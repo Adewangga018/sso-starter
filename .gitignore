@@ -1,0 +1,35 @@
+# =========================
+# BACKEND (.NET / C#)
+# =========================
+backend/bin/
+backend/obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+
+# Ignore appsettings.Development.json if you have sensitive local db credentials
+# backend/appsettings.Development.json 
+
+# =========================
+# FRONTEND (Node.js / React / Vite)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.npm/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# GENERAL OS FILES
+# =========================
+.DS_Store
+Thumbs.db
