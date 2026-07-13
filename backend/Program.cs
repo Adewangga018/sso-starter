@@ -18,11 +18,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseOpenIddict();
 });
 
-// --- Read-only view onto the legacy employee tables (MST_PEGAWAI, MST_ANAK_PEGAWAI,
-//     easy.users), now hosted inside db_mygcs (same DB as the app's own schema) ---
+// --- View onto the live SDM/EASy database (GCS): employee master (MST_PEGAWAI,
+//     MST_ANAK_PEGAWAI, easy.users) plus operational objects that MUST stay live in the
+//     SDM system — attendance (vw_web_sdm_absensi), overtime submissions (web_sdm_spl +
+//     triggers), and approval routing (vw_web_sdm_approval). These cannot be copied into
+//     db_mygcs, so this context connects to GCS. ---
 builder.Services.AddDbContext<GcsDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("GcsConnection"));
 });
 
 builder.Services.AddScoped<CurrentUserContext>();

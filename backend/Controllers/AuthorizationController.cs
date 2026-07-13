@@ -150,6 +150,8 @@ public class AuthorizationController : ControllerBase
 
         principal.SetClaim("nik", user.Nik ?? string.Empty);
         principal.SetClaim("gcs_uid", user.GcsUserId?.ToString() ?? string.Empty);
+        principal.SetClaim("full_name", user.FullName ?? string.Empty);
+        principal.SetClaim("is_active", user.IsActive ? "true" : "false");
 
         foreach (var claim in principal.Claims)
         {

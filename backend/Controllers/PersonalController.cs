@@ -89,7 +89,7 @@ public class PersonalController : ControllerBase
             pegawai.TGL_LAHIR.HasValue ? DateOnly.FromDateTime(pegawai.TGL_LAHIR.Value) : null,
             pegawai.JENIS_KELAMIN,
             pegawai.STATUS_KARYAWAN,
-            string.Equals(user.Status, "Aktif", StringComparison.OrdinalIgnoreCase),
+            user.IsActive,
             pegawai.AGAMA,
             pegawai.PENDIDIKAN,
             pegawai.NO_HP,

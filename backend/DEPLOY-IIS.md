@@ -151,6 +151,7 @@ File ini ada di server saja, **tidak** masuk git:
   <environmentVariables>
     <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
     <environmentVariable name="ConnectionStrings__DefaultConnection" value="Server=...;Database=db_mygcs;User Id=svc_mygcs;Password=...;TrustServerCertificate=True;Encrypt=False;" />
+    <environmentVariable name="ConnectionStrings__GcsConnection" value="Server=...;Database=GCS;User Id=svc_mygcs;Password=...;TrustServerCertificate=True;Encrypt=False;" />
     <environmentVariable name="Oidc__SigningCertificateThumbprint" value="<THUMBPRINT_SIGNING>" />
     <environmentVariable name="Oidc__EncryptionCertificateThumbprint" value="<THUMBPRINT_ENCRYPTION>" />
   </environmentVariables>

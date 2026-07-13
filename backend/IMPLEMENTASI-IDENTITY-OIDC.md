@@ -116,9 +116,11 @@ Frontend React kini memakai **Authorization Code + PKCE** via `oidc-client-ts`.
 ### Wajib dilakukan operator saat deploy (lihat DEPLOY-IIS.md)
 1. **Generate 2 sertifikat** (signing + encryption) di server + beri App Pool akses private key +
    set thumbprint sebagai env var. (Langkah PowerShell ada di DEPLOY-IIS.md §Sertifikat OIDC.)
-2. **Set connection string sebagai env var IIS** (`ConnectionStrings__DefaultConnection`) +
-   `ASPNETCORE_ENVIRONMENT=Production`. Aplikasi kini **hanya memakai db_mygcs** (data pegawai
-   `MST_PEGAWAI`, `MST_ANAK_PEGAWAI`, dan `easy.users` sudah dipindah ke db_mygcs; koneksi GCS dihapus).
+2. **Set connection string sebagai env var IIS** + `ASPNETCORE_ENVIRONMENT=Production`. Aplikasi
+   memakai **dua** koneksi: `ConnectionStrings__DefaultConnection` = **db_mygcs** (Identity,
+   OpenIddict, audit) dan `ConnectionStrings__GcsConnection` = **GCS** (data operasional SDM live:
+   absensi, lembur/SPL, approval, serta master pegawai `MST_PEGAWAI`/`easy.users`). Objek SDM
+   (view & tabel bertrigger) tidak dapat dipindah ke db_mygcs karena bersifat live/transaksional.
 3. ⚠️ **Rotasi kredensial yang sudah bocor di git.** Password SA & key `Jwt` lama ada di histori
    commit pertama — anggap kompromi. **Rekomendasi kuat**: buat **SQL login khusus MyGCS**
    (least-privilege: `db_mygcs` read/write) menggantikan `sa`, karena merotasi
