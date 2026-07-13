@@ -3,8 +3,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 24px;
   background: var(--gcs-bg);
   padding: 24px;
+}
+
+.login__image-card {
+  width: 570px;
+  height: 380px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.55);
+}
+
+.login__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .login__card {
@@ -20,6 +37,17 @@
   align-items: center;
   text-align: center;
   color: #fff;
+}
+
+@media (max-width: 860px) {
+  .login {
+    flex-direction: column;
+  }
+
+  .login__image-card {
+    width: 100%;
+    max-width: 380px;
+  }
 }
 
 @media (max-width: 420px) {

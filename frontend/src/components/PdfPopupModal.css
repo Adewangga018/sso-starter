@@ -61,6 +61,16 @@
   border: none;
 }
 
+/* Optional slot under the document - used to hang the anak list off the Kartu Keluarga. */
+.pdf-modal__footer {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+}
+
 .pdf-modal__state {
   margin: auto;
   display: flex;

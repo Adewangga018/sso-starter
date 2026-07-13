@@ -114,6 +114,30 @@ public class PersonalController : ControllerBase
         return Ok(dto);
     }
 
+    [HttpGet("absensi")]
+    public async Task<ActionResult<IReadOnlyList<AbsensiDto>>> GetAbsensi()
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null)
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+        }
+
+        var logs = await _db.AbsensiLog
+            .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
+            .OrderByDescending(a => a.Tanggal)
+            .Select(a => new AbsensiDto(
+                a.NamaPegawai,
+                DateOnly.FromDateTime(a.Tanggal),
+                a.NamaHari,
+                a.CheckIn,
+                a.CheckOut,
+                a.CatatanMangkir))
+            .ToListAsync();
+
+        return Ok(logs);
+    }
+
     [HttpGet("documents/{key}")]
     public async Task<ActionResult<DocumentInfo>> GetDocument(string key)
     {

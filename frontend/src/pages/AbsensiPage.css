@@ -1,0 +1,225 @@
+.absensi__empty {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--gcs-text-muted);
+  font-size: 14px;
+}
+
+.absensi__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 24px 28px;
+}
+
+.absensi__section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  margin-bottom: 18px;
+}
+
+.absensi__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.absensi__page-size,
+.absensi__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+}
+
+.absensi__page-size select {
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+}
+
+.absensi__search input {
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--gcs-ink);
+  min-width: 220px;
+  outline: none;
+}
+
+.absensi__search input:focus {
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
+.absensi__table-wrap {
+  overflow-x: auto;
+}
+
+.absensi__table {
+  width: 100%;
+  /* Fixed layout makes the percentage widths below authoritative, so the columns
+     scale with the viewport instead of being sized by their content. */
+  table-layout: fixed;
+  /* Below this the headers start colliding, so the wrapper scrolls instead of squeezing. */
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.absensi__table th,
+.absensi__table td {
+  padding: 12px 14px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--gcs-border);
+}
+
+.absensi__table thead th {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  border-bottom: 2px solid var(--gcs-border);
+}
+
+.absensi__col-num {
+  width: 8%;
+}
+
+.absensi__col-tanggal {
+  width: 18%;
+}
+
+.absensi__col-hari {
+  width: 16%;
+}
+
+.absensi__col-jam {
+  width: 16%;
+}
+
+/* Keterangan is the only column allowed to wrap - the fixed layout would otherwise
+   overflow it. Its share is kept modest so leftover width is spread across the
+   other columns instead of pooling as dead space on the right. */
+.absensi__col-ket {
+  width: 26%;
+}
+
+.absensi__table td.absensi__col-ket {
+  white-space: normal;
+}
+
+.absensi__th--sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.absensi__th--sortable:hover {
+  color: var(--gcs-green-600);
+}
+
+.absensi__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.absensi__sort-icon--idle {
+  opacity: 0.35;
+}
+
+.absensi__table tbody tr:nth-child(even) {
+  background: var(--gcs-bg);
+}
+
+.absensi__badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.absensi__badge--red {
+  background: #e6483f;
+}
+
+/* "Sabtu" is shorter than "Minggu", so pin a common width to keep both day badges equal. */
+.absensi__badge--hari {
+  min-width: 72px;
+  text-align: center;
+}
+
+.absensi__badge--yellow {
+  background: var(--gcs-gold-500);
+  color: #402c07;
+}
+
+.absensi__no-data {
+  text-align: center;
+  color: var(--gcs-text-muted);
+  padding: 24px;
+}
+
+.absensi__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+}
+
+.absensi__pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.absensi__pagination button {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--gcs-ink);
+  cursor: pointer;
+}
+
+.absensi__pagination button:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+}
+
+.absensi__pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.absensi__page-indicator {
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .absensi__card {
+    padding: 18px 16px;
+  }
+
+  .absensi__search input {
+    min-width: 0;
+    flex: 1;
+  }
+}

@@ -20,7 +20,7 @@ function InfoRow({ label, value, children }) {
   )
 }
 
-const emptyModal = { open: false, title: '', loading: false, doc: null, error: '' }
+const emptyModal = { open: false, key: '', title: '', loading: false, doc: null, error: '' }
 
 export default function ProfilPage() {
   const [profile, setProfile] = useState(null)
@@ -43,7 +43,7 @@ export default function ProfilPage() {
   }, [])
 
   async function openDocumentModal(key, title) {
-    setModal({ open: true, title, loading: true, doc: null, error: '' })
+    setModal({ open: true, key, title, loading: true, doc: null, error: '' })
     try {
       const doc = await api.getDocument(key)
       setModal((m) => ({ ...m, loading: false, doc }))
@@ -53,7 +53,7 @@ export default function ProfilPage() {
   }
 
   async function openAktaModal(anak) {
-    setModal({ open: true, title: `Akta Kelahiran - ${anak.nama ?? 'Anak'}`, loading: true, doc: null, error: '' })
+    setModal({ open: true, key: 'akta', title: `Akta Kelahiran - ${anak.nama ?? 'Anak'}`, loading: true, doc: null, error: '' })
     try {
       const doc = await api.getAktaAnak(anak.id)
       setModal((m) => ({ ...m, loading: false, doc }))
@@ -93,18 +93,18 @@ export default function ProfilPage() {
       <div className="profil__card">
         <div className="profil__section-title">Informasi Pribadi</div>
         <div className="profil__grid">
-          <InfoRow label="ID_PEGAWAI" value={profile.idPegawai} />
-          <InfoRow label="ID_KARYAWAN" value={profile.idKaryawan} />
-          <InfoRow label="NAMA_LENGKAP" value={profile.namaLengkap} />
+          <InfoRow label="ID Pegawai" value={profile.idPegawai} />
+          <InfoRow label="ID Karyawan" value={profile.idKaryawan} />
+          <InfoRow label="Nama Lengkap" value={profile.namaLengkap} />
           <InfoRow label="NIK" value={profile.nik} />
-          <InfoRow label="STATUS_KARYAWAN" value={profile.statusKaryawan} />
-          <InfoRow label="JABATAN" value={profile.jabatan} />
-          <InfoRow label="TEMPAT_LAHIR" value={profile.tempatLahir} />
-          <InfoRow label="TGL_LAHIR" value={formatTanggal(profile.tglLahir)} />
-          <InfoRow label="JENIS_KELAMIN" value={profile.jenisKelamin} />
-          <InfoRow label="AGAMA" value={profile.agama} />
-          <InfoRow label="PENDIDIKAN" value={profile.pendidikan} />
-          <InfoRow label="STATUS PERNIKAHAN">
+          <InfoRow label="Status Karyawan" value={profile.statusKaryawan} />
+          <InfoRow label="Jabatan" value={profile.jabatan} />
+          <InfoRow label="Tempat Lahir" value={profile.tempatLahir} />
+          <InfoRow label="Tanggal Lahir" value={formatTanggal(profile.tglLahir)} />
+          <InfoRow label="Jenis Kelamin" value={profile.jenisKelamin} />
+          <InfoRow label="Agama" value={profile.agama} />
+          <InfoRow label="Pendidikan" value={profile.pendidikan} />
+          <InfoRow label="Status Pernikahan">
             {profile.isMarried ? (
               <button type="button" className="profil__link" onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}>
                 {profile.statusNikah}
@@ -113,32 +113,32 @@ export default function ProfilPage() {
               profile.statusNikah ?? '-'
             )}
           </InfoRow>
-          <InfoRow label="TERDAFTAR_SEJAK" value={formatTanggal(profile.terdaftarSejak)} />
+          <InfoRow label="Terdaftar Sejak" value={formatTanggal(profile.terdaftarSejak)} />
         </div>
       </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Kontak &amp; Alamat</div>
         <div className="profil__grid">
-          <InfoRow label="NO_HP" value={profile.noHp} />
-          <InfoRow label="EMAIL" value={profile.email} />
-          <InfoRow label="ALAMAT" value={profile.alamat?.alamat} />
+          <InfoRow label="No. HP" value={profile.noHp} />
+          <InfoRow label="Email" value={profile.email} />
+          <InfoRow label="Alamat" value={profile.alamat?.alamat} />
           <InfoRow label="RT" value={profile.alamat?.rt} />
           <InfoRow label="RW" value={profile.alamat?.rw} />
-          <InfoRow label="DESA" value={profile.alamat?.desa} />
-          <InfoRow label="KECAMATAN" value={profile.alamat?.kecamatan} />
-          <InfoRow label="KABUPATEN" value={profile.alamat?.kabupaten} />
-          <InfoRow label="PROVINSI" value={profile.alamat?.provinsi} />
-          <InfoRow label="KODE_POS" value={profile.alamat?.kodePos} />
+          <InfoRow label="Desa" value={profile.alamat?.desa} />
+          <InfoRow label="Kecamatan" value={profile.alamat?.kecamatan} />
+          <InfoRow label="Kabupaten" value={profile.alamat?.kabupaten} />
+          <InfoRow label="Provinsi" value={profile.alamat?.provinsi} />
+          <InfoRow label="Kode Pos" value={profile.alamat?.kodePos} />
         </div>
       </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Kesehatan &amp; Darurat</div>
         <div className="profil__grid">
-          <InfoRow label="RIWAYAT_KESEHATAN" value={profile.riwayatKesehatan} />
-          <InfoRow label="NAMA_DARURAT" value={profile.namaDarurat} />
-          <InfoRow label="HP_DARURAT" value={profile.hpDarurat} />
+          <InfoRow label="Riwayat Kesehatan" value={profile.riwayatKesehatan} />
+          <InfoRow label="Nama Kontak Darurat" value={profile.namaDarurat} />
+          <InfoRow label="No. HP Darurat" value={profile.hpDarurat} />
         </div>
       </div>
 
@@ -146,10 +146,10 @@ export default function ProfilPage() {
         <div className="profil__card">
           <div className="profil__section-title">Data Pasangan</div>
           <div className="profil__grid">
-            <InfoRow label="NAMA_PASANGAN" value={profile.pasangan.nama} />
-            <InfoRow label="TEMPAT_LAHIR_PASANGAN" value={profile.pasangan.tempatLahir} />
-            <InfoRow label="TGL_LAHIR_PASANGAN" value={formatTanggal(profile.pasangan.tglLahir)} />
-            <InfoRow label="BUKU_NIKAH">
+            <InfoRow label="Nama Pasangan" value={profile.pasangan.nama} />
+            <InfoRow label="Tempat Lahir" value={profile.pasangan.tempatLahir} />
+            <InfoRow label="Tanggal Lahir" value={formatTanggal(profile.pasangan.tglLahir)} />
+            <InfoRow label="Buku Nikah">
               <button type="button" className="profil__link" onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}>
                 Lihat Buku Nikah
               </button>
@@ -157,29 +157,6 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
-
-      <div className="profil__card">
-        <div className="profil__section-title">Data Anak {profile.jumlahAnak != null && `(${profile.jumlahAnak})`}</div>
-        {profile.anak.length === 0 && <div className="profil__empty-inline">Belum ada data anak.</div>}
-        <div className="profil__anak-list">
-          {profile.anak.map((anak) => (
-            <button type="button" className="profil__anak-item" key={anak.id} onClick={() => openAktaModal(anak)}>
-              <div className="profil__anak-icon">
-                <Users size={16} />
-              </div>
-              <div className="profil__anak-text">
-                <div className="profil__anak-name">{anak.nama ?? `Anak ke-${anak.urutan}`}</div>
-                <div className="profil__anak-sub">
-                  {anak.tempatLahir ?? '-'}, {formatTanggal(anak.tglLahir)}
-                </div>
-              </div>
-              <div className="profil__anak-akta">
-                <ChevronRight size={16} className="profil__anak-chevron" />
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Berkas Pribadi</div>
@@ -213,6 +190,37 @@ export default function ProfilPage() {
         loading={modal.loading}
         doc={modal.doc}
         error={modal.error}
+        // Children belong to the family card, so their akta are reachable from inside the
+        // Kartu Keluarga popup rather than from a section of their own on the page.
+        footer={
+          modal.key === 'kk' ? (
+            <div className="profil__anak-panel">
+              <div className="profil__anak-panel-title">Data Anak</div>
+              {profile.anak.length === 0 ? (
+                <div className="profil__empty-inline">Belum ada data anak.</div>
+              ) : (
+                <div className="profil__anak-list">
+                  {profile.anak.map((anak) => (
+                    <button type="button" className="profil__anak-item" key={anak.id} onClick={() => openAktaModal(anak)}>
+                      <div className="profil__anak-icon">
+                        <Users size={16} />
+                      </div>
+                      <div className="profil__anak-text">
+                        <div className="profil__anak-name">{anak.nama ?? `Anak ke-${anak.urutan}`}</div>
+                        <div className="profil__anak-sub">
+                          {anak.tempatLahir ?? '-'}, {formatTanggal(anak.tglLahir)}
+                        </div>
+                      </div>
+                      <div className="profil__anak-akta">
+                        <ChevronRight size={16} className="profil__anak-chevron" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null
+        }
       />
     </div>
   )

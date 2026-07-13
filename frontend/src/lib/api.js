@@ -48,6 +48,12 @@ export const api = {
     apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   getDashboardSummary: () => apiFetch('/api/dashboard/summary'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
+  getAbsensi: () => apiFetch('/api/personal/absensi'),
+  getSpl: () => apiFetch('/api/personal/spl'),
+  createSpl: (payload) => apiFetch('/api/personal/spl', { method: 'POST', body: JSON.stringify(payload) }),
+  updateSpl: (id, payload) =>
+    apiFetch(`/api/personal/spl/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSpl: (id) => apiFetch(`/api/personal/spl/${id}`, { method: 'DELETE' }),
   getDocument: (key) => apiFetch(`/api/personal/documents/${key}`),
   getAktaAnak: (idAnak) => apiFetch(`/api/personal/documents/anak/${idAnak}/akta`),
 }

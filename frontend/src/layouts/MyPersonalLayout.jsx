@@ -23,9 +23,9 @@ const SECTIONS = [
     items: [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard' },
       { key: 'profil', label: 'Profil', icon: UserCircle, to: '/my-personal/profil' },
-      { key: 'absensi', label: 'Absensi', icon: ClipboardList, disabled: true },
+      { key: 'absensi', label: 'Absensi', icon: ClipboardList, to: '/my-personal/absensi' },
       { key: 'gaji', label: 'Gaji', icon: Wallet, disabled: true },
-      { key: 'lembur', label: 'Lembur', icon: Clock3, disabled: true },
+      { key: 'lembur', label: 'Lembur', icon: Clock3, to: '/my-personal/lembur' },
       { key: 'cuti', label: 'Cuti', icon: CalendarDays, disabled: true },
       { key: 'izin', label: 'Izin', icon: FileSignature, disabled: true },
       { key: 'sppd', label: 'SPPD', icon: Plane, disabled: true },

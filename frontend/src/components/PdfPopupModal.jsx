@@ -1,7 +1,7 @@
 import { FileWarning, Loader2, X } from 'lucide-react'
 import './PdfPopupModal.css'
 
-export default function PdfPopupModal({ open, onClose, title, loading, doc, error }) {
+export default function PdfPopupModal({ open, onClose, title, loading, doc, error, footer }) {
   if (!open) return null
 
   return (
@@ -32,6 +32,8 @@ export default function PdfPopupModal({ open, onClose, title, loading, doc, erro
             <iframe title={title} src={doc.url} className="pdf-modal__frame" />
           )}
         </div>
+
+        {footer && <div className="pdf-modal__footer">{footer}</div>}
       </div>
     </div>
   )

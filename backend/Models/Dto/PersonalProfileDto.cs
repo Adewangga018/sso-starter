@@ -25,6 +25,14 @@ public record PasanganDto(
 
 public record BerkasDto(string Key, string Label, bool Available);
 
+public record AbsensiDto(
+    string NamaPegawai,
+    DateOnly Tanggal,
+    string? NamaHari,
+    string? CheckIn,
+    string? CheckOut,
+    string? CatatanMangkir);
+
 public record PersonalProfileDto(
     int IdPegawai,
     string NamaLengkap,

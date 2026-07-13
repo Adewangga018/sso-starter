@@ -165,6 +165,16 @@
   color: var(--gcs-text-muted);
 }
 
+/* The anak list lives inside the Kartu Keluarga popup, under the document itself. */
+.profil__anak-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gcs-text-muted);
+  margin-bottom: 10px;
+}
+
 .profil__anak-list {
   display: flex;
   flex-direction: column;
@@ -246,6 +256,7 @@
 
 .profil__berkas-item {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;

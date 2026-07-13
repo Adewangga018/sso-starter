@@ -6,6 +6,8 @@ import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
+import AbsensiPage from './pages/AbsensiPage'
+import SplPage from './pages/SplPage'
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
             <Route path="/my-personal" element={<MyPersonalLayout />}>
               <Route index element={<Navigate to="profil" replace />} />
               <Route path="profil" element={<ProfilPage />} />
+              <Route path="absensi" element={<AbsensiPage />} />
+              <Route path="lembur" element={<SplPage />} />
             </Route>
           </Route>
 

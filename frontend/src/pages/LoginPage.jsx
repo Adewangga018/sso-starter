@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, HelpCircle, Lock, LifeBuoy, LogIn, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../lib/api'
 import './LoginPage.css'
+
+const IMAGE_ASPECT_RATIO = 1280 / 853
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -13,6 +15,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const cardRef = useRef(null)
+  const [cardHeight, setCardHeight] = useState(null)
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      setCardHeight(el.getBoundingClientRect().height)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -30,8 +44,19 @@ export default function LoginPage() {
 
   return (
     <div className="login">
-      <div className="login__card">
-        <img src="/LOGO MY GCS_1.png" alt="GCS" className="login__logo" />
+      <div
+        className="login__image-card"
+        style={
+          cardHeight
+            ? { height: cardHeight, width: cardHeight * IMAGE_ASPECT_RATIO }
+            : undefined
+        }
+      >
+        <img src="/GUDANG_PUPUK.jpeg" alt="Gudang Pupuk" className="login__image" />
+      </div>
+
+        <div className="login__card" ref={cardRef}>
+          <img src="/LOGO MY GCS_1.png" alt="GCS" className="login__logo" />
         <h1 className="login__title">Login</h1>
         <p className="login__subtitle">Access your corporate dashboard</p>
 
