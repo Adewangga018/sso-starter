@@ -80,7 +80,6 @@ export default function ProfilPage() {
         <div className="profil__avatar">{profile.namaLengkap?.charAt(0)?.toUpperCase() ?? '?'}</div>
         <div className="profil__header-text">
           <h2>{profile.namaLengkap}</h2>
-          <div className="profil__jabatan">{profile.jabatan ?? 'Jabatan belum tersedia'}</div>
           <span className={`profil__status-pill${profile.isActive ? '' : ' profil__status-pill--inactive'}`}>
             {profile.isActive ? 'Karyawan Aktif' : 'Karyawan Nonaktif'}
           </span>
@@ -98,7 +97,6 @@ export default function ProfilPage() {
           <InfoRow label="Nama Lengkap" value={profile.namaLengkap} />
           <InfoRow label="NIK" value={profile.nik} />
           <InfoRow label="Status Karyawan" value={profile.statusKaryawan} />
-          <InfoRow label="Jabatan" value={profile.jabatan} />
           <InfoRow label="Tempat Lahir" value={profile.tempatLahir} />
           <InfoRow label="Tanggal Lahir" value={formatTanggal(profile.tglLahir)} />
           <InfoRow label="Jenis Kelamin" value={profile.jenisKelamin} />

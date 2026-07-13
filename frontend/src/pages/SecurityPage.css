@@ -1,0 +1,106 @@
+.security {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.security__head h1 {
+  font-size: 1.5rem;
+  margin-top: 8px;
+}
+
+.security__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2a5298;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.security__card {
+  background: #fff;
+  border: 1px solid #e6e8ee;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.security__card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+}
+
+.security__status { color: #555; margin-bottom: 14px; }
+
+.security__form,
+.security__setup { display: flex; flex-direction: column; gap: 10px; }
+
+.security__inline { display: flex; gap: 8px; margin-top: 8px; }
+
+.security input {
+  padding: 10px 12px;
+  border: 1px solid #d6dae3;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.security__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #2a5298;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.security__btn:hover { background: #1e3c72; }
+.security__btn--danger { background: #c0392b; }
+.security__btn--danger:hover { background: #a5281c; }
+
+.security__key {
+  font-family: 'Consolas', monospace;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+  background: #f4f6fb;
+  border: 1px dashed #b9c2d6;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.security__hint { font-size: 0.8rem; color: #888; word-break: break-all; }
+.security__hint code { font-size: 0.75rem; }
+
+.security__banner {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.security__banner--ok { background: #e6f7ed; color: #1a7f45; }
+.security__banner--err { background: #fdecea; color: #c0392b; }
+
+.security__recovery { font-size: 0.9rem; }
+.security__codes {
+  list-style: none;
+  padding: 12px;
+  margin: 10px 0 0;
+  background: #f4f6fb;
+  border-radius: 8px;
+  font-family: 'Consolas', monospace;
+  columns: 2;
+}
+.security__codes li { padding: 2px 0; }

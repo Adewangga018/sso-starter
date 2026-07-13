@@ -62,7 +62,7 @@ export default function MyPersonalLayout() {
         onLogout={handleLogout}
       />
       <div className="app-shell__main">
-        <TopBar title="My Personal" name={summary?.nama} jabatan={summary?.jabatan} onMenuClick={openMobile} />
+        <TopBar title="My Personal" name={summary?.nama} onMenuClick={openMobile} />
         <div className="app-shell__content">
           <Outlet />
         </div>

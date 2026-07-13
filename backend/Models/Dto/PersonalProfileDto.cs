@@ -42,7 +42,6 @@ public record PersonalProfileDto(
     DateOnly? TglLahir,
     string? JenisKelamin,
     string? StatusKaryawan,
-    string? Jabatan,
     bool IsActive,
     string? Agama,
     string? Pendidikan,

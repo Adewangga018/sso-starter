@@ -3,9 +3,10 @@ using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Data;
 
-// Onto the existing "GCS" legacy database (dbo + easy schemas). No migrations are ever
-// generated or run against this context - every table here already exists and is owned by
-// other systems. Everything is read-only except web_sdm_spl, which employees submit into.
+// Onto the legacy employee tables (dbo + easy schemas), now hosted in db_mygcs alongside
+// the app's own schema. No migrations are ever generated or run against this context -
+// every table here already exists and is owned by other systems. Everything is read-only
+// except web_sdm_spl, which employees submit into.
 public class GcsDbContext : DbContext
 {
     public GcsDbContext(DbContextOptions<GcsDbContext> options) : base(options)
@@ -15,7 +16,6 @@ public class GcsDbContext : DbContext
     public DbSet<MstPegawai> MstPegawai => Set<MstPegawai>();
     public DbSet<MstAnakPegawai> MstAnakPegawai => Set<MstAnakPegawai>();
     public DbSet<EasyUser> EasyUsers => Set<EasyUser>();
-    public DbSet<PegawaiSdm> PegawaiSdm => Set<PegawaiSdm>();
     public DbSet<AbsensiLog> AbsensiLog => Set<AbsensiLog>();
     public DbSet<WebSdmSpl> WebSdmSpl => Set<WebSdmSpl>();
     public DbSet<SdmApproval> SdmApproval => Set<SdmApproval>();
@@ -43,13 +43,6 @@ public class GcsDbContext : DbContext
         {
             e.ToTable("users", "easy");
             e.HasKey(x => x.Id);
-        });
-
-        builder.Entity<PegawaiSdm>(e =>
-        {
-            // There is also an unrelated easy.PEGAWAI_SDM table - this must stay pinned to dbo.
-            e.ToTable("PEGAWAI_SDM", "dbo");
-            e.HasKey(x => x.id);
         });
 
         builder.Entity<AbsensiLog>(e =>

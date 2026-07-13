@@ -39,7 +39,7 @@ export default function DashboardLayout() {
         onLogout={handleLogout}
       />
       <div className="app-shell__main">
-        <TopBar title="Dashboard" name={summary?.nama} jabatan={summary?.jabatan} onMenuClick={openMobile} />
+        <TopBar title="Dashboard" name={summary?.nama} onMenuClick={openMobile} />
         <div className="app-shell__content">
           <Outlet context={{ summary }} />
         </div>

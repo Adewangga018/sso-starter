@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
@@ -6,6 +5,9 @@ using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Services;
 
+// Bridges an authenticated MyGCS token back to the legacy GCS employee record.
+// The token (issued by OpenIddict) carries "gcs_uid" (easy.users.Id) and "nik"
+// (employee badge) claims, which we use to resolve the user + MST_PEGAWAI row.
 public class CurrentUserContext
 {
     private readonly GcsDbContext _db;
@@ -17,19 +19,22 @@ public class CurrentUserContext
 
     public async Task<(EasyUser? User, MstPegawai? Pegawai)> ResolveAsync(ClaimsPrincipal principal)
     {
-        var userIdClaim = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (userIdClaim is null || !long.TryParse(userIdClaim, out var userId))
+        EasyUser? user = null;
+
+        // Preferred: resolve the exact legacy user row via the provenance claim.
+        var uidClaim = principal.FindFirstValue("gcs_uid");
+        if (long.TryParse(uidClaim, out var userId))
         {
-            return (null, null);
+            user = await _db.EasyUsers.FirstOrDefaultAsync(u => u.Id == userId);
         }
 
-        var user = await _db.EasyUsers.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        var nik = user?.Nik ?? principal.FindFirstValue("nik");
+        if (string.IsNullOrWhiteSpace(nik))
         {
             return (user, null);
         }
 
-        var pegawai = await _db.MstPegawai.FirstOrDefaultAsync(p => p.ID_KARYAWAN == user.Nik);
+        var pegawai = await _db.MstPegawai.FirstOrDefaultAsync(p => p.ID_KARYAWAN == nik);
         return (user, pegawai);
     }
 }

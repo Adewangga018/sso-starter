@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Gcs;
@@ -9,7 +10,7 @@ using SsoBackend.Services;
 namespace SsoBackend.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("api/personal")]
 public class PersonalController : ControllerBase
 {
@@ -54,11 +55,6 @@ public class PersonalController : ControllerBase
             return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
         }
 
-        var jabatan = await _db.PegawaiSdm
-            .Where(p => p.Nik == pegawai.ID_KARYAWAN)
-            .Select(p => p.nm_jabatan)
-            .FirstOrDefaultAsync();
-
         var anak = await _db.MstAnakPegawai
             .Where(a => a.ID_PEGAWAI == pegawai.ID_PEGAWAI)
             .OrderBy(a => a.URUTAN_ANAK)
@@ -93,7 +89,6 @@ public class PersonalController : ControllerBase
             pegawai.TGL_LAHIR.HasValue ? DateOnly.FromDateTime(pegawai.TGL_LAHIR.Value) : null,
             pegawai.JENIS_KELAMIN,
             pegawai.STATUS_KARYAWAN,
-            jabatan,
             string.Equals(user.Status, "Aktif", StringComparison.OrdinalIgnoreCase),
             pegawai.AGAMA,
             pegawai.PENDIDIKAN,
