@@ -1,0 +1,101 @@
+import { useOutletContext, useNavigate } from 'react-router-dom'
+import {
+  Activity,
+  Archive,
+  Bell,
+  CalendarCheck2,
+  ClipboardCheck,
+  Lightbulb,
+  Lock,
+  Mail,
+  TrendingUp,
+  Users,
+  Users2,
+} from 'lucide-react'
+import './DashboardPage.css'
+
+const ICONS = {
+  users: Users,
+  mail: Mail,
+  'clipboard-check': ClipboardCheck,
+  activity: Activity,
+  lightbulb: Lightbulb,
+  archive: Archive,
+  'trending-up': TrendingUp,
+  'users-round': Users2,
+}
+
+const MODULE_ROUTES = {
+  'my-personal': '/my-personal/profil',
+}
+
+export default function DashboardPage() {
+  const { summary } = useOutletContext()
+  const navigate = useNavigate()
+
+  const modules = summary?.modules ?? []
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard__welcome">
+        <h2>Selamat Datang di MyGCS</h2>
+        <p>Berikut adalah ringkasan operasional Anda hari ini.</p>
+      </div>
+
+      <div className="dashboard__grid">
+        <div className="dashboard__profile-card">
+          <div className="dashboard__avatar">{summary?.nama?.charAt(0)?.toUpperCase() ?? '?'}</div>
+          <div className="dashboard__name">{summary?.nama ?? '-'}</div>
+          {summary?.jabatan && <div className="dashboard__role">{summary.jabatan}</div>}
+        </div>
+
+        <div className="dashboard__notif-card">
+          <div className="dashboard__notif-header">
+            <Bell size={16} />
+            <span>Notifikasi</span>
+          </div>
+          <div className="dashboard__notif-item">
+            <CalendarCheck2 size={16} className="dashboard__notif-icon" />
+            <div>
+              <div className="dashboard__notif-title">Selamat datang di MyGCS</div>
+              <div className="dashboard__notif-sub">Modul My Personal sudah aktif digunakan.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard__modules-label">Modul</div>
+      <div className="dashboard__modules">
+        {modules.map((mod) => {
+          const Icon = ICONS[mod.icon] ?? Users
+          const target = MODULE_ROUTES[mod.key]
+
+          if (!mod.enabled || !target) {
+            return (
+              <div className="module-tile module-tile--disabled" key={mod.key}>
+                <div className="module-tile__icon">
+                  <Icon size={22} />
+                </div>
+                <div className="module-tile__label">{mod.label}</div>
+                <div className="module-tile__subtitle">{mod.subtitle}</div>
+                <div className="module-tile__locked">
+                  <Lock size={11} /> Segera Hadir
+                </div>
+              </div>
+            )
+          }
+
+          return (
+            <button type="button" className="module-tile" key={mod.key} onClick={() => navigate(target)}>
+              <div className="module-tile__icon module-tile__icon--active">
+                <Icon size={22} />
+              </div>
+              <div className="module-tile__label">{mod.label}</div>
+              <div className="module-tile__subtitle">{mod.subtitle}</div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
