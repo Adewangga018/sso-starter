@@ -1,13 +1,111 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>myGCS</title>
+    <!-- Menggunakan font Google Montserrat yang modern dan elegan -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Reset & Base Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, #1a1c23 0%, #0d0e12 100%);
+            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        /* Container & Text Styling */
+        .brand-container {
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-text {
+            font-size: 5rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: #ffffff;
+            text-transform: uppercase;
+            padding-left: 0.3em; /* Menyeimbangkan letter-spacing di akhir kata */
+            position: relative;
+            animation: fadeIn 2s ease-in-out forwards;
+        }
+
+        /* Memberikan efek tebal dan warna berbeda pada 'GCS' untuk aksen premium */
+        .logo-text span {
+            font-weight: 700;
+            background: linear-gradient(135deg, #dfb76c 0%, #c29947 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Garis estetis di bawah teks */
+        .brand-container::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #c29947, transparent);
+            animation: expandLine 2.5s ease-in-out forwards;
+        }
+
+        /* Animasi */
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                letter-spacing: 0.1em;
+                filter: blur(5px);
+            }
+            100% {
+                opacity: 1;
+                letter-spacing: 0.3em;
+                filter: blur(0);
+            }
+        }
+
+        @keyframes expandLine {
+            0% {
+                width: 0;
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                width: 120px;
+                opacity: 1;
+            }
+        }
+
+        /* Responsif untuk perangkat mobile */
+        @media (max-width: 768px) {
+            .logo-text {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="brand-container">
+        <h1 class="logo-text">my<span>GCS</span></h1>
+    </div>
+
+</body>
 </html>
