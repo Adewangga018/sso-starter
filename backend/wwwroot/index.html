@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SSO Backend — Status Deployment</title>
+    <script>
+        // Menyisipkan <base href> otomatis agar aset & /health tetap benar
+        // walau backend dijalankan di subfolder IIS (mis. /api atau /api/).
+        (function () {
+            var p = location.pathname.replace(/index\.html?$/i, '');
+            if (!p.endsWith('/')) { p += '/'; }
+            var b = document.createElement('base');
+            b.href = p;
+            document.head.appendChild(b);
+        })();
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
