@@ -3,9 +3,9 @@ using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Data;
 
-// Read-only view onto the existing "GCS" legacy database (dbo + easy schemas).
-// No migrations are ever generated or run against this context - it only queries
-// tables that already exist and are owned by other systems.
+// Read-only view onto the legacy employee tables (MST_PEGAWAI, MST_ANAK_PEGAWAI,
+// easy.users), now hosted in db_mygcs alongside the app's own schema. No migrations
+// are ever generated or run against this context - it only queries pre-existing tables.
 public class GcsDbContext : DbContext
 {
     public GcsDbContext(DbContextOptions<GcsDbContext> options) : base(options)
@@ -15,7 +15,6 @@ public class GcsDbContext : DbContext
     public DbSet<MstPegawai> MstPegawai => Set<MstPegawai>();
     public DbSet<MstAnakPegawai> MstAnakPegawai => Set<MstAnakPegawai>();
     public DbSet<EasyUser> EasyUsers => Set<EasyUser>();
-    public DbSet<PegawaiSdm> PegawaiSdm => Set<PegawaiSdm>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -40,13 +39,6 @@ public class GcsDbContext : DbContext
         {
             e.ToTable("users", "easy");
             e.HasKey(x => x.Id);
-        });
-
-        builder.Entity<PegawaiSdm>(e =>
-        {
-            // There is also an unrelated easy.PEGAWAI_SDM table - this must stay pinned to dbo.
-            e.ToTable("PEGAWAI_SDM", "dbo");
-            e.HasKey(x => x.id);
         });
     }
 }

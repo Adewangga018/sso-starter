@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { api, getStoredToken, setStoredToken } from '../lib/api'
+import { api } from '../lib/api'
+import { userManager } from '../lib/auth'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => getStoredToken())
-  const [user, setUser] = useState(null)
+  const [oidcUser, setOidcUser] = useState(null)
   const [summary, setSummary] = useState(null)
   const [initializing, setInitializing] = useState(true)
 
@@ -21,48 +21,60 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false
+
     async function bootstrap() {
-      if (!token) {
-        setInitializing(false)
-        return
-      }
-      const data = await loadSummary()
+      const user = await userManager.getUser()
       if (cancelled) return
-      if (!data) {
-        // stored token is no longer valid
-        setStoredToken(null)
-        setToken(null)
+      if (user && !user.expired) {
+        setOidcUser(user)
+        await loadSummary()
       }
       setInitializing(false)
     }
+
     bootstrap()
+
+    const handleLoaded = (user) => setOidcUser(user)
+    const handleUnloaded = () => {
+      setOidcUser(null)
+      setSummary(null)
+    }
+    userManager.events.addUserLoaded(handleLoaded)
+    userManager.events.addUserUnloaded(handleUnloaded)
+
     return () => {
       cancelled = true
+      userManager.events.removeUserLoaded(handleLoaded)
+      userManager.events.removeUserUnloaded(handleUnloaded)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadSummary])
+
+  // Starts the OIDC login flow (redirect to the SSO Hub authorize endpoint).
+  const login = useCallback(() => userManager.signinRedirect(), [])
+
+  // Single logout: clears the Hub session cookie and returns to the app.
+  const logout = useCallback(async () => {
+    try {
+      await userManager.signoutRedirect()
+    } catch {
+      await userManager.removeUser()
+      window.location.href = '/'
+    }
   }, [])
 
-  async function login(email, password) {
-    const data = await api.login(email, password)
-    setStoredToken(data.token)
-    setToken(data.token)
-    setUser(data.user)
-    await loadSummary()
-    return data
-  }
+  const isAuthenticated = Boolean(oidcUser && !oidcUser.expired)
 
-  function logout() {
-    setStoredToken(null)
-    setToken(null)
-    setUser(null)
-    setSummary(null)
-  }
+  const roles = oidcUser?.profile?.role
+  const isAdmin = isAuthenticated &&
+    (Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin')
 
   const value = {
-    token,
-    user,
+    user: isAuthenticated
+      ? { name: oidcUser.profile?.name ?? '', email: oidcUser.profile?.email ?? '' }
+      : null,
     summary,
-    isAuthenticated: Boolean(token),
+    isAuthenticated,
+    isAdmin,
     initializing,
     login,
     logout,

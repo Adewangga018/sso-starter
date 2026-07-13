@@ -8,6 +8,20 @@
   gap: 12px;
 }
 
+.topbar__admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fdecea;
+  color: #c0392b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.topbar__admin-link:hover { background: #f9d7d3; }
+
 .topbar__left {
   display: flex;
   align-items: center;

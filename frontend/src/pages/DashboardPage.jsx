@@ -46,7 +46,6 @@ export default function DashboardPage() {
         <div className="dashboard__profile-card">
           <div className="dashboard__avatar">{summary?.nama?.charAt(0)?.toUpperCase() ?? '?'}</div>
           <div className="dashboard__name">{summary?.nama ?? '-'}</div>
-          {summary?.jabatan && <div className="dashboard__role">{summary.jabatan}</div>}
         </div>
 
         <div className="dashboard__notif-card">

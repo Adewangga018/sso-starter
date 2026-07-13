@@ -1,0 +1,76 @@
+.audit {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.audit__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2a5298;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.audit__head h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.5rem;
+  margin-top: 8px;
+}
+
+.audit__summary { display: flex; gap: 12px; flex-wrap: wrap; }
+.audit__chip {
+  background: #eef2fa;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  color: #333;
+}
+.audit__chip--warn { background: #fdecea; color: #c0392b; }
+
+.audit__filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.audit__filters input,
+.audit__filters select {
+  padding: 8px 10px;
+  border: 1px solid #d6dae3;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.audit__filters label { font-size: 0.8rem; color: #666; display: flex; gap: 6px; align-items: center; }
+
+.audit__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2a5298;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.audit__btn:hover { background: #1e3c72; }
+
+.audit__table-wrap { overflow-x: auto; border: 1px solid #e6e8ee; border-radius: 10px; }
+.audit__table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.audit__table th, .audit__table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eef0f4; white-space: nowrap; }
+.audit__table th { background: #f7f9fc; color: #556; font-weight: 600; }
+.audit__table td:last-child { white-space: normal; }
+.audit__event { font-family: 'Consolas', monospace; font-size: 0.8rem; }
+.audit__row--warn { background: #fff6f5; }
+.audit__row--warn .audit__event { color: #c0392b; font-weight: 600; }
+
+.audit__empty, .audit__forbidden { text-align: center; color: #999; padding: 24px; }
+.audit__error { background: #fdecea; color: #c0392b; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; }
