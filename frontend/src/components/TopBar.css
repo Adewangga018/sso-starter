@@ -8,6 +8,41 @@
   gap: 12px;
 }
 
+/* Varian hijau tua untuk Dashboard, yang tidak punya sidebar - bilah ini yang memikul
+   warna korporat, sekaligus jadi tempat logo. */
+.topbar--dark {
+  background: var(--gcs-green-900);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.topbar--dark .topbar__title,
+.topbar--dark .topbar__user-name {
+  color: #fff;
+}
+
+.topbar--dark .topbar__user-role,
+.topbar--dark .topbar__chevron,
+.topbar--dark .topbar__bell {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.topbar--dark .topbar__bell:hover,
+.topbar--dark .topbar__user:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+}
+
+.topbar__logo {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
 .topbar__admin-link {
   display: inline-flex;
   align-items: center;
@@ -74,11 +109,98 @@
   background: rgba(15, 38, 31, 0.05);
 }
 
+/* Kini benar-benar sebuah tombol: sebelumnya <div> dengan cursor:default, sehingga panah
+   di sampingnya terlihat bisa diklik padahal tidak. */
 .topbar__user {
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: default;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar__user:hover {
+  background: rgba(15, 38, 31, 0.05);
+}
+
+.topbar__popup-anchor {
+  position: relative;
+}
+
+.topbar__popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 240px;
+  background: var(--gcs-white);
+  color: var(--gcs-ink);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -12px rgba(15, 38, 31, 0.35);
+  padding: 12px 14px;
+  z-index: 50;
+}
+
+.topbar__popup-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gcs-gold-700);
+  margin-bottom: 8px;
+}
+
+.topbar__popup-empty {
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+  padding: 6px 0;
+}
+
+.topbar__popup--menu {
+  padding: 0;
+  overflow: hidden;
+}
+
+.topbar__popup-user {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gcs-border);
+}
+
+.topbar__popup-name {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.topbar__popup-role {
+  font-size: 11.5px;
+  color: var(--gcs-text-muted);
+  margin-top: 2px;
+}
+
+.topbar__popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  color: #c8352c;
+  cursor: pointer;
+}
+
+.topbar__popup-item:hover {
+  background: rgba(230, 72, 63, 0.08);
+}
+
+.topbar__chevron--open {
+  transform: rotate(180deg);
 }
 
 .topbar__avatar {

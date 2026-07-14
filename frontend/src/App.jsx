@@ -15,6 +15,11 @@ import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
 import IzinPage from './pages/IzinPage'
 import IzinCetakPage from './pages/IzinCetakPage'
+import SppdPage from './pages/SppdPage'
+import UmdlPage from './pages/UmdlPage'
+import TiketPage from './pages/TiketPage'
+import TiketCetakPage from './pages/TiketCetakPage'
+import SppdCetakPage from './pages/SppdCetakPage'
 
 export default function App() {
   return (
@@ -39,11 +44,16 @@ export default function App() {
               <Route path="absensi" element={<AbsensiPage />} />
               <Route path="lembur" element={<SplPage />} />
               <Route path="izin" element={<IzinPage />} />
+              <Route path="sppd" element={<SppdPage />} />
+              <Route path="umdl" element={<UmdlPage />} />
+              <Route path="tiket" element={<TiketPage />} />
             </Route>
 
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,
                 with no sidebar or header bleeding into the print output. */}
             <Route path="/cetak/izin/:id" element={<IzinCetakPage />} />
+            <Route path="/cetak/sppd/:id" element={<SppdCetakPage />} />
+            <Route path="/cetak/tiket/:id" element={<TiketCetakPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

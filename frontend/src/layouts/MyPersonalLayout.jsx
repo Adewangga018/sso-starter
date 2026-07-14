@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import {
   Banknote,
+  Ticket,
   CalendarDays,
   ClipboardList,
   Clock3,
@@ -24,12 +25,13 @@ const SECTIONS = [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard' },
       { key: 'profil', label: 'Profil', icon: UserCircle, to: '/my-personal/profil' },
       { key: 'absensi', label: 'Absensi', icon: ClipboardList, to: '/my-personal/absensi' },
-      { key: 'gaji', label: 'Gaji', icon: Wallet, disabled: true },
+      { key: 'izin', label: 'Izin', icon: FileSignature, to: '/my-personal/izin' },
       { key: 'lembur', label: 'Lembur', icon: Clock3, to: '/my-personal/lembur' },
       { key: 'cuti', label: 'Cuti', icon: CalendarDays, disabled: true },
-      { key: 'izin', label: 'Izin', icon: FileSignature, to: '/my-personal/izin' },
-      { key: 'sppd', label: 'SPPD', icon: Plane, disabled: true },
-      { key: 'umdm', label: 'UMDM', icon: Banknote, disabled: true },
+      { key: 'sppd', label: 'SPPD', icon: Plane, to: '/my-personal/sppd' },
+      { key: 'umdl', label: 'UMDL', icon: Banknote, to: '/my-personal/umdl' },
+      { key: 'tiket', label: 'Pemesanan Tiket', icon: Ticket, to: '/my-personal/tiket' },
+      { key: 'gaji', label: 'Slip Gaji', icon: Wallet, disabled: true },
     ],
   },
 ]
@@ -62,7 +64,13 @@ export default function MyPersonalLayout() {
         onLogout={handleLogout}
       />
       <div className="app-shell__main">
-        <TopBar title="My Personal" name={summary?.nama} onMenuClick={openMobile} />
+        <TopBar
+          title="My Personal"
+          name={summary?.nama}
+          subtitle={summary?.jabatan}
+          onMenuClick={openMobile}
+          onLogout={handleLogout}
+        />
         <div className="app-shell__content">
           <Outlet />
         </div>

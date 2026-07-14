@@ -82,7 +82,7 @@
    (bingkai luar sudah dipegang oleh .absensi__table-wrap). */
 .absensi__table th,
 .absensi__table td {
-  padding: 12px 14px;
+  padding: 14px 20px;
   text-align: center;
   white-space: nowrap;
   border-bottom: 1px solid var(--gcs-border);

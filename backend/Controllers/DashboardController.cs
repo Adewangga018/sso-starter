@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
+using SsoBackend.Data;
 using SsoBackend.Models.Dto;
 using SsoBackend.Services;
 
@@ -12,10 +14,12 @@ namespace SsoBackend.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
+    private readonly GcsDbContext _db;
 
-    public DashboardController(CurrentUserContext currentUser)
+    public DashboardController(CurrentUserContext currentUser, GcsDbContext db)
     {
         _currentUser = currentUser;
+        _db = db;
     }
 
     private static readonly IReadOnlyList<ModuleTileDto> Modules = new[]
@@ -33,12 +37,23 @@ public class DashboardController : ControllerBase
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
     {
-        var (user, _) = await _currentUser.ResolveAsync(User);
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
         if (user is null)
         {
             return Unauthorized();
         }
 
-        return Ok(new DashboardSummaryDto(user.Name, Modules));
+        // Jabatan hanya pelengkap tampilan: kalau pegawainya belum tertaut, dashboard tetap
+        // tampil tanpa baris jabatan - bukan alasan untuk menggagalkan seluruh halaman.
+        string? jabatan = null;
+        if (pegawai is not null)
+        {
+            jabatan = await _db.PegawaiSdm
+                .Where(p => p.Nik == pegawai.ID_KARYAWAN)
+                .Select(p => p.nm_jabatan)
+                .FirstOrDefaultAsync();
+        }
+
+        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), Modules));
     }
 }

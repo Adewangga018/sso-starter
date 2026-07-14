@@ -27,7 +27,7 @@ const STATUS_DIBUAT = 'Di Buat'
 
 const TABS = [
   { key: 'dibuat', label: 'Di Buat' },
-  { key: 'persetujuan', label: 'Di Setujui' },
+  { key: 'persetujuan', label: 'Persetujuan' },
 ]
 
 const COLUMNS = [
@@ -255,11 +255,21 @@ export default function IzinPage() {
         kepentinganIjin: form.kepentinganIjin,
         keterangan: form.keterangan,
       }
+      let izinId
       if (editing) {
         await api.updateIzin(editing.id, payload)
+        izinId = editing.id
       } else {
-        await api.createIzin(payload)
+        // Diunggah setelah izin tersimpan, bukan sebelumnya: kode_ijin - yang dipakai sebagai
+        // nama berkas - baru diterbitkan oleh trigger database saat baris izin dibuat.
+        const created = await api.createIzin(payload)
+        izinId = created.id
       }
+
+      if (berkas && form.jenisIjin === JENIS_SAKIT) {
+        await api.uploadSuratDokter(izinId, berkas)
+      }
+
       setModalOpen(false)
       await load()
     } catch (err) {
