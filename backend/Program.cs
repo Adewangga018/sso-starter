@@ -78,6 +78,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     // The interactive login page lives in the React SPA at /login.
     options.LoginPath = "/login";
     options.LogoutPath = "/logout";
+
+    // The login UI is served by the SPA at the SITE ROOT (/login). In production the API
+    // runs as an IIS sub-application under /api (PathBase=/api), so the default cookie
+    // redirect would target /api/login — which doesn't exist. Redirect to the root /login
+    // instead, keeping the original authorize URL (incl. PathBase) as ReturnUrl so the flow
+    // resumes correctly. Works in dev too (PathBase is empty there).
+    options.Events.OnRedirectToLogin = context =>
+    {
+        var returnUrl = context.Properties?.RedirectUri
+            ?? (context.Request.PathBase + context.Request.Path + context.Request.QueryString);
+        context.Response.Redirect("/login?ReturnUrl=" + Uri.EscapeDataString(returnUrl));
+        return Task.CompletedTask;
+    };
 });
 
 // --- OpenIddict: the OAuth 2.0 / OpenID Connect server (Identity Provider) ---
