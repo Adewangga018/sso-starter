@@ -185,7 +185,7 @@ export default function AbsensiPage() {
                 const hasCatatan = Boolean((row.catatanMangkir ?? '').trim())
                 return (
                   <tr key={`${row.tanggal}-${row._seq}`}>
-                    <td>{row._seq}.</td>
+                    <td>{row._seq}</td>
                     <td>
                       {weekend ? (
                         <span className="absensi__badge absensi__badge--red">{formatTanggal(row.tanggal)}</span>

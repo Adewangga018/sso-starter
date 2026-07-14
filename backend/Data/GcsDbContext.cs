@@ -3,10 +3,11 @@ using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Data;
 
-// Onto the legacy employee tables (dbo + easy schemas), now hosted in db_mygcs alongside
-// the app's own schema. No migrations are ever generated or run against this context -
-// every table here already exists and is owned by other systems. Everything is read-only
-// except web_sdm_spl, which employees submit into.
+// Onto the live GCS database (dbo + easy schemas) via GcsConnection - NOT db_mygcs. The
+// employee master, attendance, overtime and approval objects must stay in the SDM system,
+// so they are read where they live. No migrations are ever generated or run against this
+// context - every table here already exists and is owned by other systems. Everything is
+// read-only except web_sdm_spl, which employees submit into.
 public class GcsDbContext : DbContext
 {
     public GcsDbContext(DbContextOptions<GcsDbContext> options) : base(options)
@@ -19,6 +20,9 @@ public class GcsDbContext : DbContext
     public DbSet<AbsensiLog> AbsensiLog => Set<AbsensiLog>();
     public DbSet<WebSdmSpl> WebSdmSpl => Set<WebSdmSpl>();
     public DbSet<SdmApproval> SdmApproval => Set<SdmApproval>();
+    public DbSet<WebSdmSuratIjin> WebSdmSuratIjin => Set<WebSdmSuratIjin>();
+    public DbSet<PegawaiSdm> PegawaiSdm => Set<PegawaiSdm>();
+    public DbSet<TtdElektronik> TtdElektronik => Set<TtdElektronik>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -80,8 +84,41 @@ public class GcsDbContext : DbContext
             e.Property(x => x.KodePegawai).HasColumnName("kode_pegawai");
             e.Property(x => x.KodeAtasan).HasColumnName("kode_atasan");
             e.Property(x => x.NamaAtasan).HasColumnName("nama_atasan");
+            e.Property(x => x.TitleKepada).HasColumnName("title_kepada");
             e.Property(x => x.Urut).HasColumnName("urut");
             e.Property(x => x.Status).HasColumnName("STATUS");
+        });
+
+        builder.Entity<WebSdmSuratIjin>(e =>
+        {
+            // Legacy triggers on this table: declaring them makes EF use the trigger-safe
+            // INSERT path (SQL Server forbids an OUTPUT clause on a table with triggers).
+            // web_sdm_surat_ijin_tri fills kode_ijin; web_sdm_surat_ijin_tru posts approved
+            // leave into the attendance/payroll tables in GCSSDM.
+            e.ToTable("web_sdm_surat_ijin", "dbo", tb =>
+            {
+                tb.HasTrigger("web_sdm_surat_ijin_tri");
+                tb.HasTrigger("web_sdm_surat_ijin_tru");
+            });
+            e.HasKey(x => x.id);
+            e.Property(x => x.id).ValueGeneratedOnAdd().HasPrecision(25, 0);
+            // tgl_input carries a getdate() default; kode_ijin is filled by the INSERT trigger.
+        });
+
+        builder.Entity<PegawaiSdm>(e =>
+        {
+            e.HasNoKey();
+            // There is also an unrelated easy.PEGAWAI_SDM view - this must stay pinned to dbo.
+            e.ToView("PEGAWAI_SDM", "dbo");
+        });
+
+        builder.Entity<TtdElektronik>(e =>
+        {
+            e.ToTable("web_ttd_elektronik", "intranet");
+            e.HasKey(x => x.id);
+            e.Property(x => x.id).ValueGeneratedOnAdd();
+            // kode_link carries a newid() default, so it is filled by the database on INSERT.
+            e.Property(x => x.kode_link).ValueGeneratedOnAdd();
         });
     }
 }

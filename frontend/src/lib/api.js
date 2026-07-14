@@ -48,6 +48,13 @@ export const api = {
   updateSpl: (id, payload) =>
     apiFetch(`/api/personal/spl/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSpl: (id) => apiFetch(`/api/personal/spl/${id}`, { method: 'DELETE' }),
+  getIzin: () => apiFetch('/api/personal/izin'),
+  createIzin: (payload) => apiFetch('/api/personal/izin', { method: 'POST', body: JSON.stringify(payload) }),
+  updateIzin: (id, payload) =>
+    apiFetch(`/api/personal/izin/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteIzin: (id) => apiFetch(`/api/personal/izin/${id}`, { method: 'DELETE' }),
+  // POST, not GET: printing registers the document in the QR-validation registry.
+  printIzin: (id) => apiFetch(`/api/personal/izin/${id}/print`, { method: 'POST' }),
   getDocument: (key) => apiFetch(`/api/personal/documents/${key}`),
   getAktaAnak: (idAnak) => apiFetch(`/api/personal/documents/anak/${idAnak}/akta`),
 

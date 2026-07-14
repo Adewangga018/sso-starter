@@ -2,6 +2,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Archive,
+  ArrowRight,
   Bell,
   CalendarCheck2,
   ClipboardCheck,
@@ -71,26 +72,40 @@ export default function DashboardPage() {
 
           if (!mod.enabled || !target) {
             return (
-              <div className="module-tile module-tile--disabled" key={mod.key}>
+              <div className="module-tile module-tile--disabled" key={mod.key} aria-disabled="true">
                 <div className="module-tile__icon">
-                  <Icon size={22} />
+                  <Icon size={24} />
                 </div>
-                <div className="module-tile__label">{mod.label}</div>
-                <div className="module-tile__subtitle">{mod.subtitle}</div>
-                <div className="module-tile__locked">
-                  <Lock size={11} /> Segera Hadir
+                <div className="module-tile__body">
+                  <div className="module-tile__label">{mod.label}</div>
+                  <div className="module-tile__subtitle">{mod.subtitle}</div>
+                </div>
+                <div className="module-tile__action module-tile__action--locked">
+                  <Lock size={12} /> Coming Soon
                 </div>
               </div>
             )
           }
 
           return (
-            <button type="button" className="module-tile" key={mod.key} onClick={() => navigate(target)}>
+            <button
+              type="button"
+              className="module-tile module-tile--open"
+              key={mod.key}
+              onClick={() => navigate(target)}
+              aria-label={`Buka modul ${mod.label}`}
+            >
               <div className="module-tile__icon module-tile__icon--active">
-                <Icon size={22} />
+                <Icon size={24} />
               </div>
-              <div className="module-tile__label">{mod.label}</div>
-              <div className="module-tile__subtitle">{mod.subtitle}</div>
+              <div className="module-tile__body">
+                <div className="module-tile__label">{mod.label}</div>
+                <div className="module-tile__subtitle">{mod.subtitle}</div>
+              </div>
+              <div className="module-tile__action">
+                <span>Buka Modul</span>
+                <ArrowRight size={14} className="module-tile__arrow" />
+              </div>
             </button>
           )
         })}

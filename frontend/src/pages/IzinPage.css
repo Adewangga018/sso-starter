@@ -1,21 +1,21 @@
-.spl__empty {
+.izin__empty {
   padding: 60px 0;
   text-align: center;
   color: var(--gcs-text-muted);
   font-size: 14px;
 }
 
-.spl__page-title {
+.izin__page-title {
   font-size: 22px;
   margin-bottom: 16px;
 }
 
-.spl__tabs {
+.izin__tabs {
   display: flex;
   gap: 4px;
 }
 
-.spl__tab {
+.izin__tab {
   border: 1px solid var(--gcs-border);
   border-bottom: none;
   background: var(--gcs-bg);
@@ -27,12 +27,12 @@
   cursor: pointer;
 }
 
-.spl__tab--active {
+.izin__tab--active {
   background: var(--gcs-white);
   color: var(--gcs-ink);
 }
 
-.spl__actionbar {
+.izin__actionbar {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -43,13 +43,13 @@
   border-radius: 0 10px 0 0;
 }
 
-.spl__filter {
+.izin__filter {
   position: relative;
   flex: 1;
   display: flex;
 }
 
-.spl__filter input {
+.izin__filter input {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -60,13 +60,13 @@
   outline: none;
 }
 
-.spl__filter input:focus {
+.izin__filter input:focus {
   background: var(--gcs-white);
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__filter-icon {
+.izin__filter-icon {
   position: absolute;
   right: 10px;
   top: 0;
@@ -77,12 +77,12 @@
   pointer-events: none;
 }
 
-.spl__actionbar-buttons {
+.izin__actionbar-buttons {
   display: flex;
   gap: 8px;
 }
 
-.spl__icon-btn {
+.izin__icon-btn {
   border: none;
   border-radius: 8px;
   width: 38px;
@@ -94,26 +94,26 @@
   cursor: pointer;
 }
 
-.spl__icon-btn--add {
+.izin__icon-btn--add {
   background: var(--gcs-green-600);
 }
 
-.spl__icon-btn--refresh {
+.izin__icon-btn--refresh {
   background: var(--gcs-green-500);
 }
 
-.spl__icon-btn:hover {
+.izin__icon-btn:hover {
   opacity: 0.9;
 }
 
-.spl__card {
+.izin__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
   border-radius: 0 0 14px 14px;
   padding: 20px 24px;
 }
 
-.spl__toolbar {
+.izin__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,8 +122,8 @@
   margin-bottom: 16px;
 }
 
-.spl__page-size,
-.spl__search {
+.izin__page-size,
+.izin__search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -131,8 +131,8 @@
   color: var(--gcs-text-muted);
 }
 
-.spl__page-size select,
-.spl__search input {
+.izin__page-size select,
+.izin__search input {
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
   padding: 6px 10px;
@@ -142,22 +142,22 @@
   outline: none;
 }
 
-.spl__search input {
+.izin__search input {
   min-width: 220px;
 }
 
-.spl__search input:focus {
+.izin__search input:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__table-wrap {
+.izin__table-wrap {
   overflow-x: auto;
   border: 1px solid var(--gcs-border);
   border-radius: 12px;
 }
 
-.spl__table {
+.izin__table {
   width: 100%;
   table-layout: fixed;
   min-width: 960px;
@@ -166,9 +166,9 @@
 }
 
 /* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .spl__table-wrap). */
-.spl__table th,
-.spl__table td {
+   (bingkai luar sudah dipegang oleh .izin__table-wrap). */
+.izin__table th,
+.izin__table td {
   padding: 12px 14px;
   text-align: center;
   vertical-align: middle;
@@ -176,17 +176,17 @@
   border-right: 1px solid var(--gcs-border);
 }
 
-.spl__table th:last-child,
-.spl__table td:last-child {
+.izin__table th:last-child,
+.izin__table td:last-child {
   border-right: none;
 }
 
 /* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.spl__table tbody tr:last-child td {
+.izin__table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.spl__table thead th {
+.izin__table thead th {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--gcs-ink);
@@ -195,64 +195,65 @@
   white-space: nowrap;
 }
 
-.spl__table tbody tr:hover td {
+.izin__table tbody tr:hover td {
   background: rgba(244, 174, 70, 0.06);
 }
 
-.spl__col-status {
+.izin__col-status {
   width: 13%;
 }
 
-.spl__col-kode {
+.izin__col-kode {
   width: 15%;
 }
 
-.spl__col-ket {
+.izin__col-ket {
   width: 30%;
 }
 
-.spl__col-jam {
+.izin__col-jam {
   width: 15%;
   white-space: nowrap;
 }
 
-.spl__col-jenis {
+.izin__col-jenis {
   width: 12%;
 }
 
-.spl__col-aksi {
-  width: 100px;
+/* Lebih lebar dari SPL: kolom ini memuat tiga tombol (cetak, ubah, hapus). */
+.izin__col-aksi {
+  width: 132px;
   text-align: center;
 }
 
-.spl__th--sortable {
+.izin__th--sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.spl__th--sortable:hover {
+.izin__th--sortable:hover {
   color: var(--gcs-green-600);
 }
 
-.spl__th-content {
+.izin__th-content {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.spl__sort-icon--idle {
+.izin__sort-icon--idle {
   opacity: 0.35;
 }
 
-.spl__status {
+.izin__status {
   font-weight: 600;
 }
 
-.spl__status--done {
+.izin__status--done {
   color: var(--gcs-green-600);
 }
 
-.spl__row-actions {
+.izin__row-actions {
   display: flex;
   gap: 8px;
   justify-content: center;
@@ -260,7 +261,7 @@
 
 /* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
    terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
-.spl__row-btn {
+.izin__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -273,43 +274,62 @@
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.spl__row-btn--edit {
+.izin__row-btn--edit {
   color: var(--gcs-gold-700);
   border-color: rgba(244, 174, 70, 0.45);
   background: rgba(244, 174, 70, 0.12);
 }
 
-.spl__row-btn--edit:hover {
+.izin__row-btn--edit:hover {
   color: #fff;
   border-color: var(--gcs-gold-600);
   background: var(--gcs-gold-600);
 }
 
-.spl__row-btn--delete {
+.izin__row-btn--delete {
   color: #c8352c;
   border-color: rgba(230, 72, 63, 0.4);
   background: rgba(230, 72, 63, 0.1);
 }
 
-.spl__row-btn--delete:hover {
+.izin__row-btn--delete:hover {
   color: #fff;
   border-color: #c8352c;
   background: #d63c32;
 }
 
-.spl__source {
+/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
+   izin yang sudah disetujui pun tetap perlu dicetak. */
+.izin__row-btn--print {
+  color: var(--gcs-green-600);
+  border-color: rgba(47, 108, 63, 0.35);
+  background: rgba(47, 108, 63, 0.1);
+}
+
+.izin__row-btn--print:hover {
+  color: #fff;
+  border-color: var(--gcs-green-600);
+  background: var(--gcs-green-600);
+}
+
+.izin__row-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.izin__source {
   color: var(--gcs-text-muted);
   font-size: 12px;
   margin-top: 2px;
 }
 
-.spl__no-data {
+.izin__no-data {
   text-align: center;
   color: var(--gcs-text-muted);
   padding: 24px;
 }
 
-.spl__footer {
+.izin__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -320,13 +340,13 @@
   color: var(--gcs-text-muted);
 }
 
-.spl__pagination {
+.izin__pagination {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.spl__pagination button {
+.izin__pagination button {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -336,22 +356,22 @@
   cursor: pointer;
 }
 
-.spl__pagination button:hover:not(:disabled) {
+.izin__pagination button:hover:not(:disabled) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.spl__pagination button:disabled {
+.izin__pagination button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.spl__page-indicator {
+.izin__page-indicator {
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.spl__error {
+.izin__error {
   margin-bottom: 12px;
   font-size: 12.5px;
   color: #b3261e;
@@ -361,7 +381,7 @@
 }
 
 /* Modal */
-.spl__modal-backdrop {
+.izin__modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 38, 31, 0.5);
@@ -372,7 +392,7 @@
   z-index: 50;
 }
 
-.spl__modal {
+.izin__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
@@ -382,7 +402,7 @@
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
 }
 
-.spl__modal-header {
+.izin__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -393,12 +413,12 @@
   border-radius: 14px 14px 0 0;
 }
 
-.spl__modal-header h3 {
+.izin__modal-header h3 {
   font-size: 17px;
   color: #fff;
 }
 
-.spl__modal-close {
+.izin__modal-close {
   border: none;
   background: none;
   color: rgba(255, 255, 255, 0.75);
@@ -407,15 +427,15 @@
   padding: 2px;
 }
 
-.spl__modal-close:hover {
+.izin__modal-close:hover {
   color: #fff;
 }
 
-.spl__modal-body {
+.izin__modal-body {
   padding: 22px;
 }
 
-.spl__field {
+.izin__field {
   display: grid;
   grid-template-columns: 130px 1fr;
   align-items: center;
@@ -423,15 +443,15 @@
   margin-bottom: 14px;
 }
 
-.spl__field > span {
+.izin__field > span {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.spl__field input,
-.spl__field select,
-.spl__field textarea {
+.izin__field input,
+.izin__field select,
+.izin__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -443,22 +463,37 @@
   outline: none;
 }
 
-.spl__field input:focus,
-.spl__field select:focus,
-.spl__field textarea:focus {
+.izin__field input:focus,
+.izin__field select:focus,
+.izin__field textarea:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__field--textarea {
+.izin__field--textarea {
   align-items: start;
 }
 
-.spl__field textarea {
+.izin__field--berkas {
+  align-items: start;
+}
+
+.izin__field--berkas input[type='file'] {
+  width: 100%;
+  font-size: 13px;
+}
+
+.izin__berkas-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.izin__field textarea {
   resize: vertical;
 }
 
-.spl__window-hint {
+.izin__window-hint {
   font-size: 12.5px;
   color: var(--gcs-text-muted);
   background: var(--gcs-bg);
@@ -467,12 +502,12 @@
   margin-bottom: 14px;
 }
 
-.spl__modal-footer {
+.izin__modal-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-.spl__submit {
+.izin__submit {
   border: none;
   border-radius: 8px;
   background: var(--gcs-gold-500);
@@ -483,21 +518,21 @@
   cursor: pointer;
 }
 
-.spl__submit:hover:not(:disabled) {
+.izin__submit:hover:not(:disabled) {
   opacity: 0.92;
 }
 
-.spl__submit:disabled {
+.izin__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 @media (max-width: 640px) {
-  .spl__card {
+  .izin__card {
     padding: 16px;
   }
 
-  .spl__field {
+  .izin__field {
     grid-template-columns: 1fr;
     gap: 6px;
   }

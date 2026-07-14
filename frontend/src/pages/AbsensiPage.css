@@ -63,6 +63,8 @@
 
 .absensi__table-wrap {
   overflow-x: auto;
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
 }
 
 .absensi__table {
@@ -76,18 +78,32 @@
   font-size: 13.5px;
 }
 
+/* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
+   (bingkai luar sudah dipegang oleh .absensi__table-wrap). */
 .absensi__table th,
 .absensi__table td {
   padding: 12px 14px;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   border-bottom: 1px solid var(--gcs-border);
+  border-right: 1px solid var(--gcs-border);
+}
+
+.absensi__table th:last-child,
+.absensi__table td:last-child {
+  border-right: none;
+}
+
+/* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
+.absensi__table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .absensi__table thead th {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.035);
   border-bottom: 2px solid var(--gcs-border);
 }
 
@@ -139,6 +155,11 @@
 
 .absensi__table tbody tr:nth-child(even) {
   background: var(--gcs-bg);
+}
+
+/* Ditaruh setelah aturan zebra agar hover menang atas warna baris genap. */
+.absensi__table tbody tr:hover td {
+  background: rgba(244, 174, 70, 0.06);
 }
 
 .absensi__badge {

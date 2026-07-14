@@ -13,6 +13,8 @@ import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
+import IzinPage from './pages/IzinPage'
+import IzinCetakPage from './pages/IzinCetakPage'
 
 export default function App() {
   return (
@@ -36,7 +38,12 @@ export default function App() {
               <Route path="profil" element={<ProfilPage />} />
               <Route path="absensi" element={<AbsensiPage />} />
               <Route path="lembur" element={<SplPage />} />
+              <Route path="izin" element={<IzinPage />} />
             </Route>
+
+            {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,
+                with no sidebar or header bleeding into the print output. */}
+            <Route path="/cetak/izin/:id" element={<IzinCetakPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

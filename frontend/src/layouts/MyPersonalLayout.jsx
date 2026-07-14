@@ -27,7 +27,7 @@ const SECTIONS = [
       { key: 'gaji', label: 'Gaji', icon: Wallet, disabled: true },
       { key: 'lembur', label: 'Lembur', icon: Clock3, to: '/my-personal/lembur' },
       { key: 'cuti', label: 'Cuti', icon: CalendarDays, disabled: true },
-      { key: 'izin', label: 'Izin', icon: FileSignature, disabled: true },
+      { key: 'izin', label: 'Izin', icon: FileSignature, to: '/my-personal/izin' },
       { key: 'sppd', label: 'SPPD', icon: Plane, disabled: true },
       { key: 'umdm', label: 'UMDM', icon: Banknote, disabled: true },
     ],

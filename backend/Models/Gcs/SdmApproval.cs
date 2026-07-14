@@ -8,6 +8,9 @@ public class SdmApproval
     public string KodePegawai { get; set; } = string.Empty;
     public string? KodeAtasan { get; set; }
     public string? NamaAtasan { get; set; }
+
+    // The supervisor's role as printed in the letter's addressee line ("Asisten Manager").
+    public string? TitleKepada { get; set; }
     public int? Urut { get; set; }
     public string? Status { get; set; }
 }
