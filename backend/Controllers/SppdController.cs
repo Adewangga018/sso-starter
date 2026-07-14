@@ -12,7 +12,7 @@ namespace SsoBackend.Controllers;
 
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-[Route("api/personal/sppd")]
+[Route("personal/sppd")]
 public class SppdController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

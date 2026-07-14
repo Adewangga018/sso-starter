@@ -11,7 +11,7 @@ namespace SsoBackend.Controllers;
 
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-[Route("api/personal/tiket")]
+[Route("personal/tiket")]
 public class TiketController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";
