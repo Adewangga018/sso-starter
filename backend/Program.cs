@@ -202,24 +202,41 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Diagnostic endpoint to confirm the backend is alive on IIS.
-app.MapGet("/health", async (ApplicationDbContext db) =>
+app.MapGet("/health", async (ApplicationDbContext db, GcsDbContext gcs) =>
 {
-    var dbConnected = false;
-    try
+    static async Task<bool> Probe(Func<Task<bool>> check)
     {
-        dbConnected = await db.Database.CanConnectAsync();
+        try { return await check(); }
+        catch { return false; }
     }
-    catch
+
+    var myGcsOk = await Probe(() => db.Database.CanConnectAsync());
+    var gcsOk = await Probe(() => gcs.Database.CanConnectAsync());
+
+    // CanConnect alone is misleading here: the SDM views (PEGAWAI_SDM, vw_web_sdm_absensi,
+    // vw_web_sdm_approval) read across into the GCSSDM database, which breaks SQL Server's
+    // ownership chaining - the login needs SELECT rights in GCSSDM too. Without them the
+    // connection still opens fine and only blows up later, as a 500, when a user opens the
+    // dashboard. So probe a view for real.
+    var gcsViewsOk = await Probe(async () =>
     {
-        dbConnected = false;
-    }
+        await gcs.PegawaiSdm.Take(1).ToListAsync();
+        return true;
+    });
+
+    var healthy = myGcsOk && gcsOk && gcsViewsOk;
 
     return Results.Ok(new
     {
-        status = "OK - Backend berjalan",
+        status = healthy
+            ? "OK - Backend berjalan"
+            : "DEGRADED - ada koneksi/izin database yang gagal",
         environment = app.Environment.EnvironmentName,
         machineName = Environment.MachineName,
-        databaseConnected = dbConnected,
+        databaseConnected = myGcsOk,
+        gcsDatabaseConnected = gcsOk,
+        // false = login SQL belum punya izin baca di GCSSDM (lihat DEPLOY-IIS.md Bab 3)
+        gcsSdmViewsReadable = gcsViewsOk,
         serverTimeUtc = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC"
     });
 });

@@ -87,10 +87,28 @@ ALTER ROLE db_datareader ADD MEMBER svc_mygcs;                         -- baca: 
 GRANT INSERT, UPDATE, DELETE ON dbo.web_sdm_spl        TO svc_mygcs;   -- Lembur (SPL)
 GRANT INSERT, UPDATE, DELETE ON dbo.web_sdm_surat_ijin TO svc_mygcs;   -- Izin (surat izin)
 GRANT INSERT                 ON intranet.web_ttd_elektronik TO svc_mygcs; -- registry QR validasi (cetak izin)
+
+-- GCSSDM: WAJIB. View SDM di GCS (PEGAWAI_SDM, vw_web_sdm_absensi, vw_web_sdm_approval)
+-- membaca lintas-database ke GCSSDM. View lintas-database MEMUTUS ownership chaining, jadi
+-- login pemanggil harus punya izin SELECT di GCSSDM juga - kalau tidak, koneksi tetap sukses
+-- tapi SELECT view gagal => Dashboard/Absensi HTTP 500, dan pengajuan Lembur/Izin gagal
+-- (keduanya mencari atasan lewat vw_web_sdm_approval).
+USE GCSSDM; CREATE USER svc_mygcs FOR LOGIN svc_mygcs;
+ALTER ROLE db_datareader ADD MEMBER svc_mygcs;   -- tabel & view (ABSENSI_DETAIL, CHECK_CLOCK, HARI_LIBUR_TAB, pegawai)
+
+-- db_datareader TIDAK mencakup scalar function. View SDM memanggil 3 function ini,
+-- jadi tanpa EXECUTE: Absensi -> 500, dan pengajuan Lembur/Izin gagal (getDireksi
+-- dipakai vw_web_sdm_approval untuk mencari atasan penyetuju).
+GRANT EXECUTE ON dbo.checkSppdCuti     TO svc_mygcs;
+GRANT EXECUTE ON dbo.getCatatanMangkir TO svc_mygcs;
+GRANT EXECUTE ON dbo.getDireksi        TO svc_mygcs;
 ```
-> ⚠️ Tabel `web_sdm_spl` & `web_sdm_surat_ijin` punya **trigger legacy** yang bisa menulis ke
+> ⚠️ Tabel `web_sdm_spl` & `web_sdm_surat_ijin` punya **trigger legacy** yang bisa **menulis** ke
 > tabel/basis data SDM lain (mis. `GCSSDM`). Bila pengajuan gagal karena error permission dari
-> trigger, koordinasikan dengan DBA/tim SDM untuk hak akses tambahan yang dibutuhkan trigger.
+> trigger, koordinasikan dengan DBA/tim SDM untuk hak tulis tambahan yang dibutuhkan trigger.
+>
+> **Cek cepat setelah deploy:** `GET /api/health` harus menunjukkan `gcsSdmViewsReadable: true`.
+> Kalau `false`, izin di `GCSSDM` di atas belum diberikan.
 > ⚠️ Password `sa` & key `Jwt` lama sudah bocor di histori git commit pertama — anggap kompromi,
 > jangan dipakai; login khusus di atas menggantikannya. Bila perlu bersihkan histori (`git filter-repo`/BFG).
 
@@ -224,9 +242,19 @@ Urutan cek:
 
 1. **Backend hidup** → buka `https://my.gcs-gresik.com/api/`
    → muncul halaman **logo + "Backend berhasil di-deploy ke IIS"**.
-2. **Health** → `https://my.gcs-gresik.com/api/health`
-   → `{"status":"OK - Backend berjalan","databaseConnected":true,...}`.
-   `databaseConnected:true` = koneksi `db_mygcs` OK.
+2. **Health** → `https://my.gcs-gresik.com/api/health` — **ketiga flag harus `true`**:
+   ```json
+   {
+     "status": "OK - Backend berjalan",
+     "databaseConnected": true,        // db_mygcs (Identity/OpenIddict/audit)
+     "gcsDatabaseConnected": true,     // GCS (data SDM)
+     "gcsSdmViewsReadable": true       // view SDM lintas-database ke GCSSDM
+   }
+   ```
+   Kalau `status` = `DEGRADED`, lihat flag mana yang `false`:
+   - `gcsDatabaseConnected:false` → `ConnectionStrings__GcsConnection` salah.
+   - **`gcsSdmViewsReadable:false`** → login SQL belum punya izin **SELECT di `GCSSDM`** (Bab 3).
+     Gejalanya: Dashboard & Absensi HTTP 500, pengajuan Lembur/Izin gagal.
 3. **Discovery OIDC** → `https://my.gcs-gresik.com/api/.well-known/openid-configuration`
    → cek `"issuer": "https://my.gcs-gresik.com/api"` (harus **sama** dengan authority frontend).
 4. **Frontend** → buka `https://my.gcs-gresik.com/`
