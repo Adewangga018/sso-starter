@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Gcs;
@@ -10,7 +11,7 @@ using SsoBackend.Services;
 namespace SsoBackend.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("api/personal/izin")]
 public class IzinController : ControllerBase
 {
