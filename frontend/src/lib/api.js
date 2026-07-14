@@ -11,6 +11,14 @@ export class ApiError extends Error {
   }
 }
 
+// The list endpoints answer 404 when the signed-in account cannot be matched to an
+// employee record. The pages treat that as "no rows" and render an empty table rather
+// than an error banner. Only 404 is swallowed - a 500 or a network failure still surfaces,
+// so a genuinely broken backend never masquerades as an empty list.
+export function isEmptyDataError(err) {
+  return err instanceof ApiError && err.status === 404
+}
+
 async function apiFetch(path, options = {}) {
   const user = await userManager.getUser()
   const headers = { ...(options.headers || {}) }

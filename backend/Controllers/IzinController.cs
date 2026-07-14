@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Gcs;
@@ -10,7 +11,10 @@ using SsoBackend.Services;
 namespace SsoBackend.Controllers;
 
 [ApiController]
-[Authorize]
+// Must pin the OpenIddict scheme like the other API controllers: plain [Authorize] falls
+// back to the Identity cookie, whose principal carries no "nik" claim, so resolving the
+// employee would always fail even for a perfectly valid caller.
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("api/personal/izin")]
 public class IzinController : ControllerBase
 {

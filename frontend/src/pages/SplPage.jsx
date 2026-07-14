@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUp, ArrowDown, ArrowUpDown, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
-import { api, ApiError } from '../lib/api'
+import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './SplPage.css'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -77,6 +77,11 @@ export default function SplPage() {
       setWindow(data.window)
       setLoadError('')
     } catch (err) {
+      if (isEmptyDataError(err)) {
+        setRows([])
+        setLoadError('')
+        return
+      }
       setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat data SPL.')
     }
   }
