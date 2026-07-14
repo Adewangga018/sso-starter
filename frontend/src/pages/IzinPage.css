@@ -157,10 +157,12 @@
   border-radius: 12px;
 }
 
+/* Tabel izin punya satu kolom lebih banyak daripada SPL (Kepentingan), jadi butuh ruang
+   lebih lebar - di bawah ini kolom Jam mulai berdesakan dan pembungkusnya menggulir. */
 .izin__table {
   width: 100%;
   table-layout: fixed;
-  min-width: 960px;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -199,18 +201,21 @@
   background: rgba(244, 174, 70, 0.06);
 }
 
+/* Lebar kolom dijaga agar totalnya tidak melebihi 100% - itu penyebab kolom jam terjepit:
+   lebar warisan SPL (13+15+30+15+15+12) masih ditambah kolom Kepentingan yang baru. */
 .izin__col-status {
-  width: 13%;
+  width: 10%;
 }
 
 .izin__col-kode {
-  width: 15%;
+  width: 11%;
 }
 
 .izin__col-ket {
-  width: 30%;
+  width: 23%;
 }
 
+/* Tanggal + jam ("06-07-2026 07:00") harus muat dalam satu baris. */
 .izin__col-jam {
   width: 15%;
   white-space: nowrap;
@@ -218,6 +223,10 @@
 
 .izin__col-jenis {
   width: 12%;
+}
+
+.izin__col-kepentingan {
+  width: 10%;
 }
 
 /* Lebih lebar dari SPL: kolom ini memuat tiga tombol (cetak, ubah, hapus). */

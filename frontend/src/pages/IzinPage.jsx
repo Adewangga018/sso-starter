@@ -37,7 +37,7 @@ const COLUMNS = [
   { key: 'jamMulai', label: 'Jam Mulai', className: 'izin__col-jam' },
   { key: 'jamSelesai', label: 'Jam Selesai', className: 'izin__col-jam' },
   { key: 'jenisIjin', label: 'Jenis', className: 'izin__col-jenis' },
-  { key: 'kepentinganIjin', label: 'Kepentingan', className: 'izin__col-jenis' },
+  { key: 'kepentinganIjin', label: 'Kepentingan', className: 'izin__col-kepentingan' },
 ]
 
 const FILTER_PLACEHOLDER = 'Cari kode izin, keterangan, atau jenis izin...'
@@ -401,7 +401,7 @@ export default function IzinPage() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={COLUMNS.length + 1} className="izin__no-data">
-                    Tidak ada data yang cocok.
+                    Tidak ada data.
                   </td>
                 </tr>
               )}
@@ -420,7 +420,7 @@ export default function IzinPage() {
                     <div>{row.jenisIjin}</div>
                     <div className="izin__source">{row.source}</div>
                   </td>
-                  <td className="izin__col-jenis">{row.kepentinganIjin}</td>
+                  <td className="izin__col-kepentingan">{row.kepentinganIjin}</td>
                   <td className="izin__col-aksi">
                     <div className="izin__row-actions">
                       <button
@@ -568,9 +568,9 @@ export default function IzinPage() {
                 </label>
               )}
 
-              <div className="izin__window-hint">
+              {/* <div className="izin__window-hint">
                 Izin bisa diajukan mulai H-1 ({formatDateOnly(minTanggal())}) dan untuk tanggal seterusnya.
-              </div>
+              </div> */}
 
               {formError && <div className="izin__error">{formError}</div>}
 

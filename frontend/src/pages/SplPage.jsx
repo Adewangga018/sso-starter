@@ -337,7 +337,7 @@ export default function SplPage() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={COLUMNS.length + (isDibuatTab ? 1 : 0)} className="spl__no-data">
-                    Tidak ada data yang cocok.
+                    Tidak ada data.
                   </td>
                 </tr>
               )}
@@ -468,10 +468,10 @@ export default function SplPage() {
                 />
               </label>
 
-              <div className="spl__window-hint">
+              {/* <div className="spl__window-hint">
                 Tanggal lembur hanya bisa diajukan untuk hari ini atau hari sebelumnya
                 {minDate && maxDate ? ` (${formatDateOnly(minDate)} s/d ${formatDateOnly(maxDate)})` : ''}.
-              </div>
+              </div> */}
 
               {formError && <div className="spl__error">{formError}</div>}
 

@@ -181,7 +181,7 @@ export default function AbsensiPage() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={COLUMNS.length + 1} className="absensi__no-data">
-                    Tidak ada data yang cocok.
+                    Tidak ada data.
                   </td>
                 </tr>
               )}
