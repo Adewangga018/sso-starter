@@ -1,21 +1,21 @@
-.izin__empty {
+.sppd__empty {
   padding: 60px 0;
   text-align: center;
   color: var(--gcs-text-muted);
   font-size: 14px;
 }
 
-.izin__page-title {
+.sppd__page-title {
   font-size: 22px;
   margin-bottom: 16px;
 }
 
-.izin__tabs {
+.sppd__tabs {
   display: flex;
   gap: 4px;
 }
 
-.izin__tab {
+.sppd__tab {
   border: 1px solid var(--gcs-border);
   border-bottom: none;
   background: var(--gcs-bg);
@@ -27,12 +27,12 @@
   cursor: pointer;
 }
 
-.izin__tab--active {
+.sppd__tab--active {
   background: var(--gcs-white);
   color: var(--gcs-ink);
 }
 
-.izin__actionbar {
+.sppd__actionbar {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -43,13 +43,13 @@
   border-radius: 0 10px 0 0;
 }
 
-.izin__filter {
+.sppd__filter {
   position: relative;
   flex: 1;
   display: flex;
 }
 
-.izin__filter input {
+.sppd__filter input {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -60,13 +60,13 @@
   outline: none;
 }
 
-.izin__filter input:focus {
+.sppd__filter input:focus {
   background: var(--gcs-white);
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.izin__filter-icon {
+.sppd__filter-icon {
   position: absolute;
   right: 10px;
   top: 0;
@@ -77,12 +77,12 @@
   pointer-events: none;
 }
 
-.izin__actionbar-buttons {
+.sppd__actionbar-buttons {
   display: flex;
   gap: 8px;
 }
 
-.izin__icon-btn {
+.sppd__icon-btn {
   border: none;
   border-radius: 8px;
   width: 38px;
@@ -94,26 +94,26 @@
   cursor: pointer;
 }
 
-.izin__icon-btn--add {
+.sppd__icon-btn--add {
   background: var(--gcs-green-600);
 }
 
-.izin__icon-btn--refresh {
+.sppd__icon-btn--refresh {
   background: var(--gcs-green-500);
 }
 
-.izin__icon-btn:hover {
+.sppd__icon-btn:hover {
   opacity: 0.9;
 }
 
-.izin__card {
+.sppd__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
   border-radius: 0 0 14px 14px;
   padding: 20px 24px;
 }
 
-.izin__toolbar {
+.sppd__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,8 +122,8 @@
   margin-bottom: 16px;
 }
 
-.izin__page-size,
-.izin__search {
+.sppd__page-size,
+.sppd__search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -131,8 +131,8 @@
   color: var(--gcs-text-muted);
 }
 
-.izin__page-size select,
-.izin__search input {
+.sppd__page-size select,
+.sppd__search input {
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
   padding: 6px 10px;
@@ -142,35 +142,37 @@
   outline: none;
 }
 
-.izin__search input {
+.sppd__search input {
   min-width: 220px;
 }
 
-.izin__search input:focus {
+.sppd__search input:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.izin__table-wrap {
+.sppd__table-wrap {
   overflow-x: auto;
   border: 1px solid var(--gcs-border);
   border-radius: 12px;
 }
 
-/* Tabel izin punya satu kolom lebih banyak daripada SPL (Kepentingan), jadi butuh ruang
-   lebih lebar - di bawah ini kolom Jam mulai berdesakan dan pembungkusnya menggulir. */
-.izin__table {
+/* Sembilan kolom - butuh ruang paling lebar di antara tabel My Personal. Di bawah lebar ini
+   pembungkusnya menggulir horizontal, bukan memampatkan isi kolom. */
+.sppd__table {
   width: 100%;
   table-layout: fixed;
-  min-width: 1180px;
+  min-width: 1560px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
 
 /* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .izin__table-wrap). */
-.izin__table th,
-.izin__table td {
+   (bingkai luar sudah dipegang oleh .sppd__table-wrap). */
+/* Padding kiri-kanan dibuat lega untuk SEMUA sel, bukan ditambal per kolom: isi kolom mana
+   pun (kode SPPD, tanggal, transportasi) sama-sama tidak boleh menempel ke sekat. */
+.sppd__table th,
+.sppd__table td {
   padding: 14px 20px;
   text-align: center;
   vertical-align: middle;
@@ -178,17 +180,17 @@
   border-right: 1px solid var(--gcs-border);
 }
 
-.izin__table th:last-child,
-.izin__table td:last-child {
+.sppd__table th:last-child,
+.sppd__table td:last-child {
   border-right: none;
 }
 
 /* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.izin__table tbody tr:last-child td {
+.sppd__table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.izin__table thead th {
+.sppd__table thead th {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--gcs-ink);
@@ -197,72 +199,124 @@
   white-space: nowrap;
 }
 
-.izin__table tbody tr:hover td {
+.sppd__table tbody tr:hover td {
   background: rgba(244, 174, 70, 0.06);
 }
 
-/* Lebar kolom dijaga agar totalnya tidak melebihi 100% - itu penyebab kolom jam terjepit:
-   lebar warisan SPL (13+15+30+15+15+12) masih ditambah kolom Kepentingan yang baru. */
-.izin__col-status {
+/* Sembilan kolom - total lebar dijaga di bawah 100% supaya tidak ada yang terjepit;
+   di bawah min-width tabel, pembungkusnya menggulir. */
+.sppd__col-status {
+  width: 8%;
+}
+
+.sppd__col-tgl {
   width: 10%;
-}
-
-.izin__col-kode {
-  width: 11%;
-}
-
-.izin__col-ket {
-  width: 23%;
-}
-
-/* Tanggal + jam ("06-07-2026 07:00") harus muat dalam satu baris. */
-.izin__col-jam {
-  width: 15%;
   white-space: nowrap;
 }
 
-.izin__col-jenis {
-  width: 12%;
+/* Kode SPPD ("ISP202607000024") lebih panjang dari yang terlihat. Kalau kolomnya kurang
+   lebar, teksnya meluber melewati padding dan tampak condong ke kanan - bukan salah
+   perataan, melainkan kurang ruang. Nowrap supaya tidak terpotong jadi dua baris. */
+.sppd__col-kode {
+  width: 14%;
+  white-space: nowrap;
 }
 
-.izin__col-kepentingan {
-  width: 10%;
+.sppd__col-tujuan {
+  width: 9%;
 }
 
-/* Lebih lebar dari SPL: kolom ini memuat tiga tombol (cetak, ubah, hapus). */
-.izin__col-aksi {
-  width: 132px;
+/* Dua kolom ini memuat daftar (bisa beberapa peserta), jadi paling lebar dan rata kiri -
+   teks panjang yang rata tengah jauh lebih sulit dibaca saat membungkus ke baris baru. */
+.sppd__col-nama {
+  width: 14%;
+  text-align: left;
+}
+
+.sppd__col-tugas {
+  width: 14%;
+  text-align: left;
+}
+
+.sppd__col-kendaraan {
+  width: 9%;
+}
+
+/* Daftar peserta: bernomor supaya batas antar orang jelas, bukan sekadar baris menumpuk
+   yang tak bisa dibedakan dari teks yang membungkus. */
+.sppd__list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: decimal;
+  text-align: left;
+}
+
+.sppd__list li + li {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--gcs-border);
+}
+
+/* Satu peserta saja tidak perlu nomor - "1." di baris tunggal hanya jadi derau visual. */
+.sppd__list li:only-child {
+  list-style: none;
+  margin-left: -18px;
+}
+
+/* Sel dengan daftar diratakan ke atas agar sejajar dengan kolom lain di baris yang sama. */
+.sppd__table td.sppd__col-nama,
+.sppd__table td.sppd__col-tugas {
+  vertical-align: top;
+}
+
+/* Rata kiri hanya untuk isinya; judul kolom tetap di tengah seperti kolom lain - kelas
+   kolom menempel di <th> juga, jadi harus dikembalikan di sini. */
+.sppd__table th.sppd__col-nama,
+.sppd__table th.sppd__col-tugas {
   text-align: center;
 }
 
-.izin__th--sortable {
+/* Memuat sampai empat tombol: cetak, rincian, ubah, hapus. */
+.sppd__col-aksi {
+  width: 168px;
+  text-align: center;
+}
+
+.sppd__th--sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.izin__th--sortable:hover {
+.sppd__th--sortable:hover {
   color: var(--gcs-green-600);
 }
 
-.izin__th-content {
+/* Judul kolom SPPD panjang-panjang ("Tugas yang dilaksanakan"), jadi ikon sort mudah
+   menempel ke hurufnya. Jarak dilebarkan dan ikon dijaga agar tidak ikut menyusut. */
+.sppd__th-content {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
-.izin__sort-icon--idle {
+.sppd__th-content svg {
+  flex-shrink: 0;
+}
+
+
+.sppd__sort-icon--idle {
   opacity: 0.35;
 }
 
-.izin__status {
+.sppd__status {
   font-weight: 600;
 }
 
-.izin__status--done {
+.sppd__status--done {
   color: var(--gcs-green-600);
 }
 
-.izin__row-actions {
+.sppd__row-actions {
   display: flex;
   gap: 8px;
   justify-content: center;
@@ -270,7 +324,7 @@
 
 /* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
    terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
-.izin__row-btn {
+.sppd__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -283,62 +337,62 @@
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.izin__row-btn--edit {
+.sppd__row-btn--edit {
   color: var(--gcs-gold-700);
   border-color: rgba(244, 174, 70, 0.45);
   background: rgba(244, 174, 70, 0.12);
 }
 
-.izin__row-btn--edit:hover {
+.sppd__row-btn--edit:hover {
   color: #fff;
   border-color: var(--gcs-gold-600);
   background: var(--gcs-gold-600);
 }
 
-.izin__row-btn--delete {
+.sppd__row-btn--delete {
   color: #c8352c;
   border-color: rgba(230, 72, 63, 0.4);
   background: rgba(230, 72, 63, 0.1);
 }
 
-.izin__row-btn--delete:hover {
+.sppd__row-btn--delete:hover {
   color: #fff;
   border-color: #c8352c;
   background: #d63c32;
 }
 
 /* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
-   izin yang sudah disetujui pun tetap perlu dicetak. */
-.izin__row-btn--print {
+   sppd yang sudah disetujui pun tetap perlu dicetak. */
+.sppd__row-btn--print {
   color: var(--gcs-green-600);
   border-color: rgba(47, 108, 63, 0.35);
   background: rgba(47, 108, 63, 0.1);
 }
 
-.izin__row-btn--print:hover {
+.sppd__row-btn--print:hover {
   color: #fff;
   border-color: var(--gcs-green-600);
   background: var(--gcs-green-600);
 }
 
-.izin__row-btn:disabled {
+.sppd__row-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.izin__source {
+.sppd__source {
   color: var(--gcs-text-muted);
   font-size: 12px;
   margin-top: 2px;
 }
 
-.izin__no-data {
+.sppd__no-data {
   text-align: center;
   color: var(--gcs-text-muted);
   padding: 24px;
 }
 
-.izin__footer {
+.sppd__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -349,13 +403,13 @@
   color: var(--gcs-text-muted);
 }
 
-.izin__pagination {
+.sppd__pagination {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.izin__pagination button {
+.sppd__pagination button {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -365,22 +419,22 @@
   cursor: pointer;
 }
 
-.izin__pagination button:hover:not(:disabled) {
+.sppd__pagination button:hover:not(:disabled) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.izin__pagination button:disabled {
+.sppd__pagination button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.izin__page-indicator {
+.sppd__page-indicator {
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.izin__error {
+.sppd__error {
   margin-bottom: 12px;
   font-size: 12.5px;
   color: #b3261e;
@@ -390,7 +444,7 @@
 }
 
 /* Modal */
-.izin__modal-backdrop {
+.sppd__modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 38, 31, 0.5);
@@ -401,7 +455,7 @@
   z-index: 50;
 }
 
-.izin__modal {
+.sppd__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
@@ -411,7 +465,7 @@
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
 }
 
-.izin__modal-header {
+.sppd__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -422,12 +476,12 @@
   border-radius: 14px 14px 0 0;
 }
 
-.izin__modal-header h3 {
+.sppd__modal-header h3 {
   font-size: 17px;
   color: #fff;
 }
 
-.izin__modal-close {
+.sppd__modal-close {
   border: none;
   background: none;
   color: rgba(255, 255, 255, 0.75);
@@ -436,15 +490,15 @@
   padding: 2px;
 }
 
-.izin__modal-close:hover {
+.sppd__modal-close:hover {
   color: #fff;
 }
 
-.izin__modal-body {
+.sppd__modal-body {
   padding: 22px;
 }
 
-.izin__field {
+.sppd__field {
   display: grid;
   grid-template-columns: 130px 1fr;
   align-items: center;
@@ -452,15 +506,15 @@
   margin-bottom: 14px;
 }
 
-.izin__field > span {
+.sppd__field > span {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.izin__field input,
-.izin__field select,
-.izin__field textarea {
+.sppd__field input,
+.sppd__field select,
+.sppd__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -472,37 +526,37 @@
   outline: none;
 }
 
-.izin__field input:focus,
-.izin__field select:focus,
-.izin__field textarea:focus {
+.sppd__field input:focus,
+.sppd__field select:focus,
+.sppd__field textarea:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.izin__field--textarea {
+.sppd__field--textarea {
   align-items: start;
 }
 
-.izin__field--berkas {
+.sppd__field--berkas {
   align-items: start;
 }
 
-.izin__field--berkas input[type='file'] {
+.sppd__field--berkas input[type='file'] {
   width: 100%;
   font-size: 13px;
 }
 
-.izin__berkas-hint {
+.sppd__berkas-hint {
   margin-top: 6px;
   font-size: 12px;
   color: var(--gcs-text-muted);
 }
 
-.izin__field textarea {
+.sppd__field textarea {
   resize: vertical;
 }
 
-.izin__window-hint {
+.sppd__window-hint {
   font-size: 12.5px;
   color: var(--gcs-text-muted);
   background: var(--gcs-bg);
@@ -511,12 +565,12 @@
   margin-bottom: 14px;
 }
 
-.izin__modal-footer {
+.sppd__modal-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-.izin__submit {
+.sppd__submit {
   border: none;
   border-radius: 8px;
   background: var(--gcs-gold-500);
@@ -527,22 +581,125 @@
   cursor: pointer;
 }
 
-.izin__submit:hover:not(:disabled) {
+.sppd__submit:hover:not(:disabled) {
   opacity: 0.92;
 }
 
-.izin__submit:disabled {
+.sppd__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 @media (max-width: 640px) {
-  .izin__card {
+  .sppd__card {
     padding: 16px;
   }
 
-  .izin__field {
+  .sppd__field {
     grid-template-columns: 1fr;
     gap: 6px;
   }
+}
+
+/* --- Tambahan khusus SPPD --- */
+
+/* Modal rincian & pencari pegawai memuat tabel, jadi lebih lebar dari modal form biasa. */
+.sppd__modal--wide {
+  max-width: 860px;
+}
+
+.sppd__peserta {
+  padding: 0 24px 20px;
+  overflow-x: auto;
+}
+
+/* Tabel di dalam modal: lebih ringkas dan tidak perlu lebar minimum halaman. */
+.sppd__table--peserta {
+  min-width: 0;
+  table-layout: auto;
+  border: 1px solid var(--gcs-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Kolom NIK: input hanya-baca + tombol pencarian di sampingnya. */
+.sppd__nik {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.sppd__nik input {
+  flex: 1;
+}
+
+.sppd__nik button {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 8px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gcs-green-600);
+  cursor: pointer;
+}
+
+.sppd__nik button:hover {
+  background: var(--gcs-green-600);
+  border-color: var(--gcs-green-600);
+  color: #fff;
+}
+
+/* Rincian peserta: biru, dibedakan dari cetak (hijau), ubah (kuning), hapus (merah). */
+.sppd__row-btn--detail {
+  color: #1f6fb2;
+  border-color: rgba(31, 111, 178, 0.4);
+  background: rgba(31, 111, 178, 0.1);
+}
+
+.sppd__row-btn--detail:hover {
+  color: #fff;
+  border-color: #1f6fb2;
+  background: #2a80c8;
+}
+
+.sppd__row-btn--pick {
+  color: var(--gcs-green-600);
+  border-color: rgba(47, 108, 63, 0.35);
+  background: rgba(47, 108, 63, 0.1);
+}
+
+.sppd__row-btn--pick:hover {
+  color: #fff;
+  border-color: var(--gcs-green-600);
+  background: var(--gcs-green-600);
+}
+
+.sppd__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Baris peserta yang sedang diubah disorot, supaya jelas isi form itu milik baris mana. */
+.sppd__row--editing td {
+  background: rgba(244, 174, 70, 0.14);
+}
+
+.sppd__cancel {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.sppd__cancel:hover {
+  border-color: var(--gcs-ink);
+  color: var(--gcs-ink);
 }

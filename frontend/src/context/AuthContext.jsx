@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { userManager } from '../lib/auth'
+import { useIdleLogout } from '../hooks/useIdleLogout'
 
 const AuthContext = createContext(null)
 
@@ -25,21 +26,36 @@ export function AuthProvider({ children }) {
     async function bootstrap() {
       const user = await userManager.getUser()
       if (cancelled) return
+
       if (user && !user.expired) {
         setOidcUser(user)
         await loadSummary()
+      } else if (user) {
+        // Token sudah kedaluwarsa saat halaman dibuka. Perpanjang sekarang juga daripada
+        // menunggu automaticSilentRenew - kalau tidak, halaman tampil kosong sampai
+        // pengguna menekan refresh sendiri. Keberhasilannya memicu handleLoaded di bawah,
+        // yang memuat ringkasannya.
+        try {
+          await userManager.signinSilent()
+        } catch {
+          // Refresh token ikut mati - biarkan RequireAuth mengarahkan ke halaman login.
+        }
       }
-      setInitializing(false)
+
+      if (!cancelled) setInitializing(false)
     }
 
     bootstrap()
 
-    // Fires on interactive login (via /callback) and on silent token renew. Refresh the
-    // dashboard data too, otherwise after login the UI stays empty until a full page reload.
+    // Fires on login and on every silent token renew. The summary must be reloaded here, not
+    // only in bootstrap(): if the stored token was already expired at page load, the first
+    // fetch failed and summary stayed null - leaving the dashboard blank ("?" avatar, no
+    // modules) until the user hit refresh by hand.
     const handleLoaded = (user) => {
       setOidcUser(user)
       loadSummary()
     }
+
     const handleUnloaded = () => {
       setOidcUser(null)
       setSummary(null)
@@ -72,6 +88,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   const isAuthenticated = Boolean(oidcUser && !oidcUser.expired)
+
+  // Sesi berakhir kalau aplikasi ditinggal diam terlalu lama. Tanpa ini, refresh token
+  // (offline_access) akan terus memperpanjang akses tanpa batas selama tab dibiarkan
+  // terbuka - berbahaya di komputer bersama.
+  useIdleLogout(isAuthenticated, useCallback(() => logout(), [logout]))
 
   const roles = oidcUser?.profile?.role
   const isAdmin = isAuthenticated &&

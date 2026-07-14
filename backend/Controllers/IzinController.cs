@@ -42,13 +42,20 @@ public class IzinController : ControllerBase
 
     private static readonly string[] AllowedKepentingan = ["Dinas", "Pribadi"];
 
+    // Surat dokter (izin sakit). Nothing about the file is recorded in the database: EASy
+    // finds it purely by name, so the file IS the record and its name must be the kode_ijin.
+    private static readonly string[] AllowedBerkasExt = [".pdf", ".png", ".jpg", ".jpeg"];
+    private const long MaxBerkasBytes = 10 * 1024 * 1024;
+
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
+    private readonly IConfiguration _config;
 
-    public IzinController(GcsDbContext db, CurrentUserContext currentUser)
+    public IzinController(GcsDbContext db, CurrentUserContext currentUser, IConfiguration config)
     {
         _db = db;
         _currentUser = currentUser;
+        _config = config;
     }
 
     [HttpGet]
@@ -187,6 +194,73 @@ public class IzinController : ControllerBase
         return NoContent();
     }
 
+    // Stores the doctor's note for a Sakit izin. There is no database record for it at all -
+    // EASy locates the file by name alone, so the file is named after the kode_ijin and
+    // dropped into the shared folder (SuratDokter:Path, a UNC share in production).
+    // Re-uploading replaces the previous file, which is what "ganti surat dokter" should do.
+    [HttpPost("{id:long}/surat-dokter")]
+    [RequestSizeLimit(MaxBerkasBytes)]
+    public async Task<IActionResult> UploadSuratDokter(long id, IFormFile file)
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null)
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Berkas surat dokter kosong." });
+        }
+
+        if (file.Length > MaxBerkasBytes)
+        {
+            return BadRequest(new { message = "Ukuran berkas maksimal 10 MB." });
+        }
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedBerkasExt.Contains(ext))
+        {
+            return BadRequest(new { message = "Surat dokter harus berupa file PDF, PNG, JPG, atau JPEG." });
+        }
+
+        var basePath = _config["SuratDokter:Path"];
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = "Penyimpanan surat dokter belum dikonfigurasi (SuratDokter:Path). Hubungi IT."
+            });
+        }
+
+        var izin = await _db.WebSdmSuratIjin
+            .FirstOrDefaultAsync(s => s.id == id && s.id_user == pegawai.ID_KARYAWAN);
+        if (izin is null)
+        {
+            return NotFound(new { message = "Izin tidak ditemukan." });
+        }
+
+        if (string.IsNullOrWhiteSpace(izin.kode_ijin))
+        {
+            return BadRequest(new { message = "Kode izin belum terbit, coba muat ulang halaman." });
+        }
+
+        // kode_ijin comes from the database, but it lands in a file path - so refuse anything
+        // that is not the plain numeric code rather than trusting it blindly.
+        if (!izin.kode_ijin.All(char.IsAsciiDigit))
+        {
+            return BadRequest(new { message = "Kode izin tidak valid untuk penamaan berkas." });
+        }
+
+        Directory.CreateDirectory(basePath);
+        var target = Path.Combine(basePath, izin.kode_ijin + ext);
+
+        await using var stream = System.IO.File.Create(target);
+        await file.CopyToAsync(stream);
+
+        return NoContent();
+    }
+
     // Assembles the printed letter and registers the document for QR validation.
     [HttpPost("{id:long}/print")]
     public async Task<ActionResult<IzinPrintDto>> Print(long id)
@@ -227,7 +301,9 @@ public class IzinController : ControllerBase
             izin.kode_ijin!,
             pegawai.NAMA_LENGKAP,
             pegawai.ID_KARYAWAN,
-            sdm?.REGU?.Trim(),
+            // UNIT_KERJA, not REGU: REGU is blank for department-level staff, which would
+            // print an empty "Kelompok" line on their letter.
+            (sdm?.UNIT_KERJA ?? sdm?.REGU)?.Trim(),
             BuildKepada(atasan?.TitleKepada, sdm?.BAGIAN),
             atasan?.NamaAtasan?.Trim(),
             izin.jenis_ijin,

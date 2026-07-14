@@ -1,21 +1,21 @@
-.spl__empty {
+.tiket__empty {
   padding: 60px 0;
   text-align: center;
   color: var(--gcs-text-muted);
   font-size: 14px;
 }
 
-.spl__page-title {
+.tiket__page-title {
   font-size: 22px;
   margin-bottom: 16px;
 }
 
-.spl__tabs {
+.tiket__tabs {
   display: flex;
   gap: 4px;
 }
 
-.spl__tab {
+.tiket__tab {
   border: 1px solid var(--gcs-border);
   border-bottom: none;
   background: var(--gcs-bg);
@@ -27,12 +27,12 @@
   cursor: pointer;
 }
 
-.spl__tab--active {
+.tiket__tab--active {
   background: var(--gcs-white);
   color: var(--gcs-ink);
 }
 
-.spl__actionbar {
+.tiket__actionbar {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -43,13 +43,13 @@
   border-radius: 0 10px 0 0;
 }
 
-.spl__filter {
+.tiket__filter {
   position: relative;
   flex: 1;
   display: flex;
 }
 
-.spl__filter input {
+.tiket__filter input {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -60,13 +60,13 @@
   outline: none;
 }
 
-.spl__filter input:focus {
+.tiket__filter input:focus {
   background: var(--gcs-white);
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__filter-icon {
+.tiket__filter-icon {
   position: absolute;
   right: 10px;
   top: 0;
@@ -77,12 +77,12 @@
   pointer-events: none;
 }
 
-.spl__actionbar-buttons {
+.tiket__actionbar-buttons {
   display: flex;
   gap: 8px;
 }
 
-.spl__icon-btn {
+.tiket__icon-btn {
   border: none;
   border-radius: 8px;
   width: 38px;
@@ -94,26 +94,26 @@
   cursor: pointer;
 }
 
-.spl__icon-btn--add {
+.tiket__icon-btn--add {
   background: var(--gcs-green-600);
 }
 
-.spl__icon-btn--refresh {
+.tiket__icon-btn--refresh {
   background: var(--gcs-green-500);
 }
 
-.spl__icon-btn:hover {
+.tiket__icon-btn:hover {
   opacity: 0.9;
 }
 
-.spl__card {
+.tiket__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
   border-radius: 0 0 14px 14px;
   padding: 20px 24px;
 }
 
-.spl__toolbar {
+.tiket__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,8 +122,8 @@
   margin-bottom: 16px;
 }
 
-.spl__page-size,
-.spl__search {
+.tiket__page-size,
+.tiket__search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -131,8 +131,8 @@
   color: var(--gcs-text-muted);
 }
 
-.spl__page-size select,
-.spl__search input {
+.tiket__page-size select,
+.tiket__search input {
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
   padding: 6px 10px;
@@ -142,33 +142,37 @@
   outline: none;
 }
 
-.spl__search input {
+.tiket__search input {
   min-width: 220px;
 }
 
-.spl__search input:focus {
+.tiket__search input:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__table-wrap {
+.tiket__table-wrap {
   overflow-x: auto;
   border: 1px solid var(--gcs-border);
   border-radius: 12px;
 }
 
-.spl__table {
+/* Sembilan kolom - butuh ruang paling lebar di antara tabel My Personal. Di bawah lebar ini
+   pembungkusnya menggulir horizontal, bukan memampatkan isi kolom. */
+.tiket__table {
   width: 100%;
   table-layout: fixed;
-  min-width: 960px;
+  min-width: 1200px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
 
 /* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .spl__table-wrap). */
-.spl__table th,
-.spl__table td {
+   (bingkai luar sudah dipegang oleh .tiket__table-wrap). */
+/* Padding kiri-kanan dibuat lega untuk SEMUA sel, bukan ditambal per kolom: isi kolom mana
+   pun (kode SPPD, tanggal, transportasi) sama-sama tidak boleh menempel ke sekat. */
+.tiket__table th,
+.tiket__table td {
   padding: 14px 20px;
   text-align: center;
   vertical-align: middle;
@@ -176,17 +180,17 @@
   border-right: 1px solid var(--gcs-border);
 }
 
-.spl__table th:last-child,
-.spl__table td:last-child {
+.tiket__table th:last-child,
+.tiket__table td:last-child {
   border-right: none;
 }
 
 /* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.spl__table tbody tr:last-child td {
+.tiket__table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.spl__table thead th {
+.tiket__table thead th {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--gcs-ink);
@@ -195,64 +199,91 @@
   white-space: nowrap;
 }
 
-.spl__table tbody tr:hover td {
+.tiket__table tbody tr:hover td {
   background: rgba(244, 174, 70, 0.06);
 }
 
-.spl__col-status {
-  width: 13%;
+/* Enam kolom. */
+.tiket__col-status {
+  width: 10%;
 }
 
-.spl__col-kode {
-  width: 15%;
-}
-
-.spl__col-ket {
-  width: 30%;
-}
-
-.spl__col-jam {
-  width: 15%;
+.tiket__col-tgl {
+  width: 12%;
   white-space: nowrap;
 }
 
-.spl__col-jenis {
-  width: 12%;
+.tiket__col-kode {
+  width: 18%;
+  white-space: nowrap;
 }
 
-.spl__col-aksi {
-  width: 100px;
+.tiket__col-pesan {
+  width: 22%;
+  text-align: left;
+}
+
+.tiket__col-ket {
+  width: 20%;
+  text-align: left;
+}
+
+.tiket__col-source {
+  width: 10%;
+}
+
+/* Memuat empat tombol: cetak, rincian, ubah, hapus. */
+.tiket__col-aksi {
+  width: 168px;
   text-align: center;
 }
 
-.spl__th--sortable {
+/* Judul kolom tetap di tengah walau isinya rata kiri. */
+.tiket__table th.tiket__col-pesan,
+.tiket__table th.tiket__col-ket {
+  text-align: center;
+}
+
+.tiket__table td.tiket__col-pesan,
+.tiket__table td.tiket__col-ket {
+  vertical-align: top;
+}
+
+.tiket__th--sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.spl__th--sortable:hover {
+.tiket__th--sortable:hover {
   color: var(--gcs-green-600);
 }
 
-.spl__th-content {
+/* Judul kolom SPPD panjang-panjang ("Tugas yang dilaksanakan"), jadi ikon sort mudah
+   menempel ke hurufnya. Jarak dilebarkan dan ikon dijaga agar tidak ikut menyusut. */
+.tiket__th-content {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
-.spl__sort-icon--idle {
+.tiket__th-content svg {
+  flex-shrink: 0;
+}
+
+
+.tiket__sort-icon--idle {
   opacity: 0.35;
 }
 
-.spl__status {
+.tiket__status {
   font-weight: 600;
 }
 
-.spl__status--done {
+.tiket__status--done {
   color: var(--gcs-green-600);
 }
 
-.spl__row-actions {
+.tiket__row-actions {
   display: flex;
   gap: 8px;
   justify-content: center;
@@ -260,7 +291,7 @@
 
 /* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
    terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
-.spl__row-btn {
+.tiket__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -273,43 +304,62 @@
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.spl__row-btn--edit {
+.tiket__row-btn--edit {
   color: var(--gcs-gold-700);
   border-color: rgba(244, 174, 70, 0.45);
   background: rgba(244, 174, 70, 0.12);
 }
 
-.spl__row-btn--edit:hover {
+.tiket__row-btn--edit:hover {
   color: #fff;
   border-color: var(--gcs-gold-600);
   background: var(--gcs-gold-600);
 }
 
-.spl__row-btn--delete {
+.tiket__row-btn--delete {
   color: #c8352c;
   border-color: rgba(230, 72, 63, 0.4);
   background: rgba(230, 72, 63, 0.1);
 }
 
-.spl__row-btn--delete:hover {
+.tiket__row-btn--delete:hover {
   color: #fff;
   border-color: #c8352c;
   background: #d63c32;
 }
 
-.spl__source {
+/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
+   tiket yang sudah disetujui pun tetap perlu dicetak. */
+.tiket__row-btn--print {
+  color: var(--gcs-green-600);
+  border-color: rgba(47, 108, 63, 0.35);
+  background: rgba(47, 108, 63, 0.1);
+}
+
+.tiket__row-btn--print:hover {
+  color: #fff;
+  border-color: var(--gcs-green-600);
+  background: var(--gcs-green-600);
+}
+
+.tiket__row-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tiket__source {
   color: var(--gcs-text-muted);
   font-size: 12px;
   margin-top: 2px;
 }
 
-.spl__no-data {
+.tiket__no-data {
   text-align: center;
   color: var(--gcs-text-muted);
   padding: 24px;
 }
 
-.spl__footer {
+.tiket__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -320,13 +370,13 @@
   color: var(--gcs-text-muted);
 }
 
-.spl__pagination {
+.tiket__pagination {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.spl__pagination button {
+.tiket__pagination button {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   border-radius: 8px;
@@ -336,22 +386,22 @@
   cursor: pointer;
 }
 
-.spl__pagination button:hover:not(:disabled) {
+.tiket__pagination button:hover:not(:disabled) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.spl__pagination button:disabled {
+.tiket__pagination button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.spl__page-indicator {
+.tiket__page-indicator {
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.spl__error {
+.tiket__error {
   margin-bottom: 12px;
   font-size: 12.5px;
   color: #b3261e;
@@ -361,7 +411,7 @@
 }
 
 /* Modal */
-.spl__modal-backdrop {
+.tiket__modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 38, 31, 0.5);
@@ -372,7 +422,7 @@
   z-index: 50;
 }
 
-.spl__modal {
+.tiket__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
@@ -382,7 +432,7 @@
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
 }
 
-.spl__modal-header {
+.tiket__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -393,12 +443,12 @@
   border-radius: 14px 14px 0 0;
 }
 
-.spl__modal-header h3 {
+.tiket__modal-header h3 {
   font-size: 17px;
   color: #fff;
 }
 
-.spl__modal-close {
+.tiket__modal-close {
   border: none;
   background: none;
   color: rgba(255, 255, 255, 0.75);
@@ -407,15 +457,15 @@
   padding: 2px;
 }
 
-.spl__modal-close:hover {
+.tiket__modal-close:hover {
   color: #fff;
 }
 
-.spl__modal-body {
+.tiket__modal-body {
   padding: 22px;
 }
 
-.spl__field {
+.tiket__field {
   display: grid;
   grid-template-columns: 130px 1fr;
   align-items: center;
@@ -423,15 +473,15 @@
   margin-bottom: 14px;
 }
 
-.spl__field > span {
+.tiket__field > span {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--gcs-ink);
 }
 
-.spl__field input,
-.spl__field select,
-.spl__field textarea {
+.tiket__field input,
+.tiket__field select,
+.tiket__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
@@ -443,22 +493,37 @@
   outline: none;
 }
 
-.spl__field input:focus,
-.spl__field select:focus,
-.spl__field textarea:focus {
+.tiket__field input:focus,
+.tiket__field select:focus,
+.tiket__field textarea:focus {
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.spl__field--textarea {
+.tiket__field--textarea {
   align-items: start;
 }
 
-.spl__field textarea {
+.tiket__field--berkas {
+  align-items: start;
+}
+
+.tiket__field--berkas input[type='file'] {
+  width: 100%;
+  font-size: 13px;
+}
+
+.tiket__berkas-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.tiket__field textarea {
   resize: vertical;
 }
 
-.spl__window-hint {
+.tiket__window-hint {
   font-size: 12.5px;
   color: var(--gcs-text-muted);
   background: var(--gcs-bg);
@@ -467,12 +532,12 @@
   margin-bottom: 14px;
 }
 
-.spl__modal-footer {
+.tiket__modal-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-.spl__submit {
+.tiket__submit {
   border: none;
   border-radius: 8px;
   background: var(--gcs-gold-500);
@@ -483,22 +548,125 @@
   cursor: pointer;
 }
 
-.spl__submit:hover:not(:disabled) {
+.tiket__submit:hover:not(:disabled) {
   opacity: 0.92;
 }
 
-.spl__submit:disabled {
+.tiket__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 @media (max-width: 640px) {
-  .spl__card {
+  .tiket__card {
     padding: 16px;
   }
 
-  .spl__field {
+  .tiket__field {
     grid-template-columns: 1fr;
     gap: 6px;
   }
+}
+
+/* --- Tambahan khusus SPPD --- */
+
+/* Modal rincian & pencari pegawai memuat tabel, jadi lebih lebar dari modal form biasa. */
+.tiket__modal--wide {
+  max-width: 860px;
+}
+
+.tiket__peserta {
+  padding: 0 24px 20px;
+  overflow-x: auto;
+}
+
+/* Tabel di dalam modal: lebih ringkas dan tidak perlu lebar minimum halaman. */
+.tiket__table--peserta {
+  min-width: 0;
+  table-layout: auto;
+  border: 1px solid var(--gcs-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Kolom NIK: input hanya-baca + tombol pencarian di sampingnya. */
+.tiket__nik {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.tiket__nik input {
+  flex: 1;
+}
+
+.tiket__nik button {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 8px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gcs-green-600);
+  cursor: pointer;
+}
+
+.tiket__nik button:hover {
+  background: var(--gcs-green-600);
+  border-color: var(--gcs-green-600);
+  color: #fff;
+}
+
+/* Rincian peserta: biru, dibedakan dari cetak (hijau), ubah (kuning), hapus (merah). */
+.tiket__row-btn--detail {
+  color: #1f6fb2;
+  border-color: rgba(31, 111, 178, 0.4);
+  background: rgba(31, 111, 178, 0.1);
+}
+
+.tiket__row-btn--detail:hover {
+  color: #fff;
+  border-color: #1f6fb2;
+  background: #2a80c8;
+}
+
+.tiket__row-btn--pick {
+  color: var(--gcs-green-600);
+  border-color: rgba(47, 108, 63, 0.35);
+  background: rgba(47, 108, 63, 0.1);
+}
+
+.tiket__row-btn--pick:hover {
+  color: #fff;
+  border-color: var(--gcs-green-600);
+  background: var(--gcs-green-600);
+}
+
+.tiket__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Baris rincian yang sedang diubah disorot, supaya jelas isi form itu milik baris mana. */
+.tiket__row--editing td {
+  background: rgba(244, 174, 70, 0.14);
+}
+
+.tiket__cancel {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.tiket__cancel:hover {
+  border-color: var(--gcs-ink);
+  color: var(--gcs-ink);
 }

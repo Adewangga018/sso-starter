@@ -23,6 +23,11 @@ public class GcsDbContext : DbContext
     public DbSet<WebSdmSuratIjin> WebSdmSuratIjin => Set<WebSdmSuratIjin>();
     public DbSet<PegawaiSdm> PegawaiSdm => Set<PegawaiSdm>();
     public DbSet<TtdElektronik> TtdElektronik => Set<TtdElektronik>();
+    public DbSet<WebSdmSppd> WebSdmSppd => Set<WebSdmSppd>();
+    public DbSet<WebSdmSppdDetail> WebSdmSppdDetail => Set<WebSdmSppdDetail>();
+    public DbSet<WebSdmUmdl> WebSdmUmdl => Set<WebSdmUmdl>();
+    public DbSet<WebSdmPesanTiket> WebSdmPesanTiket => Set<WebSdmPesanTiket>();
+    public DbSet<WebSdmPesanTiketDetail> WebSdmPesanTiketDetail => Set<WebSdmPesanTiketDetail>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -110,6 +115,71 @@ public class GcsDbContext : DbContext
             e.HasNoKey();
             // There is also an unrelated easy.PEGAWAI_SDM view - this must stay pinned to dbo.
             e.ToView("PEGAWAI_SDM", "dbo");
+        });
+
+        builder.Entity<WebSdmSppd>(e =>
+        {
+            // web_sdm_sppd_tri rewrites kode_sppd after the INSERT, so EF must use the
+            // trigger-safe path (no OUTPUT clause).
+            e.ToTable("web_sdm_sppd", "intranet", tb =>
+            {
+                tb.HasTrigger("web_sdm_sppd_tri");
+                tb.HasTrigger("web_sdm_sppd_tru");
+            });
+            e.HasKey(x => x.id);
+            e.Property(x => x.id).ValueGeneratedOnAdd();
+        });
+
+        builder.Entity<WebSdmSppdDetail>(e =>
+        {
+            e.ToTable("web_sdm_sppd_detail", "intranet", tb =>
+            {
+                tb.HasTrigger("web_sdm_sppd_detail_triu");
+            });
+            // id_det is the identity key; "id" is the parent SPPD id, not a key.
+            e.HasKey(x => x.id_det);
+            e.Property(x => x.id_det).ValueGeneratedOnAdd();
+
+            // The database DOES have a foreign key here (FK__web_sdm_sppd__id__...). It must be
+            // declared, otherwise EF has no idea the two are related and is free to delete the
+            // parent SPPD before its detail rows - which the FK then rejects, surfacing as a 500.
+            e.HasOne<WebSdmSppd>()
+                .WithMany()
+                .HasForeignKey(x => x.id)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<WebSdmPesanTiket>(e =>
+        {
+            // web_sdm_pesan_tiket_tri rewrites kode_tiket after the INSERT, so EF must use
+            // the trigger-safe path (no OUTPUT clause).
+            e.ToTable("web_sdm_pesan_tiket", "intranet", tb =>
+            {
+                tb.HasTrigger("web_sdm_pesan_tiket_tri");
+            });
+            e.HasKey(x => x.id);
+            e.Property(x => x.id).ValueGeneratedOnAdd();
+        });
+
+        builder.Entity<WebSdmPesanTiketDetail>(e =>
+        {
+            e.ToTable("web_sdm_pesan_tiket_detail", "intranet");
+            // id_det is the identity key; "id" is the parent booking id, not a key.
+            e.HasKey(x => x.id_det);
+            e.Property(x => x.id_det).ValueGeneratedOnAdd();
+        });
+
+        builder.Entity<WebSdmUmdl>(e =>
+        {
+            e.ToTable("web_sdm_umdl", "dbo", tb =>
+            {
+                tb.HasTrigger("web_sdm_umdl_tru");
+            });
+            e.HasKey(x => x.ID);
+            e.Property(x => x.ID).ValueGeneratedOnAdd().HasPrecision(13, 0);
+            e.Property(x => x.ID_IJIN).HasPrecision(13, 0);
+            // ROWID is NOT NULL with a newid() default and is absent from the entity on
+            // purpose, so INSERTs let the database fill it.
         });
 
         builder.Entity<TtdElektronik>(e =>

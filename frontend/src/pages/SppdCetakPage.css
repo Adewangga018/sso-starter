@@ -1,0 +1,234 @@
+/* Halaman cetak SPPD. Sama seperti cetak Surat Izin: lembar A4 di layar, dan saat dicetak
+   seluruh elemen layar (tombol, latar abu) disembunyikan sehingga hanya suratnya yang keluar. */
+
+.cetak {
+  background: #e9eaea;
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+  font-family: 'Times New Roman', Times, serif;
+  color: #000;
+}
+
+.cetak__state {
+  padding: 48px;
+  text-align: center;
+  color: #555;
+  font-family: system-ui, sans-serif;
+}
+
+.cetak__toolbar {
+  max-width: 210mm;
+  margin: 0 auto 16px;
+  display: flex;
+  justify-content: flex-end;
+  font-family: system-ui, sans-serif;
+}
+
+.cetak__toolbar button {
+  background: var(--gcs-green-600, #2f6c3f);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* border-box: padding dihitung KE DALAM tinggi lembar. Tanpa ini, 297mm + padding melebihi
+   satu halaman dan footer terlempar ke halaman kedua. */
+.cetak__sheet {
+  box-sizing: border-box;
+  width: 210mm;
+  height: 297mm;
+  margin: 0 auto;
+  padding: 20mm;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  font-size: 11pt;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+}
+
+.cetak__header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.cetak__logo {
+  width: 100px;
+  height: auto;
+  justify-self: start;
+}
+
+.cetak__qr {
+  width: 100px;
+  height: 100px;
+  justify-self: end;
+}
+
+.cetak__title {
+  text-align: center;
+  padding-top: 4px;
+}
+
+.cetak__title h1 {
+  font-size: 14pt;
+  font-weight: 700;
+}
+
+.cetak__no {
+  font-size: 10pt;
+}
+
+/* Wadah inilah yang memegang kotak dan tingginya - bukan tabelnya. Kalau tinggi dipasang
+   pada <table>, browser membagi sisa ruang ke tiap baris, sehingga peserta jadi berjauhan
+   dengan garis horizontal di antaranya. Kini sisa ruang jatuh sebagai ruang kosong di bawah
+   baris terakhir - tempat tanda tangan basah. */
+.cetak__tabel-box {
+  border: 1px solid #000;
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+.cetak__tabel {
+  width: 100%;
+  /* Tinggi penuh agar baris pengisi bisa memanjangkan sekat vertikal sampai dasar kotak. */
+  height: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+/* Hanya baris ini yang boleh meregang; baris peserta tetap setinggi isinya. */
+.cetak__filler {
+  height: 100%;
+}
+
+.cetak__tabel th,
+.cetak__tabel td {
+  padding: 5px 6px;
+  vertical-align: top;
+  /* Hanya sekat vertikal antar kolom; tidak ada garis antar baris. */
+  border-right: 1px solid #000;
+}
+
+.cetak__tabel th:last-child,
+.cetak__tabel td:last-child {
+  border-right: none;
+}
+
+.cetak__tabel thead th {
+  border-bottom: 1px solid #000;
+  text-align: center;
+  font-weight: 700;
+  font-size: 8.5pt;
+}
+
+.cetak__c-no {
+  width: 5%;
+  text-align: center;
+}
+
+.cetak__nama {
+  font-weight: 700;
+}
+
+/* Ketua/Anggota: dibedakan supaya pembaca surat tahu siapa penanggung jawab rombongan. */
+.cetak__posisi {
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.cetak__c-org {
+  width: 30%;
+}
+
+.cetak__c-tujuan {
+  width: 13%;
+}
+
+.cetak__c-tugas {
+  width: 32%;
+}
+
+.cetak__c-ttd {
+  width: 20%;
+}
+
+.cetak__tabel tbody td {
+  vertical-align: top;
+}
+
+.cetak__ringkas {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 16px;
+  font-size: 10pt;
+}
+
+.cetak__ringkas-kiri {
+  border-collapse: collapse;
+}
+
+.cetak__ringkas-kiri td {
+  padding: 2px 0;
+  vertical-align: top;
+}
+
+.cetak__label {
+  width: 110px;
+}
+
+.cetak__sep {
+  width: 16px;
+}
+
+.cetak__ttd-kolom {
+  text-align: center;
+}
+
+.cetak__ttd-garis {
+  margin-top: 64px;
+}
+
+.cetak__footer {
+  margin-top: auto;
+  padding-top: 24px;
+  text-align: right;
+  font-size: 9pt;
+}
+
+@media print {
+  /* Margin nol: dengan margin bawaan, Chrome mencetak header/footer-nya sendiri (tanggal,
+     judul tab, URL, nomor halaman) di tepi kertas. Margin surat dipindah ke .cetak__sheet. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .cetak {
+    background: #fff;
+    padding: 0;
+    min-height: auto;
+  }
+
+  .cetak__toolbar {
+    display: none;
+  }
+
+  /* Tepat satu halaman A4: tingginya dipatok, sisanya diserap kotak peserta yang elastis. */
+  .cetak__sheet {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 15mm;
+    box-shadow: none;
+    overflow: hidden;
+  }
+}
