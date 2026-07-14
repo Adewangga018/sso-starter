@@ -236,6 +236,58 @@ Urutan cek:
 
 ---
 
+## 8b. Update / Redeploy (aplikasi sudah berjalan)
+
+File `.dll` **terkunci** oleh worker process IIS (`w3wp.exe`) selama App Pool hidup — muncul error
+*"Folder In Use / file is open in another program"*. Aplikasi **harus dihentikan dulu**.
+
+### Cara 0 — Script otomatis `deploy.ps1` (RECOMMENDED)
+Mengotomatiskan seluruh Cara A (build → app_offline → hapus → copy → online lagi), dan
+**selalu mempertahankan `web.config`** di server.
+
+```powershell
+# sesuaikan path share sekali saja di bagian param() deploy.ps1
+.\deploy.ps1 -DryRun     # lihat dulu apa yang akan dilakukan (aman, tidak mengubah apa pun)
+.\deploy.ps1             # build + deploy backend & frontend
+.\deploy.ps1 -BackendOnly
+.\deploy.ps1 -SkipBuild  # deploy artifact yang sudah ada
+```
+
+### Cara A — `app_offline.htm` manual (cukup akses file share)
+Tidak perlu IIS Manager / RDP:
+
+1. Copy **`app_offline.htm`** ke folder root backend di server (mis. `\\server\web_apps$\backend-mygcs\`).
+   → ASP.NET Core Module langsung mematikan aplikasi **dan melepas semua kunci file** (± 1-2 detik),
+   pengunjung melihat halaman pemeliharaan.
+2. Hapus isi folder **KECUALI `web.config`** dan **`app_offline.htm`**.
+   > ⚠️ `web.config` di server berisi env var/rahasia Anda — **jangan ditimpa** oleh yang dari publish.
+3. Copy isi `sso-backend-publish.zip` yang baru (semua **kecuali `web.config`**).
+4. **Hapus `app_offline.htm`** → aplikasi otomatis start lagi.
+
+### Cara B — Stop App Pool via IIS Manager (butuh RDP/IIS Manager)
+1. Buka **IIS Manager** di server.
+2. Panel kiri → **Application Pools**.
+3. Klik `mygcs-api-pool` → panel kanan **Stop**.
+4. Ganti file (kecuali `web.config`) → panel kanan **Start**.
+
+### Cara C — Stop App Pool via command line (di server, sebagai Administrator)
+```powershell
+# PowerShell
+Import-Module WebAdministration
+Stop-WebAppPool  -Name "mygcs-api-pool"
+# ...ganti file (kecuali web.config)...
+Start-WebAppPool -Name "mygcs-api-pool"
+```
+```cmd
+:: atau appcmd
+%windir%\system32\inetsrv\appcmd stop  apppool /apppool.name:"mygcs-api-pool"
+%windir%\system32\inetsrv\appcmd start apppool /apppool.name:"mygcs-api-pool"
+```
+
+> **Frontend** tidak pernah terkunci (file statis) — cukup timpa isi folder web-nya kapan saja.
+
+---
+
 ## 9. Troubleshooting
 
 | Gejala | Sebab & solusi |
@@ -245,6 +297,7 @@ Urutan cek:
 | **Login mentok / redirect ke `/api/login`** | Pastikan memakai build terbaru (perbaikan redirect root `/login` sudah ada). Publish ulang bila artifact lama. |
 | **`oidc-client` error "issuer mismatch"** | `Oidc__Issuer` ≠ `VITE_SSO_AUTHORITY`. Samakan keduanya ke `https://my.gcs-gresik.com/api`. |
 | **Buka `/dashboard`/`/login` langsung → 404** | `web.config` SPA (Bab 6) belum ada atau URL Rewrite Module belum terpasang. |
+| **Endpoint API mis. `/api/account/login` → 404** (padahal `/api/connect/authorize` jalan) | Route controller **tidak boleh** ber-prefix `api/`. Sub-app IIS `/api` sudah melepas `/api` via PathBase, jadi controller harus root-relative (`[Route("account")]`, bukan `[Route("api/account")]`) — mengikuti pola OpenIddict `connect/*`. Sudah diperbaiki di kode; kalau menambah controller baru, ikuti konvensi ini. |
 | **Absensi/Lembur/Izin "Data pegawai tidak ditemukan"** | Akun Identity tidak punya NIK yang cocok di `MST_PEGAWAI` (GCS), atau `GcsConnection` salah. Cek env var `ConnectionStrings__GcsConnection`. (Bug lama di mana controller memakai `[Authorize]` polos alih-alih skema Bearer sudah diperbaiki di kode.) |
 | **Reset password tak terkirim email** | `Email__Smtp__Host` belum diisi → link hanya ditulis ke log. Isi konfig SMTP. |
 | **`databaseConnected:false`** | Server IIS tak bisa menjangkau SQL / kredensial `svc_mygcs` salah. |

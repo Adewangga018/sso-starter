@@ -13,7 +13,10 @@ export default defineConfig({
     proxy: {
       // changeOrigin:false keeps Host: localhost:5173 so OpenIddict advertises the
       // proxied origin in its discovery endpoints (not the raw backend host).
-      '/api': { target: 'http://localhost:5283', changeOrigin: false },
+      // Strip the /api prefix so the backend (at root in dev) sees the same root-relative
+      // paths as in production, where IIS hosts it as the /api sub-application and removes
+      // /api via PathBase. This keeps dev and prod routing identical.
+      '/api': { target: 'http://localhost:5283', changeOrigin: false, rewrite: (p) => p.replace(/^\/api/, '') },
       '/connect': { target: 'http://localhost:5283', changeOrigin: false },
       '/.well-known': { target: 'http://localhost:5283', changeOrigin: false },
     },

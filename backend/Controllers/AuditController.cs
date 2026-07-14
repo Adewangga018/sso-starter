@@ -9,7 +9,7 @@ namespace SsoBackend.Controllers;
 
 // Read-only view over the audit trail (SRS Fitur D), for Admin IT.
 [ApiController]
-[Route("api/audit")]
+[Route("audit")]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 public class AuditController : ControllerBase
 {

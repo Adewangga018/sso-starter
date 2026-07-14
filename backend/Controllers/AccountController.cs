@@ -16,7 +16,9 @@ namespace SsoBackend.Controllers;
 // - MFA (authenticator app), password reset, and change-password are self-service.
 // - Every security-relevant event is written to the audit trail (SRS Fitur D).
 [ApiController]
-[Route("api/account")]
+// Route is root-relative (no "api/"): in production IIS hosts this app as the /api
+// sub-application and strips /api via PathBase, so the app must NOT repeat it.
+[Route("account")]
 public class AccountController : ControllerBase
 {
     private const string BearerScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;

@@ -11,7 +11,7 @@ namespace SsoBackend.Controllers;
 
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-[Route("api/personal")]
+[Route("personal")]
 public class PersonalController : ControllerBase
 {
     private readonly GcsDbContext _db;

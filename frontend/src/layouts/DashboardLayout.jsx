@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { LayoutGrid, Settings } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
@@ -17,12 +17,11 @@ const SECTIONS = [
 
 export default function DashboardLayout() {
   const { summary, logout } = useAuth()
-  const navigate = useNavigate()
   const { collapsed, toggleCollapsed, mobileOpen, openMobile, closeMobile } = useSidebarState()
 
+  // logout() clears local tokens + server cookie and redirects to /login itself.
   function handleLogout() {
     logout()
-    navigate('/login', { replace: true })
   }
 
   return (

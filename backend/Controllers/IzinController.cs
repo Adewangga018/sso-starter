@@ -15,7 +15,7 @@ namespace SsoBackend.Controllers;
 // back to the Identity cookie, whose principal carries no "nik" claim, so resolving the
 // employee would always fail even for a perfectly valid caller.
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-[Route("api/personal/izin")]
+[Route("personal/izin")]
 public class IzinController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

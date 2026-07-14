@@ -47,7 +47,8 @@ public class AuthorizationController : ControllerBase
                 });
         }
 
-        var user = await _userManager.GetUserAsync(result.Principal)
+        // After a successful cookie authentication, Principal is guaranteed non-null.
+        var user = await _userManager.GetUserAsync(result.Principal!)
             ?? throw new InvalidOperationException("The user details cannot be retrieved.");
 
         if (!user.IsActive)

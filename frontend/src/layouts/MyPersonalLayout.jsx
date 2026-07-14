@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import {
   Banknote,
   CalendarDays,
@@ -36,7 +36,6 @@ const SECTIONS = [
 
 export default function MyPersonalLayout() {
   const { summary, logout, refreshSummary } = useAuth()
-  const navigate = useNavigate()
   const { collapsed, toggleCollapsed, mobileOpen, openMobile, closeMobile } = useSidebarState()
 
   useEffect(() => {
@@ -44,9 +43,9 @@ export default function MyPersonalLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // logout() clears local tokens + server cookie and redirects to /login itself.
   function handleLogout() {
     logout()
-    navigate('/login', { replace: true })
   }
 
   return (

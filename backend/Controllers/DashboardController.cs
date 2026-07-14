@@ -8,7 +8,7 @@ namespace SsoBackend.Controllers;
 
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-[Route("api/dashboard")]
+[Route("dashboard")]
 public class DashboardController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

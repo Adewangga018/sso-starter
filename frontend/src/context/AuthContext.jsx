@@ -34,7 +34,12 @@ export function AuthProvider({ children }) {
 
     bootstrap()
 
-    const handleLoaded = (user) => setOidcUser(user)
+    // Fires on interactive login (via /callback) and on silent token renew. Refresh the
+    // dashboard data too, otherwise after login the UI stays empty until a full page reload.
+    const handleLoaded = (user) => {
+      setOidcUser(user)
+      loadSummary()
+    }
     const handleUnloaded = () => {
       setOidcUser(null)
       setSummary(null)
@@ -52,14 +57,18 @@ export function AuthProvider({ children }) {
   // Starts the OIDC login flow (redirect to the SSO Hub authorize endpoint).
   const login = useCallback(() => userManager.signinRedirect(), [])
 
-  // Single logout: clears the Hub session cookie and returns to the app.
+  // Logout in two parts so the app is *actually* signed out:
+  //  1) remove the tokens from the SPA's storage (otherwise the still-valid JWT keeps the
+  //     UI "logged in" even after the server cookie is gone);
+  //  2) clear the SSO Hub session cookie so the next login must re-enter the password.
   const logout = useCallback(async () => {
+    await userManager.removeUser()
     try {
-      await userManager.signoutRedirect()
+      await fetch('/api/account/logout', { method: 'POST', credentials: 'include' })
     } catch {
-      await userManager.removeUser()
-      window.location.href = '/'
+      // network hiccup — local logout already happened, continue anyway
     }
+    window.location.replace('/login')
   }, [])
 
   const isAuthenticated = Boolean(oidcUser && !oidcUser.expired)
