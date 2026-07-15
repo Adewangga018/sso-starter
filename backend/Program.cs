@@ -167,6 +167,13 @@ builder.Services.AddOpenIddict()
 
 builder.Services.AddHostedService<OidcSeeder>();
 
+// Dev convenience: seed a ready-to-use Admin IT account (DevAdmin:Email/Password from
+// user-secrets). Registered only in Development so it never runs in Production.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHostedService<DevAdminSeeder>();
+}
+
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {

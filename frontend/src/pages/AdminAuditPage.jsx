@@ -9,7 +9,10 @@ const EVENT_TYPES = [
   '', 'login.success', 'login.failure', 'login.lockout', 'login.2fa_required',
   'login.2fa_failure', 'logout', 'mfa.enabled', 'mfa.disabled',
   'password.reset.requested', 'password.reset.completed', 'password.changed',
-  'account.provisioned', 'role.admin_granted',
+  'account.provisioned', 'account.activated', 'account.deactivated', 'account.unlocked',
+  'role.admin_granted', 'role.admin_revoked',
+  'profile.updated', 'profile.document.updated', 'profile.anak.added',
+  'profile.anak.updated', 'profile.anak.deleted',
 ]
 
 const isAnomaly = (t) => t.includes('failure') || t.includes('lockout')
@@ -48,7 +51,7 @@ export default function AdminAuditPage() {
   return (
     <div className="audit">
       <div className="audit__head">
-        <Link to="/dashboard" className="audit__back"><ArrowLeft size={16} /> Dashboard</Link>
+        <Link to="/admin" className="audit__back"><ArrowLeft size={16} /> Panel Admin</Link>
         <h1><ShieldAlert size={20} /> Audit Keamanan</h1>
       </div>
 

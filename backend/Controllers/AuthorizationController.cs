@@ -63,8 +63,7 @@ public class AuthorizationController : ControllerBase
                 }));
         }
 
-        var principal = await BuildPrincipalAsync(user);
-        principal.SetScopes(request.GetScopes());
+        var principal = await BuildPrincipalAsync(user, request.GetScopes());
 
         return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -96,8 +95,7 @@ public class AuthorizationController : ControllerBase
                 }));
         }
 
-        var principal = await BuildPrincipalAsync(user);
-        principal.SetScopes(result.Principal!.GetScopes());
+        var principal = await BuildPrincipalAsync(user, result.Principal!.GetScopes());
 
         return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -143,11 +141,18 @@ public class AuthorizationController : ControllerBase
             properties: new AuthenticationProperties { RedirectUri = "/" });
     }
 
-    // Builds the token principal: the Identity claims plus the GCS bridge claims,
-    // each tagged with the destinations (access token / id token) it belongs in.
-    private async Task<ClaimsPrincipal> BuildPrincipalAsync(ApplicationUser user)
+    // Builds the token principal: the Identity claims plus the GCS bridge claims, each tagged
+    // with the destinations (access token / id token) it belongs in.
+    //
+    // Scopes MUST be set before computing destinations: GetDestinations decides whether role /
+    // name / email land in the ID token by checking principal.HasScope(...). If scopes were set
+    // afterwards (as they used to be), those claims never reached the ID token - so the SPA,
+    // which reads the role from the ID token, could never see that a user was an Admin.
+    private async Task<ClaimsPrincipal> BuildPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
     {
         var principal = await _signInManager.CreateUserPrincipalAsync(user);
+
+        principal.SetScopes(scopes);
 
         principal.SetClaim("nik", user.Nik ?? string.Empty);
         principal.SetClaim("gcs_uid", user.GcsUserId?.ToString() ?? string.Empty);

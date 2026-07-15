@@ -84,7 +84,7 @@ export default function AdminDocumentsPage() {
   return (
     <div className="admin-docs">
       <div className="admin-docs__head">
-        <Link to="/dashboard" className="admin-docs__back"><ArrowLeft size={16} /> Dashboard</Link>
+        <Link to="/admin" className="admin-docs__back"><ArrowLeft size={16} /> Panel Admin</Link>
         <h1><FolderLock size={20} /> Dokumen Karyawan</h1>
       </div>
 
