@@ -212,7 +212,9 @@ Edit `C:\inetpub\mygcs\api\web.config`, tambahkan `<environmentVariables>` di da
     <!-- Issuer OIDC HARUS sama dengan VITE_SSO_AUTHORITY frontend -->
     <environmentVariable name="Oidc__Issuer" value="https://my.gcs-gresik.com/api" />
 
-    <!-- (Opsional) Admin bootstrap: email ini otomatis diberi role Admin saat login -->
+    <!-- Bootstrap Admin IT: email di sini otomatis diberi role Admin saat login. WAJIB berupa
+         akun yang BISA login (ada di easy.users, atau sudah ada di tabel Users). Ini admin
+         pertama; admin berikutnya dikelola lewat Panel Admin (lihat Bab 7b). -->
     <environmentVariable name="Admin__Emails__0" value="admin.it@gcs-gresik.com" />
 
     <!-- Folder dokumen karyawan (KTP/KK/ijazah, dll.) di server WCP-GCS. Kolom FILE_* di
@@ -250,6 +252,40 @@ Setelah semua diset, restart App Pool: IIS Manager → `mygcs-api-pool` → **Re
 
 ---
 
+## 7b. Panel Admin IT (manajemen akun & role)
+
+Panel Admin (`/admin`) memerlukan akun ber-role **Admin**. Tidak ada infrastruktur tambahan —
+role `Admin` sudah otomatis dibuat seeder (`OidcSeeder`) di `db_mygcs`. Yang perlu dilakukan
+hanya **menetapkan admin pertama**, lalu selanjutnya kelola dari UI.
+
+**Langkah:**
+
+1. **Deploy kode terbaru** (backend **dan** frontend). Ini WAJIB:
+   - Backend membawa endpoint `/admin/*` **dan** perbaikan penting: klaim `role` kini
+     dimasukkan ke **ID token** (sebelumnya hanya di access token, sehingga SPA tak pernah
+     mengenali admin). Tanpa build ini, Panel Admin selalu "Akses ditolak" walau role sudah ada.
+   - Frontend membawa route `/admin`, `/admin/users`, dll. Tanpa build ini, `/admin` dilempar
+     ke `/dashboard`.
+2. **Set `Admin__Emails__0`** (Bab 7) ke email akun admin IT yang **benar-benar bisa login**
+   (karyawan yang ada di `easy.users`, atau akun yang sudah ada di tabel `Users`). Recycle App Pool.
+3. **Login** dengan akun itu → otomatis diberi role Admin → menu **Panel Admin** muncul.
+4. **Admin berikutnya** tidak perlu lewat config: buka **Panel Admin → Manajemen Pengguna & Role**,
+   lalu **toggle "Admin IT"** pada akun yang diinginkan.
+
+> **Berlaku setelah login ulang.** Role dibawa di token saat diterbitkan. Menambah/mencabut role
+> (via config atau toggle) baru terasa saat pengguna itu **login ulang** atau token-nya di-refresh.
+
+> **Akun `admin.it@gcs-gresik.com` (Dev) TIDAK dibuat di produksi.** Seeder pembuat akun itu
+> (`DevAdminSeeder`) hanya jalan di Development. Jangan mengandalkannya di server — pakai akun
+> nyata via `Admin__Emails__0`.
+
+> ⚠️ **Catatan lingkungan.** Bila Dev dan Produksi memakai **`db_mygcs` yang sama**, maka tabel
+> `Users`/`Roles`/`AuditLogs` **dipakai bersama** — grant admin & akun uji dari lokal ikut muncul
+> di produksi (dan sebaliknya). Untuk pemisahan bersih, gunakan database `db_mygcs` terpisah untuk
+> Produksi. Tidak wajib, tapi disarankan sebelum go-live.
+
+---
+
 ## 8. Verifikasi
 
 Urutan cek:
@@ -275,6 +311,11 @@ Urutan cek:
    → diarahkan ke halaman login → login dengan kredensial karyawan (data lama `easy.users`).
    → masuk dashboard; cek modul **My Personal → Profil / Absensi / Lembur / Izin** (baca/tulis ke GCS;
    fitur cetak Izin menghasilkan QR di sisi browser).
+5. **Panel Admin** → login dengan akun `Admin__Emails__0` → tombol **Panel Admin** muncul di kanan
+   atas → buka `https://my.gcs-gresik.com/admin` → statistik tampil dan **Manajemen Pengguna & Role**
+   bisa toggle Admin. Kalau "Akses ditolak" padahal akun sudah di `Admin__Emails`: pastikan **backend
+   build terbaru** ter-deploy (perbaikan role→ID token) dan Anda **login ulang**. Kalau `/admin`
+   melempar ke `/dashboard`: **frontend build terbaru** belum ter-deploy.
 
 ---
 
@@ -344,6 +385,8 @@ Start-WebAppPool -Name "mygcs-api-pool"
 | **Reset password tak terkirim email** | `Email__Smtp__Host` belum diisi → link hanya ditulis ke log. Isi konfig SMTP. |
 | **Dokumen karyawan "Dokumen belum tersedia" padahal ada** | (1) `LegacyFiles__Root` belum diset / salah folder. (2) Identitas App Pool tak punya izin **NTFS Read** ke folder/ share dokumen (Bab 7). (3) Path di kolom `FILE_*` tak cocok dengan isi folder. |
 | **Edit profil gagal simpan / unggah dokumen error** | Unggah dokumen butuh izin **NTFS Write** App Pool ke `LegacyFiles__Root` (Bab 7). Simpan biodata butuh **UPDATE** di `dbo.MST_PEGAWAI`; tambah/hapus anak butuh **INSERT/UPDATE/DELETE** di `dbo.MST_ANAK_PEGAWAI` (GCS) untuk login `svc_mygcs` — bukan hanya `db_datareader`. |
+| **Panel Admin "Akses ditolak" padahal sudah di `Admin__Emails`** | Backend build lama (klaim `role` belum masuk ID token). Deploy backend terbaru, lalu **login ulang** agar token baru membawa role. |
+| **Buka `/admin` malah ke `/dashboard`** | Frontend build lama tanpa route `/admin`. Deploy frontend terbaru (`npm run build` → salin). |
 | **`databaseConnected:false`** | Server IIS tak bisa menjangkau SQL / kredensial `svc_mygcs` salah. |
 
 **Aktifkan log error** (sementara): set `stdoutLogEnabled="true"`, buat folder `C:\inetpub\mygcs\api\logs`,
@@ -364,6 +407,7 @@ Start-WebAppPool -Name "mygcs-api-pool"
 - [ ] `web.config` backend: `ASPNETCORE_ENVIRONMENT`, 2 connection string, 2 thumbprint, `Oidc__Issuer`, `LegacyFiles__Root`, (opsional Admin/SMTP).
 - [ ] Folder dokumen (`LegacyFiles__Root`) diberi izin **NTFS Read + Write** ke App Pool `mygcs-api-pool` (Write untuk edit-profil unggah dokumen).
 - [ ] `svc_mygcs` diberi **UPDATE** pada `dbo.MST_PEGAWAI` dan **INSERT/UPDATE/DELETE** pada `dbo.MST_ANAK_PEGAWAI` (GCS) untuk edit profil + CRUD anak.
+- [ ] **Panel Admin**: `Admin__Emails__0` diisi email admin IT yang **bisa login**; login sekali untuk aktivasi role, lalu kelola admin lain lewat toggle (Bab 7b).
 - [ ] Recycle App Pool.
 - [ ] Verifikasi: `/api/` → halaman logo, `/api/health` → db true, discovery issuer benar, login end-to-end jalan.
 
