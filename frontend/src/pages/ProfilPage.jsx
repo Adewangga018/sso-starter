@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronRight, FileWarning, Users } from 'lucide-react'
+import { CheckCircle2, ChevronRight, FileWarning, Loader2, Lock, Upload } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import PdfPopupModal from '../components/PdfPopupModal'
+import ChildrenSection from '../components/ChildrenSection'
 import './ProfilPage.css'
+
+const GENDER_OPTIONS = ['Laki-laki', 'Perempuan']
+const AGAMA_OPTIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
+const NIKAH_OPTIONS = ['Belum Kawin', 'Kawin', 'Cerai Hidup', 'Cerai Mati']
+const MARITAL_KEYS = new Set(['kk', 'buku-nikah'])
+const ACCEPT = '.pdf,.png,.jpg,.jpeg'
 
 function formatTanggal(value) {
   if (!value) return '-'
@@ -11,12 +18,114 @@ function formatTanggal(value) {
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
-function InfoRow({ label, value, children }) {
+const toDateInput = (v) => (v ? String(v).slice(0, 10) : '')
+const emptyToNull = (v) => {
+  const t = (v ?? '').trim()
+  return t === '' ? null : t
+}
+
+function initForm(p) {
+  return {
+    namaLengkap: p.namaLengkap ?? '',
+    nik: p.nik ?? '',
+    tempatLahir: p.tempatLahir ?? '',
+    tglLahir: toDateInput(p.tglLahir),
+    jenisKelamin: p.jenisKelamin ?? '',
+    agama: p.agama ?? '',
+    pendidikan: p.pendidikan ?? '',
+    noHp: p.noHp ?? '',
+    email: p.email ?? '',
+    alamat: p.alamat?.alamat ?? '',
+    rt: p.alamat?.rt ?? '',
+    rw: p.alamat?.rw ?? '',
+    provinsi: p.alamat?.provinsi ?? '',
+    kabupaten: p.alamat?.kabupaten ?? '',
+    kecamatan: p.alamat?.kecamatan ?? '',
+    desa: p.alamat?.desa ?? '',
+    kodePos: p.alamat?.kodePos ?? '',
+    riwayatKesehatan: p.riwayatKesehatan ?? '',
+    statusNikah: p.statusNikah ?? '',
+    namaPasangan: p.pasangan?.nama ?? '',
+    tempatLahirPasangan: p.pasangan?.tempatLahir ?? '',
+    tglLahirPasangan: toDateInput(p.pasangan?.tglLahir),
+    jumlahAnak: p.jumlahAnak ?? '',
+    namaDarurat: p.namaDarurat ?? '',
+    hpDarurat: p.hpDarurat ?? '',
+  }
+}
+
+function buildPayload(form) {
+  return {
+    namaLengkap: (form.namaLengkap ?? '').trim(),
+    nik: emptyToNull(form.nik),
+    tempatLahir: emptyToNull(form.tempatLahir),
+    tglLahir: form.tglLahir || null,
+    jenisKelamin: emptyToNull(form.jenisKelamin),
+    agama: emptyToNull(form.agama),
+    pendidikan: emptyToNull(form.pendidikan),
+    noHp: emptyToNull(form.noHp),
+    email: emptyToNull(form.email),
+    alamat: {
+      alamat: emptyToNull(form.alamat),
+      rt: emptyToNull(form.rt),
+      rw: emptyToNull(form.rw),
+      provinsi: emptyToNull(form.provinsi),
+      kabupaten: emptyToNull(form.kabupaten),
+      kecamatan: emptyToNull(form.kecamatan),
+      desa: emptyToNull(form.desa),
+      kodePos: emptyToNull(form.kodePos),
+    },
+    riwayatKesehatan: emptyToNull(form.riwayatKesehatan),
+    statusNikah: emptyToNull(form.statusNikah),
+    namaPasangan: emptyToNull(form.namaPasangan),
+    tempatLahirPasangan: emptyToNull(form.tempatLahirPasangan),
+    tglLahirPasangan: form.tglLahirPasangan || null,
+    jumlahAnak: (form.jumlahAnak ?? '') === '' ? null : Number(form.jumlahAnak),
+    namaDarurat: emptyToNull(form.namaDarurat),
+    hpDarurat: emptyToNull(form.hpDarurat),
+  }
+}
+
+// One label/value row. In edit mode it renders `children` (the input); otherwise the display
+// value. Locked rows always show the value, with a lock marker on the label.
+function Row({ label, editing, locked, display, children }) {
   return (
     <div className="info-row">
-      <div className="info-row__label">{label}</div>
-      <div className="info-row__value">{children ?? value ?? '-'}</div>
+      <div className="info-row__label">
+        {label}
+        {locked && <Lock size={11} className="profil__lock" />}
+      </div>
+      <div className="info-row__value">
+        {editing && !locked ? children : (display ?? '-')}
+      </div>
     </div>
+  )
+}
+
+function TextField({ form, setForm, name, type = 'text', placeholder }) {
+  return (
+    <input
+      className="profil__input"
+      type={type}
+      placeholder={placeholder}
+      value={form[name] ?? ''}
+      onChange={(e) => setForm((f) => ({ ...f, [name]: e.target.value }))}
+    />
+  )
+}
+
+function SelectField({ form, setForm, name, options }) {
+  const current = form[name] ?? ''
+  const opts = current && !options.includes(current) ? [current, ...options] : options
+  return (
+    <select
+      className="profil__input"
+      value={current}
+      onChange={(e) => setForm((f) => ({ ...f, [name]: e.target.value }))}
+    >
+      <option value="">—</option>
+      {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
   )
 }
 
@@ -26,6 +135,14 @@ export default function ProfilPage() {
   const [profile, setProfile] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [modal, setModal] = useState(emptyModal)
+
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const [uploadingKey, setUploadingKey] = useState(null)
+  const [uploadMsg, setUploadMsg] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -42,7 +159,66 @@ export default function ProfilPage() {
     }
   }, [])
 
+  async function reloadProfile() {
+    setProfile(await api.getPersonalProfile())
+  }
+
+  function startEdit() {
+    setForm(initForm(profile))
+    setSaveError('')
+    setEditing(true)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setSaveError('')
+  }
+
+  async function saveProfile() {
+    setSaving(true)
+    setSaveError('')
+    try {
+      await api.updateProfile(buildPayload(form))
+      await reloadProfile()
+      setEditing(false)
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : 'Gagal menyimpan profil.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleUpload(uploadKey, file, label, doUpload) {
+    if (!file) return
+    setUploadingKey(uploadKey)
+    setUploadMsg(null)
+    try {
+      await doUpload(file)
+      await reloadProfile()
+      setUploadMsg({ type: 'ok', text: `${label} berhasil diperbarui.` })
+    } catch (err) {
+      setUploadMsg({ type: 'err', text: err instanceof ApiError ? err.message : `Gagal mengunggah ${label}.` })
+    } finally {
+      setUploadingKey(null)
+    }
+  }
+
+  function onPickFile(e, uploadKey, label, doUpload) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file later
+    handleUpload(uploadKey, file, label, doUpload)
+  }
+
+  // The doc.url is a blob: object URL; free the previous one before loading another.
+  function revokeCurrentDoc() {
+    setModal((m) => {
+      if (m.doc?.url) URL.revokeObjectURL(m.doc.url)
+      return m
+    })
+  }
+
   async function openDocumentModal(key, title) {
+    revokeCurrentDoc()
     setModal({ open: true, key, title, loading: true, doc: null, error: '' })
     try {
       const doc = await api.getDocument(key)
@@ -53,6 +229,7 @@ export default function ProfilPage() {
   }
 
   async function openAktaModal(anak) {
+    revokeCurrentDoc()
     setModal({ open: true, key: 'akta', title: `Akta Kelahiran - ${anak.nama ?? 'Anak'}`, loading: true, doc: null, error: '' })
     try {
       const doc = await api.getAktaAnak(anak.id)
@@ -63,6 +240,7 @@ export default function ProfilPage() {
   }
 
   function closeModal() {
+    if (modal.doc?.url) URL.revokeObjectURL(modal.doc.url)
     setModal(emptyModal)
   }
 
@@ -74,6 +252,8 @@ export default function ProfilPage() {
     return <div className="profil__empty">Memuat data profil...</div>
   }
 
+  const marriedNow = editing ? form?.statusNikah === 'Kawin' : profile.isMarried
+
   return (
     <div className="profil">
       <div className="profil__header">
@@ -84,100 +264,202 @@ export default function ProfilPage() {
             {profile.isActive ? 'Karyawan Aktif' : 'Karyawan Nonaktif'}
           </span>
         </div>
-        <button type="button" className="profil__edit-btn" disabled title="Segera hadir">
-          Edit Profil
-        </button>
+        {editing ? (
+          <div className="profil__edit-actions">
+            <button type="button" className="profil__btn profil__btn--ghost" onClick={cancelEdit} disabled={saving}>
+              Batal
+            </button>
+            <button type="button" className="profil__btn" onClick={saveProfile} disabled={saving}>
+              {saving ? 'Menyimpan…' : 'Simpan'}
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="profil__edit-btn profil__edit-btn--active" onClick={startEdit}>
+            Edit Profil
+          </button>
+        )}
       </div>
+
+      {editing && (
+        <div className="profil__notice">
+          Anda dapat memperbarui data pribadi Anda. <b>ID Karyawan</b> dan status kepegawaian dikunci
+          oleh sistem. Klik <b>Simpan</b> untuk menyimpan perubahan.
+        </div>
+      )}
+      {saveError && <div className="profil__alert profil__alert--err">{saveError}</div>}
 
       <div className="profil__card">
         <div className="profil__section-title">Informasi Pribadi</div>
         <div className="profil__grid">
-          <InfoRow label="ID Pegawai" value={profile.idPegawai} />
-          <InfoRow label="ID Karyawan" value={profile.idKaryawan} />
-          <InfoRow label="Nama Lengkap" value={profile.namaLengkap} />
-          <InfoRow label="NIK" value={profile.nik} />
-          <InfoRow label="Status Karyawan" value={profile.statusKaryawan} />
-          <InfoRow label="Tempat Lahir" value={profile.tempatLahir} />
-          <InfoRow label="Tanggal Lahir" value={formatTanggal(profile.tglLahir)} />
-          <InfoRow label="Jenis Kelamin" value={profile.jenisKelamin} />
-          <InfoRow label="Agama" value={profile.agama} />
-          <InfoRow label="Pendidikan" value={profile.pendidikan} />
-          <InfoRow label="Status Pernikahan">
-            {profile.isMarried ? (
+          <Row label="ID Pegawai" locked display={profile.idPegawai} />
+          <Row label="ID Karyawan" locked display={profile.idKaryawan} />
+          <Row label="Nama Lengkap" editing={editing} display={profile.namaLengkap}>
+            <TextField form={form} setForm={setForm} name="namaLengkap" />
+          </Row>
+          <Row label="NIK" editing={editing} display={profile.nik}>
+            <TextField form={form} setForm={setForm} name="nik" placeholder="16 digit" />
+          </Row>
+          <Row label="Status Karyawan" locked display={profile.statusKaryawan} />
+          <Row label="Tempat Lahir" editing={editing} display={profile.tempatLahir}>
+            <TextField form={form} setForm={setForm} name="tempatLahir" />
+          </Row>
+          <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.tglLahir)}>
+            <TextField form={form} setForm={setForm} name="tglLahir" type="date" />
+          </Row>
+          <Row label="Jenis Kelamin" editing={editing} display={profile.jenisKelamin}>
+            <SelectField form={form} setForm={setForm} name="jenisKelamin" options={GENDER_OPTIONS} />
+          </Row>
+          <Row label="Agama" editing={editing} display={profile.agama}>
+            <SelectField form={form} setForm={setForm} name="agama" options={AGAMA_OPTIONS} />
+          </Row>
+          <Row label="Pendidikan" editing={editing} display={profile.pendidikan}>
+            <TextField form={form} setForm={setForm} name="pendidikan" />
+          </Row>
+          <Row label="Status Pernikahan" editing={editing} display={
+            profile.isMarried ? (
               <button type="button" className="profil__link" onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}>
                 {profile.statusNikah}
               </button>
-            ) : (
-              profile.statusNikah ?? '-'
-            )}
-          </InfoRow>
-          <InfoRow label="Terdaftar Sejak" value={formatTanggal(profile.terdaftarSejak)} />
+            ) : (profile.statusNikah ?? '-')
+          }>
+            <SelectField form={form} setForm={setForm} name="statusNikah" options={NIKAH_OPTIONS} />
+          </Row>
+          <Row label="Terdaftar Sejak" locked display={formatTanggal(profile.terdaftarSejak)} />
         </div>
       </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Kontak &amp; Alamat</div>
         <div className="profil__grid">
-          <InfoRow label="No. HP" value={profile.noHp} />
-          <InfoRow label="Email" value={profile.email} />
-          <InfoRow label="Alamat" value={profile.alamat?.alamat} />
-          <InfoRow label="RT" value={profile.alamat?.rt} />
-          <InfoRow label="RW" value={profile.alamat?.rw} />
-          <InfoRow label="Desa" value={profile.alamat?.desa} />
-          <InfoRow label="Kecamatan" value={profile.alamat?.kecamatan} />
-          <InfoRow label="Kabupaten" value={profile.alamat?.kabupaten} />
-          <InfoRow label="Provinsi" value={profile.alamat?.provinsi} />
-          <InfoRow label="Kode Pos" value={profile.alamat?.kodePos} />
+          <Row label="No. HP" editing={editing} display={profile.noHp}>
+            <TextField form={form} setForm={setForm} name="noHp" />
+          </Row>
+          <Row label="Email" editing={editing} display={profile.email}>
+            <TextField form={form} setForm={setForm} name="email" type="email" />
+          </Row>
+          <Row label="Alamat" editing={editing} display={profile.alamat?.alamat}>
+            <TextField form={form} setForm={setForm} name="alamat" />
+          </Row>
+          <Row label="RT" editing={editing} display={profile.alamat?.rt}>
+            <TextField form={form} setForm={setForm} name="rt" />
+          </Row>
+          <Row label="RW" editing={editing} display={profile.alamat?.rw}>
+            <TextField form={form} setForm={setForm} name="rw" />
+          </Row>
+          <Row label="Desa" editing={editing} display={profile.alamat?.desa}>
+            <TextField form={form} setForm={setForm} name="desa" />
+          </Row>
+          <Row label="Kecamatan" editing={editing} display={profile.alamat?.kecamatan}>
+            <TextField form={form} setForm={setForm} name="kecamatan" />
+          </Row>
+          <Row label="Kabupaten" editing={editing} display={profile.alamat?.kabupaten}>
+            <TextField form={form} setForm={setForm} name="kabupaten" />
+          </Row>
+          <Row label="Provinsi" editing={editing} display={profile.alamat?.provinsi}>
+            <TextField form={form} setForm={setForm} name="provinsi" />
+          </Row>
+          <Row label="Kode Pos" editing={editing} display={profile.alamat?.kodePos}>
+            <TextField form={form} setForm={setForm} name="kodePos" />
+          </Row>
         </div>
       </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Kesehatan &amp; Darurat</div>
         <div className="profil__grid">
-          <InfoRow label="Riwayat Kesehatan" value={profile.riwayatKesehatan} />
-          <InfoRow label="Nama Kontak Darurat" value={profile.namaDarurat} />
-          <InfoRow label="No. HP Darurat" value={profile.hpDarurat} />
+          <Row label="Riwayat Kesehatan" editing={editing} display={profile.riwayatKesehatan}>
+            <TextField form={form} setForm={setForm} name="riwayatKesehatan" />
+          </Row>
+          <Row label="Nama Kontak Darurat" editing={editing} display={profile.namaDarurat}>
+            <TextField form={form} setForm={setForm} name="namaDarurat" />
+          </Row>
+          <Row label="No. HP Darurat" editing={editing} display={profile.hpDarurat}>
+            <TextField form={form} setForm={setForm} name="hpDarurat" />
+          </Row>
+          <Row label="Jumlah Anak" editing={editing} display={profile.jumlahAnak}>
+            <TextField form={form} setForm={setForm} name="jumlahAnak" type="number" />
+          </Row>
         </div>
       </div>
 
-      {profile.isMarried && profile.pasangan && (
+      {marriedNow && (
         <div className="profil__card">
           <div className="profil__section-title">Data Pasangan</div>
           <div className="profil__grid">
-            <InfoRow label="Nama Pasangan" value={profile.pasangan.nama} />
-            <InfoRow label="Tempat Lahir" value={profile.pasangan.tempatLahir} />
-            <InfoRow label="Tanggal Lahir" value={formatTanggal(profile.pasangan.tglLahir)} />
-            <InfoRow label="Buku Nikah">
-              <button type="button" className="profil__link" onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}>
-                Lihat Buku Nikah
-              </button>
-            </InfoRow>
+            <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
+              <TextField form={form} setForm={setForm} name="namaPasangan" />
+            </Row>
+            <Row label="Tempat Lahir" editing={editing} display={profile.pasangan?.tempatLahir}>
+              <TextField form={form} setForm={setForm} name="tempatLahirPasangan" />
+            </Row>
+            <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.pasangan?.tglLahir)}>
+              <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
+            </Row>
+            {!editing && (
+              <div className="info-row">
+                <div className="info-row__label">Buku Nikah</div>
+                <div className="info-row__value">
+                  <button type="button" className="profil__link" onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}>
+                    Lihat Buku Nikah
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      <ChildrenSection anak={profile.anak} onChanged={reloadProfile} onViewAkta={openAktaModal} />
+
       <div className="profil__card">
         <div className="profil__section-title">Berkas Pribadi</div>
+        {uploadMsg && (
+          <div className={`profil__alert profil__alert--${uploadMsg.type === 'ok' ? 'ok' : 'err'}`}>
+            {uploadMsg.text}
+          </div>
+        )}
         <div className="profil__berkas-list">
-          {profile.berkas.map((b) => (
-            <button
-              type="button"
-              className="profil__berkas-item"
-              key={b.key}
-              onClick={() => openDocumentModal(b.key, b.label)}
-            >
-              {b.available ? (
-                <CheckCircle2 size={18} className="profil__berkas-icon profil__berkas-icon--available" />
-              ) : (
-                <FileWarning size={18} className="profil__berkas-icon" />
-              )}
-              <div className="profil__berkas-text">
-                <div className="profil__berkas-label">{b.label}</div>
-                <div className="profil__berkas-sub">{b.available ? 'Tersedia' : 'Belum tersedia'}</div>
+          {profile.berkas.map((b) => {
+            const maritalLocked = MARITAL_KEYS.has(b.key) && !profile.isMarried
+            const busy = uploadingKey === b.key
+            return (
+              <div className="profil__berkas-item" key={b.key}>
+                <button
+                  type="button"
+                  className="profil__berkas-view"
+                  disabled={!b.available}
+                  onClick={() => openDocumentModal(b.key, b.label)}
+                >
+                  {b.available ? (
+                    <CheckCircle2 size={18} className="profil__berkas-icon profil__berkas-icon--available" />
+                  ) : (
+                    <FileWarning size={18} className="profil__berkas-icon" />
+                  )}
+                  <div className="profil__berkas-text">
+                    <div className="profil__berkas-label">{b.label}</div>
+                    <div className="profil__berkas-sub">
+                      {b.available ? 'Tersedia · klik untuk lihat' : 'Belum tersedia'}
+                    </div>
+                  </div>
+                  {b.available && <ChevronRight size={16} className="profil__anak-chevron" />}
+                </button>
+                <label
+                  className={`profil__upload${maritalLocked || busy ? ' is-disabled' : ''}`}
+                  title={maritalLocked ? 'Hanya untuk karyawan berstatus Kawin' : 'Unggah / ganti berkas (PDF/JPG/PNG, maks 10MB)'}
+                >
+                  {busy ? <Loader2 size={14} className="profil__spin" /> : <Upload size={14} />}
+                  <span>{b.available ? 'Ubah' : 'Unggah'}</span>
+                  <input
+                    type="file"
+                    accept={ACCEPT}
+                    hidden
+                    disabled={maritalLocked || busy}
+                    onChange={(e) => onPickFile(e, b.key, b.label, (file) => api.uploadDocument(b.key, file))}
+                  />
+                </label>
               </div>
-              <ChevronRight size={16} className="profil__anak-chevron" />
-            </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -188,37 +470,6 @@ export default function ProfilPage() {
         loading={modal.loading}
         doc={modal.doc}
         error={modal.error}
-        // Children belong to the family card, so their akta are reachable from inside the
-        // Kartu Keluarga popup rather than from a section of their own on the page.
-        footer={
-          modal.key === 'kk' ? (
-            <div className="profil__anak-panel">
-              <div className="profil__anak-panel-title">Data Anak</div>
-              {profile.anak.length === 0 ? (
-                <div className="profil__empty-inline">Belum ada data anak.</div>
-              ) : (
-                <div className="profil__anak-list">
-                  {profile.anak.map((anak) => (
-                    <button type="button" className="profil__anak-item" key={anak.id} onClick={() => openAktaModal(anak)}>
-                      <div className="profil__anak-icon">
-                        <Users size={16} />
-                      </div>
-                      <div className="profil__anak-text">
-                        <div className="profil__anak-name">{anak.nama ?? `Anak ke-${anak.urutan}`}</div>
-                        <div className="profil__anak-sub">
-                          {anak.tempatLahir ?? '-'}, {formatTanggal(anak.tglLahir)}
-                        </div>
-                      </div>
-                      <div className="profil__anak-akta">
-                        <ChevronRight size={16} className="profil__anak-chevron" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : null
-        }
       />
     </div>
   )

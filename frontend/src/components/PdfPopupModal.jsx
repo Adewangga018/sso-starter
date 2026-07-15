@@ -21,14 +21,14 @@ export default function PdfPopupModal({ open, onClose, title, loading, doc, erro
             </div>
           )}
 
-          {!loading && (error || !doc?.available) && (
+          {!loading && (error || !doc?.url) && (
             <div className="pdf-modal__state">
               <FileWarning size={22} />
               <span>{error || 'Dokumen belum tersedia. Hubungi HR/SDM.'}</span>
             </div>
           )}
 
-          {!loading && !error && doc?.available && (
+          {!loading && !error && doc?.url && (
             <iframe title={title} src={doc.url} className="pdf-modal__frame" />
           )}
         </div>

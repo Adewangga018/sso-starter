@@ -87,6 +87,8 @@ ALTER ROLE db_datareader ADD MEMBER svc_mygcs;                         -- baca: 
 GRANT INSERT, UPDATE, DELETE ON dbo.web_sdm_spl        TO svc_mygcs;   -- Lembur (SPL)
 GRANT INSERT, UPDATE, DELETE ON dbo.web_sdm_surat_ijin TO svc_mygcs;   -- Izin (surat izin)
 GRANT INSERT                 ON intranet.web_ttd_elektronik TO svc_mygcs; -- registry QR validasi (cetak izin)
+GRANT UPDATE                 ON dbo.MST_PEGAWAI      TO svc_mygcs;      -- Edit profil mandiri (biodata/kontak/alamat + path dokumen)
+GRANT INSERT, UPDATE, DELETE ON dbo.MST_ANAK_PEGAWAI TO svc_mygcs;      -- Edit profil: CRUD data anak + path akta
 
 -- GCSSDM: WAJIB. View SDM di GCS (PEGAWAI_SDM, vw_web_sdm_absensi, vw_web_sdm_approval)
 -- membaca lintas-database ke GCSSDM. View lintas-database MEMUTUS ownership chaining, jadi
@@ -213,6 +215,13 @@ Edit `C:\inetpub\mygcs\api\web.config`, tambahkan `<environmentVariables>` di da
     <!-- (Opsional) Admin bootstrap: email ini otomatis diberi role Admin saat login -->
     <environmentVariable name="Admin__Emails__0" value="admin.it@gcs-gresik.com" />
 
+    <!-- Folder dokumen karyawan (KTP/KK/ijazah, dll.) di server WCP-GCS. Kolom FILE_* di
+         MST_PEGAWAI menyimpan path relatif (uploads/karyawan/xxx.jpg) yang di-resolve ke
+         bawah folder ini, lalu di-stream lewat endpoint ber-otorisasi (bukan URL publik).
+         Edit-profil mandiri MENULIS ke folder ini → App Pool butuh izin Read + Write.
+         Backend co-located di server WCP-GCS → cukup path lokal; kalau remote, pakai UNC. -->
+    <environmentVariable name="LegacyFiles__Root" value="D:\web_apps\WCP-GCS" />
+
     <!-- (Opsional) SMTP untuk reset password nyata; jika kosong, link ditulis ke log -->
     <environmentVariable name="Email__Smtp__Host"     value="smtp.gcs-gresik.com" />
     <environmentVariable name="Email__Smtp__Port"     value="587" />
@@ -227,6 +236,11 @@ Edit `C:\inetpub\mygcs\api\web.config`, tambahkan `<environmentVariables>` di da
 > **Penting:**
 > - Tanpa thumbprint sertifikat, aplikasi sengaja gagal start (fail-fast).
 > - `Oidc__Issuer` wajib `https://my.gcs-gresik.com/api` agar cocok dengan authority frontend.
+> - **`LegacyFiles__Root`**: identitas App Pool (`IIS AppPool\mygcs-api-pool` atau akun servis
+>   yang dipakai) **harus punya izin NTFS Read + Write** ke folder itu (dan ke share bila UNC) —
+>   Read untuk menampilkan dokumen, Write karena edit-profil mandiri mengunggah/mengganti
+>   dokumen. Tanpa izin, dokumen gagal dibuka/diunggah walau health OK. Set: klik-kanan folder →
+>   *Properties* → *Security* → tambah user App Pool dengan hak *Modify* (mencakup Read & Write).
 > - Redirect URI SPA (`https://my.gcs-gresik.com/callback`) & post-logout (`.../`) **sudah**
 >   terdaftar otomatis oleh seeder (dari `appsettings.json` → `Oidc:Spa`). Bila domain berbeda,
 >   ubah `appsettings.json` sebelum publish.
@@ -328,6 +342,8 @@ Start-WebAppPool -Name "mygcs-api-pool"
 | **Endpoint API mis. `/api/account/login` → 404** (padahal `/api/connect/authorize` jalan) | Route controller **tidak boleh** ber-prefix `api/`. Sub-app IIS `/api` sudah melepas `/api` via PathBase, jadi controller harus root-relative (`[Route("account")]`, bukan `[Route("api/account")]`) — mengikuti pola OpenIddict `connect/*`. Sudah diperbaiki di kode; kalau menambah controller baru, ikuti konvensi ini. |
 | **Absensi/Lembur/Izin "Data pegawai tidak ditemukan"** | Akun Identity tidak punya NIK yang cocok di `MST_PEGAWAI` (GCS), atau `GcsConnection` salah. Cek env var `ConnectionStrings__GcsConnection`. (Bug lama di mana controller memakai `[Authorize]` polos alih-alih skema Bearer sudah diperbaiki di kode.) |
 | **Reset password tak terkirim email** | `Email__Smtp__Host` belum diisi → link hanya ditulis ke log. Isi konfig SMTP. |
+| **Dokumen karyawan "Dokumen belum tersedia" padahal ada** | (1) `LegacyFiles__Root` belum diset / salah folder. (2) Identitas App Pool tak punya izin **NTFS Read** ke folder/ share dokumen (Bab 7). (3) Path di kolom `FILE_*` tak cocok dengan isi folder. |
+| **Edit profil gagal simpan / unggah dokumen error** | Unggah dokumen butuh izin **NTFS Write** App Pool ke `LegacyFiles__Root` (Bab 7). Simpan biodata butuh **UPDATE** di `dbo.MST_PEGAWAI`; tambah/hapus anak butuh **INSERT/UPDATE/DELETE** di `dbo.MST_ANAK_PEGAWAI` (GCS) untuk login `svc_mygcs` — bukan hanya `db_datareader`. |
 | **`databaseConnected:false`** | Server IIS tak bisa menjangkau SQL / kredensial `svc_mygcs` salah. |
 
 **Aktifkan log error** (sementara): set `stdoutLogEnabled="true"`, buat folder `C:\inetpub\mygcs\api\logs`,
@@ -345,7 +361,9 @@ Start-WebAppPool -Name "mygcs-api-pool"
 - [ ] App Pool `mygcs-api-pool` (No Managed Code) + izin folder.
 - [ ] Site frontend (root, https) + `web.config` SPA fallback.
 - [ ] Sub-application `api` menunjuk ke folder publish backend.
-- [ ] `web.config` backend: `ASPNETCORE_ENVIRONMENT`, 2 connection string, 2 thumbprint, `Oidc__Issuer`, (opsional Admin/SMTP).
+- [ ] `web.config` backend: `ASPNETCORE_ENVIRONMENT`, 2 connection string, 2 thumbprint, `Oidc__Issuer`, `LegacyFiles__Root`, (opsional Admin/SMTP).
+- [ ] Folder dokumen (`LegacyFiles__Root`) diberi izin **NTFS Read + Write** ke App Pool `mygcs-api-pool` (Write untuk edit-profil unggah dokumen).
+- [ ] `svc_mygcs` diberi **UPDATE** pada `dbo.MST_PEGAWAI` dan **INSERT/UPDATE/DELETE** pada `dbo.MST_ANAK_PEGAWAI` (GCS) untuk edit profil + CRUD anak.
 - [ ] Recycle App Pool.
 - [ ] Verifikasi: `/api/` → halaman logo, `/api/health` → db true, discovery issuer benar, login end-to-end jalan.
 
@@ -361,6 +379,7 @@ Start-WebAppPool -Name "mygcs-api-pool"
 | `Oidc__SigningCertificateThumbprint` | `A1B2...` | ✅ |
 | `Oidc__EncryptionCertificateThumbprint` | `C3D4...` | ✅ |
 | `Oidc__Issuer` | `https://my.gcs-gresik.com/api` | ✅ |
+| `LegacyFiles__Root` | `D:\web_apps\WCP-GCS` (folder dokumen karyawan; App Pool butuh izin Read) | ✅ |
 | `Admin__Emails__0` | `admin.it@gcs-gresik.com` | opsional |
 | `Email__Smtp__Host` (+Port/User/Password/From/EnableSsl) | `smtp...` | opsional |
 

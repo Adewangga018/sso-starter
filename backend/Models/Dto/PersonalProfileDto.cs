@@ -25,6 +25,37 @@ public record PasanganDto(
 
 public record BerkasDto(string Key, string Label, bool Available);
 
+// Add/edit payload for a child (MST_ANAK_PEGAWAI). Urutan is optional on add (auto-assigned
+// to next in sequence when omitted).
+public record AnakUpsertRequest(
+    string? Nama,
+    string? TempatLahir,
+    DateOnly? TglLahir,
+    int? Urutan);
+
+// Self-service profile edit payload. ID_KARYAWAN (the account-to-employee link) and system
+// fields (ID_PEGAWAI, STATUS_KARYAWAN, CREATED_AT) are intentionally NOT here - they cannot
+// be changed by the employee.
+public record UpdateProfileRequest(
+    string NamaLengkap,
+    string? Nik,
+    string? TempatLahir,
+    DateOnly? TglLahir,
+    string? JenisKelamin,
+    string? Agama,
+    string? Pendidikan,
+    string? NoHp,
+    string? Email,
+    AlamatDto? Alamat,
+    string? RiwayatKesehatan,
+    string? StatusNikah,
+    string? NamaPasangan,
+    string? TempatLahirPasangan,
+    DateOnly? TglLahirPasangan,
+    int? JumlahAnak,
+    string? NamaDarurat,
+    string? HpDarurat);
+
 public record AbsensiDto(
     string NamaPegawai,
     DateOnly Tanggal,
