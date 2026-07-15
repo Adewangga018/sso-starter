@@ -1,0 +1,297 @@
+.kamera__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.kamera__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  margin-bottom: 18px;
+}
+
+.kamera__section-title svg {
+  color: var(--gcs-green-600);
+}
+
+.kamera__body {
+  display: grid;
+  grid-template-columns: minmax(0, 660px) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+/* --- Panggung kamera --- */
+.kamera__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kamera__viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--gcs-green-900);
+  border: 1px solid var(--gcs-border);
+}
+
+.kamera__video,
+.kamera__shot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Preview kamera depan dicerminkan agar terasa natural (foto tetap dikoreksi di canvas). */
+.kamera__viewport--mirror .kamera__video {
+  transform: scaleX(-1);
+}
+
+.kamera__switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 38, 31, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.kamera__switch:hover {
+  background: rgba(15, 38, 31, 0.78);
+}
+
+.kamera__alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.kamera__alert svg {
+  flex-shrink: 0;
+}
+
+.kamera__alert--error {
+  color: #b3352d;
+  background: rgba(230, 72, 63, 0.08);
+  border: 1px solid rgba(230, 72, 63, 0.25);
+}
+
+.kamera__retry {
+  margin-left: auto;
+  border: 1px solid rgba(230, 72, 63, 0.4);
+  background: transparent;
+  color: #b3352d;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kamera__radius {
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.kamera__radius--ok {
+  color: #1f5b30;
+  background: rgba(47, 108, 63, 0.1);
+  border: 1px solid rgba(47, 108, 63, 0.25);
+}
+
+.kamera__radius--out {
+  color: #b3352d;
+  background: rgba(230, 72, 63, 0.08);
+  border: 1px solid rgba(230, 72, 63, 0.25);
+}
+
+.kamera__controls {
+  display: flex;
+  justify-content: center;
+}
+
+/* --- Panel keterangan + aksi --- */
+.kamera__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kamera__info {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kamera__info li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.kamera__info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
+}
+
+.kamera__info-icon--gold {
+  background: rgba(244, 174, 70, 0.16);
+  color: var(--gcs-gold-700);
+}
+
+.kamera__info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kamera__info-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-muted);
+}
+
+.kamera__info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  word-break: break-word;
+}
+
+.kamera__info-muted {
+  font-weight: 500;
+  color: var(--gcs-text-muted);
+}
+
+.kamera__feedback {
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.kamera__feedback--success {
+  color: #1f5b30;
+  background: rgba(47, 108, 63, 0.1);
+  border: 1px solid rgba(47, 108, 63, 0.25);
+}
+
+.kamera__feedback--error {
+  color: #b3352d;
+  background: rgba(230, 72, 63, 0.08);
+  border: 1px solid rgba(230, 72, 63, 0.25);
+}
+
+.kamera__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* --- Tombol --- */
+.kamera__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: filter 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.kamera__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kamera__btn--capture {
+  background: var(--gcs-green-600);
+  color: #fff;
+}
+
+.kamera__btn--capture:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.kamera__btn--ghost {
+  background: var(--gcs-white);
+  border-color: var(--gcs-border);
+  color: var(--gcs-ink);
+}
+
+.kamera__btn--ghost:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+}
+
+.kamera__btn--absen {
+  width: 100%;
+  padding: 13px 28px;
+  font-size: 14px;
+  background: var(--gcs-green-600);
+  color: #fff;
+}
+
+.kamera__btn--absen:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+/* Canvas kerja tidak pernah ditampilkan. */
+.kamera__canvas {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .kamera__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kamera__card {
+    padding: 18px 16px;
+  }
+}

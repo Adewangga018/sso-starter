@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
+import AbsensiKamera from './AbsensiKamera'
 import './AbsensiPage.css'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -16,6 +17,13 @@ const COLUMNS = [
 function isWeekend(namaHari) {
   const v = (namaHari ?? '').trim().toLowerCase()
   return v === 'sabtu' || v === 'minggu'
+}
+
+// "09:53:40" -> "09:53"; nilai vw yang sudah "HH:mm" dibiarkan apa adanya.
+function formatJam(value) {
+  if (!value) return value
+  const m = String(value).match(/^(\d{1,2}):(\d{2})/)
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}` : value
 }
 
 function formatTanggal(value) {
@@ -35,27 +43,26 @@ export default function AbsensiPage() {
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState({ key: 'tanggal', direction: 'desc' })
 
-  useEffect(() => {
-    let cancelled = false
-    api
+  const loadRows = useCallback(() => {
+    setLoadError('')
+    return api
       .getAbsensi()
       .then((data) => {
-        if (cancelled) return
         const withSeq = data.map((row, idx) => ({ ...row, _seq: data.length - idx }))
         setRows(withSeq)
       })
       .catch((err) => {
-        if (cancelled) return
         if (isEmptyDataError(err)) {
           setRows([])
           return
         }
         setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat data absensi.')
       })
-    return () => {
-      cancelled = true
-    }
   }, [])
+
+  useEffect(() => {
+    loadRows()
+  }, [loadRows])
 
   const filtered = useMemo(() => {
     if (!rows) return []
@@ -112,16 +119,21 @@ export default function AbsensiPage() {
     setPage(1)
   }
 
-  if (loadError) {
-    return <div className="absensi__empty">{loadError}</div>
-  }
-
-  if (!rows) {
-    return <div className="absensi__empty">Memuat data absensi...</div>
-  }
-
   return (
     <div className="absensi">
+      <AbsensiKamera onSubmitted={loadRows} />
+
+      {loadError ? (
+        <div className="absensi__card">
+          <div className="absensi__section-title">Log Absensi</div>
+          <div className="absensi__empty">{loadError}</div>
+        </div>
+      ) : !rows ? (
+        <div className="absensi__card">
+          <div className="absensi__section-title">Log Absensi</div>
+          <div className="absensi__empty">Memuat data absensi...</div>
+        </div>
+      ) : (
       <div className="absensi__card">
         <div className="absensi__section-title">Log Absensi</div>
 
@@ -209,18 +221,18 @@ export default function AbsensiPage() {
                     </td>
                     <td>
                       {weekend ? (
-                        <span className="absensi__badge absensi__badge--red">{row.checkIn ?? '-'}</span>
+                        <span className="absensi__badge absensi__badge--red">{formatJam(row.checkIn) ?? '-'}</span>
                       ) : (
-                        row.checkIn ?? '-'
+                        formatJam(row.checkIn) ?? '-'
                       )}
                     </td>
                     <td>
                       {weekend ? (
-                        <span className="absensi__badge absensi__badge--red">{row.checkOut ?? '-'}</span>
+                        <span className="absensi__badge absensi__badge--red">{formatJam(row.checkOut) ?? '-'}</span>
                       ) : hasCatatan ? (
-                        <span className="absensi__badge absensi__badge--yellow">{row.checkOut ?? '-'}</span>
+                        <span className="absensi__badge absensi__badge--yellow">{formatJam(row.checkOut) ?? '-'}</span>
                       ) : (
-                        row.checkOut ?? '-'
+                        formatJam(row.checkOut) ?? '-'
                       )}
                     </td>
                     <td className="absensi__col-ket">
@@ -254,6 +266,7 @@ export default function AbsensiPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

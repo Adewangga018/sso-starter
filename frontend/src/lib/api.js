@@ -53,6 +53,8 @@ export const api = {
   getDashboardSummary: () => apiFetch('/api/dashboard/summary'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
+  submitAbsensi: (payload) =>
+    apiFetch('/api/personal/absensi', { method: 'POST', body: JSON.stringify(payload) }),
   getSpl: () => apiFetch('/api/personal/spl'),
   createSpl: (payload) => apiFetch('/api/personal/spl', { method: 'POST', body: JSON.stringify(payload) }),
   updateSpl: (id, payload) =>
