@@ -62,7 +62,17 @@ public record AbsensiDto(
     string? NamaHari,
     string? CheckIn,
     string? CheckOut,
-    string? CatatanMangkir);
+    string? CatatanMangkir,
+    // "SDM" = baris resmi dari vw_web_sdm_absensi; "Kamera" = hasil absensi kamera (db_mygcs).
+    string Sumber);
+
+// Payload absensi kamera dari SPA: foto (data URL base64), koordinat, tempat, dan tipe in/out.
+public record AbsensiCheckInDto(
+    string Foto,
+    decimal Lat,
+    decimal Lng,
+    string? Tempat,
+    string Type);
 
 public record PersonalProfileDto(
     int IdPegawai,

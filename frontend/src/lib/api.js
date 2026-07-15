@@ -94,6 +94,8 @@ export const api = {
     apiFetch(`/api/personal/anak/${idAnak}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteAnak: (idAnak) => apiFetch(`/api/personal/anak/${idAnak}`, { method: 'DELETE' }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
+  submitAbsensi: (payload) =>
+    apiFetch('/api/personal/absensi', { method: 'POST', body: JSON.stringify(payload) }),
   getSpl: () => apiFetch('/api/personal/spl'),
   createSpl: (payload) => apiFetch('/api/personal/spl', { method: 'POST', body: JSON.stringify(payload) }),
   updateSpl: (id, payload) =>

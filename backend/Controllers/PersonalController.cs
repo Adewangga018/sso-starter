@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using SsoBackend.Data;
+using SsoBackend.Models;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Gcs;
 using SsoBackend.Services;
@@ -19,20 +20,66 @@ public class PersonalController : ControllerBase
     private const long MaxDocBytes = 10 * 1024 * 1024;
 
     private readonly GcsDbContext _db;
+    private readonly ApplicationDbContext _appDb;
     private readonly DocumentResolver _documentResolver;
     private readonly CurrentUserContext _currentUser;
+    private readonly IConfiguration _config;
+    private readonly ILogger<PersonalController> _logger;
     private readonly IAuditLogger _audit;
 
     public PersonalController(
         GcsDbContext db,
+        ApplicationDbContext appDb,
         DocumentResolver documentResolver,
         CurrentUserContext currentUser,
+        IConfiguration config,
+        ILogger<PersonalController> logger,
         IAuditLogger audit)
     {
         _db = db;
+        _appDb = appDb;
         _documentResolver = documentResolver;
         _currentUser = currentUser;
+        _config = config;
+        _logger = logger;
         _audit = audit;
+    }
+
+    // Geofence kantor: absensi hanya sah dalam radius 15 m dari titik ini.
+    private const double OfficeLat = -7.160305232233935;
+    private const double OfficeLng = 112.63314286876565;
+    private const double RadiusMeters = 200.0;
+
+    private static string HariIndonesia(DayOfWeek d) => d switch
+    {
+        DayOfWeek.Sunday => "Minggu",
+        DayOfWeek.Monday => "Senin",
+        DayOfWeek.Tuesday => "Selasa",
+        DayOfWeek.Wednesday => "Rabu",
+        DayOfWeek.Thursday => "Kamis",
+        DayOfWeek.Friday => "Jumat",
+        DayOfWeek.Saturday => "Sabtu",
+        _ => string.Empty,
+    };
+
+    // Jarak Haversine dalam meter.
+    private static double DistanceMeters(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double R = 6371000.0;
+        static double ToRad(double d) => d * Math.PI / 180.0;
+        var dLat = ToRad(lat2 - lat1);
+        var dLng = ToRad(lng2 - lng1);
+        var a = Math.Pow(Math.Sin(dLat / 2), 2)
+            + Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) * Math.Pow(Math.Sin(dLng / 2), 2);
+        return 2 * R * Math.Asin(Math.Sqrt(a));
+    }
+
+    // "data:image/jpeg;base64,...." -> byte[].
+    private static byte[] DecodeDataUrl(string dataUrl)
+    {
+        var idx = dataUrl.IndexOf("base64,", StringComparison.Ordinal);
+        var b64 = idx >= 0 ? dataUrl[(idx + 7)..] : dataUrl;
+        return Convert.FromBase64String(b64);
     }
 
     [HttpGet("profile")]
@@ -318,19 +365,172 @@ public class PersonalController : ControllerBase
             return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
         }
 
-        var logs = await _db.AbsensiLog
+        // Baris resmi dari SDM (read-only; view GCS tidak pernah diubah). Diindeks per tanggal.
+        var sdmRows = await _db.AbsensiLog
             .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
-            .OrderByDescending(a => a.Tanggal)
-            .Select(a => new AbsensiDto(
+            .Select(a => new
+            {
+                a.Tanggal,
                 a.NamaPegawai,
-                DateOnly.FromDateTime(a.Tanggal),
                 a.NamaHari,
                 a.CheckIn,
                 a.CheckOut,
-                a.CatatanMangkir))
+                a.CatatanMangkir,
+            })
             .ToListAsync();
 
+        var sdmByDate = sdmRows
+            .GroupBy(a => DateOnly.FromDateTime(a.Tanggal))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // Hasil absensi kamera (db_mygcs), digabung per tanggal: jam masuk = check-in paling
+        // awal, jam keluar = check-out paling akhir pada hari itu.
+        var kameraRows = await _appDb.Attendances
+            .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
+            .ToListAsync();
+
+        var kameraByDate = kameraRows
+            .GroupBy(a => a.Tanggal)
+            .ToDictionary(g => g.Key, g => new
+            {
+                NamaPegawai = g.First().NamaPegawai,
+                NamaHari = g.First().NamaHari,
+                CheckIn = g.Where(x => x.CheckIn != null).OrderBy(x => x.CheckIn).Select(x => x.CheckIn).FirstOrDefault(),
+                CheckOut = g.Where(x => x.CheckOut != null).OrderByDescending(x => x.CheckOut).Select(x => x.CheckOut).FirstOrDefault(),
+            });
+
+        // Satu tanggal = satu baris. Kamera = data terbaru (dipakai bila ada, jika kosong pakai
+        // nilai vw). Keterangan mengikuti logika vw (catatan_mangkir); kosong bila tanggal itu
+        // hanya berasal dari kamera. Tidak ada nilai yang ditulis balik ke GCS.
+        var logs = sdmByDate.Keys
+            .Union(kameraByDate.Keys)
+            .Select(d =>
+            {
+                sdmByDate.TryGetValue(d, out var s);
+                kameraByDate.TryGetValue(d, out var k);
+                return new AbsensiDto(
+                    s?.NamaPegawai ?? k?.NamaPegawai ?? pegawai.NAMA_LENGKAP,
+                    d,
+                    s?.NamaHari ?? k?.NamaHari,
+                    k?.CheckIn ?? s?.CheckIn,
+                    k?.CheckOut ?? s?.CheckOut,
+                    s?.CatatanMangkir,
+                    k != null ? "Kamera" : "SDM");
+            })
+            .OrderByDescending(x => x.Tanggal)
+            .ToList();
+
         return Ok(logs);
+    }
+
+    [HttpPost("absensi")]
+    public async Task<ActionResult<AbsensiDto>> PostAbsensi([FromBody] AbsensiCheckInDto dto)
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null)
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Foto))
+        {
+            return BadRequest(new { message = "Foto absensi wajib diambil terlebih dahulu." });
+        }
+
+        // Geofence: hanya boleh absen dalam radius kantor. Divalidasi ulang di server agar
+        // tidak bisa ditembus dari klien.
+        var jarak = DistanceMeters((double)dto.Lat, (double)dto.Lng, OfficeLat, OfficeLng);
+        if (jarak > RadiusMeters)
+        {
+            return BadRequest(new
+            {
+                message = $"Anda berada di luar radius kantor (~{jarak:0} m). Absensi hanya dapat dilakukan dalam radius {RadiusMeters:0} meter dari kantor.",
+            });
+        }
+
+        var basePath = _config["Attendance:PhotoPath"];
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = "Penyimpanan foto absensi belum dikonfigurasi (Attendance:PhotoPath). Hubungi IT.",
+            });
+        }
+
+        // WIB (UTC+7) dihitung eksplisit agar tidak bergantung pada zona waktu server.
+        var nowUtc = DateTime.UtcNow;
+        var nowWib = nowUtc.AddHours(7);
+        var jam = nowWib.ToString("HH:mm:ss");
+        var tanggalWib = DateOnly.FromDateTime(nowWib);
+
+        // Satu tombol: sistem menentukan masuk/keluar dari status absensi hari ini, bukan dari
+        // jam. Belum ada absen masuk hari itu -> tap ini dihitung "masuk" (termasuk yang telat).
+        // Sudah absen masuk -> tap berikutnya dihitung "keluar". Tidak mungkin "keluar" tercatat
+        // sebelum "masuk".
+        var sudahAbsenMasuk = await _appDb.Attendances
+            .AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null);
+        var type = sudahAbsenMasuk ? "out" : "in";
+
+        // Foto (sudah bertempel timestamp dari klien) disimpan sebagai file di share EASy;
+        // hanya path relatifnya yang dicatat di database.
+        byte[] fotoBytes;
+        try
+        {
+            fotoBytes = DecodeDataUrl(dto.Foto);
+        }
+        catch (FormatException)
+        {
+            return BadRequest(new { message = "Format foto tidak valid." });
+        }
+
+        var safeKode = new string((pegawai.ID_KARYAWAN ?? "").Where(char.IsLetterOrDigit).ToArray());
+        var fileName = $"{safeKode}_{nowWib:yyyyMMdd_HHmmss}.jpg";
+        try
+        {
+            Directory.CreateDirectory(basePath);
+            await System.IO.File.WriteAllBytesAsync(Path.Combine(basePath, fileName), fotoBytes);
+        }
+        catch (Exception ex)
+        {
+            // Penyebab tersering: identitas App Pool IIS tidak punya izin tulis ke share UNC
+            // (Attendance:PhotoPath). Exception asli (UnauthorizedAccessException / IOException /
+            // DirectoryNotFoundException) dicatat agar IT bisa membedakan izin vs path salah.
+            _logger.LogError(ex, "Gagal menyimpan foto absensi ke {BasePath} (file {FileName})", basePath, fileName);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Gagal menyimpan foto absensi ke penyimpanan. Hubungi IT.",
+            });
+        }
+
+        var row = new Attendance
+        {
+            KodePegawai = pegawai.ID_KARYAWAN ?? string.Empty,
+            NamaPegawai = pegawai.NAMA_LENGKAP,
+            Tanggal = DateOnly.FromDateTime(nowWib),
+            NamaHari = HariIndonesia(nowWib.DayOfWeek),
+            CheckIn = type == "in" ? jam : null,
+            CheckOut = type == "out" ? jam : null,
+            CatatanMangkir = null,
+            Foto = "attendances/" + fileName,
+            Lat = dto.Lat,
+            Lng = dto.Lng,
+            Type = type,
+            Tempat = dto.Tempat,
+            CreatedAt = nowUtc,
+            UpdatedAt = nowUtc,
+        };
+
+        _appDb.Attendances.Add(row);
+        await _appDb.SaveChangesAsync();
+
+        return Ok(new AbsensiDto(
+            row.NamaPegawai,
+            row.Tanggal,
+            row.NamaHari,
+            row.CheckIn,
+            row.CheckOut,
+            row.CatatanMangkir,
+            "Kamera"));
     }
 
     // Streams the employee's OWN document. The file physically lives on the WCP-GCS share;

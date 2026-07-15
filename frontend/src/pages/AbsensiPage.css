@@ -187,6 +187,10 @@
   color: #402c07;
 }
 
+.absensi__badge--green {
+  background: var(--gcs-green-600);
+}
+
 .absensi__no-data {
   text-align: center;
   color: var(--gcs-text-muted);
