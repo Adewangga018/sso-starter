@@ -48,10 +48,51 @@ async function apiFetch(path, options = {}) {
 
 const post = (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
+// Fetches a binary document (KTP/KK/ijazah, etc.) as a blob and returns an object URL the
+// viewer can point an <iframe> at. An <iframe src> can't carry an Authorization header, so we
+// fetch with the Bearer token here and hand back a blob: URL instead. The caller MUST call
+// URL.revokeObjectURL(url) when done to free the blob. Throws ApiError on failure (e.g. 404
+// when the document isn't available), so callers can show a friendly message.
+async function apiBlob(path) {
+  const user = await userManager.getUser()
+  const headers = {}
+  if (user && !user.expired) headers.Authorization = `Bearer ${user.access_token}`
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include', headers })
+  if (!res.ok) {
+    let message = `Terjadi kesalahan (${res.status}).`
+    try {
+      const data = await res.json()
+      if (data?.message) message = data.message
+    } catch {
+      // response has no JSON body, keep default message
+    }
+    throw new ApiError(res.status, message)
+  }
+
+  const blob = await res.blob()
+  return { url: URL.createObjectURL(blob), contentType: blob.type }
+}
+
 export const api = {
   // dashboard / personal (Bearer)
   getDashboardSummary: () => apiFetch('/api/dashboard/summary'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
+  updateProfile: (payload) => apiFetch('/api/personal/profile', { method: 'PUT', body: JSON.stringify(payload) }),
+  uploadDocument: (key, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiFetch(`/api/personal/documents/${key}`, { method: 'POST', body })
+  },
+  uploadAktaAnak: (idAnak, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiFetch(`/api/personal/documents/anak/${idAnak}/akta`, { method: 'POST', body })
+  },
+  createAnak: (payload) => apiFetch('/api/personal/anak', { method: 'POST', body: JSON.stringify(payload) }),
+  updateAnak: (idAnak, payload) =>
+    apiFetch(`/api/personal/anak/${idAnak}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteAnak: (idAnak) => apiFetch(`/api/personal/anak/${idAnak}`, { method: 'DELETE' }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getSpl: () => apiFetch('/api/personal/spl'),
   createSpl: (payload) => apiFetch('/api/personal/spl', { method: 'POST', body: JSON.stringify(payload) }),
@@ -108,8 +149,9 @@ export const api = {
     body.append('file', file)
     return apiFetch(`/api/personal/izin/${id}/surat-dokter`, { method: 'POST', body })
   },
-  getDocument: (key) => apiFetch(`/api/personal/documents/${key}`),
-  getAktaAnak: (idAnak) => apiFetch(`/api/personal/documents/anak/${idAnak}/akta`),
+  // Return { url, contentType } - url is a blob: object URL; revoke it when the viewer closes.
+  getDocument: (key) => apiBlob(`/api/personal/documents/${key}`),
+  getAktaAnak: (idAnak) => apiBlob(`/api/personal/documents/anak/${idAnak}/akta`),
 
   // authentication (cookie flow)
   login: (email, password) => post('/api/account/login', { email, password }),
@@ -125,6 +167,14 @@ export const api = {
   twoFactorSetup: () => apiFetch('/api/account/2fa/setup'),
   enableTwoFactor: (code) => post('/api/account/2fa/enable', { code }),
   disableTwoFactor: () => post('/api/account/2fa/disable'),
+
+  // admin document browser (Admin, Bearer)
+  searchEmployees: (q) => apiFetch(`/api/admin/documents/search?q=${encodeURIComponent(q ?? '')}`),
+  getEmployeeDocuments: (idPegawai) => apiFetch(`/api/admin/documents/${idPegawai}`),
+  // Return { url, contentType } - blob object URL; revoke it when the viewer closes.
+  getEmployeeDocument: (idPegawai, key) => apiBlob(`/api/admin/documents/${idPegawai}/file/${key}`),
+  getEmployeeAktaAnak: (idPegawai, idAnak) =>
+    apiBlob(`/api/admin/documents/${idPegawai}/anak/${idAnak}/akta`),
 
   // audit (Admin, Bearer)
   getAuditLogs: (params = {}) => {

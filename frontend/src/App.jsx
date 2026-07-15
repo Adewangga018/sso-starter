@@ -7,6 +7,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import SecurityPage from './pages/SecurityPage'
 import AdminAuditPage from './pages/AdminAuditPage'
+import AdminDocumentsPage from './pages/AdminDocumentsPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
@@ -34,6 +35,7 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="/security" element={<SecurityPage />} />
             <Route path="/admin/audit" element={<AdminAuditPage />} />
+            <Route path="/admin/documents" element={<AdminDocumentsPage />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
             </Route>
