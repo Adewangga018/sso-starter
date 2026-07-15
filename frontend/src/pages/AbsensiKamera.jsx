@@ -4,9 +4,9 @@ import { api, ApiError } from '../lib/api'
 import './AbsensiKamera.css'
 
 // Titik & radius geofence kantor. Absensi hanya sah dalam radius ini (divalidasi ulang di server).
-const OFFICE_LAT = -7.160305232233935
-const OFFICE_LNG = 112.63314286876565
-const RADIUS_METERS = 200
+const OFFICE_LAT = -7.160356123699222
+const OFFICE_LNG = 112.63249083138189
+const RADIUS_METERS = 150
 
 function distanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000

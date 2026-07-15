@@ -45,10 +45,10 @@ public class PersonalController : ControllerBase
         _audit = audit;
     }
 
-    // Geofence kantor: absensi hanya sah dalam radius 15 m dari titik ini.
-    private const double OfficeLat = -7.160305232233935;
-    private const double OfficeLng = 112.63314286876565;
-    private const double RadiusMeters = 200.0;
+    // Geofence kantor: absensi hanya sah dalam radius 150 m dari titik ini.
+    private const double OfficeLat = -7.160356123699222;
+    private const double OfficeLng = 112.63249083138189;
+    private const double RadiusMeters = 150.0;
 
     private static string HariIndonesia(DayOfWeek d) => d switch
     {
