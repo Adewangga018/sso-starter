@@ -178,6 +178,15 @@ export const api = {
   getEmployeeAktaAnak: (idPegawai, idAnak) =>
     apiBlob(`/api/admin/documents/${idPegawai}/anak/${idAnak}/akta`),
 
+  // admin control panel (Admin IT, Bearer)
+  getAdminOverview: () => apiFetch('/api/admin/overview'),
+  getAdminUsers: (q) => apiFetch(`/api/admin/users?q=${encodeURIComponent(q ?? '')}`),
+  setUserAdmin: (id, enabled) =>
+    apiFetch(`/api/admin/users/${id}/role/admin`, { method: 'POST', body: JSON.stringify({ enabled }) }),
+  setUserActive: (id, enabled) =>
+    apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
+  unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),
+
   // audit (Admin, Bearer)
   getAuditLogs: (params = {}) => {
     const q = new URLSearchParams(

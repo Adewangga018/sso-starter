@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, ChevronDown, FolderLock, LogOut, Menu, ShieldAlert } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './TopBar.css'
 
@@ -68,14 +68,8 @@ export default function TopBar({ title, name, subtitle, logoSrc, dark = false, o
 
       <div className="topbar__actions" ref={actionsRef}>
         {isAdmin && (
-          <Link to="/admin/documents" className="topbar__admin-link" title="Dokumen Karyawan">
-            <FolderLock size={16} /> Dokumen
-          </Link>
-        )}
-
-        {isAdmin && (
-          <Link to="/admin/audit" className="topbar__admin-link" title="Audit Keamanan">
-            <ShieldAlert size={16} /> Audit
+          <Link to="/admin" className="topbar__admin-link" title="Panel Admin IT">
+            <ShieldCheck size={16} /> Panel Admin
           </Link>
         )}
 
