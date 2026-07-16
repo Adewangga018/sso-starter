@@ -46,7 +46,7 @@ public class TiketController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         var rows = await _db.WebSdmPesanTiket
@@ -81,7 +81,7 @@ public class TiketController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         if (string.IsNullOrWhiteSpace(request.Keterangan))

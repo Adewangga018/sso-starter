@@ -94,6 +94,7 @@ export const api = {
     apiFetch(`/api/personal/anak/${idAnak}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteAnak: (idAnak) => apiFetch(`/api/personal/anak/${idAnak}`, { method: 'DELETE' }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
+  getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>
     apiFetch('/api/personal/absensi', { method: 'POST', body: JSON.stringify(payload) }),
   getSpl: () => apiFetch('/api/personal/spl'),
@@ -186,6 +187,13 @@ export const api = {
   setUserActive: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),
+
+  // admin: lokasi geofence absensi (Admin IT, Bearer)
+  getAdminLocations: () => apiFetch('/api/admin/locations'),
+  createLocation: (payload) => apiFetch('/api/admin/locations', { method: 'POST', body: JSON.stringify(payload) }),
+  updateLocation: (id, payload) =>
+    apiFetch(`/api/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteLocation: (id) => apiFetch(`/api/admin/locations/${id}`, { method: 'DELETE' }),
 
   // audit (Admin, Bearer)
   getAuditLogs: (params = {}) => {

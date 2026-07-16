@@ -26,6 +26,7 @@ public class Attendance
     public string? Foto { get; set; }        // data URL base64 (nvarchar(max))
     public decimal Lat { get; set; }
     public decimal Lng { get; set; }
+    public decimal? Accuracy { get; set; }   // meter, dari GeolocationPosition.coords.accuracy
     public string Type { get; set; } = "in"; // "in" | "out"
     public string? Tempat { get; set; }      // mis. "Kantor Pusat PT. Gresik Cipta Sejahtera"
     public DateTime CreatedAt { get; set; }

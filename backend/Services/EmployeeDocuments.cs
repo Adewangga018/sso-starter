@@ -25,8 +25,11 @@ public static class EmployeeDocuments
         new("lain", "Berkas Lainnya", p => p.FILE_LAIN, (p, v) => p.FILE_LAIN = v),
     ];
 
-    // "kk" and "buku-nikah" are marital documents, only shown to married employees.
-    public static readonly IReadOnlySet<string> MaritalKeys = new HashSet<string> { "kk", "buku-nikah" };
+    // Only "buku-nikah" is genuinely marriage-specific. "kk" (Kartu Keluarga) applies to every
+    // employee regardless of marital status - single employees are still listed on a family
+    // card (their parents', typically) - so it's gated only behind having a MST_PEGAWAI row,
+    // not IsMarried.
+    public static readonly IReadOnlySet<string> MaritalKeys = new HashSet<string> { "buku-nikah" };
 
     public static Field? Find(string key) => Fields.FirstOrDefault(f => f.Key == key);
 

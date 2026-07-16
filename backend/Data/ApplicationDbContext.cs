@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<Location> Locations => Set<Location>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -50,9 +51,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Foto);
             e.Property(x => x.Lat).HasPrecision(10, 7);
             e.Property(x => x.Lng).HasPrecision(11, 7);
+            e.Property(x => x.Accuracy).HasPrecision(10, 2);
             e.Property(x => x.Type).HasMaxLength(10).IsRequired();
             e.Property(x => x.Tempat).HasMaxLength(200);
             e.HasIndex(x => new { x.KodePegawai, x.Tanggal });
+        });
+
+        // Titik geofence kantor/gudang (lihat Location.cs). Dikelola dari halaman admin;
+        // PersonalController mencari lokasi Aktif terdekat pada tiap absen.
+        builder.Entity<Location>(e =>
+        {
+            e.ToTable("locations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nama).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Lat).HasPrecision(10, 7);
+            e.Property(x => x.Lng).HasPrecision(11, 7);
+            e.HasIndex(x => x.Aktif);
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

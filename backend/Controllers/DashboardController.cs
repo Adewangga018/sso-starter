@@ -54,6 +54,7 @@ public class DashboardController : ControllerBase
                 .FirstOrDefaultAsync();
         }
 
-        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), Modules));
+        var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
+        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), Modules, ProfileComplete: profileComplete));
     }
 }

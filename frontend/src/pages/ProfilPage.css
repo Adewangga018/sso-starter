@@ -126,6 +126,12 @@
   margin-bottom: 16px;
 }
 
+.profil__notice--warn {
+  background: rgba(244, 174, 70, 0.14);
+  border-color: rgba(244, 174, 70, 0.4);
+  color: var(--gcs-gold-700);
+}
+
 .profil__alert {
   border-radius: 10px;
   padding: 10px 14px;
@@ -360,6 +366,11 @@
   color: var(--gcs-text-muted);
   text-transform: uppercase;
   margin-bottom: 4px;
+}
+
+.profil__required {
+  color: #c0392b;
+  margin-left: 3px;
 }
 
 .info-row__value {

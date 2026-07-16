@@ -43,7 +43,7 @@ public class UmdlController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         var rows = await _db.WebSdmUmdl
@@ -110,7 +110,7 @@ public class UmdlController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         var izin = await _db.WebSdmSuratIjin
@@ -138,7 +138,7 @@ public class UmdlController : ControllerBase
         var atasan = await ResolveAtasanAsync(pegawai.ID_KARYAWAN);
         if (atasan is null)
         {
-            return BadRequest(new { message = "Atasan penyetuju belum terdaftar untuk Anda. Hubungi HR/SDM." });
+            return BadRequest(new { message = "Atasan penyetuju belum terdaftar untuk Anda." });
         }
 
         var umdl = new WebSdmUmdl

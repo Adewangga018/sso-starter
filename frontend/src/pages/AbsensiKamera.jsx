@@ -3,10 +3,9 @@ import { Camera, RefreshCw, RotateCcw, MapPin, Navigation, AlertTriangle } from 
 import { api, ApiError } from '../lib/api'
 import './AbsensiKamera.css'
 
-// Titik & radius geofence kantor. Absensi hanya sah dalam radius ini (divalidasi ulang di server).
-const OFFICE_LAT = -7.160356123699222
-const OFFICE_LNG = 112.63249083138189
-const RADIUS_METERS = 150
+// GPS indoor rutin melaporkan akurasi buruk (puluhan-ratusan meter) walau posisinya benar,
+// jadi ini cuma dipakai untuk peringatan info, BUKAN untuk memblokir tombol Absen.
+const ACCURACY_WARNING_METERS = 75
 
 function distanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000
@@ -74,6 +73,19 @@ export default function AbsensiKamera({ onSubmitted }) {
   const [busy, setBusy] = useState(false)
   const [capturing, setCapturing] = useState(false)
   const [feedback, setFeedback] = useState(null) // { type: 'success' | 'error', text }
+  const [locations, setLocations] = useState(null) // null = belum dimuat, [] = gagal/kosong
+  const [locError, setLocError] = useState('')
+
+  // Titik geofence aktif (kantor pusat, region, gudang) - dikelola dari panel Admin IT.
+  useEffect(() => {
+    api
+      .getLocations()
+      .then((data) => setLocations(data))
+      .catch((err) => {
+        setLocations([])
+        setLocError(err instanceof ApiError ? err.message : 'Gagal memuat lokasi kantor.')
+      })
+  }, [])
 
   // Ambil tile peta titik lokasi lewat fetch -> blob -> objectURL -> Image.
   // Object URL bersifat same-origin sehingga aman digambar ke kanvas (tidak menodai).
@@ -329,8 +341,17 @@ export default function AbsensiKamera({ onSubmitted }) {
     setFeedback(null)
   }
 
-  const dist = location ? distanceMeters(location.lat, location.lng, OFFICE_LAT, OFFICE_LNG) : null
-  const inRadius = dist != null && dist <= RADIUS_METERS
+  // Lokasi aktif terdekat dari titik pegawai saat ini (kantor pusat, region, atau gudang).
+  const nearest =
+    location && locations?.length
+      ? locations.reduce((best, loc) => {
+          const jarak = distanceMeters(location.lat, location.lng, loc.lat, loc.lng)
+          return !best || jarak < best.jarak ? { ...loc, jarak } : best
+        }, null)
+      : null
+  const inRadius = nearest != null && nearest.jarak <= nearest.radiusMeters
+  // Cuma peringatan info (GPS indoor rutin buruk) - tidak memblokir tombol Absen.
+  const accuracyLow = location?.accuracy != null && location.accuracy > ACCURACY_WARNING_METERS
   const canSubmit = Boolean(captured) && inRadius && !busy
 
   async function submit() {
@@ -351,6 +372,7 @@ export default function AbsensiKamera({ onSubmitted }) {
         foto: captured,
         lat: location.lat,
         lng: location.lng,
+        accuracy: location.accuracy ?? null,
         tempat: tempat || null,
         type: 'in',
       })
@@ -455,13 +477,33 @@ export default function AbsensiKamera({ onSubmitted }) {
                 Coba lagi
               </button>
             </div>
-          ) : location ? (
+          ) : locError ? (
+            <div className="kamera__alert kamera__alert--error">
+              <AlertTriangle size={15} />
+              <span>{locError}</span>
+            </div>
+          ) : location && locations && locations.length === 0 ? (
+            <div className="kamera__alert kamera__alert--error">
+              <AlertTriangle size={15} />
+              <span>Konfigurasi lokasi kantor belum tersedia. Hubungi admin IT.</span>
+            </div>
+          ) : location && nearest ? (
             <div className={`kamera__radius ${inRadius ? 'kamera__radius--ok' : 'kamera__radius--out'}`}>
               {inRadius
-                ? `Dalam radius kantor (~${Math.round(dist)} m)`
-                : `Di luar radius kantor (~${Math.round(dist)} m). Absensi hanya dalam radius ${RADIUS_METERS} m.`}
+                ? `Dalam radius ${nearest.nama} (~${Math.round(nearest.jarak)} m)`
+                : `Di luar radius. Terdekat: ${nearest.nama} (~${Math.round(nearest.jarak)} m, radius ${nearest.radiusMeters} m).`}
             </div>
           ) : null}
+
+          {location && accuracyLow && (
+            <div className="kamera__alert kamera__alert--warn">
+              <AlertTriangle size={15} />
+              <span>
+                Sinyal GPS kurang akurat (~{Math.round(location.accuracy)} m), umum terjadi di dalam ruangan.
+                Absen tetap bisa dilanjutkan.
+              </span>
+            </div>
+          )}
 
           {feedback && (
             <div className={`kamera__feedback kamera__feedback--${feedback.type}`}>{feedback.text}</div>

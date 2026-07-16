@@ -10,6 +10,7 @@ import AdminAuditPage from './pages/AdminAuditPage'
 import AdminDocumentsPage from './pages/AdminDocumentsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminLocationsPage from './pages/AdminLocationsPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/admin/documents" element={<AdminDocumentsPage />} />
+            <Route path="/admin/locations" element={<AdminLocationsPage />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
             </Route>

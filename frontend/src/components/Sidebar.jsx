@@ -68,8 +68,9 @@ function SidebarItem({ item, showLabels, onNavigate }) {
   const Icon = item.icon
 
   if (item.disabled) {
+    const title = item.disabledReason ?? (showLabels ? undefined : item.label)
     return (
-      <div className="sidebar__item sidebar__item--disabled" title={showLabels ? undefined : item.label}>
+      <div className="sidebar__item sidebar__item--disabled" title={title}>
         <span className="sidebar__item-content">
           {Icon && <Icon size={18} />}
           {showLabels && <span>{item.label}</span>}

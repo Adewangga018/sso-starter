@@ -33,19 +33,19 @@ public record AnakUpsertRequest(
     DateOnly? TglLahir,
     int? Urutan);
 
-// Self-service profile edit payload. ID_KARYAWAN (the account-to-employee link) and system
-// fields (ID_PEGAWAI, STATUS_KARYAWAN, CREATED_AT) are intentionally NOT here - they cannot
-// be changed by the employee.
+// Self-service profile edit payload. ID_KARYAWAN (the account-to-employee link), Email (always
+// the login account's own email - see PersonalController.UpdateProfile), and system fields
+// (ID_PEGAWAI, CREATED_AT) are intentionally NOT here - they cannot be changed by the employee.
 public record UpdateProfileRequest(
     string NamaLengkap,
     string? Nik,
     string? TempatLahir,
     DateOnly? TglLahir,
     string? JenisKelamin,
+    string? StatusKaryawan,
     string? Agama,
     string? Pendidikan,
     string? NoHp,
-    string? Email,
     AlamatDto? Alamat,
     string? RiwayatKesehatan,
     string? StatusNikah,
@@ -66,13 +66,23 @@ public record AbsensiDto(
     // "SDM" = baris resmi dari vw_web_sdm_absensi; "Kamera" = hasil absensi kamera (db_mygcs).
     string Sumber);
 
-// Payload absensi kamera dari SPA: foto (data URL base64), koordinat, tempat, dan tipe in/out.
+// Payload absensi kamera dari SPA: foto (data URL base64), koordinat, akurasi GPS (meter),
+// tempat, dan tipe in/out.
 public record AbsensiCheckInDto(
     string Foto,
     decimal Lat,
     decimal Lng,
+    decimal? Accuracy,
     string? Tempat,
     string Type);
+
+// Titik geofence aktif yang dikembalikan ke SPA absensi kamera (bukan admin-only).
+public record LocationDto(
+    int Id,
+    string Nama,
+    decimal Lat,
+    decimal Lng,
+    double RadiusMeters);
 
 public record PersonalProfileDto(
     int IdPegawai,
@@ -98,4 +108,14 @@ public record PersonalProfileDto(
     string? HpDarurat,
     DateOnly? TerdaftarSejak,
     IReadOnlyList<AnakDto> Anak,
-    IReadOnlyList<BerkasDto> Berkas);
+    IReadOnlyList<BerkasDto> Berkas,
+    // False when the signed-in account has a badge number (IdKaryawan) but HR hasn't created
+    // the MST_PEGAWAI master row yet - the SPA renders an input form instead of read-only "-"s
+    // in that case, and hides Data Keluarga/Data Anak/Berkas Pribadi (nothing to attach them to
+    // yet). PUT /personal/profile creates the row on first save.
+    bool Registered = true,
+    // False when the row exists but the required fields (ProfileRules.IsComplete) aren't all
+    // filled in yet - covers both a fresh self-registration in progress and a pre-existing
+    // HR/legacy row that predates this rule. Drives the "*" markers, the Simpan validation, and
+    // (via DashboardSummaryDto) whether the other My Personal modules are unlocked.
+    bool ProfileComplete = true);

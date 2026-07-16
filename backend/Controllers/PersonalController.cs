@@ -19,6 +19,9 @@ public class PersonalController : ControllerBase
     private static readonly string[] AllowedDocExt = [".pdf", ".png", ".jpg", ".jpeg"];
     private const long MaxDocBytes = 10 * 1024 * 1024;
 
+    private static readonly HashSet<string> AllowedStatusKaryawan =
+        new(["BP", "IK", "Layanan Jasa", "PKWT", "Tetap"], StringComparer.OrdinalIgnoreCase);
+
     private readonly GcsDbContext _db;
     private readonly ApplicationDbContext _appDb;
     private readonly DocumentResolver _documentResolver;
@@ -44,11 +47,6 @@ public class PersonalController : ControllerBase
         _logger = logger;
         _audit = audit;
     }
-
-    // Geofence kantor: absensi hanya sah dalam radius 150 m dari titik ini.
-    private const double OfficeLat = -7.160356123699222;
-    private const double OfficeLng = 112.63249083138189;
-    private const double RadiusMeters = 150.0;
 
     private static string HariIndonesia(DayOfWeek d) => d switch
     {
@@ -93,7 +91,30 @@ public class PersonalController : ControllerBase
 
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            if (string.IsNullOrWhiteSpace(user.Nik))
+            {
+                return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+            }
+
+            // The account is tied to a badge number (from the login token) but HR hasn't
+            // created the MST_PEGAWAI master row for it yet. Hand back an empty shell -
+            // isProfileEmpty() on the frontend opens edit mode automatically, so the page
+            // renders as an input form. Saving it (PUT /personal/profile) creates the row.
+            return Ok(new PersonalProfileDto(
+                0,
+                user.Name,
+                user.Nik,
+                string.Empty,
+                null, null, null, null,
+                user.IsActive,
+                null, null, null, user.Email,
+                new AlamatDto(null, null, null, null, null, null, null, null),
+                null, null, false, null, null, null, null,
+                null,
+                [],
+                [],
+                Registered: false,
+                ProfileComplete: false));
         }
 
         var anak = await _db.MstAnakPegawai
@@ -134,7 +155,9 @@ public class PersonalController : ControllerBase
             pegawai.AGAMA,
             pegawai.PENDIDIKAN,
             pegawai.NO_HP,
-            pegawai.EMAIL,
+            // Email is account-owned (easy.users.Email via the login token), not HR-entered -
+            // prefer it over the MST_PEGAWAI copy so a stale/blank HR record never hides it.
+            user.Email ?? pegawai.EMAIL,
             new AlamatDto(pegawai.ALAMAT, pegawai.RT, pegawai.RW, pegawai.PROVINSI, pegawai.KABUPATEN, pegawai.KECAMATAN, pegawai.DESA, pegawai.KODE_POS),
             pegawai.RIWAYAT_KESEHATAN,
             pegawai.STATUS_NIKAH,
@@ -145,21 +168,27 @@ public class PersonalController : ControllerBase
             pegawai.HP_DARURAT,
             DateOnly.FromDateTime(pegawai.CREATED_AT),
             anak,
-            berkas);
+            berkas,
+            ProfileComplete: ProfileRules.IsComplete(pegawai));
 
         return Ok(dto);
     }
 
     // Self-service profile edit. The employee may change their own biodata, contact, address,
-    // marital/spouse and emergency fields. ID_KARYAWAN (the account link), ID_PEGAWAI, and the
-    // HR-managed employment status are NOT editable here.
+    // marital/spouse, and employment-status fields. ID_KARYAWAN (the account link) and
+    // ID_PEGAWAI are NOT editable here.
+    //
+    // Doubles as self-registration: if the account has a badge number but no MST_PEGAWAI row
+    // yet (see GetProfile's "shell" response), this creates it instead of updating it. Requires
+    // an INSERT grant on dbo.MST_PEGAWAI for the app's SQL login, in addition to the existing
+    // UPDATE grant - see DEPLOY-IIS.md.
     [HttpPut("profile")]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
     {
-        var (_, pegawai) = await _currentUser.ResolveAsync(User);
-        if (pegawai is null)
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
+        if (user is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+            return Unauthorized();
         }
 
         if (string.IsNullOrWhiteSpace(req.NamaLengkap))
@@ -173,17 +202,48 @@ public class PersonalController : ControllerBase
             return BadRequest(new { message = "NIK harus 16 digit angka." });
         }
 
-        var email = Clean(req.Email);
-        if (email is not null && !email.Contains('@'))
+        var statusKaryawan = Clean(req.StatusKaryawan);
+        if (statusKaryawan is not null && !AllowedStatusKaryawan.Contains(statusKaryawan))
         {
-            return BadRequest(new { message = "Format email tidak valid." });
+            return BadRequest(new { message = "Status Karyawan tidak valid." });
         }
 
-        // NoTracking is the context default, so load a tracked copy to update + save.
-        var entity = await _db.MstPegawai.AsTracking().FirstOrDefaultAsync(p => p.ID_PEGAWAI == pegawai.ID_PEGAWAI);
-        if (entity is null)
+        // Required fields are enforced on every save, not just the first one - a pre-existing
+        // HR/legacy row can already exist with gaps (created before this rule), and simply
+        // editing it shouldn't be a way to dodge completing it. See ProfileRules.IsComplete,
+        // which the dashboard/sidebar gate reads back from the saved data.
+        var missing = GetMissingRegistrationFields(req);
+        if (missing.Count > 0)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan." });
+            return BadRequest(new { message = $"Lengkapi dulu: {string.Join(", ", missing)}." });
+        }
+
+        var isNew = pegawai is null;
+        MstPegawai entity;
+        if (isNew)
+        {
+            if (string.IsNullOrWhiteSpace(user.Nik))
+            {
+                return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+            }
+
+            entity = new MstPegawai
+            {
+                ID_KARYAWAN = user.Nik,
+                // CREATED_AT is NOT NULL with no default in this table; set it explicitly.
+                CREATED_AT = DateTime.Now,
+            };
+            _db.MstPegawai.Add(entity);
+        }
+        else
+        {
+            // NoTracking is the context default, so load a tracked copy to update + save.
+            var tracked = await _db.MstPegawai.AsTracking().FirstOrDefaultAsync(p => p.ID_PEGAWAI == pegawai!.ID_PEGAWAI);
+            if (tracked is null)
+            {
+                return NotFound(new { message = "Data pegawai tidak ditemukan." });
+            }
+            entity = tracked;
         }
 
         entity.NAMA_LENGKAP = req.NamaLengkap.Trim();
@@ -191,10 +251,13 @@ public class PersonalController : ControllerBase
         entity.TEMPAT_LAHIR = Clean(req.TempatLahir);
         entity.TGL_LAHIR = req.TglLahir?.ToDateTime(TimeOnly.MinValue);
         entity.JENIS_KELAMIN = Clean(req.JenisKelamin);
+        entity.STATUS_KARYAWAN = statusKaryawan;
         entity.AGAMA = Clean(req.Agama);
         entity.PENDIDIKAN = Clean(req.Pendidikan);
         entity.NO_HP = Clean(req.NoHp);
-        entity.EMAIL = email;
+        // Not user input - always the account's own login email (easy.users.Email via the
+        // token), kept in lockstep with AccountController.SyncFromLegacyAsync on every login.
+        entity.EMAIL = user.Email;
 
         var alamat = req.Alamat;
         entity.ALAMAT = Clean(alamat?.Alamat);
@@ -217,13 +280,55 @@ public class PersonalController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        await _audit.LogAsync("profile.updated", entity.ID_KARYAWAN, User.FindFirstValue("email"),
-            $"Pegawai {entity.ID_KARYAWAN} memperbarui data profil.");
+        await _audit.LogAsync(
+            isNew ? "profile.registered" : "profile.updated",
+            entity.ID_KARYAWAN,
+            User.FindFirstValue("email"),
+            isNew
+                ? $"Pegawai {entity.ID_KARYAWAN} mendaftarkan data profil baru."
+                : $"Pegawai {entity.ID_KARYAWAN} memperbarui data profil.");
 
         return NoContent();
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // Mirrors the frontend's REQUIRED_ON_REGISTER list (ProfilPage.jsx) and ProfileRules.
+    // IsComplete (checked against the saved entity, for the dashboard/sidebar gate) - enforced
+    // here too so the rule holds even if someone calls the API directly instead of going through
+    // the form. Data Keluarga/Data Anak/Berkas Pribadi aren't checked because that whole section
+    // of the SPA is hidden until registration completes, so there's nothing there yet to require.
+    private static List<string> GetMissingRegistrationFields(UpdateProfileRequest req)
+    {
+        var missing = new List<string>();
+        void Require(string? value, string label)
+        {
+            if (string.IsNullOrWhiteSpace(value)) missing.Add(label);
+        }
+
+        Require(req.NamaLengkap, "Nama Lengkap");
+        Require(req.Nik, "NIK");
+        Require(req.StatusKaryawan, "Status Karyawan");
+        Require(req.TempatLahir, "Tempat Lahir");
+        Require(req.TglLahir?.ToString(), "Tanggal Lahir");
+        Require(req.JenisKelamin, "Jenis Kelamin");
+        Require(req.Agama, "Agama");
+        Require(req.Pendidikan, "Pendidikan");
+        Require(req.StatusNikah, "Status Pernikahan");
+        Require(req.NoHp, "No. HP");
+        Require(req.Alamat?.Alamat, "Alamat");
+        Require(req.Alamat?.Rt, "RT");
+        Require(req.Alamat?.Rw, "RW");
+        Require(req.Alamat?.Provinsi, "Provinsi");
+        Require(req.Alamat?.Kabupaten, "Kota/Kabupaten");
+        Require(req.Alamat?.Kecamatan, "Kecamatan");
+        Require(req.Alamat?.Desa, "Desa/Kelurahan");
+        Require(req.Alamat?.KodePos, "Kode Pos");
+        Require(req.NamaDarurat, "Nama Kontak Darurat");
+        Require(req.HpDarurat, "No. HP Darurat");
+
+        return missing;
+    }
 
     // --- Children (MST_ANAK_PEGAWAI), scoped to the signed-in employee ---
 
@@ -362,7 +467,7 @@ public class PersonalController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         // Baris resmi dari SDM (read-only; view GCS tidak pernah diubah). Diindeks per tanggal.
@@ -423,13 +528,28 @@ public class PersonalController : ControllerBase
         return Ok(logs);
     }
 
+    // Lokasi geofence aktif untuk SPA absensi kamera (cek radius sisi klien sebelum submit;
+    // server tetap memvalidasi ulang di PostAbsensi). Tidak admin-only - sekadar daftar
+    // titik kantor/gudang, bukan data sensitif.
+    [HttpGet("locations")]
+    public async Task<ActionResult<IReadOnlyList<LocationDto>>> GetLocations()
+    {
+        var items = await _appDb.Locations
+            .Where(l => l.Aktif)
+            .OrderBy(l => l.Nama)
+            .Select(l => new LocationDto(l.Id, l.Nama, l.Lat, l.Lng, l.RadiusMeters))
+            .ToListAsync();
+
+        return Ok(items);
+    }
+
     [HttpPost("absensi")]
     public async Task<ActionResult<AbsensiDto>> PostAbsensi([FromBody] AbsensiCheckInDto dto)
     {
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         if (string.IsNullOrWhiteSpace(dto.Foto))
@@ -437,14 +557,37 @@ public class PersonalController : ControllerBase
             return BadRequest(new { message = "Foto absensi wajib diambil terlebih dahulu." });
         }
 
-        // Geofence: hanya boleh absen dalam radius kantor. Divalidasi ulang di server agar
-        // tidak bisa ditembus dari klien.
-        var jarak = DistanceMeters((double)dto.Lat, (double)dto.Lng, OfficeLat, OfficeLng);
-        if (jarak > RadiusMeters)
+        // Akurasi GPS device di dalam gedung rutin buruk (puluhan-ratusan meter) walau posisinya
+        // benar - jadi TIDAK dipakai untuk menolak absen (dulu sempat begitu, tapi malah
+        // memblokir pegawai yang sah sedang berada di kantor). Nilainya tetap disimpan di
+        // Attendance.Accuracy untuk audit manual HR/atasan (pola akurasi sempurna berulang kali
+        // adalah indikasi umum fake-GPS, tapi itu keputusan manusia, bukan validasi otomatis).
+        if (dto.Accuracy is null)
+        {
+            return BadRequest(new { message = "Akurasi lokasi tidak terbaca. Pastikan GPS aktif lalu coba lagi." });
+        }
+
+        // Geofence: hanya boleh absen dalam radius salah satu lokasi Aktif (kantor/gudang).
+        // Divalidasi ulang di server agar tidak bisa ditembus dari klien.
+        var lokasiAktif = await _appDb.Locations.Where(l => l.Aktif).ToListAsync();
+        if (lokasiAktif.Count == 0)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = "Konfigurasi lokasi kantor belum tersedia. Hubungi admin IT.",
+            });
+        }
+
+        var terdekat = lokasiAktif
+            .Select(l => new { Lokasi = l, Jarak = DistanceMeters((double)dto.Lat, (double)dto.Lng, (double)l.Lat, (double)l.Lng) })
+            .OrderBy(x => x.Jarak)
+            .First();
+
+        if (terdekat.Jarak > terdekat.Lokasi.RadiusMeters)
         {
             return BadRequest(new
             {
-                message = $"Anda berada di luar radius kantor (~{jarak:0} m). Absensi hanya dapat dilakukan dalam radius {RadiusMeters:0} meter dari kantor.",
+                message = $"Anda berada di luar radius {terdekat.Lokasi.Nama} (~{terdekat.Jarak:0} m). Absensi hanya dapat dilakukan dalam radius {terdekat.Lokasi.RadiusMeters:0} meter.",
             });
         }
 
@@ -466,9 +609,14 @@ public class PersonalController : ControllerBase
         // Satu tombol: sistem menentukan masuk/keluar dari status absensi hari ini, bukan dari
         // jam. Belum ada absen masuk hari itu -> tap ini dihitung "masuk" (termasuk yang telat).
         // Sudah absen masuk -> tap berikutnya dihitung "keluar". Tidak mungkin "keluar" tercatat
-        // sebelum "masuk".
-        var sudahAbsenMasuk = await _appDb.Attendances
-            .AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null);
+        // sebelum "masuk". "Sudah absen masuk" dicek di KEDUA sumber - kamera (db_mygcs.Attendances)
+        // maupun fingerprint/SDM (GCS.vw_web_sdm_absensi via AbsensiLog) - supaya check-in fingerprint
+        // pagi ini tidak diabaikan lalu tercatat dobel sebagai "masuk" lagi di sini.
+        var startOfDayWib = tanggalWib.ToDateTime(TimeOnly.MinValue);
+        var endOfDayWib = startOfDayWib.AddDays(1);
+        var sudahAbsenMasuk =
+            await _appDb.Attendances.AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null) ||
+            await _db.AbsensiLog.AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal >= startOfDayWib && a.Tanggal < endOfDayWib && a.CheckIn != null);
         var type = sudahAbsenMasuk ? "out" : "in";
 
         // Foto (sudah bertempel timestamp dari klien) disimpan sebagai file di share EASy;
@@ -514,6 +662,7 @@ public class PersonalController : ControllerBase
             Foto = "attendances/" + fileName,
             Lat = dto.Lat,
             Lng = dto.Lng,
+            Accuracy = dto.Accuracy,
             Type = type,
             Tempat = dto.Tempat,
             CreatedAt = nowUtc,

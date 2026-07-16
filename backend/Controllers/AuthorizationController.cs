@@ -59,7 +59,7 @@ public class AuthorizationController : ControllerBase
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "Akun tidak aktif. Hubungi HR/SDM."
+                        "Akun tidak aktif."
                 }));
         }
 

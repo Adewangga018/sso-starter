@@ -70,11 +70,19 @@ public class AccountController : ControllerBase
                 return Unauthorized(new { message = "Email atau kata sandi salah." });
             }
         }
+        else
+        {
+            // Existing account: easy.users may have changed since provisioning (HR assigns/fixes
+            // the badge number, corrects the email, deactivates the employee, ...). Re-sync on
+            // every login so Nik - and everything that resolves MST_PEGAWAI from it (Absensi,
+            // Izin, Lembur, SPPD, UMDL, Tiket, Profil) - never drifts from easy.users.
+            await SyncFromLegacyAsync(user);
+        }
 
         if (!user.IsActive)
         {
             await _audit.LogAsync("login.blocked", user.Id, email, "Akun tidak aktif");
-            return Unauthorized(new { message = "Akun tidak aktif. Hubungi HR/SDM." });
+            return Unauthorized(new { message = "Akun tidak aktif." });
         }
 
         var result = await _signInManager.PasswordSignInAsync(
@@ -325,6 +333,59 @@ public class AccountController : ControllerBase
 
         await _audit.LogAsync("account.provisioned", user.Id, user.Email, "Migrasi dari easy.users");
         return user;
+    }
+
+    // Refreshes FullName/Nik/IsActive/Email from the easy.users row this account was
+    // provisioned from. GcsUserId (not email) is the join key, so this is safe even if the
+    // email itself has since changed in easy.users. Accounts predating GcsUserId (none should
+    // exist post-migration, but just in case) have nothing to sync against and are left alone.
+    private async Task SyncFromLegacyAsync(ApplicationUser user)
+    {
+        if (user.GcsUserId is null)
+        {
+            return;
+        }
+
+        var legacy = await _gcs.EasyUsers.FirstOrDefaultAsync(u => u.Id == user.GcsUserId.Value);
+        if (legacy is null)
+        {
+            return;
+        }
+
+        var legacyActive = string.Equals(legacy.Status, "Aktif", StringComparison.OrdinalIgnoreCase);
+        var changed = false;
+
+        if (user.FullName != legacy.Name)
+        {
+            user.FullName = legacy.Name;
+            changed = true;
+        }
+
+        if (user.Nik != legacy.Nik)
+        {
+            user.Nik = legacy.Nik;
+            changed = true;
+        }
+
+        if (user.IsActive != legacyActive)
+        {
+            user.IsActive = legacyActive;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(legacy.Email) && !string.Equals(user.Email, legacy.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            user.Email = legacy.Email;
+            user.UserName = legacy.Email;
+            user.EmailConfirmed = true;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _userManager.UpdateAsync(user);
+            await _audit.LogAsync("account.synced", user.Id, user.Email, "Disegarkan dari easy.users");
+        }
     }
 
     // Grants the Admin role to emails listed in Admin:Emails config (bootstrap so the

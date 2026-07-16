@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, Boxes, FolderLock, KeyRound, ShieldAlert, ShieldCheck, Users, UsersRound,
+  ArrowLeft, Boxes, FolderLock, KeyRound, MapPin, ShieldAlert, ShieldCheck, Users, UsersRound,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -25,6 +25,12 @@ const TILES = [
     icon: FolderLock,
     title: 'Dokumen Karyawan',
     desc: 'Telusuri & lihat dokumen (KTP/KK/ijazah) seluruh karyawan.',
+  },
+  {
+    to: '/admin/locations',
+    icon: MapPin,
+    title: 'Kelola Lokasi Absensi',
+    desc: 'Atur titik geofence & radius kantor pusat, region, dan gudang.',
   },
   {
     icon: Boxes,

@@ -7,11 +7,11 @@ namespace SsoBackend.Services;
 
 // Lightweight identity of the caller, derived entirely from the token claims
 // (name/status) — no longer touches easy.users.
-public record ResolvedUser(string Name, bool IsActive, string? Nik);
+public record ResolvedUser(string Name, bool IsActive, string? Nik, string? Email);
 
 // Bridges an authenticated MyGCS token to the GCS employee record. The token
-// (issued by OpenIddict) carries "full_name", "is_active", and "nik" claims; the
-// employee master (MST_PEGAWAI) is still read live from GCS by NIK.
+// (issued by OpenIddict) carries "full_name", "is_active", "nik", and standard "email"
+// claims; the employee master (MST_PEGAWAI) is still read live from GCS by NIK.
 public class CurrentUserContext
 {
     private readonly GcsDbContext _db;
@@ -38,7 +38,11 @@ public class CurrentUserContext
         var isActive = isActiveClaim is null ||
             string.Equals(isActiveClaim, "true", StringComparison.OrdinalIgnoreCase);
 
-        var user = new ResolvedUser(name, isActive, nik);
+        // Standard OIDC "email" claim - mapped from ApplicationUser.Email (itself kept in sync
+        // with easy.users.Email on every login, see AccountController.SyncFromLegacyAsync).
+        var email = principal.FindFirstValue("email");
+
+        var user = new ResolvedUser(name, isActive, nik, email);
 
         if (string.IsNullOrWhiteSpace(nik))
         {

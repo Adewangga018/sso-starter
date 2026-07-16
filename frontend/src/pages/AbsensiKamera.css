@@ -99,6 +99,12 @@
   border: 1px solid rgba(230, 72, 63, 0.25);
 }
 
+.kamera__alert--warn {
+  color: #8a6412;
+  background: rgba(244, 174, 70, 0.14);
+  border: 1px solid rgba(244, 174, 70, 0.35);
+}
+
 .kamera__retry {
   margin-left: auto;
   border: 1px solid rgba(230, 72, 63, 0.4);

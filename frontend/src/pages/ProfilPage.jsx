@@ -4,10 +4,13 @@ import { api, ApiError } from '../lib/api'
 import PdfPopupModal from '../components/PdfPopupModal'
 import BerkasFileRow from '../components/BerkasFileRow'
 import ChildrenSection from '../components/ChildrenSection'
+import WilayahFields from '../components/WilayahFields'
 import './ProfilPage.css'
 
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan']
-const AGAMA_OPTIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
+const STATUS_KARYAWAN_OPTIONS = ['BP', 'IK', 'Layanan Jasa', 'PKWT', 'Tetap']
+const AGAMA_OPTIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu', 'Lainnya']
+const PENDIDIKAN_OPTIONS = ['SD', 'SMP', 'SMA/SMK', 'D3', 'S1', 'S2', 'S3']
 const NIKAH_OPTIONS = ['Belum Kawin', 'Kawin', 'Cerai Hidup', 'Cerai Mati']
 const MARITAL_KEYS = new Set(['kk', 'buku-nikah'])
 const ACCEPT = '.pdf,.png,.jpg,.jpeg'
@@ -32,10 +35,10 @@ function initForm(p) {
     tempatLahir: p.tempatLahir ?? '',
     tglLahir: toDateInput(p.tglLahir),
     jenisKelamin: p.jenisKelamin ?? '',
+    statusKaryawan: p.statusKaryawan ?? '',
     agama: p.agama ?? '',
     pendidikan: p.pendidikan ?? '',
     noHp: p.noHp ?? '',
-    email: p.email ?? '',
     alamat: p.alamat?.alamat ?? '',
     rt: p.alamat?.rt ?? '',
     rw: p.alamat?.rw ?? '',
@@ -62,10 +65,10 @@ function buildPayload(form) {
     tempatLahir: emptyToNull(form.tempatLahir),
     tglLahir: form.tglLahir || null,
     jenisKelamin: emptyToNull(form.jenisKelamin),
+    statusKaryawan: emptyToNull(form.statusKaryawan),
     agama: emptyToNull(form.agama),
     pendidikan: emptyToNull(form.pendidikan),
     noHp: emptyToNull(form.noHp),
-    email: emptyToNull(form.email),
     alamat: {
       alamat: emptyToNull(form.alamat),
       rt: emptyToNull(form.rt),
@@ -88,16 +91,89 @@ function buildPayload(form) {
 }
 
 // One label/value row. In edit mode it renders `children` (the input); otherwise the display
-// value. Locked rows always show the value and are never editable.
-function Row({ label, editing, locked, display, children }) {
+// value. Locked rows always show the value and are never editable. `required` only draws the
+// "*" marker (validation itself lives in REQUIRED_ON_REGISTER + validateRegistration below).
+function Row({ label, editing, locked, required, display, children }) {
   return (
     <div className="info-row">
-      <div className="info-row__label">{label}</div>
+      <div className="info-row__label">
+        {label}
+        {required && editing && <span className="profil__required">*</span>}
+      </div>
       <div className="info-row__value">
         {editing && !locked ? children : (display ?? '-')}
       </div>
     </div>
   )
+}
+
+// Fields that must be filled in before Simpan is allowed - everything visible on the page
+// regardless of registration state, except the optional Riwayat Kesehatan. Enforced on every
+// save (not just the first), because a pre-existing HR/legacy row can already exist with gaps.
+// Data Keluarga/Data Anak/Berkas Pribadi aren't in this list because that whole card is hidden
+// until a MST_PEGAWAI row exists (see the `profile.registered &&` guards below), so there's
+// nothing there for the user to fill in yet. Mirrors PersonalController.
+// GetMissingRegistrationFields (server-side) and ProfileRules.IsComplete (the completeness
+// check the dashboard/sidebar gate reads back) - keep all three in sync if this list changes.
+const REQUIRED_ON_REGISTER = [
+  ['namaLengkap', 'Nama Lengkap'],
+  ['nik', 'NIK'],
+  ['statusKaryawan', 'Status Karyawan'],
+  ['tempatLahir', 'Tempat Lahir'],
+  ['tglLahir', 'Tanggal Lahir'],
+  ['jenisKelamin', 'Jenis Kelamin'],
+  ['agama', 'Agama'],
+  ['pendidikan', 'Pendidikan'],
+  ['statusNikah', 'Status Pernikahan'],
+  ['noHp', 'No. HP'],
+  ['alamat', 'Alamat'],
+  ['rt', 'RT'],
+  ['rw', 'RW'],
+  ['provinsi', 'Provinsi'],
+  ['kabupaten', 'Kota/Kabupaten'],
+  ['kecamatan', 'Kecamatan'],
+  ['desa', 'Desa/Kelurahan'],
+  ['kodePos', 'Kode Pos'],
+  ['namaDarurat', 'Nama Kontak Darurat'],
+  ['hpDarurat', 'No. HP Darurat'],
+]
+
+// Returns the labels still missing, or [] if the form is complete enough to save.
+function validateRegistration(form) {
+  return REQUIRED_ON_REGISTER
+    .filter(([name]) => String(form[name] ?? '').trim() === '')
+    .map(([, label]) => label)
+}
+
+// Same check as validateRegistration, but read straight off the loaded profile (view mode,
+// before the user has even clicked Edit Profil) - alamat's fields are nested there, unlike the
+// flat form state, hence the separate field list rather than reusing REQUIRED_ON_REGISTER.
+function missingFieldsOf(profile) {
+  const checks = [
+    [profile.namaLengkap, 'Nama Lengkap'],
+    [profile.nik, 'NIK'],
+    [profile.statusKaryawan, 'Status Karyawan'],
+    [profile.tempatLahir, 'Tempat Lahir'],
+    [profile.tglLahir, 'Tanggal Lahir'],
+    [profile.jenisKelamin, 'Jenis Kelamin'],
+    [profile.agama, 'Agama'],
+    [profile.pendidikan, 'Pendidikan'],
+    [profile.statusNikah, 'Status Pernikahan'],
+    [profile.noHp, 'No. HP'],
+    [profile.alamat?.alamat, 'Alamat'],
+    [profile.alamat?.rt, 'RT'],
+    [profile.alamat?.rw, 'RW'],
+    [profile.alamat?.provinsi, 'Provinsi'],
+    [profile.alamat?.kabupaten, 'Kota/Kabupaten'],
+    [profile.alamat?.kecamatan, 'Kecamatan'],
+    [profile.alamat?.desa, 'Desa/Kelurahan'],
+    [profile.alamat?.kodePos, 'Kode Pos'],
+    [profile.namaDarurat, 'Nama Kontak Darurat'],
+    [profile.hpDarurat, 'No. HP Darurat'],
+  ]
+  return checks
+    .filter(([v]) => v === null || v === undefined || String(v).trim() === '')
+    .map(([, label]) => label)
 }
 
 // A newly-created employee record has no self-service data yet (only what HR seeded). In that
@@ -189,6 +265,14 @@ export default function ProfilPage() {
   }
 
   async function saveProfile() {
+    // Enforced on every save, not just first-time registration - a pre-existing HR/legacy row
+    // can already exist with gaps, and the backend rejects an incomplete save either way.
+    const missing = validateRegistration(form)
+    if (missing.length > 0) {
+      setSaveError(`Lengkapi dulu: ${missing.join(', ')}.`)
+      return
+    }
+
     setSaving(true)
     setSaveError('')
     try {
@@ -289,6 +373,7 @@ export default function ProfilPage() {
   const marriedNow = editing ? form?.statusNikah === 'Kawin' : profile.isMarried
   const kkDoc = profile.berkas.find((b) => b.key === 'kk')
   const bukuNikahDoc = profile.berkas.find((b) => b.key === 'buku-nikah')
+  const requiredNow = !profile.profileComplete
 
   return (
     <div className="profil">
@@ -316,10 +401,32 @@ export default function ProfilPage() {
         )}
       </div>
 
+      {!editing && !profile.profileComplete && (
+        <div className="profil__notice profil__notice--warn">
+          Profil Anda belum lengkap. Menu masih terkunci sampai field berikut diisi: <b>{missingFieldsOf(profile).join(', ')}</b>.
+          Klik <b>Edit Profil</b> untuk melengkapinya.
+        </div>
+      )}
+
       {editing && (
         <div className="profil__notice">
-          Anda dapat memperbarui data pribadi Anda. <b>ID Karyawan</b>, status kepegawaian, dan
-          email dikunci oleh sistem. Klik <b>Simpan</b> untuk menyimpan perubahan.
+          {!profile.registered ? (
+            <>
+              Profil Anda belum terdaftar di sistem. Lengkapi data di bawah ini lalu klik{' '}
+              <b>Simpan</b>. Data keluarga dan berkas pribadi bisa dilengkapi
+              setelah ini tersimpan.
+            </>
+          ) : !profile.profileComplete ? (
+            <>
+              Profil Anda sudah terdaftar tapi belum lengkap. Lengkapi field bertanda{' '}
+              <b>*</b> di bawah ini lalu klik <b>Simpan</b> agar menu lain (Absensi, Izin,
+              Lembur, SPPD, UMDL, Pemesanan Tiket) ikut terbuka.
+            </>
+          ) : (
+            <>
+              Anda dapat memperbarui data pribadi Anda. Klik <b>Simpan</b> untuk menyimpan perubahan.
+            </>
+          )}
         </div>
       )}
       {saveError && <div className="profil__alert profil__alert--err">{saveError}</div>}
@@ -328,29 +435,31 @@ export default function ProfilPage() {
         <div className="profil__section-title">Informasi Pribadi</div>
         <div className="profil__grid">
           <Row label="ID Karyawan" locked display={profile.idKaryawan} />
-          <Row label="Nama Lengkap" editing={editing} display={profile.namaLengkap}>
+          <Row label="Nama Lengkap" editing={editing} required={requiredNow} display={profile.namaLengkap}>
             <TextField form={form} setForm={setForm} name="namaLengkap" />
           </Row>
-          <Row label="NIK" editing={editing} display={profile.nik}>
+          <Row label="NIK" editing={editing} required={requiredNow} display={profile.nik}>
             <TextField form={form} setForm={setForm} name="nik" placeholder="16 digit" />
           </Row>
-          <Row label="Status Karyawan" locked display={profile.statusKaryawan} />
-          <Row label="Tempat Lahir" editing={editing} display={profile.tempatLahir}>
+          <Row label="Status Karyawan" editing={editing} required={requiredNow} display={profile.statusKaryawan}>
+            <SelectField form={form} setForm={setForm} name="statusKaryawan" options={STATUS_KARYAWAN_OPTIONS} />
+          </Row>
+          <Row label="Tempat Lahir" editing={editing} required={requiredNow} display={profile.tempatLahir}>
             <TextField form={form} setForm={setForm} name="tempatLahir" />
           </Row>
-          <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.tglLahir)}>
+          <Row label="Tanggal Lahir" editing={editing} required={requiredNow} display={formatTanggal(profile.tglLahir)}>
             <TextField form={form} setForm={setForm} name="tglLahir" type="date" />
           </Row>
-          <Row label="Jenis Kelamin" editing={editing} display={profile.jenisKelamin}>
+          <Row label="Jenis Kelamin" editing={editing} required={requiredNow} display={profile.jenisKelamin}>
             <SelectField form={form} setForm={setForm} name="jenisKelamin" options={GENDER_OPTIONS} />
           </Row>
-          <Row label="Agama" editing={editing} display={profile.agama}>
+          <Row label="Agama" editing={editing} required={requiredNow} display={profile.agama}>
             <SelectField form={form} setForm={setForm} name="agama" options={AGAMA_OPTIONS} />
           </Row>
-          <Row label="Pendidikan" editing={editing} display={profile.pendidikan}>
-            <TextField form={form} setForm={setForm} name="pendidikan" />
+          <Row label="Pendidikan" editing={editing} required={requiredNow} display={profile.pendidikan}>
+            <SelectField form={form} setForm={setForm} name="pendidikan" options={PENDIDIKAN_OPTIONS} />
           </Row>
-          <Row label="Status Pernikahan" editing={editing} display={
+          <Row label="Status Pernikahan" editing={editing} required={requiredNow} display={
             profile.isMarried ? (
               <button type="button" className="profil__link" onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}>
                 {profile.statusNikah}
@@ -366,32 +475,21 @@ export default function ProfilPage() {
       <div className="profil__card">
         <div className="profil__section-title">Kontak &amp; Alamat</div>
         <div className="profil__grid">
-          <Row label="No. HP" editing={editing} display={profile.noHp}>
+          <Row label="No. HP" editing={editing} required={requiredNow} display={profile.noHp}>
             <TextField form={form} setForm={setForm} name="noHp" />
           </Row>
           <Row label="Email" locked display={profile.email} />
-          <Row label="Alamat" editing={editing} display={profile.alamat?.alamat}>
+          <Row label="Alamat" editing={editing} required={requiredNow} display={profile.alamat?.alamat}>
             <TextField form={form} setForm={setForm} name="alamat" />
           </Row>
-          <Row label="RT" editing={editing} display={profile.alamat?.rt}>
+          <Row label="RT" editing={editing} required={requiredNow} display={profile.alamat?.rt}>
             <TextField form={form} setForm={setForm} name="rt" />
           </Row>
-          <Row label="RW" editing={editing} display={profile.alamat?.rw}>
+          <Row label="RW" editing={editing} required={requiredNow} display={profile.alamat?.rw}>
             <TextField form={form} setForm={setForm} name="rw" />
           </Row>
-          <Row label="Desa" editing={editing} display={profile.alamat?.desa}>
-            <TextField form={form} setForm={setForm} name="desa" />
-          </Row>
-          <Row label="Kecamatan" editing={editing} display={profile.alamat?.kecamatan}>
-            <TextField form={form} setForm={setForm} name="kecamatan" />
-          </Row>
-          <Row label="Kabupaten" editing={editing} display={profile.alamat?.kabupaten}>
-            <TextField form={form} setForm={setForm} name="kabupaten" />
-          </Row>
-          <Row label="Provinsi" editing={editing} display={profile.alamat?.provinsi}>
-            <TextField form={form} setForm={setForm} name="provinsi" />
-          </Row>
-          <Row label="Kode Pos" editing={editing} display={profile.alamat?.kodePos}>
+          <WilayahFields profile={profile} form={form} setForm={setForm} editing={editing} required={requiredNow} />
+          <Row label="Kode Pos" editing={editing} required={requiredNow} display={profile.alamat?.kodePos}>
             <TextField form={form} setForm={setForm} name="kodePos" />
           </Row>
         </div>
@@ -403,19 +501,19 @@ export default function ProfilPage() {
           <Row label="Riwayat Kesehatan" editing={editing} display={profile.riwayatKesehatan}>
             <TextField form={form} setForm={setForm} name="riwayatKesehatan" />
           </Row>
-          <Row label="Nama Kontak Darurat" editing={editing} display={profile.namaDarurat}>
+          <Row label="Nama Kontak Darurat" editing={editing} required={requiredNow} display={profile.namaDarurat}>
             <TextField form={form} setForm={setForm} name="namaDarurat" />
           </Row>
-          <Row label="No. HP Darurat" editing={editing} display={profile.hpDarurat}>
+          <Row label="No. HP Darurat" editing={editing} required={requiredNow} display={profile.hpDarurat}>
             <TextField form={form} setForm={setForm} name="hpDarurat" />
           </Row>
         </div>
       </div>
 
-      <div className="profil__card">
-        <div className="profil__section-title">Data Keluarga</div>
+      {profile.registered && (
+        <div className="profil__card">
+          <div className="profil__section-title">Data Keluarga</div>
 
-        {marriedNow && (
           <div className="profil__subsection">
             <BerkasFileRow
               label="Kartu Keluarga"
@@ -424,59 +522,63 @@ export default function ProfilPage() {
               uploadSlot={renderUploadSlot('kk', 'Kartu Keluarga', kkDoc?.available)}
             />
           </div>
-        )}
 
-        {marriedNow && (
-          <div className="profil__subsection">
-            <div className="profil__subsection-title">Data Pasangan</div>
-            <div className="profil__grid">
-              <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
-                <TextField form={form} setForm={setForm} name="namaPasangan" />
-              </Row>
-              <Row label="Tempat Lahir" editing={editing} display={profile.pasangan?.tempatLahir}>
-                <TextField form={form} setForm={setForm} name="tempatLahirPasangan" />
-              </Row>
-              <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.pasangan?.tglLahir)}>
-                <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
-              </Row>
+          {marriedNow && (
+            <>
+              <div className="profil__subsection">
+                <div className="profil__subsection-title">Data Pasangan</div>
+                <div className="profil__grid">
+                  <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
+                    <TextField form={form} setForm={setForm} name="namaPasangan" />
+                  </Row>
+                  <Row label="Tempat Lahir" editing={editing} display={profile.pasangan?.tempatLahir}>
+                    <TextField form={form} setForm={setForm} name="tempatLahirPasangan" />
+                  </Row>
+                  <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.pasangan?.tglLahir)}>
+                    <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
+                  </Row>
 
+                </div>
+                <BerkasFileRow
+                  label="Buku Nikah"
+                  available={bukuNikahDoc?.available}
+                  onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}
+                  uploadSlot={renderUploadSlot('buku-nikah', 'Buku Nikah', bukuNikahDoc?.available)}
+                />
+              </div>
+
+              <div className="profil__subsection">
+                <div className="profil__subsection-title">Data Anak</div>
+                <ChildrenSection anak={profile.anak} onChanged={reloadProfile} onViewAkta={openAktaModal} editing={editing} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {profile.registered && (
+        <div className="profil__card">
+          <div className="profil__section-title">Berkas Pribadi</div>
+          {uploadMsg && (
+            <div className={`profil__alert profil__alert--${uploadMsg.type === 'ok' ? 'ok' : 'err'}`}>
+              {uploadMsg.text}
             </div>
-            <BerkasFileRow
-              label="Buku Nikah"
-              available={bukuNikahDoc?.available}
-              onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}
-              uploadSlot={renderUploadSlot('buku-nikah', 'Buku Nikah', bukuNikahDoc?.available)}
-            />
+          )}
+          <div className="profil__berkas-list">
+            {profile.berkas
+              .filter((b) => !MARITAL_KEYS.has(b.key)) // KK & Buku Nikah now live under Data Keluarga
+              .map((b) => (
+                <BerkasFileRow
+                  key={b.key}
+                  label={b.label}
+                  available={b.available}
+                  onClick={() => openDocumentModal(b.key, b.label)}
+                  uploadSlot={renderUploadSlot(b.key, b.label, b.available)}
+                />
+              ))}
           </div>
-        )}
-
-        <div className="profil__subsection">
-          <div className="profil__subsection-title">Data Anak</div>
-          <ChildrenSection anak={profile.anak} onChanged={reloadProfile} onViewAkta={openAktaModal} editing={editing} />
         </div>
-      </div>
-
-      <div className="profil__card">
-        <div className="profil__section-title">Berkas Pribadi</div>
-        {uploadMsg && (
-          <div className={`profil__alert profil__alert--${uploadMsg.type === 'ok' ? 'ok' : 'err'}`}>
-            {uploadMsg.text}
-          </div>
-        )}
-        <div className="profil__berkas-list">
-          {profile.berkas
-            .filter((b) => !MARITAL_KEYS.has(b.key)) // KK & Buku Nikah now live under Data Keluarga
-            .map((b) => (
-              <BerkasFileRow
-                key={b.key}
-                label={b.label}
-                available={b.available}
-                onClick={() => openDocumentModal(b.key, b.label)}
-                uploadSlot={renderUploadSlot(b.key, b.label, b.available)}
-              />
-            ))}
-        </div>
-      </div>
+      )}
 
       <PdfPopupModal
         open={modal.open}

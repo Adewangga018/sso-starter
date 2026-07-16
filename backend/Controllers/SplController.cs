@@ -39,7 +39,7 @@ public class SplController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         var items = await _db.WebSdmSpl
@@ -66,7 +66,7 @@ public class SplController : ControllerBase
         var (_, pegawai) = await _currentUser.ResolveAsync(User);
         if (pegawai is null)
         {
-            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini. Hubungi HR/SDM." });
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
         if (Validate(request) is { } error)
@@ -77,7 +77,7 @@ public class SplController : ControllerBase
         var atasan = await ResolveAtasanAsync(pegawai.ID_KARYAWAN);
         if (atasan is null)
         {
-            return BadRequest(new { message = "Atasan penyetuju belum terdaftar untuk Anda. Hubungi HR/SDM." });
+            return BadRequest(new { message = "Atasan penyetuju belum terdaftar untuk Anda." });
         }
 
         var spl = new WebSdmSpl
