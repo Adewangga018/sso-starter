@@ -147,6 +147,33 @@
   cursor: not-allowed;
 }
 
+/* The "back to MyGCS dashboard" link: it leaves the current module entirely, so it's styled
+   as an outlined button rather than a plain list item, and lives in its own unlabeled section
+   (see .sidebar__nav > .sidebar__section:first-child below) to keep it visually apart from the
+   module's own menu items. */
+.sidebar__item--home {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+}
+
+.sidebar__item--home:hover {
+  border-color: var(--gcs-gold-500);
+  background: rgba(244, 174, 70, 0.1);
+  color: var(--gcs-gold-500);
+}
+
+.sidebar__item--home .sidebar__item-content svg {
+  color: var(--gcs-gold-500);
+  flex-shrink: 0;
+}
+
+.sidebar__nav > .sidebar__section:first-child {
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .sidebar__lock {
   opacity: 0.6;
   flex-shrink: 0;

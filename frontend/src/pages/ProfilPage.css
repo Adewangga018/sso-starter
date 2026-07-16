@@ -143,12 +143,6 @@
   color: #c0392b;
 }
 
-.profil__lock {
-  margin-left: 5px;
-  color: var(--gcs-text-muted);
-  vertical-align: -1px;
-}
-
 .profil__input {
   width: 100%;
   border: 1px solid var(--gcs-border);
@@ -201,10 +195,8 @@
 .profil__anak-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
-  padding: 0 10px;
-  border-left: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
 }
 
 .profil__iconbtn {
@@ -298,10 +290,38 @@
   border-bottom: 1px solid var(--gcs-border);
 }
 
+/* A labelled group inside a .profil__card, e.g. "Data Pasangan" / "Data Anak" living
+   together under the "Data Keluarga" card. */
+.profil__subsection + .profil__subsection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--gcs-border);
+}
+
+.profil__subsection-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
 .profil__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px 24px;
+}
+
+/* Spacing before a standalone berkas row that follows a detail grid, e.g. Buku Nikah under
+   Data Pasangan. Not needed inside .profil__anak-item (Akta Kelahiran under each anak's
+   detail) - that's a flex column with its own `gap`, which would double up with this margin. */
+.profil__grid + .profil__berkas-item {
+  margin-top: 16px;
+}
+
+.profil__anak-item > .profil__grid + .profil__berkas-item {
+  margin-top: 0;
 }
 
 @media (max-width: 860px) {
@@ -387,72 +407,20 @@
 
 .profil__anak-item {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 14px;
   border: 1px solid var(--gcs-border);
   border-radius: 10px;
   background: var(--gcs-bg);
-  overflow: hidden;
+  padding: 16px;
 }
 
 .profil__anak-item:hover {
   border-color: var(--gcs-gold-500);
 }
 
-.profil__anak-view {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: none;
-  background: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.profil__anak-view:disabled {
-  cursor: default;
-}
-
-.profil__anak-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: rgba(244, 174, 70, 0.18);
-  color: var(--gcs-gold-700);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.profil__anak-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.profil__anak-name {
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.profil__anak-sub {
-  font-size: 12px;
-  color: var(--gcs-text-muted);
-  margin-top: 2px;
-}
-
-.profil__anak-akta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--gcs-green-600);
-  font-weight: 600;
-  flex-shrink: 0;
+.profil__anak-item .profil__berkas-item {
+  background: var(--gcs-white);
 }
 
 .profil__anak-chevron {

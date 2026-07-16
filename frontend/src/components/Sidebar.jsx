@@ -79,12 +79,14 @@ function SidebarItem({ item, showLabels, onNavigate }) {
     )
   }
 
+  const variantClass = item.variant ? ` sidebar__item--${item.variant}` : ''
+
   return (
     <NavLink
       to={item.to}
       title={showLabels ? undefined : item.label}
       onClick={onNavigate}
-      className={({ isActive }) => `sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
+      className={({ isActive }) => `sidebar__item${variantClass}${isActive ? ' sidebar__item--active' : ''}`}
     >
       <span className="sidebar__item-content">
         {Icon && <Icon size={18} />}

@@ -749,7 +749,7 @@ public class PersonalController : ControllerBase
         var file = _documentResolver.Resolve(relativePath);
         if (file is null)
         {
-            return NotFound(new { message = "Dokumen belum tersedia. Silakan hubungi HR/SDM." });
+            return NotFound(new { message = "Dokumen belum tersedia." });
         }
 
         var stream = System.IO.File.OpenRead(file.PhysicalPath);

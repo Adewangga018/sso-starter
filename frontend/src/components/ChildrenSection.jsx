@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { CheckCircle2, Loader2, Pencil, Plus, Trash2, Upload, Users, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Loader2, Pencil, Plus, Trash2, Upload, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
+import BerkasFileRow from './BerkasFileRow'
 
 const toDateInput = (v) => (v ? String(v).slice(0, 10) : '')
 const emptyToNull = (v) => {
@@ -15,12 +16,12 @@ function formatTanggal(value) {
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
-const blankForm = { nama: '', tempatLahir: '', tglLahir: '' }
+const blankForm = { nama: '', urutan: '', tempatLahir: '', tglLahir: '' }
 
 // Full CRUD for the employee's children (MST_ANAK_PEGAWAI) plus akta upload/view. Each change
 // calls onChanged() so the parent reloads the profile; akta viewing is delegated up via
 // onViewAkta so it reuses the page's document popup.
-export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
+export default function ChildrenSection({ anak, onChanged, onViewAkta, editing }) {
   const [editId, setEditId] = useState(null) // a child id, 'new', or null
   const [form, setForm] = useState(blankForm)
   const [saving, setSaving] = useState(false)
@@ -28,6 +29,16 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
   const [busyId, setBusyId] = useState(null) // upload/delete in-flight for this child
   const [confirmId, setConfirmId] = useState(null)
   const [msg, setMsg] = useState(null)
+
+  // If the parent's Edit Profil is cancelled while a child sub-form is open, close it too —
+  // actions here are only reachable while editing anyway, but this covers the edge case.
+  useEffect(() => {
+    if (!editing) {
+      setEditId(null)
+      setError('')
+      setConfirmId(null)
+    }
+  }, [editing])
 
   function startAdd() {
     setForm(blankForm)
@@ -37,7 +48,12 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
   }
 
   function startEdit(a) {
-    setForm({ nama: a.nama ?? '', tempatLahir: a.tempatLahir ?? '', tglLahir: toDateInput(a.tglLahir) })
+    setForm({
+      nama: a.nama ?? '',
+      urutan: a.urutan ?? '',
+      tempatLahir: a.tempatLahir ?? '',
+      tglLahir: toDateInput(a.tglLahir),
+    })
     setError('')
     setConfirmId(null)
     setEditId(a.id)
@@ -61,6 +77,7 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
     setError('')
     const payload = {
       nama: form.nama.trim(),
+      urutan: form.urutan === '' ? null : Number(form.urutan),
       tempatLahir: emptyToNull(form.tempatLahir),
       tglLahir: form.tglLahir || null,
     }
@@ -119,6 +136,14 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
       />
       <input
         className="profil__input"
+        type="number"
+        min="1"
+        placeholder="Urutan anak (opsional)"
+        value={form.urutan}
+        onChange={(e) => setField('urutan', e.target.value)}
+      />
+      <input
+        className="profil__input"
         placeholder="Tempat lahir"
         value={form.tempatLahir}
         onChange={(e) => setField('tempatLahir', e.target.value)}
@@ -142,8 +167,7 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
   )
 
   return (
-    <div className="profil__card">
-      <div className="profil__section-title">Data Anak</div>
+    <>
       {msg && <div className={`profil__alert profil__alert--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
 
       <div className="profil__anak-list">
@@ -156,62 +180,80 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
             <div className="profil__anak-item profil__anak-item--editing" key={a.id}>{editForm}</div>
           ) : (
             <div className="profil__anak-item" key={a.id}>
-              <button type="button" className="profil__anak-view" disabled={!a.hasAkta} onClick={() => onViewAkta(a)}>
-                <div className="profil__anak-icon"><Users size={16} /></div>
-                <div className="profil__anak-text">
-                  <div className="profil__anak-name">{a.nama ?? `Anak ke-${a.urutan}`}</div>
-                  <div className="profil__anak-sub">{a.tempatLahir ?? '-'}, {formatTanggal(a.tglLahir)}</div>
+              <div className="profil__grid">
+                <div className="info-row">
+                  <div className="info-row__label">Urutan Anak</div>
+                  <div className="info-row__value">{a.urutan ?? '-'}</div>
                 </div>
-                {a.hasAkta ? (
-                  <span className="profil__anak-akta"><CheckCircle2 size={14} /> Akta</span>
-                ) : (
-                  <span className="profil__anak-sub">Tanpa akta</span>
+                <div className="info-row">
+                  <div className="info-row__label">Nama Anak</div>
+                  <div className="info-row__value">{a.nama ?? '-'}</div>
+                </div>
+                <div className="info-row">
+                  <div className="info-row__label">Tempat Lahir</div>
+                  <div className="info-row__value">{a.tempatLahir ?? '-'}</div>
+                </div>
+                <div className="info-row">
+                  <div className="info-row__label">Tanggal Lahir</div>
+                  <div className="info-row__value">{formatTanggal(a.tglLahir)}</div>
+                </div>
+              </div>
+
+              <BerkasFileRow
+                label="Akta Kelahiran"
+                available={a.hasAkta}
+                onClick={() => onViewAkta(a)}
+                uploadSlot={editing && (
+                  <label
+                    className={`profil__upload${busyId === a.id ? ' is-disabled' : ''}`}
+                    title="Unggah / ganti akta (PDF/JPG/PNG, maks 10MB)"
+                  >
+                    {busyId === a.id ? <Loader2 size={14} className="profil__spin" /> : <Upload size={14} />}
+                    <span>{a.hasAkta ? 'Ubah' : 'Unggah'}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      hidden
+                      disabled={busyId === a.id}
+                      onChange={(e) => uploadAkta(a.id, e, a.nama ?? `Anak ke-${a.urutan}`)}
+                    />
+                  </label>
                 )}
-              </button>
-              <div className="profil__anak-actions">
-                <label
-                  className={`profil__iconbtn${busyId === a.id ? ' is-disabled' : ''}`}
-                  title="Unggah / ganti akta (PDF/JPG/PNG, maks 10MB)"
-                >
-                  {busyId === a.id ? <Loader2 size={15} className="profil__spin" /> : <Upload size={15} />}
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    hidden
-                    disabled={busyId === a.id}
-                    onChange={(e) => uploadAkta(a.id, e, a.nama ?? `Anak ke-${a.urutan}`)}
-                  />
-                </label>
-                <button type="button" className="profil__iconbtn" title="Edit" onClick={() => startEdit(a)} disabled={busyId === a.id}>
-                  <Pencil size={15} />
-                </button>
-                {confirmId === a.id ? (
-                  <>
+              />
+
+              {editing && (
+                <div className="profil__anak-actions">
+                  <button type="button" className="profil__iconbtn" title="Edit" onClick={() => startEdit(a)} disabled={busyId === a.id}>
+                    <Pencil size={15} />
+                  </button>
+                  {confirmId === a.id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="profil__iconbtn profil__iconbtn--danger"
+                        title="Konfirmasi hapus"
+                        onClick={() => remove(a.id)}
+                        disabled={busyId === a.id}
+                      >
+                        {busyId === a.id ? <Loader2 size={15} className="profil__spin" /> : <Trash2 size={15} />}
+                      </button>
+                      <button type="button" className="profil__iconbtn" title="Batal" onClick={() => setConfirmId(null)}>
+                        <X size={15} />
+                      </button>
+                    </>
+                  ) : (
                     <button
                       type="button"
                       className="profil__iconbtn profil__iconbtn--danger"
-                      title="Konfirmasi hapus"
-                      onClick={() => remove(a.id)}
+                      title="Hapus"
+                      onClick={() => setConfirmId(a.id)}
                       disabled={busyId === a.id}
                     >
-                      {busyId === a.id ? <Loader2 size={15} className="profil__spin" /> : <Trash2 size={15} />}
+                      <Trash2 size={15} />
                     </button>
-                    <button type="button" className="profil__iconbtn" title="Batal" onClick={() => setConfirmId(null)}>
-                      <X size={15} />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="profil__iconbtn profil__iconbtn--danger"
-                    title="Hapus"
-                    onClick={() => setConfirmId(a.id)}
-                    disabled={busyId === a.id}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           ),
         )}
@@ -219,11 +261,11 @@ export default function ChildrenSection({ anak, onChanged, onViewAkta }) {
         {editId === 'new' && <div className="profil__anak-item profil__anak-item--editing">{editForm}</div>}
       </div>
 
-      {editId !== 'new' && (
+      {editing && editId !== 'new' && (
         <button type="button" className="profil__addbtn" onClick={startAdd}>
           <Plus size={16} /> Tambah Anak
         </button>
       )}
-    </div>
+    </>
   )
 }

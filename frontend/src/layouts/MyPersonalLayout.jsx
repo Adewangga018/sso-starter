@@ -20,9 +20,13 @@ import '../layouts/AppShell.css'
 
 const SECTIONS = [
   {
+    items: [
+      { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard', variant: 'home' },
+    ],
+  },
+  {
     label: 'My Personal',
     items: [
-      { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard' },
       { key: 'profil', label: 'Profil', icon: UserCircle, to: '/my-personal/profil' },
       { key: 'absensi', label: 'Absensi', icon: ClipboardList, to: '/my-personal/absensi' },
       { key: 'izin', label: 'Izin', icon: FileSignature, to: '/my-personal/izin' },
@@ -31,6 +35,7 @@ const SECTIONS = [
       { key: 'sppd', label: 'SPPD', icon: Plane, to: '/my-personal/sppd' },
       { key: 'umdl', label: 'UMDL', icon: Banknote, to: '/my-personal/umdl' },
       { key: 'tiket', label: 'Pemesanan Tiket', icon: Ticket, to: '/my-personal/tiket' },
+      
       { key: 'gaji', label: 'Slip Gaji', icon: Wallet, disabled: true },
     ],
   },

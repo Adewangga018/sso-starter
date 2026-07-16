@@ -24,7 +24,7 @@ export default function PdfPopupModal({ open, onClose, title, loading, doc, erro
           {!loading && (error || !doc?.url) && (
             <div className="pdf-modal__state">
               <FileWarning size={22} />
-              <span>{error || 'Dokumen belum tersedia. Hubungi HR/SDM.'}</span>
+              <span>{error || 'Dokumen belum tersedia.'}</span>
             </div>
           )}
 

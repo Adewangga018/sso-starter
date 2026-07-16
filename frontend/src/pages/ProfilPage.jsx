@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronRight, FileWarning, Loader2, Lock, Upload } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import PdfPopupModal from '../components/PdfPopupModal'
+import BerkasFileRow from '../components/BerkasFileRow'
 import ChildrenSection from '../components/ChildrenSection'
 import './ProfilPage.css'
 
@@ -87,19 +88,27 @@ function buildPayload(form) {
 }
 
 // One label/value row. In edit mode it renders `children` (the input); otherwise the display
-// value. Locked rows always show the value, with a lock marker on the label.
+// value. Locked rows always show the value and are never editable.
 function Row({ label, editing, locked, display, children }) {
   return (
     <div className="info-row">
-      <div className="info-row__label">
-        {label}
-        {locked && <Lock size={11} className="profil__lock" />}
-      </div>
+      <div className="info-row__label">{label}</div>
       <div className="info-row__value">
         {editing && !locked ? children : (display ?? '-')}
       </div>
     </div>
   )
+}
+
+// A newly-created employee record has no self-service data yet (only what HR seeded). In that
+// case the page opens straight into edit mode so the fields render as inputs immediately,
+// instead of a screen full of "-" behind an extra "Edit Profil" click.
+function isProfileEmpty(p) {
+  const fields = [
+    p.nik, p.tempatLahir, p.tglLahir, p.jenisKelamin, p.agama, p.pendidikan,
+    p.noHp, p.alamat?.alamat, p.riwayatKesehatan, p.namaDarurat, p.hpDarurat, p.statusNikah,
+  ]
+  return fields.every((v) => v === null || v === undefined || String(v).trim() === '')
 }
 
 function TextField({ form, setForm, name, type = 'text', placeholder }) {
@@ -149,7 +158,12 @@ export default function ProfilPage() {
     api
       .getPersonalProfile()
       .then((data) => {
-        if (!cancelled) setProfile(data)
+        if (cancelled) return
+        setProfile(data)
+        if (isProfileEmpty(data)) {
+          setForm(initForm(data))
+          setEditing(true)
+        }
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat data profil.')
@@ -209,6 +223,26 @@ export default function ProfilPage() {
     handleUpload(uploadKey, file, label, doUpload)
   }
 
+  // Upload control for a single berkas document; only rendered while editing (see BerkasFileRow
+  // usages below). Shared by the standalone KK/Buku Nikah rows and the Berkas Pribadi grid.
+  function renderUploadSlot(key, label, available) {
+    if (!editing) return null
+    const busy = uploadingKey === key
+    return (
+      <label className={`profil__upload${busy ? ' is-disabled' : ''}`} title="Unggah / ganti berkas (PDF/JPG/PNG, maks 10MB)">
+        {busy ? <Loader2 size={14} className="profil__spin" /> : <Upload size={14} />}
+        <span>{available ? 'Ubah' : 'Unggah'}</span>
+        <input
+          type="file"
+          accept={ACCEPT}
+          hidden
+          disabled={busy}
+          onChange={(e) => onPickFile(e, key, label, (file) => api.uploadDocument(key, file))}
+        />
+      </label>
+    )
+  }
+
   // The doc.url is a blob: object URL; free the previous one before loading another.
   function revokeCurrentDoc() {
     setModal((m) => {
@@ -253,6 +287,8 @@ export default function ProfilPage() {
   }
 
   const marriedNow = editing ? form?.statusNikah === 'Kawin' : profile.isMarried
+  const kkDoc = profile.berkas.find((b) => b.key === 'kk')
+  const bukuNikahDoc = profile.berkas.find((b) => b.key === 'buku-nikah')
 
   return (
     <div className="profil">
@@ -282,8 +318,8 @@ export default function ProfilPage() {
 
       {editing && (
         <div className="profil__notice">
-          Anda dapat memperbarui data pribadi Anda. <b>ID Karyawan</b> dan status kepegawaian dikunci
-          oleh sistem. Klik <b>Simpan</b> untuk menyimpan perubahan.
+          Anda dapat memperbarui data pribadi Anda. <b>ID Karyawan</b>, status kepegawaian, dan
+          email dikunci oleh sistem. Klik <b>Simpan</b> untuk menyimpan perubahan.
         </div>
       )}
       {saveError && <div className="profil__alert profil__alert--err">{saveError}</div>}
@@ -291,7 +327,6 @@ export default function ProfilPage() {
       <div className="profil__card">
         <div className="profil__section-title">Informasi Pribadi</div>
         <div className="profil__grid">
-          <Row label="ID Pegawai" locked display={profile.idPegawai} />
           <Row label="ID Karyawan" locked display={profile.idKaryawan} />
           <Row label="Nama Lengkap" editing={editing} display={profile.namaLengkap}>
             <TextField form={form} setForm={setForm} name="namaLengkap" />
@@ -334,9 +369,7 @@ export default function ProfilPage() {
           <Row label="No. HP" editing={editing} display={profile.noHp}>
             <TextField form={form} setForm={setForm} name="noHp" />
           </Row>
-          <Row label="Email" editing={editing} display={profile.email}>
-            <TextField form={form} setForm={setForm} name="email" type="email" />
-          </Row>
+          <Row label="Email" locked display={profile.email} />
           <Row label="Alamat" editing={editing} display={profile.alamat?.alamat}>
             <TextField form={form} setForm={setForm} name="alamat" />
           </Row>
@@ -376,40 +409,52 @@ export default function ProfilPage() {
           <Row label="No. HP Darurat" editing={editing} display={profile.hpDarurat}>
             <TextField form={form} setForm={setForm} name="hpDarurat" />
           </Row>
-          <Row label="Jumlah Anak" editing={editing} display={profile.jumlahAnak}>
-            <TextField form={form} setForm={setForm} name="jumlahAnak" type="number" />
-          </Row>
         </div>
       </div>
 
-      {marriedNow && (
-        <div className="profil__card">
-          <div className="profil__section-title">Data Pasangan</div>
-          <div className="profil__grid">
-            <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
-              <TextField form={form} setForm={setForm} name="namaPasangan" />
-            </Row>
-            <Row label="Tempat Lahir" editing={editing} display={profile.pasangan?.tempatLahir}>
-              <TextField form={form} setForm={setForm} name="tempatLahirPasangan" />
-            </Row>
-            <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.pasangan?.tglLahir)}>
-              <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
-            </Row>
-            {!editing && (
-              <div className="info-row">
-                <div className="info-row__label">Buku Nikah</div>
-                <div className="info-row__value">
-                  <button type="button" className="profil__link" onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}>
-                    Lihat Buku Nikah
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="profil__card">
+        <div className="profil__section-title">Data Keluarga</div>
 
-      <ChildrenSection anak={profile.anak} onChanged={reloadProfile} onViewAkta={openAktaModal} />
+        {marriedNow && (
+          <div className="profil__subsection">
+            <BerkasFileRow
+              label="Kartu Keluarga"
+              available={kkDoc?.available}
+              onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}
+              uploadSlot={renderUploadSlot('kk', 'Kartu Keluarga', kkDoc?.available)}
+            />
+          </div>
+        )}
+
+        {marriedNow && (
+          <div className="profil__subsection">
+            <div className="profil__subsection-title">Data Pasangan</div>
+            <div className="profil__grid">
+              <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
+                <TextField form={form} setForm={setForm} name="namaPasangan" />
+              </Row>
+              <Row label="Tempat Lahir" editing={editing} display={profile.pasangan?.tempatLahir}>
+                <TextField form={form} setForm={setForm} name="tempatLahirPasangan" />
+              </Row>
+              <Row label="Tanggal Lahir" editing={editing} display={formatTanggal(profile.pasangan?.tglLahir)}>
+                <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
+              </Row>
+
+            </div>
+            <BerkasFileRow
+              label="Buku Nikah"
+              available={bukuNikahDoc?.available}
+              onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}
+              uploadSlot={renderUploadSlot('buku-nikah', 'Buku Nikah', bukuNikahDoc?.available)}
+            />
+          </div>
+        )}
+
+        <div className="profil__subsection">
+          <div className="profil__subsection-title">Data Anak</div>
+          <ChildrenSection anak={profile.anak} onChanged={reloadProfile} onViewAkta={openAktaModal} editing={editing} />
+        </div>
+      </div>
 
       <div className="profil__card">
         <div className="profil__section-title">Berkas Pribadi</div>
@@ -419,47 +464,17 @@ export default function ProfilPage() {
           </div>
         )}
         <div className="profil__berkas-list">
-          {profile.berkas.map((b) => {
-            const maritalLocked = MARITAL_KEYS.has(b.key) && !profile.isMarried
-            const busy = uploadingKey === b.key
-            return (
-              <div className="profil__berkas-item" key={b.key}>
-                <button
-                  type="button"
-                  className="profil__berkas-view"
-                  disabled={!b.available}
-                  onClick={() => openDocumentModal(b.key, b.label)}
-                >
-                  {b.available ? (
-                    <CheckCircle2 size={18} className="profil__berkas-icon profil__berkas-icon--available" />
-                  ) : (
-                    <FileWarning size={18} className="profil__berkas-icon" />
-                  )}
-                  <div className="profil__berkas-text">
-                    <div className="profil__berkas-label">{b.label}</div>
-                    <div className="profil__berkas-sub">
-                      {b.available ? 'Tersedia · klik untuk lihat' : 'Belum tersedia'}
-                    </div>
-                  </div>
-                  {b.available && <ChevronRight size={16} className="profil__anak-chevron" />}
-                </button>
-                <label
-                  className={`profil__upload${maritalLocked || busy ? ' is-disabled' : ''}`}
-                  title={maritalLocked ? 'Hanya untuk karyawan berstatus Kawin' : 'Unggah / ganti berkas (PDF/JPG/PNG, maks 10MB)'}
-                >
-                  {busy ? <Loader2 size={14} className="profil__spin" /> : <Upload size={14} />}
-                  <span>{b.available ? 'Ubah' : 'Unggah'}</span>
-                  <input
-                    type="file"
-                    accept={ACCEPT}
-                    hidden
-                    disabled={maritalLocked || busy}
-                    onChange={(e) => onPickFile(e, b.key, b.label, (file) => api.uploadDocument(b.key, file))}
-                  />
-                </label>
-              </div>
-            )
-          })}
+          {profile.berkas
+            .filter((b) => !MARITAL_KEYS.has(b.key)) // KK & Buku Nikah now live under Data Keluarga
+            .map((b) => (
+              <BerkasFileRow
+                key={b.key}
+                label={b.label}
+                available={b.available}
+                onClick={() => openDocumentModal(b.key, b.label)}
+                uploadSlot={renderUploadSlot(b.key, b.label, b.available)}
+              />
+            ))}
         </div>
       </div>
 

@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, HelpCircle, Lock, LifeBuoy, LogIn, ShieldCheck, User } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { userManager } from '../lib/auth'
 import './LoginPage.css'
-
-const IMAGE_ASPECT_RATIO = 1280 / 853
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
@@ -14,18 +12,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const cardRef = useRef(null)
-  const [cardHeight, setCardHeight] = useState(null)
-
-  useEffect(() => {
-    const el = cardRef.current
-    if (!el) return
-    const observer = new ResizeObserver(() => {
-      setCardHeight(el.getBoundingClientRect().height)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
 
   // Two-factor step
   const [twoFactor, setTwoFactor] = useState(false)
@@ -75,18 +61,15 @@ export default function LoginPage() {
 
   return (
     <div className="login">
-      <div
-        className="login__image-card"
-        style={
-          cardHeight
-            ? { height: cardHeight, width: cardHeight * IMAGE_ASPECT_RATIO }
-            : undefined
-        }
-      >
-        <img src="/GUDANG_PUPUK.jpeg" alt="Gudang Pupuk" className="login__image" />
+      <img src="/GUDANG_PUPUK.jpeg" alt="Gudang Pupuk PT. Gresik Cipta Sejahtera" className="login__bg" />
+      <div className="login__bg-overlay" />
+
+      <div className="login__brand">
+        <span className="login__brand-rule" />
+        <span className="login__brand-name">PT. Gresik Cipta Sejahtera</span>
       </div>
 
-      <div className="login__card" ref={cardRef}>
+      <div className="login__card">
         <img src="/LOGO MY GCS_1.png" alt="GCS" className="login__logo" />
 
         {!twoFactor ? (
@@ -131,7 +114,7 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {error && <div className="login__error">{error}</div>}
+              {error && <div className="login__error" key={error}>{error}</div>}
 
               <button type="submit" className="login__submit" disabled={submitting}>
                 {submitting ? 'Memproses...' : 'Masuk'}
@@ -181,7 +164,7 @@ export default function LoginPage() {
                 Ingat perangkat ini
               </label>
 
-              {error && <div className="login__error">{error}</div>}
+              {error && <div className="login__error" key={error}>{error}</div>}
 
               <button type="submit" className="login__submit" disabled={submitting}>
                 {submitting ? 'Memverifikasi...' : 'Verifikasi'}
@@ -202,6 +185,8 @@ export default function LoginPage() {
           </>
         )}
       </div>
+
+      {/* <div className="login__footer">Sistem Informasi Kepegawaian Terpadu</div> */}
     </div>
   )
 }
