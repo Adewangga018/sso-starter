@@ -142,14 +142,4 @@ if ($DryRun) {
 } else {
     Ok 'DEPLOY SELESAI.'
     Write-Host '      Verifikasi: https://my.gcs-gresik.com/api/health  lalu buka https://my.gcs-gresik.com/' -ForegroundColor Gray
-
-    if ($doBackend) {
-        Write-Host ''
-        Warn 'Prasyarat SATU KALI utk fitur Profil/Dokumen (abaikan jika sudah pernah diset):'
-        Write-Host '       1. web.config -> env var LegacyFiles__Root = folder dokumen (mis. D:\web_apps\WCP-GCS)' -ForegroundColor Gray
-        Write-Host '       2. App Pool mygcs-api-pool -> izin NTFS Read+Write ke folder tsb' -ForegroundColor Gray
-        Write-Host '       3. SQL svc_mygcs -> UPDATE MST_PEGAWAI + INSERT/UPDATE/DELETE MST_ANAK_PEGAWAI (GCS)' -ForegroundColor Gray
-        Write-Host '       4. Panel Admin -> Admin__Emails__0 = email admin IT yg BISA login; login sekali utk aktivasi role' -ForegroundColor Gray
-        Write-Host '      Detail lengkap: DEPLOY-IIS.md Bab 3 (grant SQL), Bab 7 (env var + izin folder), Bab 7b (admin).' -ForegroundColor Gray
-    }
 }
