@@ -1,43 +1,44 @@
 # Desain Database — Job Grade (JG) & Person Grade (PG) MyGCS
 
 Konsolidasi diskusi tim (Pak A, Pak F, Pak J) atas *Analisis Pemetaan Job Grade PT GCS — Revisi 5 (Juli 2026)*.
-DDL: [`jobgrade-schema.sql`](jobgrade-schema.sql) · Contoh data: [`Contoh-JobGrade-PG-transaksional.xlsx`](Contoh-JobGrade-PG-transaksional.xlsx).
+DDL: [`jobgrade-schema.sql`](jobgrade-schema.sql) · Contoh data: [`Contoh-JobGrade-PG-final.xlsx`](Contoh-JobGrade-PG-final.xlsx).
 
 ## 1. Prinsip
 
-| Lapisan | Tabel | Sifat |
+| Lapisan | Tabel | Peran |
 |---|---|---|
-| **Master / jangkar** | `band` (0=Direksi, I–VI) + `job_grade` (skala 7–21) | Stabil. Patokan apa pun perubahan struktur. |
-| **Struktur** | `unit_organisasi`, `jabatan` | Band melekat di `jabatan`; atasan via `id_atasan` sampai Direksi. |
-| **Transaksi (per tahun)** | `jabatan_grade` (JG), `person_grade` (PG) | JG & PG bisa berubah tiap tahun → dicatat per `tahun_berlaku`. "Terkini" = tahun terbaru. |
-| **Penempatan** | `penempatan` | Siapa mengisi jabatan mana (incumbency). |
-| **Turunan** | `jabatan_hirarki` | Daftar atasan–bawahan segala tingkat, **dibangun otomatis** dari `id_atasan`. |
+| **Jenjang (jangkar)** | `band` (0=Direksi, I–VI) | Pengelompokan level. **Bukan** tempat JG. |
+| **Skala JG** | `job_grade` (jg 7–21 → id_band) | Master skala JG + peta ke band. Di-link dari `jabatan.jg`. |
+| **Struktur** | `unit_organisasi`, `jabatan` | **JG melekat di `jabatan` (kolom `jg`)**; band = jenjang; atasan via `id_atasan`. |
+| **Penempatan** | `penempatan` | Siapa mengisi jabatan mana (orang ↔ jabatan). |
+| **PG (transaksi/tahun)** | `person_grade` | PG per pegawai; "terkini" = tahun terbaru. |
+| **Turunan** | `jabatan_hirarki` | Atasan–bawahan segala tingkat, dibangun otomatis dari `id_atasan`. |
 
-Keputusan penting:
-- **JG & PG = transaksi per tahun**, bukan master (Pak J). Skala JG↔Band tetap referensi.
-- **Tidak ada versi/periode SO** untuk dibandingkan (Pak J: jangkarnya Band). Yang disimpan hanya struktur berlaku.
-- **Atasan–bawahan**: yang diisi hanya `jabatan.id_atasan`; tabel `jabatan_hirarki` untuk query cepat dibangun otomatis.
+Keputusan kunci (hasil revisi atas masukan Pak J & Pak A):
+- **JG = kolom `jg` di `jabatan`** (bukan di band, bukan tabel transaksi terpisah). Contoh Band III: Kabag Perbendaharaan `jg=16`, Kabag Pengadaan `jg=15`, Kabag Jasa Gudang `jg=16`.
+- **`band` tanpa `jg_min`/`jg_max`** — band hanya jenjang; rentang JG ada di `job_grade`.
+- **`job_grade` di-link** ke jabatan (`jabatan.jg` → `job_grade.jg`).
+- **"SO/struktur"** = `unit_organisasi` (jabatan menempel lewat `id_unit`).
 
 ## 2. ERD
 
 ```mermaid
 erDiagram
     band     ||--o{ job_grade : "rentang JG"
-    band     ||--o{ jabatan   : "jangkar level"
-    unit_organisasi ||--o{ jabatan : "menaungi"
+    band     ||--o{ jabatan   : "jenjang"
+    job_grade ||--o{ jabatan  : "grade (jg)"
+    unit_organisasi ||--o{ jabatan : "menaungi (SO/struktur)"
     unit_organisasi ||--o{ unit_organisasi : "induk"
     jabatan  ||--o{ jabatan   : "atasan (id_atasan)"
-    jabatan  ||--o{ jabatan_grade : "transaksi JG per tahun"
-    jabatan  ||--o{ penempatan    : "penempatan"
+    jabatan  ||--o{ penempatan : "diisi"
     jabatan  ||--o{ jabatan_hirarki : "atasan"
     jabatan  ||--o{ jabatan_hirarki : "bawahan"
-    MST_PEGAWAI ||--o{ penempatan   : "diisi (id_karyawan)"
+    MST_PEGAWAI ||--o{ penempatan   : "orang (id_karyawan)"
     MST_PEGAWAI ||--o{ person_grade : "punya PG (id_karyawan)"
 
     band { tinyint id_band PK
            nvarchar kode
-           tinyint jg_min
-           tinyint jg_max }
+           nvarchar nama }
     job_grade { tinyint jg PK
                 tinyint id_band FK }
     unit_organisasi { int id_unit PK
@@ -46,14 +47,11 @@ erDiagram
                       int id_unit_induk FK }
     jabatan { int id_jabatan PK
               nvarchar nama_jabatan
-              tinyint id_band FK "jangkar"
+              tinyint id_band FK "jenjang"
+              tinyint jg FK "grade (NULL utk Direksi)"
               int id_unit FK
               int id_atasan FK "atasan langsung"
               smallint jumlah_formasi }
-    jabatan_grade { int id PK
-                    int id_jabatan FK
-                    tinyint jg_max "plafon PG"
-                    smallint tahun_berlaku }
     penempatan { int id PK
                  int id_jabatan FK
                  nvarchar id_karyawan "-> MST_PEGAWAI"
@@ -64,54 +62,40 @@ erDiagram
                    smallint tahun_berlaku }
     jabatan_hirarki { int id_jabatan_atasan PK
                       int id_jabatan_bawahan PK
-                      int kedalaman "0=diri,1=langsung" }
+                      int kedalaman }
     MST_PEGAWAI { nvarchar ID_KARYAWAN PK "GCS (eksternal)"
                   nvarchar NAMA_LENGKAP }
 ```
 
-## 3. Alur pengisian
+## 3. Contoh (Pak A) — JG melekat ke jabatan
 
-1. **Band** dibuat sekali (master, termasuk Direksi).
-2. **Jabatan** dibuat: `id_band` (jangkar) + `id_atasan` (garis lapor sampai Direksi) + `id_unit` → jalankan `usp_bangun_hirarki_jabatan`.
-3. **JG jabatan**: isi `jabatan_grade` (`jg_max`, `tahun_berlaku`). Tahun depan JG berubah → tambah baris tahun baru.
-4. **Pegawai + PG**: isi `person_grade` (`pg`, `tahun_berlaku`).
-5. **Penempatan**: isi `penempatan` (siapa mengisi jabatan mana).
+| jabatan | id_band | jg |
+|---|---|---|
+| Kabag Perbendaharaan | 3 | 16 |
+| Kabag Pengadaan | 3 | 15 |
+| Kabag Jasa Gudang | 3 | 16 |
 
-## 4. Atasan–bawahan (satu sumber + tabel hirarki otomatis)
+Satu Band (III) bisa berisi jabatan ber-JG berbeda (15/16) — karena **JG di jabatan**, band cuma jenjang.
 
-- Yang **diisi** hanya `jabatan.id_atasan` (atasan langsung), sampai Direksi.
-- **`jabatan_hirarki`** (`id_jabatan_atasan`, `id_jabatan_bawahan`, `kedalaman`) memuat atasan–bawahan **segala tingkat**, dibangun `usp_bangun_hirarki_jabatan` (dipanggil aplikasi tiap struktur berubah). Query jadi pendek:
+## 4. Menjawab pertanyaan tim
 
+- **"band fungsinya apa?"** → pengelompokan jenjang (Direksi, I–VI): penamaan tingkatan, rekap per band, dan jangkar stabil. Bukan tempat JG.
+- **"band jg_min/max buat apa?"** → sudah **dihapus**; rentang JG ada di `job_grade`.
+- **"job_grade fungsinya apa, tak ada link ke jabatan?"** → master skala JG 7–21 + peta ke band, dan **kini di-link** lewat `jabatan.jg` (FK).
+- **"jabatan malah tak ada jg?"** → sudah **ditambahkan** kolom `jg` di `jabatan`.
+- **"JABATAN melekat ke SO?"** → ya, lewat `jabatan.id_unit` → `unit_organisasi` (struktur berlaku).
+- **"penentuan jabatan di penempatan?"** → **bukan**. Definisi jabatan + JG = tabel `jabatan`; `penempatan` = siapa yang mengisi (orang).
+
+## 5. Atasan–bawahan
+
+`jabatan.id_atasan` (satu-satunya yang diisi) → tabel `jabatan_hirarki` dibangun otomatis (`usp_bangun_hirarki_jabatan`). Query cepat:
 ```sql
--- semua bawahan (segala tingkat) jabatan @X
 SELECT id_jabatan_bawahan FROM grading.jabatan_hirarki WHERE id_jabatan_atasan=@X AND kedalaman>0;
--- semua atasan @X
-SELECT id_jabatan_atasan  FROM grading.jabatan_hirarki WHERE id_jabatan_bawahan=@X AND kedalaman>0;
 ```
 
-Karena `jabatan_hirarki` **turunan** (bukan manual), ganti struktur cukup ubah `id_atasan` lalu bangun ulang — tidak ada dua sumber data yang bisa berselisih.
+## 6. Kebijakan PG ≤ JG
 
-## 5. Kebijakan PG ≤ JG
+`grading.vw_status_pg_jg` membandingkan **PG terkini** vs **`jabatan.jg`** jabatan yang diduduki. PG boleh > JG (grandfathered) → **dibekukan**, bukan ditolak.
 
-PG **boleh** > JG jabatan (grandfathered, gaji tak turun) → statusnya **dibekukan**, bukan ditolak. Dihitung view `grading.vw_status_pg_jg` dari **PG terkini** vs **JG terkini** jabatan yang diduduki:
-
-| PG vs jg_max | status_kebijakan |
-|---|---|
-| `PG > jg_max` | **PG di atas JG - dibekukan** |
-| `PG = jg_max` | Selaras (mentok di JG jabatan) |
-| `PG < jg_max` | Ada ruang naik |
-
-## 6. View bantu (semua Bahasa Indonesia)
-
-- `vw_jg_terkini` / `vw_pg_terkini` — JG & PG **terkini** (tahun terbaru).
-- `vw_penempatan_aktif` — incumbent saat ini.
-- `vw_status_pg_jg` — tabel kebijakan PG≤JG.
-- `vw_rekap_band` — Formasi/Terisi/Kosong per Band.
-- `vw_bagan_organisasi` — bagan organisasi (jabatan+atasan+band+JG+incumbent) untuk visualisasi.
-
-## 7. Tautan ke DB existing
-
-`id_karyawan` → `GCS.dbo.MST_PEGAWAI.ID_KARYAWAN` (kunci bisnis lintas-DB, tanpa FK fisik). Jembatan opsional: `jabatan.id_jabatan_sdm` ↔ `PEGAWAI_SDM.id_jabatan`, `unit_organisasi.id_struktur_sdm` ↔ `id_struktur`, `person_grade.golongan_lama` ↔ `GOL`.
-
-## 8. Catatan
-Tanpa versi SO, **struktur historis tidak tersimpan** (hanya struktur terkini) — sesuai Pak J. Histori grading tetap ada lewat `tahun_berlaku` pada `jabatan_grade` & `person_grade`. Bila suatu saat perlu bandingkan struktur antar-tahun, tinggal tambah tabel versi SO tanpa membongkar yang ada.
+## 7. Catatan
+Riwayat perubahan JG per tahun tidak disimpan (JG kini kolom di jabatan) — sesuai penyederhanaan. Bila kelak perlu, tambah tabel riwayat terpisah tanpa membongkar `jabatan`. `id_karyawan` → `GCS.dbo.MST_PEGAWAI.ID_KARYAWAN` (lintas-DB, tanpa FK fisik).
