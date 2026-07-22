@@ -77,6 +77,12 @@ async function apiBlob(path) {
 export const api = {
   // dashboard / personal (Bearer)
   getDashboardSummary: () => apiFetch('/api/dashboard/summary'),
+  // My Team (Bearer): struktur tim + kehadiran. semua=true -> seluruh tingkat bawahan.
+  getMyTeam: (semua) => apiFetch(`/api/team${semua ? '?semua=true' : ''}`),
+  beriTugas: (payload) => apiFetch('/api/team/tugas', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahStatusTugas: (id, status) =>
+    apiFetch(`/api/team/tugas/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  hapusTugas: (id) => apiFetch(`/api/team/tugas/${id}`, { method: 'DELETE' }),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
   updateProfile: (payload) => apiFetch('/api/personal/profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadDocument: (key, file) => {

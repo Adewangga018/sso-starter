@@ -30,6 +30,7 @@ builder.Services.AddDbContext<GcsDbContext>(options =>
 
 builder.Services.AddScoped<CurrentUserContext>();
 builder.Services.AddScoped<DocumentResolver>();
+builder.Services.AddScoped<TeamService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

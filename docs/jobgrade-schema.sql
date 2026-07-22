@@ -15,6 +15,11 @@
    - Atasan-bawahan: satu sumber = jabatan.id_atasan; tabel jabatan_hirarki dibangun
      otomatis untuk query cepat.
    - Pegawai dirujuk lewat id_karyawan ke GCS.dbo.MST_PEGAWAI (lintas-DB, tanpa FK).
+
+   KOMPATIBILITAS: server produksi = SQL Server 2014 (12.0). Karena itu file ini
+   TIDAK memakai "CREATE OR ALTER" (baru ada di 2016 SP1) - dipakai pola
+   "IF OBJECT_ID(...) IS NOT NULL DROP ... ; GO ; CREATE ...". Status penempatan
+   memakai nilai 'Aktif' | 'Selesai'.
    ============================================================================ */
 
 IF SCHEMA_ID('grading') IS NULL EXEC('CREATE SCHEMA grading');
@@ -103,11 +108,12 @@ CREATE TABLE grading.penempatan (
     nama            NVARCHAR(150) NULL,
     tmt             DATE         NULL,                -- terhitung mulai tanggal (opsional)
     tanggal_selesai DATE         NULL,                -- NULL = masih menjabat
-    status          NVARCHAR(20) NOT NULL DEFAULT 'Aktif',   -- Aktif|Berakhir
+    status          NVARCHAR(20) NOT NULL DEFAULT 'Aktif',   -- Aktif|Selesai
+    jenis           NVARCHAR(20) NULL,                        -- Pengangkatan|Mutasi|Promosi|Demosi (cara masuk jabatan ini)
     catatan         NVARCHAR(400) NULL,
     dibuat_pada     DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT fk_penempatan_jabatan FOREIGN KEY (id_jabatan) REFERENCES grading.jabatan(id_jabatan),
-    CONSTRAINT ck_penempatan_status  CHECK (status IN ('Aktif','Berakhir'))
+    CONSTRAINT ck_penempatan_status  CHECK (status IN ('Aktif','Selesai'))
 );
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='ux_penempatan_aktif' AND object_id=OBJECT_ID('grading.penempatan'))
@@ -150,7 +156,9 @@ GO
 CREATE INDEX ix_hirarki_bawahan ON grading.jabatan_hirarki(id_jabatan_bawahan);
 GO
 
-CREATE OR ALTER PROCEDURE grading.usp_bangun_hirarki_jabatan
+IF OBJECT_ID('grading.usp_bangun_hirarki_jabatan','P') IS NOT NULL DROP PROCEDURE grading.usp_bangun_hirarki_jabatan;
+GO
+CREATE PROCEDURE grading.usp_bangun_hirarki_jabatan
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -173,7 +181,9 @@ GO
    =========================================================================== */
 
 -- PG terkini per pegawai (transaksi tahun terbaru)
-CREATE OR ALTER VIEW grading.vw_pg_terkini AS
+IF OBJECT_ID('grading.vw_pg_terkini','V') IS NOT NULL DROP VIEW grading.vw_pg_terkini;
+GO
+CREATE VIEW grading.vw_pg_terkini AS
 SELECT id_karyawan, nama, pg, golongan_lama, tahun_berlaku
 FROM (
     SELECT *, ROW_NUMBER() OVER (PARTITION BY id_karyawan ORDER BY tahun_berlaku DESC, id DESC) AS urut
@@ -182,7 +192,9 @@ FROM (
 GO
 
 -- Penempatan aktif (incumbent saat ini)
-CREATE OR ALTER VIEW grading.vw_penempatan_aktif AS
+IF OBJECT_ID('grading.vw_penempatan_aktif','V') IS NOT NULL DROP VIEW grading.vw_penempatan_aktif;
+GO
+CREATE VIEW grading.vw_penempatan_aktif AS
 SELECT id, id_jabatan, id_karyawan, nama, tmt
 FROM grading.penempatan
 WHERE status = 'Aktif';
@@ -190,7 +202,9 @@ GO
 
 -- Status kebijakan PG <= JG (JG langsung dari jabatan.jg).
 -- PG BOLEH > JG (grandfathered) => "dibekukan", bukan ditolak.
-CREATE OR ALTER VIEW grading.vw_status_pg_jg AS
+IF OBJECT_ID('grading.vw_status_pg_jg','V') IS NOT NULL DROP VIEW grading.vw_status_pg_jg;
+GO
+CREATE VIEW grading.vw_status_pg_jg AS
 SELECT  p.id_karyawan,
         COALESCE(p.nama, pg.nama, p.id_karyawan) AS nama,
         j.nama_jabatan                            AS jabatan,
@@ -209,7 +223,9 @@ LEFT JOIN   grading.vw_pg_terkini      pg ON pg.id_karyawan = p.id_karyawan;
 GO
 
 -- Rekap per Band (Formasi/Terisi/Kosong)
-CREATE OR ALTER VIEW grading.vw_rekap_band AS
+IF OBJECT_ID('grading.vw_rekap_band','V') IS NOT NULL DROP VIEW grading.vw_rekap_band;
+GO
+CREATE VIEW grading.vw_rekap_band AS
 SELECT  b.id_band, b.kode, b.nama,
         ISNULL(SUM(j.jumlah_formasi), 0)                             AS formasi,
         ISNULL(SUM(t.terisi), 0)                                     AS terisi,
@@ -221,7 +237,9 @@ GROUP BY    b.id_band, b.kode, b.nama;
 GO
 
 -- Bagan organisasi: jabatan + band + jg + atasan + incumbent.
-CREATE OR ALTER VIEW grading.vw_bagan_organisasi AS
+IF OBJECT_ID('grading.vw_bagan_organisasi','V') IS NOT NULL DROP VIEW grading.vw_bagan_organisasi;
+GO
+CREATE VIEW grading.vw_bagan_organisasi AS
 SELECT  j.id_jabatan, j.nama_jabatan AS jabatan, b.kode AS band, j.jg,
         j.id_atasan, a.nama_jabatan AS atasan,
         pa.id_karyawan, pa.nama AS incumbent
@@ -293,6 +311,84 @@ BEGIN
 
     EXEC grading.usp_bangun_hirarki_jabatan;
 END
+GO
+
+/* ===========================================================================
+   9) PROMOSI & MUTASI — dikelola lewat penempatan (akhiri lama -> buat baru).
+      Promosi = jabatan tujuan band lebih tinggi; Mutasi = band sama; Demosi = lebih rendah.
+   =========================================================================== */
+
+-- Untuk DB yang tabel penempatan-nya sudah ada tanpa kolom 'jenis' (idempoten).
+IF COL_LENGTH('grading.penempatan','jenis') IS NULL
+    ALTER TABLE grading.penempatan ADD jenis NVARCHAR(20) NULL;
+GO
+
+-- Pindah jabatan (promosi/mutasi/demosi) secara atomik & aman terhadap unique index
+-- (satu penempatan Aktif per pegawai): akhiri yang lama DULU, baru buat yang baru.
+-- @jenis boleh NULL -> otomatis ditentukan dari perbandingan band (jenjang).
+IF OBJECT_ID('grading.usp_pindah_jabatan','P') IS NOT NULL DROP PROCEDURE grading.usp_pindah_jabatan;
+GO
+CREATE PROCEDURE grading.usp_pindah_jabatan
+    @id_karyawan     NVARCHAR(30),
+    @id_jabatan_baru INT,
+    @jenis           NVARCHAR(20)  = NULL,   -- NULL = auto (Pengangkatan/Promosi/Mutasi/Demosi)
+    @tmt             DATE          = NULL,   -- NULL = hari ini
+    @nama            NVARCHAR(150) = NULL,
+    @catatan         NVARCHAR(400) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON; SET XACT_ABORT ON;
+    IF @tmt IS NULL SET @tmt = CAST(SYSDATETIME() AS DATE);
+
+    DECLARE @urutan_baru TINYINT;
+    SELECT @urutan_baru = b.urutan
+    FROM grading.jabatan j JOIN grading.band b ON b.id_band = j.id_band
+    WHERE j.id_jabatan = @id_jabatan_baru;
+    IF @urutan_baru IS NULL BEGIN RAISERROR('Jabatan tujuan tidak ditemukan.',16,1); RETURN; END;
+
+    BEGIN TRAN;
+        -- penempatan Aktif saat ini (kalau ada)
+        DECLARE @id_lama INT, @jab_lama INT, @urutan_lama TINYINT;
+        SELECT @id_lama = id, @jab_lama = id_jabatan
+        FROM grading.penempatan WHERE id_karyawan = @id_karyawan AND status = 'Aktif';
+
+        IF @jab_lama IS NOT NULL
+            SELECT @urutan_lama = b.urutan
+            FROM grading.jabatan j JOIN grading.band b ON b.id_band = j.id_band
+            WHERE j.id_jabatan = @jab_lama;
+
+        -- tentukan jenis otomatis bila tidak diberikan (urutan kecil = jenjang lebih tinggi)
+        IF @jenis IS NULL
+            SET @jenis = CASE
+                WHEN @id_lama IS NULL          THEN N'Pengangkatan'
+                WHEN @urutan_baru < @urutan_lama THEN N'Promosi'
+                WHEN @urutan_baru > @urutan_lama THEN N'Demosi'
+                ELSE N'Mutasi' END;
+
+        -- ambil nama snapshot bila tidak diberikan
+        IF @nama IS NULL
+            SELECT TOP 1 @nama = nama FROM grading.penempatan WHERE id_karyawan = @id_karyawan ORDER BY id DESC;
+
+        -- 1) akhiri penempatan lama
+        IF @id_lama IS NOT NULL
+            UPDATE grading.penempatan SET status = N'Selesai', tanggal_selesai = @tmt WHERE id = @id_lama;
+
+        -- 2) buat penempatan baru
+        INSERT INTO grading.penempatan (id_jabatan, id_karyawan, nama, tmt, status, jenis, catatan)
+        VALUES (@id_jabatan_baru, @id_karyawan, @nama, @tmt, N'Aktif', @jenis, @catatan);
+    COMMIT;
+END;
+GO
+
+-- Riwayat penempatan per pegawai (untuk lini masa karir / laporan promosi-mutasi).
+IF OBJECT_ID('grading.vw_riwayat_penempatan','V') IS NOT NULL DROP VIEW grading.vw_riwayat_penempatan;
+GO
+CREATE VIEW grading.vw_riwayat_penempatan AS
+SELECT  p.id_karyawan, p.nama, j.nama_jabatan, b.kode AS band, j.jg,
+        p.jenis, p.tmt, p.tanggal_selesai, p.status
+FROM        grading.penempatan p
+JOIN        grading.jabatan     j ON j.id_jabatan = p.id_jabatan
+JOIN        grading.band        b ON b.id_band   = j.id_band;
 GO
 
 /* Cek cepat:
