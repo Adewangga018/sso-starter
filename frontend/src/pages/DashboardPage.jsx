@@ -29,6 +29,7 @@ const ICONS = {
 const MODULE_ROUTES = {
   'my-personal': '/my-personal/profil',
   'my-innovation': '/my-innovation',
+  'my-team': '/team',
 }
 
 export default function DashboardPage() {

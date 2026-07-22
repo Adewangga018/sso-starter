@@ -31,7 +31,7 @@ public class DashboardController : ControllerBase
         new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
         new ModuleTileDto("my-asset", "My Asset", "ASET", "archive", false),
         new ModuleTileDto("my-progress", "My Progress", "KPI", "trending-up", false),
-        new ModuleTileDto("my-team", "My Team", "KINERJA TIM", "users-round", false),
+        new ModuleTileDto("my-team", "My Team", "KINERJA TIM", "users-round", true),
     };
 
     [HttpGet("summary")]

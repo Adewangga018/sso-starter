@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Tugas> Tugas => Set<Tugas>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -67,6 +68,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Lat).HasPrecision(10, 7);
             e.Property(x => x.Lng).HasPrecision(11, 7);
             e.HasIndex(x => x.Aktif);
+        });
+
+        // Tugas My Team (myteam.tugas). Tabel dikelola di luar EF (raw SQL, seperti skema
+        // grading) - ExcludeFromMigrations agar EF tidak mencoba membuat/mengubahnya, hanya baca/tulis.
+        builder.Entity<Tugas>(e =>
+        {
+            e.ToTable("tugas", "myteam", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.IdPemberi).HasColumnName("id_pemberi").HasMaxLength(30).IsRequired();
+            e.Property(x => x.NamaPemberi).HasColumnName("nama_pemberi").HasMaxLength(150);
+            e.Property(x => x.IdPenerima).HasColumnName("id_penerima").HasMaxLength(30).IsRequired();
+            e.Property(x => x.NamaPenerima).HasColumnName("nama_penerima").HasMaxLength(150);
+            e.Property(x => x.Judul).HasColumnName("judul").HasMaxLength(200).IsRequired();
+            e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.Tenggat).HasColumnName("tenggat");
+            e.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

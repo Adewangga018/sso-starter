@@ -13,6 +13,7 @@ import AdminUsersPage from './pages/AdminUsersPage'
 import AdminLocationsPage from './pages/AdminLocationsPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
+import MyTeamPage from './pages/MyTeamPage'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import AbsensiPage from './pages/AbsensiPage'
@@ -51,6 +52,8 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
             </Route>
+
+            <Route path="/team" element={<MyTeamPage />} />
 
             <Route path="/my-personal" element={<MyPersonalLayout />}>
               <Route index element={<Navigate to="profil" replace />} />
