@@ -149,6 +149,7 @@
   border-radius: 16px; padding: 14px; min-width: 0;
 }
 .mt-board__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.mt-board__actions { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 .mt-tabs { display: inline-flex; gap: 4px; background: var(--gcs-bg); padding: 4px; border-radius: 10px; }
 .mt-tabs button {
   border: none; background: none; padding: 7px 13px; border-radius: 8px;

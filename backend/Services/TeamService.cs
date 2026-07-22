@@ -166,6 +166,197 @@ public class TeamService
         }
     }
 
+    // ---- Laporan tim (unduh CSV) ----
+
+    private static readonly string[] BulanId =
+        ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+    // Menyusun laporan tim lengkap (seluruh level bawahan, memakai closure hierarki) sebagai
+    // CSV siap-Excel. Hanya untuk atasan yang punya bawahan langsung; return null bila bukan atasan
+    // atau di luar struktur — controller menerjemahkannya jadi 400 yang ramah.
+    public async Task<(byte[] Content, string FileName)?> BuildLaporanTimAsync(string idKaryawan)
+    {
+        var conn = _db.Database.GetDbConnection();
+        var mustClose = conn.State != ConnectionState.Open;
+        if (mustClose)
+        {
+            await conn.OpenAsync();
+        }
+
+        try
+        {
+            // 1) Jabatan yang saya duduki.
+            int myJabatan;
+            string? jabatanSaya, bandSaya;
+            int? jgSaya;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT TOP 1 j.id_jabatan, j.nama_jabatan, b.kode, j.jg
+                    FROM grading.penempatan p
+                    JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
+                    JOIN grading.band    b ON b.id_band    = j.id_band
+                    WHERE p.id_karyawan = @nik AND p.status = 'Aktif'";
+                AddParam(cmd, "@nik", idKaryawan);
+                await using var r = await cmd.ExecuteReaderAsync();
+                if (!await r.ReadAsync())
+                {
+                    return null; // di luar struktur
+                }
+                myJabatan = Convert.ToInt32(r.GetValue(0));
+                jabatanSaya = r.IsDBNull(1) ? null : r.GetString(1);
+                bandSaya = r.IsDBNull(2) ? null : r.GetString(2);
+                jgSaya = r.IsDBNull(3) ? null : Convert.ToInt32(r.GetValue(3));
+            }
+
+            // Bukan atasan (tak ada bawahan langsung) -> tak ada laporan.
+            if (!await ExistsBawahanLangsung(conn, myJabatan))
+            {
+                return null;
+            }
+
+            // 2) Seluruh anggota lintas level (kedalaman 1..N).
+            List<MemberRow> rows;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT h.kedalaman, j.id_jabatan, j.nama_jabatan, b.kode, j.jg,
+                           p.id_karyawan, p.nama, u.nama
+                    FROM grading.jabatan_hirarki h
+                    JOIN grading.jabatan j ON j.id_jabatan = h.id_jabatan_bawahan
+                    JOIN grading.band    b ON b.id_band    = j.id_band
+                    LEFT JOIN grading.unit_organisasi u ON u.id_unit = j.id_unit
+                    LEFT JOIN grading.penempatan p ON p.id_jabatan = j.id_jabatan AND p.status = 'Aktif'
+                    WHERE h.id_jabatan_atasan = @jab AND h.kedalaman >= 1
+                    ORDER BY h.kedalaman, j.id_band, j.nama_jabatan";
+                AddParam(cmd, "@jab", myJabatan);
+                rows = await ReadMembers(cmd);
+            }
+
+            var ids = rows.Where(m => m.IdKaryawan is not null).Select(m => m.IdKaryawan!).Distinct().ToList();
+            var hadir = await KehadiranHariIni(ids);
+
+            // 3) Beban tugas per anggota (semua tugas yang ditujukan kepadanya).
+            Dictionary<string, (int Aktif, int Selesai)> beban = new();
+            if (ids.Count > 0)
+            {
+                var agg = await _db.Tugas
+                    .Where(t => ids.Contains(t.IdPenerima))
+                    .GroupBy(t => t.IdPenerima)
+                    .Select(g => new
+                    {
+                        Id = g.Key,
+                        Aktif = g.Count(x => x.Status == "Baru" || x.Status == "Dikerjakan"),
+                        Selesai = g.Count(x => x.Status == "Selesai"),
+                    })
+                    .ToListAsync();
+                beban = agg.ToDictionary(x => x.Id, x => (x.Aktif, x.Selesai));
+            }
+
+            var wib = DateTime.UtcNow.AddHours(7);
+            var tanggal = $"{wib.Day:D2} {BulanId[wib.Month - 1]} {wib.Year} {wib:HH:mm}";
+
+            var sb = new System.Text.StringBuilder();
+            // sep=; -> memaksa Excel memakai titik-koma sebagai pemisah, apa pun locale-nya.
+            sb.Append("sep=;\r\n");
+            sb.Append("LAPORAN TIM — MyGCS\r\n");
+            Line(sb, "Disusun oleh", $"{jabatanSaya}");
+            Line(sb, "Band / JG", $"{bandSaya ?? "-"} / {(jgSaya?.ToString() ?? "-")}");
+            Line(sb, "Tanggal cetak", $"{tanggal} WIB");
+            Line(sb, "Cakupan", "Seluruh level bawahan");
+            sb.Append("\r\n");
+
+            // Ringkasan keseluruhan.
+            var totalTerisi = rows.Count(m => m.IdKaryawan is not null);
+            var totalKosong = rows.Count - totalTerisi;
+            var totalHadir = rows.Count(m => m.IdKaryawan is not null && hadir.Contains(m.IdKaryawan!));
+            sb.Append("RINGKASAN\r\n");
+            Line(sb, "Total formasi", rows.Count.ToString());
+            Line(sb, "Terisi", totalTerisi.ToString());
+            Line(sb, "Kosong", totalKosong.ToString());
+            Line(sb, "Hadir hari ini", $"{totalHadir} dari {totalTerisi}");
+            sb.Append("\r\n");
+
+            // Rekap per level.
+            sb.Append("REKAP PER LEVEL\r\n");
+            sb.Append("Level;Formasi;Terisi;Kosong;Hadir\r\n");
+            foreach (var grp in rows.GroupBy(m => m.Kedalaman).OrderBy(g => g.Key))
+            {
+                var terisi = grp.Count(m => m.IdKaryawan is not null);
+                var kosong = grp.Count() - terisi;
+                var h = grp.Count(m => m.IdKaryawan is not null && hadir.Contains(m.IdKaryawan!));
+                var label = grp.Key == 1 ? "1 (langsung)" : grp.Key.ToString();
+                sb.Append($"{Csv(label)};{grp.Count()};{terisi};{kosong};{h}\r\n");
+            }
+            sb.Append("\r\n");
+
+            // Detail anggota.
+            sb.Append("DETAIL ANGGOTA\r\n");
+            sb.Append("Level;Jabatan;Unit;Band;JG;Nama;Status;Hadir Hari Ini;Tugas Aktif;Tugas Selesai\r\n");
+            foreach (var m in rows)
+            {
+                var terisi = m.IdKaryawan is not null;
+                var isHadir = terisi && hadir.Contains(m.IdKaryawan!);
+                var (aktif, selesai) = terisi && beban.TryGetValue(m.IdKaryawan!, out var b) ? b : (0, 0);
+                sb.Append(string.Join(';',
+                    m.Kedalaman,
+                    Csv(m.Jabatan),
+                    Csv(m.Unit ?? "-"),
+                    Csv(m.Band ?? "-"),
+                    m.Jg?.ToString() ?? "-",
+                    Csv(terisi ? m.Nama ?? "-" : "(kosong)"),
+                    terisi ? "Terisi" : "Formasi kosong",
+                    terisi ? (isHadir ? "Hadir" : "Belum absen") : "-",
+                    terisi ? aktif.ToString() : "-",
+                    terisi ? selesai.ToString() : "-"));
+                sb.Append("\r\n");
+            }
+
+            var preamble = System.Text.Encoding.UTF8.GetPreamble(); // BOM agar Excel membaca UTF-8
+            var body = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            var bytes = preamble.Concat(body).ToArray();
+
+            var namaFile = $"Laporan-Tim-{Slug(jabatanSaya)}-{wib:yyyyMMdd}.csv";
+            return (bytes, namaFile);
+        }
+        finally
+        {
+            if (mustClose)
+            {
+                await conn.CloseAsync();
+            }
+        }
+    }
+
+    private static void Line(System.Text.StringBuilder sb, string label, string value)
+        => sb.Append($"{Csv(label)};{Csv(value)}\r\n");
+
+    // Escape CSV: bungkus tanda kutip bila mengandung ; " atau newline; gandakan kutip internal.
+    private static string Csv(string? s)
+    {
+        s ??= "";
+        if (s.IndexOfAny([';', '"', '\n', '\r']) < 0)
+        {
+            return s;
+        }
+        return $"\"{s.Replace("\"", "\"\"")}\"";
+    }
+
+    private static string Slug(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            return "tim";
+        }
+        var chars = s.Trim().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        var slug = new string(chars);
+        while (slug.Contains("--"))
+        {
+            slug = slug.Replace("--", "-");
+        }
+        return slug.Trim('-');
+    }
+
     // ---- Tugas (delegasi) ----
 
     public async Task<(bool Ok, string? Error, TugasDto? Tugas)> CreateTugasAsync(string pemberiNik, string? pemberiNama, TugasCreateRequest req)

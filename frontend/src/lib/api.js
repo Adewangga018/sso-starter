@@ -74,6 +74,45 @@ async function apiBlob(path) {
   return { url: URL.createObjectURL(blob), contentType: blob.type }
 }
 
+// Fetches a file and triggers a browser "Save as" using the server-provided filename
+// (from Content-Disposition). Like apiBlob it carries the Bearer token, which a plain
+// <a href> download can't. Throws ApiError on failure so callers can show a message.
+async function apiDownload(path, fallbackName = 'download') {
+  const user = await userManager.getUser()
+  const headers = {}
+  if (user && !user.expired) headers.Authorization = `Bearer ${user.access_token}`
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include', headers })
+  if (!res.ok) {
+    let message = `Terjadi kesalahan (${res.status}).`
+    try {
+      const data = await res.json()
+      if (data?.message) message = data.message
+    } catch {
+      // no JSON body, keep default message
+    }
+    throw new ApiError(res.status, message)
+  }
+
+  // Parse filename from Content-Disposition (filename*=UTF-8''… or filename="…").
+  let name = fallbackName
+  const cd = res.headers.get('Content-Disposition') || ''
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(cd)
+  const plain = /filename="?([^";]+)"?/i.exec(cd)
+  if (star) name = decodeURIComponent(star[1])
+  else if (plain) name = plain[1]
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export const api = {
   // dashboard / personal (Bearer)
   getDashboardSummary: () => apiFetch('/api/dashboard/summary'),
@@ -83,6 +122,8 @@ export const api = {
   ubahStatusTugas: (id, status) =>
     apiFetch(`/api/team/tugas/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   hapusTugas: (id) => apiFetch(`/api/team/tugas/${id}`, { method: 'DELETE' }),
+  // Unduh laporan tim (CSV) — mencakup seluruh level bawahan. Nama file dari server.
+  unduhLaporanTim: () => apiDownload('/api/team/laporan', 'Laporan-Tim.csv'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
   updateProfile: (payload) => apiFetch('/api/personal/profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadDocument: (key, file) => {

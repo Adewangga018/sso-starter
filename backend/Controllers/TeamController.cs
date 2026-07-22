@@ -39,6 +39,23 @@ public class TeamController : ControllerBase
         return Ok(await _team.GetTeamAsync(user.Nik, semua));
     }
 
+    // Unduh laporan tim (CSV siap-Excel) mencakup seluruh level bawahan. Hanya untuk atasan.
+    [HttpGet("laporan")]
+    public async Task<IActionResult> Laporan()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        var hasil = await _team.BuildLaporanTimAsync(user.Nik);
+        if (hasil is null)
+        {
+            return BadRequest(new { message = "Laporan tim hanya tersedia untuk atasan yang memiliki bawahan." });
+        }
+        return File(hasil.Value.Content, "text/csv; charset=utf-8", hasil.Value.FileName);
+    }
+
     [HttpPost("tugas")]
     public async Task<IActionResult> BeriTugas([FromBody] TugasCreateRequest req)
     {

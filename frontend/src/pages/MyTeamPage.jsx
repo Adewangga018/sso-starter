@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Briefcase, Building2, CheckCircle2, ChevronUp, CircleDashed, CircleSlash,
-  Clock, ClipboardList, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
+  Clock, ClipboardList, Download, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import './MyTeamPage.css'
@@ -59,6 +59,7 @@ export default function MyTeamPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ idPenerima: '', judul: '', deskripsi: '', tenggat: '' })
   const [saving, setSaving] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   const reload = useCallback(async (s) => {
     setLoading(true)
@@ -119,6 +120,18 @@ export default function MyTeamPage() {
       setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mengirim tugas.' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function unduhLaporan() {
+    setDownloading(true); setMsg(null)
+    try {
+      await api.unduhLaporanTim()
+      setMsg({ type: 'ok', text: 'Laporan tim berhasil diunduh.' })
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mengunduh laporan.' })
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -250,9 +263,14 @@ export default function MyTeamPage() {
                   )}
                 </div>
                 {data.punyaTim && (
-                  <button type="button" className="mt-btn" onClick={() => setFormOpen((v) => !v)}>
-                    <Plus size={15} /> Beri Tugas
-                  </button>
+                  <div className="mt-board__actions">
+                    <button type="button" className="mt-btn mt-btn--ghost" onClick={unduhLaporan} disabled={downloading} title="Unduh laporan tim seluruh level (CSV)">
+                      {downloading ? <Loader2 size={15} className="mt__spin" /> : <Download size={15} />} Unduh Laporan
+                    </button>
+                    <button type="button" className="mt-btn" onClick={() => setFormOpen((v) => !v)}>
+                      <Plus size={15} /> Beri Tugas
+                    </button>
+                  </div>
                 )}
               </div>
 
