@@ -28,8 +28,17 @@ builder.Services.AddDbContext<GcsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GcsConnection"));
 });
 
+// --- My Innovation (Sistem Saran / GIO): lives in db_mygcs (schema "inovasi")
+//     alongside Identity & grading. Tables are created by the idempotent SQL
+//     script (backend/Database/inovasi/01-schema-ddl.sql), NOT EF migrations. ---
+builder.Services.AddDbContext<InovasiDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
 builder.Services.AddScoped<CurrentUserContext>();
 builder.Services.AddScoped<DocumentResolver>();
+builder.Services.AddScoped<OrgResolver>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

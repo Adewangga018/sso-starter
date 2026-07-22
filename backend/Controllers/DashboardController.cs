@@ -28,7 +28,7 @@ public class DashboardController : ControllerBase
         new ModuleTileDto("my-office", "My Office", "SURAT-MENYURAT", "mail", false),
         new ModuleTileDto("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", false),
         new ModuleTileDto("my-health", "My Health", "KESEHATAN", "activity", false),
-        new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", false),
+        new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
         new ModuleTileDto("my-asset", "My Asset", "ASET", "archive", false),
         new ModuleTileDto("my-progress", "My Progress", "KPI", "trending-up", false),
         new ModuleTileDto("my-team", "My Team", "KINERJA TIM", "users-round", false),

@@ -24,6 +24,12 @@ import UmdlPage from './pages/UmdlPage'
 import TiketPage from './pages/TiketPage'
 import TiketCetakPage from './pages/TiketCetakPage'
 import SppdCetakPage from './pages/SppdCetakPage'
+import InovasiLayout from './layouts/InovasiLayout'
+import InovasiBeranda from './pages/inovasi/InovasiBeranda'
+import InovasiPanduan from './pages/inovasi/InovasiPanduan'
+import InovasiList from './pages/inovasi/InovasiList'
+import InovasiForm from './pages/inovasi/InovasiForm'
+import GagasanList from './pages/inovasi/GagasanList'
 
 export default function App() {
   return (
@@ -55,6 +61,17 @@ export default function App() {
               <Route path="sppd" element={<SppdPage />} />
               <Route path="umdl" element={<UmdlPage />} />
               <Route path="tiket" element={<TiketPage />} />
+            </Route>
+
+            {/* My Innovation: satu ruang kerja terpadu. Masuk = langsung Sumbang
+                Gagasan (metodologi SS/GIO/5R ditentukan GM saat menyetujui). */}
+            <Route path="/my-innovation" element={<InovasiLayout />}>
+              <Route index element={<Navigate to="gagasan" replace />} />
+              <Route path="gagasan" element={<GagasanList />} />
+              <Route path="daftar" element={<InovasiList />} />
+              <Route path="daftar/:id" element={<InovasiForm />} />
+              <Route path="beranda" element={<InovasiBeranda />} />
+              <Route path="panduan" element={<InovasiPanduan />} />
             </Route>
 
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,

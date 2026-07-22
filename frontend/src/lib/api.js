@@ -156,6 +156,36 @@ export const api = {
   getDocument: (key) => apiBlob(`/api/personal/documents/${key}`),
   getAktaAnak: (idAnak) => apiBlob(`/api/personal/documents/anak/${idAnak}/akta`),
 
+  // My Innovation (SS / GIO / 5R) - Bearer. Tanpa jenis = semua metodologi.
+  listInovasi: (jenis) => apiFetch(`/api/inovasi/gugus${jenis ? `?jenis=${encodeURIComponent(jenis)}` : ''}`),
+  createInovasi: (payload) => apiFetch('/api/inovasi/gugus', { method: 'POST', body: JSON.stringify(payload) }),
+  getInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}`),
+  saveInovasiPlan: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/plan`, { method: 'PUT', body: JSON.stringify(payload) }),
+  submitInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}/submit`, { method: 'POST' }),
+  actPengesahan: (id, pid, payload) => apiFetch(`/api/inovasi/gugus/${id}/pengesahan/${pid}`, { method: 'POST', body: JSON.stringify(payload) }),
+  saveInovasiDo: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/do`, { method: 'PUT', body: JSON.stringify(payload) }),
+  saveInovasiCheck: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/check`, { method: 'PUT', body: JSON.stringify(payload) }),
+  saveInovasiAction: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/action`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}`, { method: 'DELETE' }),
+  uploadInovasiFile: (id, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiFetch(`/api/inovasi/gugus/${id}/upload`, { method: 'POST', body })
+  },
+  cariPegawaiInovasi: (q) => apiFetch(`/api/inovasi/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  // Return { url, contentType } - blob object URL; revoke it when done.
+  getInovasiFile: (id, path) => apiBlob(`/api/inovasi/gugus/${id}/file?path=${encodeURIComponent(path)}`),
+
+  // Sumbang Gagasan (Bearer)
+  listGagasan: () => apiFetch('/api/inovasi/gagasan'),
+  createGagasan: (payload) => apiFetch('/api/inovasi/gagasan', { method: 'POST', body: JSON.stringify(payload) }),
+  getGagasan: (id) => apiFetch(`/api/inovasi/gagasan/${id}`),
+  updateGagasan: (id, payload) => apiFetch(`/api/inovasi/gagasan/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  actGagasanApproval: (id, payload) => apiFetch(`/api/inovasi/gagasan/${id}/approval`, { method: 'POST', body: JSON.stringify(payload) }),
+  daftarGagasan: (id, payload) => apiFetch(`/api/inovasi/gagasan/${id}/daftar`, { method: 'POST', body: JSON.stringify(payload) }),
+  deleteGagasan: (id) => apiFetch(`/api/inovasi/gagasan/${id}`, { method: 'DELETE' }),
+  listDepartemenInovasi: () => apiFetch('/api/inovasi/departemen'),
+
   // authentication (cookie flow)
   login: (email, password) => post('/api/account/login', { email, password }),
   loginTwoFactor: (code, rememberMachine) => post('/api/account/login-2fa', { code, rememberMachine }),
