@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDialog } from '../components/DialogProvider'
 import { ArrowUp, ArrowDown, ArrowUpDown, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './SplPage.css'
@@ -54,6 +55,7 @@ function addDays(isoDate, days) {
 const emptyForm = { mulaiTgl: '', sampaiTgl: '', jamMulai: '', jamSelesai: '', jenisSpl: 'Biasa', keterangan: '' }
 
 export default function SplPage() {
+  const dialog = useDialog()
   const [rows, setRows] = useState(null)
   const [window_, setWindow] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -210,7 +212,7 @@ export default function SplPage() {
   }
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus SPL ${row.kodeSpl}?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus SPL', message: `Hapus SPL ${row.kodeSpl}?`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.deleteSpl(row.id)
       await load()

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDialog } from '../components/DialogProvider'
 import { ArrowUp, ArrowDown, ArrowUpDown, Pencil, Plus, Printer, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './IzinPage.css'
@@ -92,6 +93,7 @@ const emptyForm = {
 }
 
 export default function IzinPage() {
+  const dialog = useDialog()
   const [rows, setRows] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState('dibuat')
@@ -280,7 +282,7 @@ export default function IzinPage() {
   }
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus izin ${row.kodeIjin}?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus Izin', message: `Hapus izin ${row.kodeIjin}?`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.deleteIzin(row.id)
       await load()

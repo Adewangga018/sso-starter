@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { Eye, MessageSquarePlus, RotateCw, Search, Trash2 } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
+import { useDialog } from '../../components/DialogProvider'
 import { statusClass } from './statusClass'
 import './inovasi.css'
 
@@ -11,6 +12,7 @@ export default function InovasiList() {
   const ctx = useOutletContext() || {}
   const base = ctx.base ?? '/my-innovation'
   const navigate = useNavigate()
+  const dialog = useDialog()
 
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
@@ -38,7 +40,7 @@ export default function InovasiList() {
   }, [rows, search])
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus Risalah', message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"?`, danger: true, confirmText: 'Hapus' }))) return
     try { await api.deleteInovasi(row.id); await load() } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menghapus.') }
   }
 

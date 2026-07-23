@@ -94,14 +94,14 @@ BEGIN
         id_kompartemen_tujuan   INT           NULL,
         nama_kompartemen_tujuan NVARCHAR(150) NULL,
         status                  NVARCHAR(40)  NOT NULL CONSTRAINT DF_inovasi_gagasan_status DEFAULT ('Dikirim'),
-        id_gugus                INT           NULL,          -- terisi saat sudah "Terdaftar Sergio"
+        id_gugus                INT           NULL,          -- terisi saat sudah "Terdaftar"
         created_at              DATETIME2     NOT NULL CONSTRAINT DF_inovasi_gagasan_created DEFAULT (SYSDATETIME()),
         updated_at              DATETIME2     NULL,
         submitted_at            DATETIME2     NULL,
         CONSTRAINT CK_inovasi_gagasan_status CHECK (status IN
             ('Dikirim','Ditolak','Revisi Fasilitator','Disetujui Fasilitator',
              'Revisi Verifikator','Disetujui Verifikator','Disetujui VP Departemen Asal',
-             'Disetujui VP Departemen Tujuan','Terdaftar Sergio')),
+             'Disetujui VP Departemen Tujuan','Terdaftar')),
         CONSTRAINT CK_inovasi_gagasan_metodologi CHECK (metodologi IS NULL OR metodologi IN ('SS','GIO','5R'))
     );
     CREATE INDEX IX_inovasi_gagasan_creator ON inovasi.gagasan (created_by_nik);

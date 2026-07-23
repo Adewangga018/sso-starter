@@ -53,7 +53,19 @@ public class InovasiController : ControllerBase
         var semua = string.IsNullOrWhiteSpace(jenis) || jenis.Equals("ALL", StringComparison.OrdinalIgnoreCase);
         var jn = semua ? null : NormalizeJenis(jenis);
 
-        // Milik saya (pembuat) + tempat saya jadi anggota + yang menunggu tanda tangan saya.
+        // Cakupan atasan: Manager (band 2) melihat seluruh risalah di departemennya;
+        // GM (band 1) melihat seluruh risalah di kompartemennya. Selain itu tetap
+        // melihat risalah miliknya, tempat ia jadi anggota (termasuk Fasilitator),
+        // atau yang menunggu tanda tangannya.
+        var org = await _org.ResolveAsync(nik);
+        var band = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+            select (byte?)j.IdBand).FirstOrDefaultAsync();
+        int? scopeDept = band == 2 ? org.IdDepartemen : null;   // Manager -> seluruh departemen
+        int? scopeKomp = band == 1 ? org.IdKompartemen : null;  // GM -> seluruh kompartemen
+
         IQueryable<Models.Inovasi.Gugus> q = _db.Gugus.AsNoTracking();
         if (!semua) q = q.Where(g => g.Jenis == jn);
 
@@ -61,13 +73,15 @@ public class InovasiController : ControllerBase
             .Where(g =>
                 g.CreatedByNik == nik ||
                 g.Anggota.Any(a => a.Nik == nik) ||
-                g.Pengesahan.Any(p => p.Nik == nik))
+                g.Pengesahan.Any(p => p.Nik == nik) ||
+                (scopeDept != null && g.IdDepartemen == scopeDept) ||
+                (scopeKomp != null && g.IdKompartemen == scopeKomp))
             .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
             .Select(g => new
             {
                 g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode, g.Judul,
                 g.NamaDepartemen, g.NamaKompartemen, g.Status, g.PlanDisahkan, g.CreatedByNik,
-                g.CreatedAt, g.UpdatedAt,
+                g.IdDepartemen, g.IdKompartemen, g.CreatedAt, g.UpdatedAt,
                 KetuaNama = g.Anggota.Where(a => a.Peran == "Ketua").Select(a => a.Nama).FirstOrDefault(),
                 PeranAnggota = g.Anggota.Where(a => a.Nik == nik).Select(a => a.Peran).FirstOrDefault(),
                 PeranPengesah = g.Pengesahan.Where(p => p.Nik == nik).Select(p => p.Peran).FirstOrDefault(),
@@ -77,7 +91,11 @@ public class InovasiController : ControllerBase
         var items = rows.Select(g => new GugusRingkasDto(
             g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode, g.Judul,
             g.NamaDepartemen, g.NamaKompartemen, g.Status, g.PlanDisahkan,
-            PeranSaya: g.CreatedByNik == nik ? "Pengaju" : g.PeranAnggota ?? g.PeranPengesah ?? "-",
+            PeranSaya:
+                g.CreatedByNik == nik ? "Pengaju"
+                : g.PeranAnggota ?? g.PeranPengesah
+                    ?? (scopeDept != null && g.IdDepartemen == scopeDept ? "Verifikator"
+                        : scopeKomp != null && g.IdKompartemen == scopeKomp ? "GM" : "-"),
             g.KetuaNama, g.CreatedAt, g.UpdatedAt)).ToList();
 
         return Ok(new GugusListDto(items));
@@ -134,7 +152,7 @@ public class InovasiController : ControllerBase
 
         var g = await LoadFullAsync(id);
         if (g is null) return NotFound(new { message = "Inovasi tidak ditemukan." });
-        if (!MayView(g, nik)) return Forbid();
+        if (!await MayViewScopeAsync(g, nik)) return Forbid();
 
         var bisaEdit = g.CreatedByNik == nik && (g.Status is "Draft" or "Revisi");
 
@@ -452,8 +470,12 @@ public class InovasiController : ControllerBase
     }
 
     // ------------------------------------------------------------- pegawai cari
+    // gugusId (opsional) membatasi kandidat sesuai cakupan anggota metodologi:
+    //   SS  -> hanya departemen yang sama dengan gugus
+    //   5R  -> hanya kompartemen yang sama dengan gugus
+    //   GIO -> bebas (tanpa filter)
     [HttpGet("pegawai")]
-    public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDto>>> CariPegawai([FromQuery] string q)
+    public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDto>>> CariPegawai([FromQuery] string q, [FromQuery] int? gugusId = null)
     {
         var term = (q ?? string.Empty).Trim();
         if (term.Length < 2) return Ok(Array.Empty<InovasiPegawaiDto>());
@@ -461,11 +483,29 @@ public class InovasiController : ControllerBase
         var rows = await _gcs.PegawaiSdm
             .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama)
-            .Take(20)
+            .Take(50)
             .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
             .ToListAsync();
 
-        return Ok(rows);
+        if (gugusId is int gid)
+        {
+            var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid);
+            if (g is not null && (g.Jenis == "SS" || g.Jenis == "5R"))
+            {
+                // Kandidat yang orgnya tak dapat diresolve (mis. pegawai tanpa baris
+                // penempatan seperti intern) tetap ditampilkan agar tidak terblokir.
+                var map = await _org.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
+                rows = rows.Where(r =>
+                {
+                    if (!map.TryGetValue(r.Nik, out var o)) return true;
+                    return g.Jenis == "SS"
+                        ? (o.IdDepartemen is null || o.IdDepartemen == g.IdDepartemen)
+                        : (o.IdKompartemen is null || o.IdKompartemen == g.IdKompartemen);
+                }).ToList();
+            }
+        }
+
+        return Ok(rows.Take(20).ToList());
     }
 
     // =======================================================================
@@ -525,6 +565,23 @@ public class InovasiController : ControllerBase
     // Pemilik + anggota + pengesah boleh melihat.
     private static bool MayView(Gugus g, string nik) =>
         g.CreatedByNik == nik || g.Anggota.Any(a => a.Nik == nik) || g.Pengesahan.Any(p => p.Nik == nik);
+
+    // MayView + cakupan atasan: Manager (band 2) boleh melihat seluruh risalah di
+    // departemennya; GM (band 1) di kompartemennya. Dipakai untuk lihat detail
+    // (read-only) - endpoint ubah/simpan tetap terbatas pada pemilik.
+    private async Task<bool> MayViewScopeAsync(Gugus g, string nik)
+    {
+        if (MayView(g, nik)) return true;
+        var org = await _org.ResolveAsync(nik);
+        var band = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+            select (byte?)j.IdBand).FirstOrDefaultAsync();
+        if (band == 2 && g.IdDepartemen != null && g.IdDepartemen == org.IdDepartemen) return true;
+        if (band == 1 && g.IdKompartemen != null && g.IdKompartemen == org.IdKompartemen) return true;
+        return false;
+    }
 
     private static bool MayViewNik(Gugus g, string nik) => g.CreatedByNik == nik;
 

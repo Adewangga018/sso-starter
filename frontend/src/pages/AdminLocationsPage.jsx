@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useDialog } from '../components/DialogProvider'
 import './AdminLocationsPage.css'
 
 function Switch({ checked, disabled, onChange, title }) {
@@ -25,6 +26,7 @@ const emptyForm = { nama: '', lat: '', lng: '', radiusMeters: '150', aktif: true
 
 export default function AdminLocationsPage() {
   const { isAdmin } = useAuth()
+  const dialog = useDialog()
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -125,7 +127,7 @@ export default function AdminLocationsPage() {
   }
 
   async function handleDelete(loc) {
-    if (!confirm(`Hapus lokasi "${loc.nama}"?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus Lokasi', message: `Hapus lokasi "${loc.nama}"?`, danger: true, confirmText: 'Hapus' }))) return
     setBusyId(loc.id)
     try {
       await api.deleteLocation(loc.id)

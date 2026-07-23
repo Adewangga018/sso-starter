@@ -43,6 +43,46 @@ public class OrgResolver
     public async Task<OrgUnit> ResolveUnitAsync(int idUnit)
     {
         var units = await LoadUnitsAsync();
+        return ResolveFromUnits(units, idUnit);
+    }
+
+    // Resolusi org untuk banyak NIK sekaligus (dipakai memfilter cakupan anggota
+    // pada pencarian pegawai). Satu query penempatan + satu muat unit.
+    public async Task<Dictionary<string, OrgUnit>> ResolveManyAsync(IReadOnlyCollection<string> niks)
+    {
+        var result = new Dictionary<string, OrgUnit>();
+        if (niks is null || niks.Count == 0) return result;
+        var distinct = niks.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+        if (distinct.Count == 0) return result;
+
+        var pairs = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where distinct.Contains(p.IdKaryawan) && p.Status == "Aktif"
+            select new { p.IdKaryawan, j.IdUnit }).ToListAsync();
+
+        var units = await LoadUnitsAsync();
+        foreach (var pr in pairs)
+        {
+            if (pr.IdUnit is int uid && !result.ContainsKey(pr.IdKaryawan))
+                result[pr.IdKaryawan] = ResolveFromUnits(units, uid);
+        }
+        return result;
+    }
+
+    // Nama jabatan aktif (grading) untuk mengisi kolom Jabatan anggota.
+    public async Task<string?> ResolveJabatanNamaAsync(string? nik)
+    {
+        if (string.IsNullOrWhiteSpace(nik)) return null;
+        return await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+            select j.NamaJabatan).FirstOrDefaultAsync();
+    }
+
+    private static OrgUnit ResolveFromUnits(Dictionary<int, UnitRow> units, int idUnit)
+    {
         int? deptId = null; string? deptNama = null;
         int? kompId = null; string? kompNama = null;
 

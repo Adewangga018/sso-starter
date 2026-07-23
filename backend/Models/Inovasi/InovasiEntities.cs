@@ -242,7 +242,9 @@ public class Gagasan
     public string? NoRegistrasi { get; set; }
     public string Judul { get; set; } = string.Empty;
     public string? LatarBelakang { get; set; }
-    public string? Metodologi { get; set; }            // SS|GIO|5R (dipilih Verifikator)
+    public string? Masalah { get; set; }               // pokok masalah
+    public string? Solusi { get; set; }                // usulan solusi
+    public string? Metodologi { get; set; }            // SS|GIO|5R (dipilih GM Kompartemen Asal)
     public string CreatedByNik { get; set; } = string.Empty;
     public string? CreatedByNama { get; set; }
     public int? IdDepartemenAsal { get; set; }
@@ -272,7 +274,7 @@ public class GagasanApproval
     public int Id { get; set; }
     public int IdGagasan { get; set; }
     public int Urutan { get; set; }
-    public string Peran { get; set; } = string.Empty;  // Fasilitator|Verifikator|VP Departemen Asal|VP Departemen Tujuan
+    public string Peran { get; set; } = string.Empty;  // Verifikator | GM Kompartemen Asal | GM Kompartemen Tujuan
     public string? Nik { get; set; }
     public string? Nama { get; set; }
     public string Status { get; set; } = "Menunggu";   // Menunggu|Disetujui|Revisi|Ditolak
@@ -296,6 +298,7 @@ public class Jabatan
     public int IdJabatan { get; set; }
     public string NamaJabatan { get; set; } = string.Empty;
     public int? IdUnit { get; set; }
+    public byte IdBand { get; set; }   // 1 = GM, 2 = Manager, dst
 }
 
 public class Penempatan

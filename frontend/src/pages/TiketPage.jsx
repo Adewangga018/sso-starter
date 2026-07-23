@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDialog } from '../components/DialogProvider'
 import { ArrowUp, ArrowDown, ArrowUpDown, ListChecks, Pencil, Plus, Printer, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './TiketPage.css'
@@ -46,6 +47,7 @@ function today() {
 const emptyRincian = { jenisTiket: 'Pesawat', tglIn: '', tglOut: '', keterangan: '' }
 
 export default function TiketPage() {
+  const dialog = useDialog()
   const [rows, setRows] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState('dibuat')
@@ -179,7 +181,7 @@ export default function TiketPage() {
   }
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus pemesanan tiket ${row.kodeTiket}? Seluruh rinciannya ikut terhapus.`)) return
+    if (!(await dialog.confirm({ title: 'Hapus Tiket', message: `Hapus pemesanan tiket ${row.kodeTiket}? Seluruh rinciannya ikut terhapus.`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.deleteTiket(row.id)
       await load()

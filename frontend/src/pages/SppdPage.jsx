@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDialog } from '../components/DialogProvider'
 import { ArrowUp, ArrowDown, ArrowUpDown, Check, ListChecks, Pencil, Plus, Printer, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './SppdPage.css'
@@ -59,6 +60,7 @@ const emptyForm = {
 const emptyPeserta = { nik: '', nama: '', posisi: 'Ketua', tugas: '' }
 
 export default function SppdPage() {
+  const dialog = useDialog()
   const [rows, setRows] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState('dibuat')
@@ -217,7 +219,7 @@ export default function SppdPage() {
   }
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus SPPD ${row.kodeSppd}? Seluruh peserta di dalamnya ikut terhapus.`)) return
+    if (!(await dialog.confirm({ title: 'Hapus SPPD', message: `Hapus SPPD ${row.kodeSppd}? Seluruh peserta di dalamnya ikut terhapus.`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.deleteSppd(row.id)
       await load()

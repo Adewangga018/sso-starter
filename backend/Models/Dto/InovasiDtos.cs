@@ -156,18 +156,20 @@ public record GagasanRingkasDto(int Id, string? NoRegistrasi, string Judul, stri
 public record GagasanListDto(IReadOnlyList<GagasanRingkasDto> Items);
 
 public record GagasanDetailDto(int Id, string? NoRegistrasi, string Judul, string? LatarBelakang,
-    string? Metodologi, string CreatedByNik, string? CreatedByNama,
+    string? Masalah, string? Solusi, string? Metodologi, string CreatedByNik, string? CreatedByNama,
     int? IdDepartemenAsal, string? NamaDepartemenAsal, int? IdDepartemenTujuan, string? NamaDepartemenTujuan,
-    string? FasilitatorNik, string? FasilitatorNama, string? PembinaNik, string? PembinaNama,
     string Status, int? IdGugus, bool BisaEdit, bool IsOwner, bool SiapDaftar,
     DateTime CreatedAt, DateTime? SubmittedAt,
     IReadOnlyList<GagasanApprovalDto> Approval);
 
-public record CreateGagasanRequest(string Judul, string? LatarBelakang, int? IdDepartemenTujuan);
-public record UpdateGagasanRequest(string Judul, string? LatarBelakang, int? IdDepartemenTujuan);
-// Aksi: Disetujui|Revisi|Ditolak. Untuk langkah Verifikator (GM) saat Disetujui,
-// wajib menyertakan Metodologi + Fasilitator (dan Pembina bila GIO).
-public record GagasanApprovalActionRequest(string Aksi, string? Komentar, string? Metodologi,
-    string? FasilitatorNik, string? FasilitatorNama, string? PembinaNik, string? PembinaNama);
+public record CreateGagasanRequest(string Judul, string? LatarBelakang, string? Masalah, string? Solusi, int? IdDepartemenTujuan);
+public record UpdateGagasanRequest(string Judul, string? LatarBelakang, string? Masalah, string? Solusi, int? IdDepartemenTujuan);
+// Aksi: Disetujui|Revisi|Ditolak. Pada langkah GM Kompartemen Asal saat Disetujui,
+// wajib menyertakan Metodologi (SS/GIO/5R). Penetapan Fasilitator/anggota dilakukan
+// Ketua saat mendaftarkan risalah, bukan di sini.
+public record GagasanApprovalActionRequest(string Aksi, string? Komentar, string? Metodologi);
 public record DaftarGagasanRequest(string? Metodologi, string? NamaGugus, int? TemaKe, string? Periode);
 public record DaftarGagasanResultDto(int IdGugus, string Jenis, string Base);
+
+// Peran pengguna pada modul inovasi (untuk menu berbeda approver vs karyawan).
+public record InovasiPeranDto(string Peran, bool BolehApprove);  // Peran: GM | Manager | Karyawan

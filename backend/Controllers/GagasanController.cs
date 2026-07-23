@@ -9,16 +9,21 @@ using SsoBackend.Services;
 
 namespace SsoBackend.Controllers;
 
-// Sumbang Gagasan: usulan awal (judul + latar belakang) yang dinilai berjenjang
-// sebelum menjadi gugus inovasi (SS/GIO/5R). Alur (mengacu SERGIO):
-//   Karyawan kirim -> Fasilitator (Manager) verifikasi -> Verifikator (GM) pilih
-//   metodologi -> VP Departemen Asal -> [bila antar-departemen] VP Departemen
-//   Tujuan -> Daftarkan ke SERGIO (jadi gugus).
+// Sumbang Gagasan: usulan awal (latar belakang + masalah + solusi) yang dinilai
+// berjenjang sebelum menjadi gugus inovasi (SS/GIO/5R). Alur:
+//   Karyawan kirim -> Verifikator (Manager bagian) verifikasi -> GM Kompartemen
+//   Asal setujui + pilih metodologi -> [bila lintas kompartemen] GM Kompartemen
+//   Tujuan setujui -> Ketua daftarkan menjadi risalah dan mengisi
+//   Sekretaris/Anggota/Fasilitator sendiri.
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("inovasi/gagasan")]
 public class GagasanController : ControllerBase
 {
+    private const string RoleVerifikator = "Verifikator";        // Manager bagian
+    private const string RoleGmAsal = "GM Kompartemen Asal";
+    private const string RoleGmTujuan = "GM Kompartemen Tujuan";
+
     private readonly InovasiDbContext _db;
     private readonly CurrentUserContext _currentUser;
     private readonly OrgResolver _org;
@@ -34,6 +39,24 @@ public class GagasanController : ControllerBase
     [HttpGet("/inovasi/departemen")]
     public async Task<ActionResult<IReadOnlyList<UnitRingkas>>> Departemen()
         => Ok(await _org.ListDepartemenAsync());
+
+    // ---- peran pengguna pada modul inovasi (menu approver vs karyawan) ----
+    [HttpGet("/inovasi/peran")]
+    public async Task<ActionResult<InovasiPeranDto>> Peran()
+    {
+        var (nik, _) = await IdentitasAsync();
+        if (nik is null) return Ok(new InovasiPeranDto("Karyawan", false));
+
+        // Band jabatan aktif menentukan peran: 1 = GM, 2 = Manager, selain itu Karyawan.
+        var band = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+            select (byte?)j.IdBand).FirstOrDefaultAsync();
+
+        var peran = band switch { 1 => "GM", 2 => "Manager", _ => "Karyawan" };
+        return Ok(new InovasiPeranDto(peran, peran is "GM" or "Manager"));
+    }
 
     // ---- list ----
     [HttpGet]
@@ -80,11 +103,14 @@ public class GagasanController : ControllerBase
             idDeptTujuan = t.IdDepartemen; namaDeptTujuan = t.NamaDepartemen;
             idKompTujuan = t.IdKompartemen; namaKompTujuan = t.NamaKompartemen;
         }
+        var antarKomp = idKompTujuan is not null && idKompTujuan != asal.IdKompartemen;
 
         var g = new Gagasan
         {
             Judul = req.Judul.Trim(),
             LatarBelakang = req.LatarBelakang,
+            Masalah = req.Masalah,
+            Solusi = req.Solusi,
             CreatedByNik = nik,
             CreatedByNama = nama,
             IdDepartemenAsal = asal.IdDepartemen, NamaDepartemenAsal = asal.NamaDepartemen,
@@ -97,16 +123,15 @@ public class GagasanController : ControllerBase
             NoRegistrasi = await _org.GenerateNoGagasanAsync(),
         };
 
-        // Rantai persetujuan.
-        var fasil = await _org.ResolveKepalaUnitAsync(asal.IdDepartemen);   // Manager departemen asal
-        var gm = await _org.ResolveKepalaUnitAsync(asal.IdKompartemen);     // GM kompartemen asal
-        g.Approval.Add(new GagasanApproval { Urutan = 0, Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Status = "Menunggu" });
-        g.Approval.Add(new GagasanApproval { Urutan = 1, Peran = "Verifikator", Nik = gm?.Nik, Nama = gm?.Nama, Status = "Menunggu" });
-        g.Approval.Add(new GagasanApproval { Urutan = 2, Peran = "VP Departemen Asal", Nik = gm?.Nik, Nama = gm?.Nama, Status = "Menunggu" });
-        if (antarDept)
+        // Rantai persetujuan: Verifikator (Manager) -> GM Kompartemen Asal -> [GM Kompartemen Tujuan].
+        var manager = await _org.ResolveKepalaUnitAsync(asal.IdDepartemen);   // Manager departemen asal
+        var gmAsal = await _org.ResolveKepalaUnitAsync(asal.IdKompartemen);   // GM kompartemen asal
+        g.Approval.Add(new GagasanApproval { Urutan = 0, Peran = RoleVerifikator, Nik = manager?.Nik, Nama = manager?.Nama, Status = "Menunggu" });
+        g.Approval.Add(new GagasanApproval { Urutan = 1, Peran = RoleGmAsal, Nik = gmAsal?.Nik, Nama = gmAsal?.Nama, Status = "Menunggu" });
+        if (antarKomp)
         {
             var gmTujuan = await _org.ResolveKepalaUnitAsync(idKompTujuan);
-            g.Approval.Add(new GagasanApproval { Urutan = 3, Peran = "VP Departemen Tujuan", Nik = gmTujuan?.Nik, Nama = gmTujuan?.Nama, Status = "Menunggu" });
+            g.Approval.Add(new GagasanApproval { Urutan = 2, Peran = RoleGmTujuan, Nik = gmTujuan?.Nik, Nama = gmTujuan?.Nama, Status = "Menunggu" });
         }
 
         _db.Gagasan.Add(g);
@@ -127,7 +152,7 @@ public class GagasanController : ControllerBase
 
         var steps = g.Approval.OrderBy(a => a.Urutan).ToList();
         var isOwner = g.CreatedByNik == nik;
-        var bisaEdit = isOwner && (g.Status is "Dikirim" or "Revisi Fasilitator" or "Revisi Verifikator");
+        var bisaEdit = isOwner && (g.Status is "Dikirim" or "Revisi Verifikator" or "Revisi GM");
         var siapDaftar = isOwner && g.IdGugus is null && steps.Count > 0 && steps.All(a => a.Status == "Disetujui");
 
         var approvalDtos = steps.Select(a => new GagasanApprovalDto(
@@ -135,9 +160,8 @@ public class GagasanController : ControllerBase
             BisaSaya: BisaTandaTangan(steps, a, nik))).ToList();
 
         return Ok(new GagasanDetailDto(
-            g.Id, g.NoRegistrasi, g.Judul, g.LatarBelakang, g.Metodologi, g.CreatedByNik, g.CreatedByNama,
+            g.Id, g.NoRegistrasi, g.Judul, g.LatarBelakang, g.Masalah, g.Solusi, g.Metodologi, g.CreatedByNik, g.CreatedByNama,
             g.IdDepartemenAsal, g.NamaDepartemenAsal, g.IdDepartemenTujuan, g.NamaDepartemenTujuan,
-            g.FasilitatorNik, g.FasilitatorNama, g.PembinaNik, g.PembinaNama,
             g.Status, g.IdGugus, bisaEdit, isOwner, siapDaftar, g.CreatedAt, g.SubmittedAt, approvalDtos));
     }
 
@@ -151,16 +175,17 @@ public class GagasanController : ControllerBase
         var g = await _db.Gagasan.Include(x => x.Approval).FirstOrDefaultAsync(x => x.Id == id);
         if (g is null) return NotFound(new { message = "Gagasan tidak ditemukan." });
         if (g.CreatedByNik != nik) return Forbid();
-        if (g.Status is not ("Dikirim" or "Revisi Fasilitator" or "Revisi Verifikator"))
+        if (g.Status is not ("Dikirim" or "Revisi Verifikator" or "Revisi GM"))
             return BadRequest(new { message = "Gagasan tidak bisa diubah pada status saat ini." });
         if (string.IsNullOrWhiteSpace(req.Judul)) return BadRequest(new { message = "Judul wajib diisi." });
 
         g.Judul = req.Judul.Trim();
         g.LatarBelakang = req.LatarBelakang;
+        g.Masalah = req.Masalah;
+        g.Solusi = req.Solusi;
         g.UpdatedAt = DateTime.Now;
 
-        // Bila sebelumnya diminta revisi, kembalikan langkah yang 'Revisi' -> 'Menunggu'
-        // agar approver terkait menilai ulang.
+        // Bila sebelumnya diminta revisi, kembalikan langkah 'Revisi' -> 'Menunggu'.
         foreach (var a in g.Approval.Where(a => a.Status == "Revisi"))
         {
             a.Status = "Menunggu";
@@ -172,7 +197,7 @@ public class GagasanController : ControllerBase
         return NoContent();
     }
 
-    // ---- approval action (Fasilitator/Verifikator/VP) ----
+    // ---- approval action (Verifikator / GM Kompartemen) ----
     [HttpPost("{id:int}/approval")]
     public async Task<IActionResult> Act(int id, GagasanApprovalActionRequest req)
     {
@@ -189,37 +214,14 @@ public class GagasanController : ControllerBase
         var aksi = req.Aksi?.Trim();
         if (aksi is not ("Disetujui" or "Revisi" or "Ditolak")) return BadRequest(new { message = "Aksi tidak dikenal." });
 
-        if (aksi == "Disetujui" && mine.Peran == "Verifikator")
+        // GM Kompartemen Asal memilih metodologi saat menyetujui.
+        if (aksi == "Disetujui" && mine.Peran == RoleGmAsal)
         {
-            // GM (Verifikator) memilih metodologi + menetapkan Fasilitator (semua) &
-            // Pembina (GIO), lewat pencarian pegawai.
             var m = req.Metodologi?.Trim().ToUpperInvariant();
             if (m is not ("SS" or "GIO" or "5R"))
-                return BadRequest(new { message = "GM wajib memilih metodologi (SS/GIO/5R)." });
-
-            // Aturan lingkup: SS hanya untuk satu departemen (tidak boleh lintas departemen).
-            if (m == "SS" && g.IdDepartemenTujuan is not null)
-                return BadRequest(new { message = "Sistem Saran (SS) hanya untuk satu departemen. Gagasan lintas departemen harus GIO atau 5R." });
-
-            if (string.IsNullOrWhiteSpace(req.FasilitatorNik))
-                return BadRequest(new { message = "GM wajib menetapkan Fasilitator." });
-            if (m == "GIO" && string.IsNullOrWhiteSpace(req.PembinaNik))
-                return BadRequest(new { message = "GM wajib menetapkan Pembina untuk GIO." });
-
+                return BadRequest(new { message = "GM Kompartemen wajib memilih metodologi (SS/GIO/5R)." });
             mine.Metodologi = m;
             g.Metodologi = m;
-            g.FasilitatorNik = req.FasilitatorNik.Trim();
-            g.FasilitatorNama = req.FasilitatorNama?.Trim();
-            if (m == "GIO")
-            {
-                g.PembinaNik = req.PembinaNik!.Trim();
-                g.PembinaNama = req.PembinaNama?.Trim();
-            }
-            else
-            {
-                g.PembinaNik = null;
-                g.PembinaNama = null;
-            }
         }
 
         mine.Status = aksi;
@@ -231,11 +233,7 @@ public class GagasanController : ControllerBase
         {
             foreach (var next in steps.Where(a => a.Urutan > mine.Urutan).OrderBy(a => a.Urutan))
             {
-                if (next.Status == "Menunggu" && next.Nik == nik)
-                {
-                    next.Status = "Disetujui";
-                    next.Tgl = DateTime.Now;
-                }
+                if (next.Status == "Menunggu" && next.Nik == nik) { next.Status = "Disetujui"; next.Tgl = DateTime.Now; }
                 else break;
             }
         }
@@ -246,7 +244,7 @@ public class GagasanController : ControllerBase
         return Ok(new { g.Status });
     }
 
-    // ---- daftarkan ke SERGIO (buat gugus) ----
+    // ---- daftarkan ke SERGIO (buat gugus; Ketua isi anggota sendiri) ----
     [HttpPost("{id:int}/daftar")]
     public async Task<ActionResult<DaftarGagasanResultDto>> Daftar(int id, DaftarGagasanRequest req)
     {
@@ -263,10 +261,9 @@ public class GagasanController : ControllerBase
             return BadRequest(new { message = "Gagasan belum disetujui seluruh approver." });
 
         var jenis = (req.Metodologi ?? g.Metodologi)?.Trim().ToUpperInvariant();
-        // 5R memakai template yang sama dengan SS (siklus PDCA).
-        if (jenis is not ("SS" or "GIO" or "5R")) return BadRequest(new { message = "Metodologi tidak valid (harus SS, GIO, atau 5R)." });
+        if (jenis is not ("SS" or "GIO" or "5R")) return BadRequest(new { message = "Metodologi belum ditetapkan GM." });
 
-        // Departemen gugus = tujuan bila antar-departemen, selain itu asal.
+        // Departemen gugus = tujuan bila lintas, selain itu asal.
         var idDept = g.IdDepartemenTujuan ?? g.IdDepartemenAsal;
         var namaDept = g.NamaDepartemenTujuan ?? g.NamaDepartemenAsal;
         var idKomp = g.IdKompartemenTujuan ?? g.IdKompartemenAsal;
@@ -281,6 +278,7 @@ public class GagasanController : ControllerBase
             NamaGugus = req.NamaGugus?.Trim(),
             Judul = g.Judul,
             LatarBelakang = g.LatarBelakang,
+            MasalahUtama = g.Masalah,
             IdDepartemen = idDept, NamaDepartemen = namaDept,
             IdKompartemen = idKomp, NamaKompartemen = namaKomp,
             IdGagasan = g.Id,
@@ -289,20 +287,29 @@ public class GagasanController : ControllerBase
             CreatedByNama = nama,
             CreatedAt = DateTime.Now,
         };
-        // Ketua = pengaju; Fasilitator (semua) & Pembina (GIO) sesuai penetapan GM.
-        // Sekretaris/Anggota lain diisi pengaju di form risalah.
-        var urut = 1;
-        gugus.Anggota.Add(new Anggota { Peran = "Ketua", Nik = nik, Nama = nama ?? nik, Urutan = urut++, DepBagian = namaDept ?? namaKomp });
-        if (!string.IsNullOrWhiteSpace(g.FasilitatorNik))
-            gugus.Anggota.Add(new Anggota { Peran = "Fasilitator", Nik = g.FasilitatorNik, Nama = g.FasilitatorNama ?? g.FasilitatorNik, Urutan = urut++ });
-        if (jenis == "GIO" && !string.IsNullOrWhiteSpace(g.PembinaNik))
-            gugus.Anggota.Add(new Anggota { Peran = "Pembina", Nik = g.PembinaNik, Nama = g.PembinaNama ?? g.PembinaNik, Urutan = urut++ });
+        // Hanya Ketua (pengaju) yang terisi otomatis; Sekretaris/Anggota/Fasilitator
+        // dilengkapi Ketua di form risalah.
+        gugus.Anggota.Add(new Anggota
+        {
+            Peran = "Ketua", Nik = nik, Nama = nama ?? nik, Urutan = 1,
+            Jabatan = await _org.ResolveJabatanNamaAsync(nik),
+            DepBagian = namaDept ?? namaKomp,
+        });
+
+        // Template awal risalah (mengikuti format resmi PT GCS): kerangka QCDSE
+        // dan fishbone sudah tersedia agar Ketua tinggal mengisi. Metodologi
+        // menentukan detail lain (Pareto/verifikasi akar untuk GIO) yang diisi
+        // di form. Latar belakang, masalah, dan judul dibawa dari gagasan.
+        foreach (var aspek in new[] { "Q", "C", "D", "S", "E", "M" })
+            gugus.Qcdse.Add(new Qcdse { Aspek = aspek });
+        foreach (var faktor in new[] { "Man", "Method", "Machine", "Material", "Environment" })
+            gugus.Fishbone.Add(new Fishbone { Faktor = faktor });
 
         _db.Gugus.Add(gugus);
         await _db.SaveChangesAsync();
 
         g.IdGugus = gugus.Id;
-        g.Status = "Terdaftar Sergio";
+        g.Status = "Terdaftar";
         g.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
 
@@ -344,21 +351,19 @@ public class GagasanController : ControllerBase
     // Status keseluruhan gagasan diturunkan dari langkah-langkahnya.
     private static string ComputeStatus(Gagasan g)
     {
-        if (g.IdGugus is not null) return "Terdaftar Sergio";
+        if (g.IdGugus is not null) return "Terdaftar";
         var steps = g.Approval;
         if (steps.Any(a => a.Status == "Ditolak")) return "Ditolak";
 
-        var fasil = steps.FirstOrDefault(a => a.Peran == "Fasilitator");
-        if (fasil?.Status == "Revisi") return "Revisi Fasilitator";
-        if (steps.Any(a => a.Status == "Revisi" && a.Peran != "Fasilitator")) return "Revisi Verifikator";
+        var verif = steps.FirstOrDefault(a => a.Peran == RoleVerifikator);
+        if (verif?.Status == "Revisi") return "Revisi Verifikator";
+        if (steps.Any(a => a.Status == "Revisi" && a.Peran != RoleVerifikator)) return "Revisi GM";
 
-        var vpTujuan = steps.FirstOrDefault(a => a.Peran == "VP Departemen Tujuan");
-        if (vpTujuan?.Status == "Disetujui") return "Disetujui VP Departemen Tujuan";
-        var vpAsal = steps.FirstOrDefault(a => a.Peran == "VP Departemen Asal");
-        if (vpAsal?.Status == "Disetujui") return "Disetujui VP Departemen Asal";
-        var verif = steps.FirstOrDefault(a => a.Peran == "Verifikator");
+        var gmTujuan = steps.FirstOrDefault(a => a.Peran == RoleGmTujuan);
+        if (gmTujuan?.Status == "Disetujui") return "Disetujui GM Kompartemen Tujuan";
+        var gmAsal = steps.FirstOrDefault(a => a.Peran == RoleGmAsal);
+        if (gmAsal?.Status == "Disetujui") return "Disetujui GM Kompartemen Asal";
         if (verif?.Status == "Disetujui") return "Disetujui Verifikator";
-        if (fasil?.Status == "Disetujui") return "Disetujui Fasilitator";
         return "Dikirim";
     }
 

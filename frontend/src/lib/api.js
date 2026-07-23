@@ -219,7 +219,7 @@ export const api = {
     body.append('file', file)
     return apiFetch(`/api/inovasi/gugus/${id}/upload`, { method: 'POST', body })
   },
-  cariPegawaiInovasi: (q) => apiFetch(`/api/inovasi/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  cariPegawaiInovasi: (q, gugusId) => apiFetch(`/api/inovasi/pegawai?q=${encodeURIComponent(q ?? '')}${gugusId ? `&gugusId=${encodeURIComponent(gugusId)}` : ''}`),
   // Return { url, contentType } - blob object URL; revoke it when done.
   getInovasiFile: (id, path) => apiBlob(`/api/inovasi/gugus/${id}/file?path=${encodeURIComponent(path)}`),
 
@@ -232,6 +232,7 @@ export const api = {
   daftarGagasan: (id, payload) => apiFetch(`/api/inovasi/gagasan/${id}/daftar`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteGagasan: (id) => apiFetch(`/api/inovasi/gagasan/${id}`, { method: 'DELETE' }),
   listDepartemenInovasi: () => apiFetch('/api/inovasi/departemen'),
+  getInovasiPeran: () => apiFetch('/api/inovasi/peran'),
 
   // authentication (cookie flow)
   login: (email, password) => post('/api/account/login', { email, password }),

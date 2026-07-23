@@ -18,22 +18,21 @@ export function statusClass(status) {
     case 'Dikirim':
     case 'Diajukan':
       return 'inv__status--diajukan'
-    case 'Disetujui Fasilitator':
+    case 'Disetujui Verifikator':
     case 'Diverifikasi':
       return 'inv__status--diverifikasi'
-    case 'Disetujui Verifikator':
-    case 'Disetujui VP Departemen Asal':
-    case 'Disetujui VP Departemen Tujuan':
+    case 'Disetujui GM Kompartemen Asal':
+    case 'Disetujui GM Kompartemen Tujuan':
     case 'Divalidasi':
       return 'inv__status--divalidasi'
-    case 'Terdaftar Sergio':
+    case 'Terdaftar':
     case 'Selesai':
       return 'inv__status--selesai'
     case 'Ditolak':
       return 'inv__status--ditolak'
     case 'Revisi':
-    case 'Revisi Fasilitator':
     case 'Revisi Verifikator':
+    case 'Revisi GM':
       return 'inv__status--revisi'
     default:
       return 'inv__status--draft'

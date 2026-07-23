@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDialog } from '../components/DialogProvider'
 import { ArrowUp, ArrowDown, ArrowUpDown, Check, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './UmdlPage.css'
@@ -43,6 +44,7 @@ function isoDate(d) {
 const emptyForm = { idIjin: null, kodeIjin: '', tglUmdl: '', keterangan: '' }
 
 export default function UmdlPage() {
+  const dialog = useDialog()
   const [rows, setRows] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState('dibuat')
@@ -207,7 +209,7 @@ export default function UmdlPage() {
   }
 
   async function handleDelete(row) {
-    if (!confirm(`Hapus UMDL ${row.kodeUmdl}?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus UMDL', message: `Hapus UMDL ${row.kodeUmdl}?`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.deleteUmdl(row.id)
       await load()

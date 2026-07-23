@@ -4,10 +4,14 @@ import { api } from '../../lib/api'
 
 // Modal pencarian pegawai (untuk menambah anggota gugus). Memanggil
 // /api/inovasi/pegawai. onPick(pegawai) -> { nik, nama, jabatan, unit }.
-export default function PegawaiPicker({ open, onClose, onPick }) {
+// gugusId membatasi hasil sesuai cakupan metodologi (SS/5R). existingNiks =
+// daftar NIK yang sudah menjadi anggota; kandidat itu ditandai & tak bisa dipilih
+// lagi (mencegah duplikat).
+export default function PegawaiPicker({ open, onClose, onPick, gugusId, existingNiks = [] }) {
   const [q, setQ] = useState('')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
+  const taken = new Set((existingNiks ?? []).filter(Boolean).map(String))
 
   useEffect(() => {
     if (!open) return
@@ -20,7 +24,7 @@ export default function PegawaiPicker({ open, onClose, onPick }) {
     setLoading(true)
     const t = setTimeout(() => {
       api
-        .cariPegawaiInovasi(term)
+        .cariPegawaiInovasi(term, gugusId)
         .then((d) => live && setRows(d))
         .catch(() => live && setRows([]))
         .finally(() => live && setLoading(false))
@@ -29,7 +33,7 @@ export default function PegawaiPicker({ open, onClose, onPick }) {
       live = false
       clearTimeout(t)
     }
-  }, [q, open])
+  }, [q, open, gugusId])
 
   if (!open) return null
 
@@ -51,21 +55,28 @@ export default function PegawaiPicker({ open, onClose, onPick }) {
           {!loading && q.trim().length >= 2 && rows.length === 0 && <div className="inv__hint">Tidak ada hasil.</div>}
           <table className="inv__subtable">
             <tbody>
-              {rows.map((p) => (
-                <tr key={p.nik}>
-                  <td style={{ width: 110 }}>{p.nik}</td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{p.nama}</div>
-                    <div style={{ fontSize: 11.5, color: '#7a877d' }}>{p.jabatan ?? '-'}{p.unit ? ` - ${p.unit}` : ''}</div>
-                  </td>
-                  <td style={{ width: 80, textAlign: 'right' }}>
-                    <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '5px 12px' }}
-                      onClick={() => { onPick({ nik: p.nik, nama: p.nama, jabatan: p.jabatan, unit: p.unit }); onClose() }}>
-                      Pilih
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((p) => {
+                const sudah = taken.has(String(p.nik))
+                return (
+                  <tr key={p.nik} style={sudah ? { opacity: 0.55 } : undefined}>
+                    <td style={{ width: 110 }}>{p.nik}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{p.nama}</div>
+                      <div style={{ fontSize: 11.5, color: '#7a877d' }}>{p.jabatan ?? '-'}{p.unit ? ` - ${p.unit}` : ''}</div>
+                    </td>
+                    <td style={{ width: 90, textAlign: 'right' }}>
+                      {sudah ? (
+                        <span style={{ fontSize: 11.5, color: '#7a877d' }}>Sudah ada</span>
+                      ) : (
+                        <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '5px 12px' }}
+                          onClick={() => { onPick({ nik: p.nik, nama: p.nama, jabatan: p.jabatan, unit: p.unit }); onClose() }}>
+                          Pilih
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

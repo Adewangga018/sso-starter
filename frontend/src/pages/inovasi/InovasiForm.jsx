@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
+  FileDown,
   FileUp,
   Link2,
   Lock,
@@ -12,9 +13,11 @@ import {
   X,
 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
+import { useDialog } from '../../components/DialogProvider'
 import RepeatTable from './RepeatTable'
 import PegawaiPicker from './PegawaiPicker'
 import { jenisLabel, statusClass } from './statusClass'
+import { exportRisalahWord } from '../../lib/risalahDoc'
 import './inovasi.css'
 
 const ASPEK = [
@@ -38,6 +41,7 @@ export default function InovasiForm() {
   const ctx = useOutletContext() || {}
   const base = ctx.base ?? '/my-innovation'
   const navigate = useNavigate()
+  const dialog = useDialog()
 
   const [data, setData] = useState(null)
   const [loadErr, setLoadErr] = useState('')
@@ -132,6 +136,17 @@ export default function InovasiForm() {
   const editPlan = data?.bisaEdit === true
   const editLanjut = data?.isOwner === true && data?.planDisahkan === true
   const isGio = data?.jenis === 'GIO'
+  const is5R = data?.jenis === '5R'
+  // Batas & cakupan anggota per metodologi:
+  //  - SS  : anggota dalam satu departemen (tanpa batas jumlah eksplisit)
+  //  - 5R  : anggota dalam satu kompartemen, maksimum 10 (Ketua, Sekretaris, Anggota 1-7, Fasilitator)
+  //  - GIO : bebas - lintas kompartemen maupun dari luar
+  const maxAnggota = is5R ? 10 : null
+  const scopeHint = isGio
+    ? 'GIO: anggota bebas - boleh lintas kompartemen maupun dari luar organisasi.'
+    : is5R
+      ? 'Program 5R: anggota harus dalam satu kompartemen. Maksimum 10 orang (Ketua, Sekretaris, Anggota 1-7, Fasilitator).'
+      : 'Sistem Saran: anggota harus dalam satu departemen.'
 
   const paretoKumulatif = useMemo(() => {
     const total = pareto.reduce((s, r) => s + (Number(r.frekuensi) || 0), 0) || 1
@@ -228,7 +243,11 @@ export default function InovasiForm() {
   }
 
   async function submit() {
-    if (!confirm('Ajukan risalah ini untuk pengesahan? PLAN tidak bisa diubah lagi kecuali diminta revisi.')) return
+    if (!(await dialog.confirm({
+      title: 'Ajukan Risalah',
+      message: 'Ajukan risalah ini untuk pengesahan? PLAN tidak bisa diubah lagi kecuali diminta revisi.',
+      confirmText: 'Ajukan',
+    }))) return
     setSaving(true)
     try {
       await savePlanSilent()
@@ -248,7 +267,13 @@ export default function InovasiForm() {
   async function actPengesahan(pid, aksi) {
     let komentar = null
     if (aksi === 'Ditolak' || aksi === 'Revisi') {
-      komentar = window.prompt(`Komentar ${aksi.toLowerCase()} (opsional):`) ?? ''
+      komentar = await dialog.prompt({
+        title: aksi === 'Revisi' ? 'Minta Revisi' : 'Tolak Risalah',
+        label: `Komentar ${aksi.toLowerCase()} (opsional):`,
+        multiline: true,
+        confirmText: aksi === 'Revisi' ? 'Kirim Revisi' : 'Tolak',
+      })
+      if (komentar === null) return
     }
     try {
       await api.actPengesahan(id, pid, { aksi, komentar })
@@ -291,6 +316,22 @@ export default function InovasiForm() {
   const planLocked = !editPlan
   const lanjutTersedia = data?.planDisahkan === true
 
+  // Ekspor Word: bagian PLAN tersedia begitu isian terisi (tak menunggu disahkan);
+  // versi Lengkap tersedia bila PLAN sudah disahkan atau ada isian DO/CHECK/ACTION.
+  const adaBaris = (a) => Array.isArray(a) && a.length > 0
+  const bisaExportPlan = Boolean(data?.judul || data?.latarBelakang || data?.masalahUtama || adaBaris(data?.anggota) || data?.planDisahkan)
+  const bisaExportLengkap = data?.planDisahkan === true
+    || adaBaris(data?.doPelaksanaan) || adaBaris(data?.doKendala)
+    || adaBaris(data?.checkPerbandingan) || adaBaris(data?.checkSasaran)
+    || adaBaris(data?.actionStandarisasi) || adaBaris(data?.actionTindakLanjut)
+
+  // Syarat sebelum risalah bisa diajukan ke Lembar Pengesahan.
+  const perluNamaGugus = !ident.namaGugus?.trim()
+  const perluJudul = !ident.judul?.trim()
+  const perluFasilitator = !anggota.some((a) => a.peran === 'Fasilitator')
+  const perluKetua = !anggota.some((a) => a.peran === 'Ketua')
+  const submitBlokir = perluNamaGugus || perluJudul || perluFasilitator || perluKetua
+
   if (loadErr) return <div className="inv"><button className="inv__back" onClick={() => navigate(`${base}/daftar`)}><ArrowLeft size={15} /> Kembali</button><div className="inv__banner inv__banner--err">{loadErr}</div></div>
   if (!data) return <div className="inv"><p className="inv__subtitle">Memuat risalah...</p></div>
 
@@ -308,6 +349,18 @@ export default function InovasiForm() {
             <span>Status: <span className={`inv__status ${statusClass(data.status)}`}>{data.status}</span></span>
           </div>
         </div>
+        {bisaExportPlan && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="inv__btn inv__btn--soft" onClick={() => exportRisalahWord(data, { mode: 'plan' })} title="Unduh bagian PLAN (isi yang sudah diinput) sebagai Word">
+              <FileDown size={15} /> Word (PLAN)
+            </button>
+            {bisaExportLengkap && (
+              <button type="button" className="inv__btn inv__btn--primary" onClick={() => exportRisalahWord(data, { mode: 'full' })} title="Unduh risalah lengkap (semua tahapan yang telah diisi) sebagai Word">
+                <FileDown size={15} /> Word (Lengkap)
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {banner && <div className={`inv__banner inv__banner--${banner.type}`}>{banner.text}</div>}
@@ -338,7 +391,13 @@ export default function InovasiForm() {
       <PegawaiPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onPick={(p) => setAnggota((prev) => [...prev, { id: 0, peran: 'Anggota', nik: p.nik, nama: p.nama, jabatan: p.jabatan ?? '', depBagian: p.unit ?? '' }])}
+        gugusId={id}
+        existingNiks={anggota.map((a) => a.nik).filter(Boolean)}
+        onPick={(p) => setAnggota((prev) => {
+          if (maxAnggota != null && prev.length >= maxAnggota) return prev
+          if (p.nik && prev.some((a) => String(a.nik) === String(p.nik))) return prev // cegah duplikat
+          return [...prev, { id: 0, peran: 'Anggota', nik: p.nik, nama: p.nama, jabatan: p.jabatan ?? '', depBagian: p.unit ?? '' }]
+        })}
       />
     </div>
   )
@@ -366,7 +425,8 @@ export default function InovasiForm() {
 
         {/* B. Anggota */}
         <Section tag="B" title="Susunan Anggota Gugus">
-          {!planLocked && (
+          <p className="inv__hint" style={{ marginTop: 0, marginBottom: 10 }}>{scopeHint}</p>
+          {!planLocked && !(maxAnggota != null && anggota.length >= maxAnggota) && (
             <button type="button" className="inv__btn inv__btn--soft" style={{ marginBottom: 10 }} onClick={() => setPickerOpen(true)}>
               <UserPlus size={15} /> Tambah Anggota dari Data Pegawai
             </button>
@@ -375,10 +435,11 @@ export default function InovasiForm() {
             readOnly={planLocked}
             rows={anggota}
             setRows={setAnggota}
+            maxRows={maxAnggota}
             makeEmpty={() => ({ id: 0, peran: 'Anggota', nik: '', nama: '', jabatan: '', depBagian: '' })}
             addLabel="Tambah Anggota Manual"
             columns={[
-              { key: 'peran', label: 'Peran', type: 'select', options: ['Ketua', 'Sekretaris', 'Fasilitator', 'Anggota', 'Pembina'], width: 120 },
+              { key: 'peran', label: 'Peran', type: 'select', options: ['Ketua', 'Sekretaris', 'Fasilitator', 'Anggota'], width: 120 },
               { key: 'nama', label: 'Nama Lengkap', type: 'text' },
               { key: 'nik', label: 'NIK', type: 'text', width: 110 },
               { key: 'jabatan', label: 'Jabatan', type: 'text' },
@@ -596,10 +657,23 @@ export default function InovasiForm() {
 
         {/* Aksi PLAN */}
         {(editPlan) && (
-          <div className="inv__actions-bar">
-            <button type="button" className="inv__btn inv__btn--ghost" onClick={savePlan} disabled={saving}><Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan PLAN'}</button>
-            <button type="button" className="inv__btn inv__btn--primary" onClick={submit} disabled={saving}><Send size={16} /> Ajukan Pengesahan</button>
-          </div>
+          <>
+            {submitBlokir && (
+              <div className="inv__banner inv__banner--warn">
+                <b>Lengkapi sebelum mengajukan:</b>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                  {perluNamaGugus && <li>Nama Gugus (bagian A) wajib diisi.</li>}
+                  {perluKetua && <li>Harus ada anggota dengan peran <b>Ketua</b>.</li>}
+                  {perluFasilitator && <li>Harus ada anggota dengan peran <b>Fasilitator</b> (pendamping gugus).</li>}
+                  {perluJudul && <li>Judul (P.8) wajib diisi.</li>}
+                </ul>
+              </div>
+            )}
+            <div className="inv__actions-bar">
+              <button type="button" className="inv__btn inv__btn--ghost" onClick={savePlan} disabled={saving}><Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan PLAN'}</button>
+              <button type="button" className="inv__btn inv__btn--primary" onClick={submit} disabled={saving || submitBlokir} title={submitBlokir ? 'Lengkapi syarat di atas dahulu' : undefined}><Send size={16} /> Ajukan Pengesahan</button>
+            </div>
+          </>
         )}
       </>
     )

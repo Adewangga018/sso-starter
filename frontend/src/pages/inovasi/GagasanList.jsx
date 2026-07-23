@@ -2,17 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { CheckCircle2, Eye, Plus, RotateCw, Search, Send, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
-import PegawaiPicker from './PegawaiPicker'
+import { useDialog } from '../../components/DialogProvider'
 import { statusClass } from './statusClass'
 import './inovasi.css'
 
-// Daftar Gagasan (Sumbang Gagasan). Pengaju mengirim judul + latar belakang;
-// dinilai berjenjang (Fasilitator/Manager -> Verifikator/GM -> VP Asal -> VP
-// Tujuan) lalu didaftarkan ke SERGIO (menjadi gugus SS/GIO).
+// Sumbang Gagasan. Karyawan mengirim latar belakang + masalah + solusi; dinilai
+// Verifikator (Manager bagian) lalu disetujui GM Kompartemen (Asal & Tujuan).
+// GM memilih metodologi (SS/GIO/5R). Setelah disetujui, Ketua mendaftarkan
+// menjadi risalah dan mengisi Sekretaris/Anggota/Fasilitator sendiri.
+// Untuk approver (Manager/GM) tampilan berupa "Persetujuan Gagasan" - hanya
+// melihat & memproses, tanpa tombol buat gagasan.
 export default function GagasanList() {
   const ctx = useOutletContext() || {}
-  const jenis = ctx.jenis ?? 'SS'
+  const isApprover = ctx.isApprover === true
+  const peran = ctx.peran ?? 'Karyawan'
   const navigate = useNavigate()
+  const dialog = useDialog()
 
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
@@ -34,23 +39,32 @@ export default function GagasanList() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    const list = rows ?? []
+    let list = rows ?? []
+    // Approver hanya menampilkan gagasan yang perlu ia proses (bukan miliknya).
+    if (isApprover) list = list.filter((r) => r.peranSaya !== 'Pengaju')
     if (!term) return list
     return list.filter((r) => [r.noRegistrasi, r.judul, r.status, r.namaDepartemenAsal, r.namaDepartemenTujuan, r.metodologi]
       .some((v) => (v ?? '').toString().toLowerCase().includes(term)))
-  }, [rows, search])
+  }, [rows, search, isApprover])
 
   async function del(row) {
-    if (!confirm(`Hapus gagasan "${row.judul}"?`)) return
+    if (!(await dialog.confirm({ title: 'Hapus Gagasan', message: `Hapus gagasan "${row.judul}"?`, danger: true, confirmText: 'Hapus' }))) return
     try { await api.deleteGagasan(row.id); await load() } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menghapus.') }
   }
+
+  const judul = peran === 'Manager' ? 'Verifikasi Gagasan' : peran === 'GM' ? 'Persetujuan Gagasan' : 'Sumbang Gagasan'
+  const subtitle = peran === 'Manager'
+    ? 'Verifikasi gagasan yang diajukan bawahan Anda. Anda dapat menyetujui (meneruskan ke GM), meminta revisi, atau menolak.'
+    : peran === 'GM'
+      ? 'Setujui gagasan yang telah diverifikasi Manager dan pilih metodologinya (SS/GIO/5R). Anda dapat menyetujui, meminta revisi, atau menolak.'
+      : 'Ajukan gagasan (latar belakang, masalah, solusi). Setelah dinilai Manager & disetujui GM Kompartemen, daftarkan menjadi risalah.'
 
   if (!rows && !err) return <div className="inv"><p className="inv__subtitle">Memuat data gagasan...</p></div>
 
   return (
     <div className="inv">
-      <h2 className="inv__title">Daftar Gagasan (Sumbang Gagasan)</h2>
-      <p className="inv__subtitle">Ajukan gagasan awal (judul & latar belakang). Setelah disetujui berjenjang, daftarkan menjadi risalah inovasi.</p>
+      <h2 className="inv__title">{judul}</h2>
+      <p className="inv__subtitle">{subtitle}</p>
 
       {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
@@ -61,7 +75,9 @@ export default function GagasanList() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="inv__btn inv__btn--ghost" onClick={load} title="Muat ulang"><RotateCw size={15} /></button>
-          <button type="button" className="inv__btn inv__btn--primary" onClick={() => setCreateOpen(true)}><Plus size={16} /> Sumbang Gagasan</button>
+          {!isApprover && (
+            <button type="button" className="inv__btn inv__btn--primary" onClick={() => setCreateOpen(true)}><Plus size={16} /> Sumbang Gagasan</button>
+          )}
         </div>
       </div>
 
@@ -89,7 +105,7 @@ export default function GagasanList() {
                     {r.idGugus
                       ? <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '5px 10px' }} onClick={() => navigate(`/my-innovation/daftar/${r.idGugus}`)}>Buka Risalah</button>
                       : <button type="button" className="inv__icon-btn" title="Buka" onClick={() => setDetailId(r.id)}><Eye size={15} /></button>}
-                    {r.peranSaya === 'Pengaju' && !r.idGugus && ['Dikirim', 'Revisi Fasilitator', 'Revisi Verifikator'].includes(r.status) && (
+                    {r.peranSaya === 'Pengaju' && !r.idGugus && ['Dikirim', 'Revisi Verifikator', 'Revisi GM'].includes(r.status) && (
                       <button type="button" className="inv__icon-btn inv__icon-btn--danger" title="Hapus" onClick={() => del(r)}><Trash2 size={15} /></button>
                     )}
                   </div>
@@ -101,14 +117,14 @@ export default function GagasanList() {
       </div>
 
       {createOpen && <CreateModal onClose={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); load() }} />}
-      {detailId && <DetailModal id={detailId} jenis={jenis} onClose={() => setDetailId(null)} onChanged={load} navigate={navigate} />}
+      {detailId && <DetailModal id={detailId} onClose={() => setDetailId(null)} onChanged={load} navigate={navigate} />}
     </div>
   )
 }
 
 // ---------- Create ----------
 function CreateModal({ onClose, onDone }) {
-  const [form, setForm] = useState({ judul: '', latarBelakang: '', idDepartemenTujuan: '' })
+  const [form, setForm] = useState({ judul: '', latarBelakang: '', masalah: '', solusi: '', idDepartemenTujuan: '' })
   const [depts, setDepts] = useState([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -122,6 +138,8 @@ function CreateModal({ onClose, onDone }) {
       await api.createGagasan({
         judul: form.judul,
         latarBelakang: form.latarBelakang,
+        masalah: form.masalah,
+        solusi: form.solusi,
         idDepartemenTujuan: form.idDepartemenTujuan ? Number(form.idDepartemenTujuan) : null,
       })
       onDone()
@@ -131,16 +149,24 @@ function CreateModal({ onClose, onDone }) {
 
   return (
     <Backdrop onClose={onClose}>
-      <div style={modalStyle(520)}>
+      <div style={modalStyle(560, true)}>
         <ModalHead title="Sumbang Gagasan Baru" onClose={onClose} />
-        <form onSubmit={submit}>
+        <form onSubmit={submit} style={{ overflowY: 'auto' }}>
           <label className="inv__field" style={{ marginBottom: 12 }}>
             <span>Judul Usulan</span>
             <input value={form.judul} onChange={(e) => setForm({ ...form, judul: e.target.value })} required placeholder="Judul gagasan" />
           </label>
           <label className="inv__field" style={{ marginBottom: 12 }}>
-            <span>Gambaran / Latar Belakang (Kondisi Awal)</span>
-            <textarea rows={4} value={form.latarBelakang} onChange={(e) => setForm({ ...form, latarBelakang: e.target.value })} placeholder="Uraikan kondisi awal / masalah." />
+            <span>Latar Belakang</span>
+            <textarea rows={3} value={form.latarBelakang} onChange={(e) => setForm({ ...form, latarBelakang: e.target.value })} placeholder="Kondisi awal / konteks." />
+          </label>
+          <label className="inv__field" style={{ marginBottom: 12 }}>
+            <span>Masalah</span>
+            <textarea rows={3} value={form.masalah} onChange={(e) => setForm({ ...form, masalah: e.target.value })} placeholder="Pokok masalah yang ingin diperbaiki." />
+          </label>
+          <label className="inv__field" style={{ marginBottom: 12 }}>
+            <span>Solusi Masalah</span>
+            <textarea rows={3} value={form.solusi} onChange={(e) => setForm({ ...form, solusi: e.target.value })} placeholder="Usulan solusi." />
           </label>
           <label className="inv__field" style={{ marginBottom: 6 }}>
             <span>Departemen Tujuan (opsional)</span>
@@ -149,7 +175,7 @@ function CreateModal({ onClose, onDone }) {
               {depts.map((d) => <option key={d.id} value={d.id}>{d.nama}</option>)}
             </select>
           </label>
-          <p className="inv__hint" style={{ marginBottom: 12 }}>SS hanya untuk departemen sendiri. Memilih departemen lain berarti gagasan lintas departemen (hanya GIO / 5R).</p>
+          <p className="inv__hint" style={{ marginBottom: 12 }}>Memilih departemen lain = gagasan lintas departemen. Bila lintas kompartemen, GM kompartemen tujuan ikut menyetujui.</p>
           {err && <div className="inv__banner inv__banner--err">{err}</div>}
           <div className="inv__actions-bar" style={{ marginTop: 8 }}>
             <button type="button" className="inv__btn inv__btn--ghost" onClick={onClose}>Batal</button>
@@ -162,17 +188,15 @@ function CreateModal({ onClose, onDone }) {
 }
 
 // ---------- Detail + Approval + Daftar ----------
-function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
+function DetailModal({ id, onClose, onChanged, navigate }) {
+  const dialog = useDialog()
   const [g, setG] = useState(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const [edit, setEdit] = useState({ judul: '', latarBelakang: '' })
-  const [metodologi, setMetodologi] = useState(jenis === 'GIO' ? 'GIO' : 'SS')
-  const [fasil, setFasil] = useState(null)   // { nik, nama }
-  const [pembina, setPembina] = useState(null)
-  const [pickerFor, setPickerFor] = useState(null)  // 'fasil' | 'pembina' | null
+  const [edit, setEdit] = useState({ judul: '', latarBelakang: '', masalah: '', solusi: '' })
+  const [metodologi, setMetodologi] = useState('SS')
 
-  // Lintas departemen (dep. tujuan diisi) => SS tidak boleh; hanya GIO/5R.
+  // Lintas departemen => SS tidak boleh (SS anggota satu departemen); hanya GIO/5R.
   const lintasDept = Boolean(g?.namaDepartemenTujuan)
   const metodOptions = lintasDept ? ['GIO', '5R'] : ['SS', 'GIO', '5R']
 
@@ -180,11 +204,9 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
     try {
       const d = await api.getGagasan(id)
       setG(d)
-      setEdit({ judul: d.judul, latarBelakang: d.latarBelakang ?? '' })
+      setEdit({ judul: d.judul, latarBelakang: d.latarBelakang ?? '', masalah: d.masalah ?? '', solusi: d.solusi ?? '' })
       if (d.metodologi) setMetodologi(d.metodologi)
       else if (d.namaDepartemenTujuan) setMetodologi('GIO')
-      if (d.fasilitatorNik) setFasil({ nik: d.fasilitatorNik, nama: d.fasilitatorNama })
-      if (d.pembinaNik) setPembina({ nik: d.pembinaNik, nama: d.pembinaNama })
     } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal memuat.') }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,29 +214,38 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
 
   async function saveEdit() {
     setBusy(true); setErr('')
-    try { await api.updateGagasan(id, { judul: edit.judul, latarBelakang: edit.latarBelakang, idDepartemenTujuan: g.idDepartemenTujuan }); await load(); onChanged() }
-    catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menyimpan.') } finally { setBusy(false) }
+    try {
+      await api.updateGagasan(id, { judul: edit.judul, latarBelakang: edit.latarBelakang, masalah: edit.masalah, solusi: edit.solusi, idDepartemenTujuan: g.idDepartemenTujuan })
+      await load(); onChanged()
+    } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menyimpan.') } finally { setBusy(false) }
   }
 
   async function act(step, aksi) {
-    const payload = { aksi, komentar: null, metodologi: null, fasilitatorNik: null, fasilitatorNama: null, pembinaNik: null, pembinaNama: null }
-    if (aksi === 'Revisi' || aksi === 'Ditolak') { payload.komentar = window.prompt(`Komentar ${aksi.toLowerCase()}:`) ?? '' }
-    if (aksi === 'Disetujui' && step.peran === 'Verifikator') {
-      // GM menetapkan metodologi + Fasilitator (+ Pembina bila GIO).
-      if (!fasil) { setErr('Pilih Fasilitator terlebih dahulu.'); return }
-      if (metodologi === 'GIO' && !pembina) { setErr('Pilih Pembina untuk GIO terlebih dahulu.'); return }
-      payload.metodologi = metodologi
-      payload.fasilitatorNik = fasil.nik
-      payload.fasilitatorNama = fasil.nama
-      if (metodologi === 'GIO') { payload.pembinaNik = pembina.nik; payload.pembinaNama = pembina.nama }
+    const payload = { aksi, komentar: null, metodologi: null }
+    if (aksi === 'Revisi' || aksi === 'Ditolak') {
+      const komentar = await dialog.prompt({
+        title: aksi === 'Revisi' ? 'Minta Revisi Gagasan' : 'Tolak Gagasan',
+        label: `Komentar ${aksi.toLowerCase()}${aksi === 'Ditolak' ? '' : ' (jelaskan yang perlu diperbaiki)'}:`,
+        multiline: true,
+        confirmText: aksi === 'Revisi' ? 'Kirim Revisi' : 'Tolak',
+      })
+      if (komentar === null) return
+      payload.komentar = komentar
     }
+    if (aksi === 'Disetujui' && step.peran === 'GM Kompartemen Asal') payload.metodologi = metodologi
     setBusy(true); setErr('')
     try { await api.actGagasanApproval(id, payload); await load(); onChanged() }
     catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal memproses.') } finally { setBusy(false) }
   }
 
   async function daftar() {
-    const nama = window.prompt('Nama gugus untuk risalah:', g.judul?.slice(0, 40) || '')
+    const nama = await dialog.prompt({
+      title: 'Daftarkan ke SERGIO',
+      label: 'Nama gugus untuk risalah:',
+      defaultValue: g.judul?.slice(0, 40) || '',
+      required: true,
+      confirmText: 'Daftarkan',
+    })
     if (nama === null) return
     setBusy(true); setErr('')
     try {
@@ -225,7 +256,6 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
   }
 
   return (
-    <>
     <Backdrop onClose={onClose}>
       <div style={modalStyle(640, true)}>
         <ModalHead title="Detail Gagasan" onClose={onClose} />
@@ -240,33 +270,34 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
               <span>Dep. Asal: <b>{g.namaDepartemenAsal ?? '-'}</b></span>
               <span>Dep. Tujuan: <b>{g.namaDepartemenTujuan ?? '(sama)'}</b></span>
             </div>
-            {(g.fasilitatorNama || g.pembinaNama) && (
-              <div className="inv__meta">
-                {g.fasilitatorNama && <span>Fasilitator: <b>{g.fasilitatorNama}</b></span>}
-                {g.pembinaNama && <span>Pembina: <b>{g.pembinaNama}</b></span>}
-              </div>
-            )}
 
             {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
             {g.bisaEdit ? (
               <div className="inv__card">
-                <div className="inv__section-head"><span className="inv__section-tag">Isi</span><h3>Judul & Latar Belakang</h3></div>
+                <div className="inv__section-head"><span className="inv__section-tag">Isi</span><h3>Perbaikan Gagasan</h3></div>
                 <label className="inv__field" style={{ marginBottom: 10 }}><span>Judul Usulan</span>
                   <input value={edit.judul} onChange={(e) => setEdit({ ...edit, judul: e.target.value })} /></label>
                 <label className="inv__field" style={{ marginBottom: 10 }}><span>Latar Belakang</span>
-                  <textarea rows={4} value={edit.latarBelakang} onChange={(e) => setEdit({ ...edit, latarBelakang: e.target.value })} /></label>
+                  <textarea rows={3} value={edit.latarBelakang} onChange={(e) => setEdit({ ...edit, latarBelakang: e.target.value })} /></label>
+                <label className="inv__field" style={{ marginBottom: 10 }}><span>Masalah</span>
+                  <textarea rows={3} value={edit.masalah} onChange={(e) => setEdit({ ...edit, masalah: e.target.value })} /></label>
+                <label className="inv__field" style={{ marginBottom: 10 }}><span>Solusi Masalah</span>
+                  <textarea rows={3} value={edit.solusi} onChange={(e) => setEdit({ ...edit, solusi: e.target.value })} /></label>
                 <div className="inv__actions-bar"><button type="button" className="inv__btn inv__btn--primary" onClick={saveEdit} disabled={busy}>Simpan Perbaikan</button></div>
               </div>
             ) : (
               <div className="inv__card">
                 <div className="inv__section-head"><span className="inv__section-tag">Isi</span><h3>{g.judul}</h3></div>
-                <p style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: 13.5 }}>{g.latarBelakang || '-'}</p>
+                <Field label="Latar Belakang" value={g.latarBelakang} />
+                <Field label="Masalah" value={g.masalah} />
+                <Field label="Solusi Masalah" value={g.solusi} />
               </div>
             )}
 
             <div className="inv__card">
               <div className="inv__section-head"><span className="inv__section-tag">Alur</span><h3>Penilaian Berjenjang</h3></div>
+              <p className="inv__hint">Verifikator (Manager bagian) &rarr; GM Kompartemen Asal (memilih metodologi){lintasDept ? ' → GM Kompartemen Tujuan' : ''}.</p>
               <div className="inv__sign-grid">
                 {g.approval.map((a) => (
                   <div className="inv__sign" key={a.id}>
@@ -277,33 +308,15 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
                     {a.komentar && <div className="inv__hint" style={{ marginTop: 4 }}>&ldquo;{a.komentar}&rdquo;</div>}
                     {a.bisaSaya && (
                       <div className="inv__sign-actions" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                        {a.peran === 'Verifikator' && (
-                          <>
-                            <label className="inv__field" style={{ marginBottom: 6 }}>
-                              <span>Approve ke Metodologi</span>
-                              <select value={metodologi} onChange={(e) => setMetodologi(e.target.value)}>
-                                {metodOptions.map((o) => <option key={o} value={o}>{o === 'SS' ? 'SS (Sistem Saran)' : o === 'GIO' ? 'GIO (Gugus Inovasi Operasi)' : '5R'}</option>)}
-                              </select>
-                            </label>
-                            {lintasDept && <div className="inv__hint" style={{ marginBottom: 6 }}>Gagasan lintas departemen - hanya bisa GIO / 5R.</div>}
-                            <div className="inv__field" style={{ marginBottom: 6 }}>
-                              <span>Fasilitator</span>
-                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <input readOnly value={fasil ? `${fasil.nama} (${fasil.nik})` : ''} placeholder="Belum dipilih" style={{ flex: 1 }} />
-                                <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '6px 10px' }} onClick={() => setPickerFor('fasil')}>Cari</button>
-                              </div>
-                            </div>
-                            {metodologi === 'GIO' && (
-                              <div className="inv__field" style={{ marginBottom: 6 }}>
-                                <span>Pembina (GIO)</span>
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                  <input readOnly value={pembina ? `${pembina.nama} (${pembina.nik})` : ''} placeholder="Belum dipilih" style={{ flex: 1 }} />
-                                  <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '6px 10px' }} onClick={() => setPickerFor('pembina')}>Cari</button>
-                                </div>
-                              </div>
-                            )}
-                          </>
+                        {a.peran === 'GM Kompartemen Asal' && (
+                          <label className="inv__field" style={{ marginBottom: 6 }}>
+                            <span>Approve ke Metodologi</span>
+                            <select value={metodologi} onChange={(e) => setMetodologi(e.target.value)}>
+                              {metodOptions.map((o) => <option key={o} value={o}>{o === 'SS' ? 'SS (Sistem Saran)' : o === 'GIO' ? 'GIO (Gugus Inovasi Operasi)' : '5R'}</option>)}
+                            </select>
+                          </label>
                         )}
+                        {a.peran === 'GM Kompartemen Asal' && lintasDept && <div className="inv__hint" style={{ marginBottom: 6 }}>Lintas departemen - hanya bisa GIO / 5R.</div>}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button type="button" className="inv__btn inv__btn--primary" style={{ padding: '6px 12px' }} disabled={busy} onClick={() => act(a, 'Disetujui')}><CheckCircle2 size={14} /> Setujui</button>
                           <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '6px 12px' }} disabled={busy} onClick={() => act(a, 'Revisi')}>Revisi</button>
@@ -318,7 +331,7 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
 
             {g.siapDaftar && (
               <div className="inv__banner inv__banner--ok" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span>Gagasan disetujui. Daftarkan menjadi risalah {g.metodologi} - Ketua{g.fasilitatorNama ? ', Fasilitator' : ''}{g.pembinaNama ? ', Pembina' : ''} otomatis terisi; nama gugus & anggota (Sekretaris/Anggota) Anda lengkapi di form risalah.</span>
+                <span>Gagasan disetujui. Daftarkan menjadi risalah {g.metodologi}. Anda (Ketua) akan mengisi nama gugus, Sekretaris, Anggota, dan Fasilitator di form risalah.</span>
                 <button type="button" className="inv__btn inv__btn--primary" onClick={daftar} disabled={busy}>Daftarkan ke SERGIO</button>
               </div>
             )}
@@ -326,12 +339,15 @@ function DetailModal({ id, jenis, onClose, onChanged, navigate }) {
         )}
       </div>
     </Backdrop>
-    <PegawaiPicker
-      open={pickerFor !== null}
-      onClose={() => setPickerFor(null)}
-      onPick={(p) => { if (pickerFor === 'fasil') setFasil({ nik: p.nik, nama: p.nama }); else if (pickerFor === 'pembina') setPembina({ nik: p.nik, nama: p.nama }) }}
-    />
-    </>
+  )
+}
+
+function Field({ label, value }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--inv-green-dark)' }}>{label}</div>
+      <div style={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>{value || '-'}</div>
+    </div>
   )
 }
 

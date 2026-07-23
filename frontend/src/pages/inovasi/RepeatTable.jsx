@@ -13,7 +13,9 @@ export default function RepeatTable({
   addLabel = 'Tambah Baris',
   makeEmpty,
   minRows = 0,
+  maxRows = null,
 }) {
+  const atMax = maxRows != null && rows.length >= maxRows
   function patch(idx, key, value) {
     setRows(rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r)))
   }
@@ -72,9 +74,13 @@ export default function RepeatTable({
         </table>
       </div>
       {!readOnly && (
-        <button type="button" className="inv__btn inv__btn--soft inv__addrow" onClick={addRow}>
-          <Plus size={15} /> {addLabel}
-        </button>
+        atMax
+          ? <p className="inv__hint" style={{ marginTop: 8 }}>Batas maksimum {maxRows} baris tercapai.</p>
+          : (
+            <button type="button" className="inv__btn inv__btn--soft inv__addrow" onClick={addRow}>
+              <Plus size={15} /> {addLabel}
+            </button>
+          )
       )}
     </div>
   )

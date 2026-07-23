@@ -239,6 +239,8 @@ public class InovasiDbContext : DbContext
             e.Property(x => x.NoRegistrasi).HasColumnName("no_registrasi");
             e.Property(x => x.Judul).HasColumnName("judul");
             e.Property(x => x.LatarBelakang).HasColumnName("latar_belakang");
+            e.Property(x => x.Masalah).HasColumnName("masalah");
+            e.Property(x => x.Solusi).HasColumnName("solusi");
             e.Property(x => x.Metodologi).HasColumnName("metodologi");
             e.Property(x => x.CreatedByNik).HasColumnName("created_by_nik");
             e.Property(x => x.CreatedByNama).HasColumnName("created_by_nama");
@@ -294,6 +296,7 @@ public class InovasiDbContext : DbContext
             e.Property(x => x.IdJabatan).HasColumnName("id_jabatan");
             e.Property(x => x.NamaJabatan).HasColumnName("nama_jabatan");
             e.Property(x => x.IdUnit).HasColumnName("id_unit");
+            e.Property(x => x.IdBand).HasColumnName("id_band");
         });
         b.Entity<Penempatan>(e =>
         {
