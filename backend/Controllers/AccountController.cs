@@ -88,6 +88,19 @@ public class AccountController : ControllerBase
         var result = await _signInManager.PasswordSignInAsync(
             user, request.Password, isPersistent: true, lockoutOnFailure: true);
 
+        // Self-healing: easy.users adalah sumber kebenaran password. Login biasa TIDAK pernah
+        // menyinkronkan password (SyncFromLegacyAsync hanya nama/NIK/status/email), jadi akun
+        // yang password EASy-nya diubah SETELAH provisioning pertama akan gagal login dengan
+        // password barunya. Bila kegagalan murni soal password (bukan 2FA/lockout) padahal
+        // password cocok di easy.users, selaraskan hash Identity lalu ulangi sign-in sekali.
+        if (!result.Succeeded && !result.IsLockedOut && !result.RequiresTwoFactor
+            && await TryResyncPasswordFromLegacyAsync(user, request.Password))
+        {
+            await _audit.LogAsync("account.password_resynced", user.Id, email, "Password diselaraskan dari easy.users");
+            result = await _signInManager.PasswordSignInAsync(
+                user, request.Password, isPersistent: true, lockoutOnFailure: true);
+        }
+
         if (result.RequiresTwoFactor)
         {
             await _audit.LogAsync("login.2fa_required", user.Id, email);
@@ -333,6 +346,30 @@ public class AccountController : ControllerBase
 
         await _audit.LogAsync("account.provisioned", user.Id, user.Email, "Migrasi dari easy.users");
         return user;
+    }
+
+    // Menyelaraskan password Identity dengan easy.users bila password yang dimasukkan cocok di
+    // sana (sumber kebenaran). Dipakai saat sign-in Identity gagal karena password EASy telah
+    // berubah sejak provisioning. Mencerminkan hash memakai pola yang sama dengan
+    // ProvisionFromLegacyAsync (lewati kebijakan password: kredensial ini sudah sah di EASy).
+    // Mengembalikan true bila password berhasil diselaraskan.
+    private async Task<bool> TryResyncPasswordFromLegacyAsync(ApplicationUser user, string password)
+    {
+        if (user.GcsUserId is null)
+        {
+            return false;
+        }
+
+        var legacy = await _gcs.EasyUsers.FirstOrDefaultAsync(u => u.Id == user.GcsUserId.Value);
+        if (legacy is null || string.IsNullOrWhiteSpace(legacy.Password)
+            || !BCrypt.Net.BCrypt.Verify(password, legacy.Password))
+        {
+            return false;
+        }
+
+        user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, password);
+        var updated = await _userManager.UpdateAsync(user);
+        return updated.Succeeded;
     }
 
     // Refreshes FullName/Nik/IsActive/Email from the easy.users row this account was

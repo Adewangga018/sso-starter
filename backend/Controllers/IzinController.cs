@@ -50,12 +50,14 @@ public class IzinController : ControllerBase
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
     private readonly IConfiguration _config;
+    private readonly ApprovalService _approval;
 
-    public IzinController(GcsDbContext db, CurrentUserContext currentUser, IConfiguration config)
+    public IzinController(GcsDbContext db, CurrentUserContext currentUser, IConfiguration config, ApprovalService approval)
     {
         _db = db;
         _currentUser = currentUser;
         _config = config;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -125,6 +127,13 @@ public class IzinController : ControllerBase
 
         _db.WebSdmSuratIjin.Add(izin);
         await _db.SaveChangesAsync();
+
+        // Persetujuan MyGCS terpadu: rutekan ke manager terkait (tidak menyentuh status SDM).
+        var ringkasan = $"Izin {request.JenisIjin} ({request.KepentinganIjin})"
+            + $" · {request.TglIjin:dd MMM}"
+            + (request.TglIjinSd != request.TglIjin ? $"–{request.TglIjinSd:dd MMM}" : string.Empty)
+            + (string.IsNullOrWhiteSpace(request.Keterangan) ? string.Empty : $": {request.Keterangan.Trim()}");
+        await _approval.CreateAsync("Izin", izin.id.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
         // kode_ijin was assigned by the trigger after the INSERT, so read the row back.
         var kodeIjin = await _db.WebSdmSuratIjin

@@ -40,3 +40,18 @@ public record TeamDto(
 
 public record TugasCreateRequest(string IdPenerima, string Judul, string? Deskripsi, DateOnly? Tenggat);
 public record TugasStatusRequest(string Status);
+
+// Rekap Tim (monitoring operasional, bukan KPI): kehadiran + beban/produktivitas tugas
+// seluruh level bawahan, dari data yang sudah ada. Null bila bukan atasan.
+public record TeamRekapDto(
+    int TotalFormasi, int Terisi, int Kosong,
+    int HadirHariIni, int BelumAbsen, int FormasiKosong,
+    int HariKerjaMinggu, int HariKerjaBulan,   // pembilang: hari kerja (Sen–Jum) berjalan
+    int TugasAktif, int TugasSelesai, int TugasTerlambat,
+    IReadOnlyList<RekapAnggotaDto> Anggota,
+    IReadOnlyList<string> Peringatan);
+
+public record RekapAnggotaDto(
+    int Kedalaman, string? IdKaryawan, string Nama, string Jabatan, string? Unit, string? Band, int? Jg,
+    bool Terisi, bool HadirHariIni, int HadirMinggu, int HadirBulan,
+    int TugasAktif, int TugasSelesai, int TugasTerlambat);

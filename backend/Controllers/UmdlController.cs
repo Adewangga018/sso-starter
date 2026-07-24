@@ -30,11 +30,13 @@ public class UmdlController : ControllerBase
 
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
+    private readonly ApprovalService _approval;
 
-    public UmdlController(GcsDbContext db, CurrentUserContext currentUser)
+    public UmdlController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
     {
         _db = db;
         _currentUser = currentUser;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -158,6 +160,10 @@ public class UmdlController : ControllerBase
 
         _db.WebSdmUmdl.Add(umdl);
         await _db.SaveChangesAsync();
+
+        var ringkasan = $"UMDL · {request.TglUmdl:dd MMM yyyy}"
+            + (string.IsNullOrWhiteSpace(request.Keterangan) ? string.Empty : $": {request.Keterangan.Trim()}");
+        await _approval.CreateAsync("UMDL", umdl.ID.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
         return Ok(new UmdlDto(
             (long)umdl.ID,

@@ -85,6 +85,7 @@ function SidebarItem({ item, showLabels, onNavigate }) {
   return (
     <NavLink
       to={item.to}
+      end={item.end}
       title={showLabels ? undefined : item.label}
       onClick={onNavigate}
       className={({ isActive }) => `sidebar__item${variantClass}${isActive ? ' sidebar__item--active' : ''}`}

@@ -132,7 +132,9 @@ export default function InovasiLayout() {
       />
       <div className="app-shell__main">
         <TopBar
+          dark
           title="My Innovation"
+          titleLogo="/innovation.png"
           name={summary?.nama}
           subtitle={summary?.jabatan}
           onMenuClick={openMobile}

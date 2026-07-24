@@ -146,14 +146,14 @@
   flex-direction: column;
   align-items: stretch;
   min-height: 176px;
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
+  background: linear-gradient(155deg, #163528 0%, var(--gcs-green-900) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 20px;
   text-align: left;
   overflow: hidden;
   font-family: inherit;
-  box-shadow: 0 1px 2px rgba(15, 38, 31, 0.04);
+  box-shadow: 0 4px 14px -8px rgba(15, 38, 31, 0.4);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -177,7 +177,7 @@
 .module-tile--open:focus-visible {
   transform: translateY(-3px);
   border-color: rgba(244, 174, 70, 0.55);
-  box-shadow: 0 2px 4px rgba(15, 38, 31, 0.05), 0 18px 32px -18px rgba(15, 38, 31, 0.35);
+  box-shadow: 0 22px 36px -18px rgba(15, 38, 31, 0.6);
 }
 
 .module-tile--open:hover::before,
@@ -196,8 +196,9 @@
 
 .module-tile--disabled {
   cursor: not-allowed;
-  background: #f1f2f1;
-  border-color: rgba(15, 38, 31, 0.1);
+  background: #26332e;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 .module-tile__icon {
@@ -207,9 +208,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 38, 31, 0.05);
-  color: rgba(15, 38, 31, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.4);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Logo modul (wordmark putih) tampil langsung di atas tile hijau tua — tanpa panel/box. */
+.module-tile__logo {
+  align-self: flex-start;
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  object-position: left center;
+  transition: transform 0.18s ease;
+}
+.module-tile--open:hover .module-tile__logo,
+.module-tile--open:focus-visible .module-tile__logo {
+  transform: scale(1.04);
+}
+.module-tile--disabled .module-tile__logo {
+  opacity: 0.5;
 }
 
 .module-tile__icon--active {
@@ -232,17 +252,17 @@
 .module-tile__label {
   font-weight: 700;
   font-size: 15px;
-  color: var(--gcs-ink);
+  color: #fff;
 }
 
 .module-tile--disabled .module-tile__label {
-  color: rgba(62, 52, 48, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .module-tile__subtitle {
   font-size: 10.5px;
   letter-spacing: 0.06em;
-  color: var(--gcs-text-muted);
+  color: rgba(255, 255, 255, 0.55);
   margin-top: 3px;
 }
 
@@ -252,10 +272,10 @@
   gap: 6px;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid var(--gcs-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 12px;
   font-weight: 700;
-  color: var(--gcs-gold-700);
+  color: var(--gcs-gold-500);
 }
 
 .module-tile__arrow {
@@ -267,7 +287,7 @@
 }
 
 .module-tile__action--locked {
-  color: rgba(62, 52, 48, 0.4);
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 600;
 }
 

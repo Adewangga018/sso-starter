@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Data;
@@ -28,10 +29,16 @@ public class GcsDbContext : DbContext
     public DbSet<WebSdmUmdl> WebSdmUmdl => Set<WebSdmUmdl>();
     public DbSet<WebSdmPesanTiket> WebSdmPesanTiket => Set<WebSdmPesanTiket>();
     public DbSet<WebSdmPesanTiketDetail> WebSdmPesanTiketDetail => Set<WebSdmPesanTiketDetail>();
+    public DbSet<WebSdmCutiHak> WebSdmCutiHak => Set<WebSdmCutiHak>();
+    public DbSet<WebSdmCutiView> WebSdmCutiView => Set<WebSdmCutiView>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        // Kunci tabel legacy SDM bertipe numeric(25,0). Presisinya sudah dicocokkan di
+        // OnModelCreating, sehingga peringatan "decimal type key" hanya derau — diabaikan
+        // agar log startup bersih (tetap aman: presisi model = kolom DB).
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(SqlServerEventId.DecimalTypeKeyWarning));
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -77,7 +84,8 @@ public class GcsDbContext : DbContext
                 tb.HasTrigger("web_sdm_spl_tru");
             });
             e.HasKey(x => x.id);
-            e.Property(x => x.id).ValueGeneratedOnAdd();
+            // Kolom asli numeric(25,0); cocokkan agar tidak terpotong & hilang warning EF.
+            e.Property(x => x.id).ValueGeneratedOnAdd().HasPrecision(25, 0);
             // ROWID / tgl_spl2 etc. are NOT NULL but carry SQL defaults (newid(), getdate()).
             // ROWID is deliberately absent from the entity so INSERTs let the default fill it.
         });
@@ -176,10 +184,41 @@ public class GcsDbContext : DbContext
                 tb.HasTrigger("web_sdm_umdl_tru");
             });
             e.HasKey(x => x.ID);
-            e.Property(x => x.ID).ValueGeneratedOnAdd().HasPrecision(13, 0);
-            e.Property(x => x.ID_IJIN).HasPrecision(13, 0);
+            // Kolom asli numeric(25,0) — sebelumnya salah (13,0) dan berisiko truncation.
+            e.Property(x => x.ID).ValueGeneratedOnAdd().HasPrecision(25, 0);
+            e.Property(x => x.ID_IJIN).HasPrecision(25, 0);
             // ROWID is NOT NULL with a newid() default and is absent from the entity on
             // purpose, so INSERTs let the database fill it.
+        });
+
+        // Cuti (SDM/EASy) — read-only. Hak per periode + view pengajuan/riwayat.
+        builder.Entity<WebSdmCutiHak>(e =>
+        {
+            e.ToTable("web_sdm_cuti_hak", "intranet");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdUser).HasColumnName("id_user");
+            e.Property(x => x.TglTerbit).HasColumnName("tgl_terbit");
+            e.Property(x => x.HakTahun).HasColumnName("hak_tahun");
+            e.Property(x => x.HakCuti).HasColumnName("hak_cuti");
+            e.Property(x => x.UtangCuti).HasColumnName("utang_cuti");
+            e.Property(x => x.AmbilCuti).HasColumnName("ambil_cuti");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.BersamaCuti).HasColumnName("bersama_cuti");
+            e.Property(x => x.TglBerakhir).HasColumnName("tgl_berakhir");
+        });
+
+        builder.Entity<WebSdmCutiView>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("vw_web_sdm_cuti", "intranet");
+            e.Property(x => x.KodeCuti).HasColumnName("kode_cuti");
+            e.Property(x => x.TglInput).HasColumnName("tgl_input");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdUser).HasColumnName("id_user");
+            e.Property(x => x.ListJenis).HasColumnName("list_jenis");
+            e.Property(x => x.TglApprove).HasColumnName("tgl_approve");
         });
 
         builder.Entity<TtdElektronik>(e =>

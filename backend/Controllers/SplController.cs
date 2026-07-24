@@ -26,11 +26,13 @@ public class SplController : ControllerBase
 
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
+    private readonly ApprovalService _approval;
 
-    public SplController(GcsDbContext db, CurrentUserContext currentUser)
+    public SplController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
     {
         _db = db;
         _currentUser = currentUser;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -99,6 +101,10 @@ public class SplController : ControllerBase
 
         _db.WebSdmSpl.Add(spl);
         await _db.SaveChangesAsync();
+
+        var ringkasan = $"Lembur {request.JenisSpl} · {request.MulaiTgl:dd MMM} {request.JamMulai}–{request.JamSelesai}"
+            + (string.IsNullOrWhiteSpace(request.Keterangan) ? string.Empty : $": {request.Keterangan.Trim()}");
+        await _approval.CreateAsync("Lembur", spl.id.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
         return Ok(new SplDto(
             (long)spl.id,

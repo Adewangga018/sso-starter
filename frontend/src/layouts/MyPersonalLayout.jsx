@@ -59,7 +59,22 @@ function buildSections(profileComplete) {
           disabled: !profileComplete,
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
-        { key: 'cuti', label: 'Cuti', icon: CalendarDays, disabled: true },
+        {
+          key: 'cuti',
+          label: 'Cuti',
+          icon: CalendarDays,
+          to: '/my-personal/cuti',
+          disabled: !profileComplete,
+          disabledReason: 'Lengkapi Profil terlebih dahulu',
+        },
+        {
+          key: 'persetujuan',
+          label: 'Persetujuan',
+          icon: ClipboardCheck,
+          to: '/my-personal/persetujuan',
+          disabled: !profileComplete,
+          disabledReason: 'Lengkapi Profil terlebih dahulu',
+        },
         {
           key: 'sppd',
           label: 'SPPD',
@@ -126,7 +141,9 @@ export default function MyPersonalLayout() {
       />
       <div className="app-shell__main">
         <TopBar
+          dark
           title="My Personal"
+          titleLogo="/personal.png"
           name={summary?.nama}
           subtitle={summary?.jabatan}
           onMenuClick={openMobile}
