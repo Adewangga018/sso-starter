@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Data;
@@ -32,6 +33,10 @@ public class GcsDbContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        // Kunci tabel legacy SDM bertipe numeric(25,0). Presisinya sudah dicocokkan di
+        // OnModelCreating, sehingga peringatan "decimal type key" hanya derau — diabaikan
+        // agar log startup bersih (tetap aman: presisi model = kolom DB).
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(SqlServerEventId.DecimalTypeKeyWarning));
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -77,7 +82,8 @@ public class GcsDbContext : DbContext
                 tb.HasTrigger("web_sdm_spl_tru");
             });
             e.HasKey(x => x.id);
-            e.Property(x => x.id).ValueGeneratedOnAdd();
+            // Kolom asli numeric(25,0); cocokkan agar tidak terpotong & hilang warning EF.
+            e.Property(x => x.id).ValueGeneratedOnAdd().HasPrecision(25, 0);
             // ROWID / tgl_spl2 etc. are NOT NULL but carry SQL defaults (newid(), getdate()).
             // ROWID is deliberately absent from the entity so INSERTs let the default fill it.
         });
@@ -176,8 +182,9 @@ public class GcsDbContext : DbContext
                 tb.HasTrigger("web_sdm_umdl_tru");
             });
             e.HasKey(x => x.ID);
-            e.Property(x => x.ID).ValueGeneratedOnAdd().HasPrecision(13, 0);
-            e.Property(x => x.ID_IJIN).HasPrecision(13, 0);
+            // Kolom asli numeric(25,0) — sebelumnya salah (13,0) dan berisiko truncation.
+            e.Property(x => x.ID).ValueGeneratedOnAdd().HasPrecision(25, 0);
+            e.Property(x => x.ID_IJIN).HasPrecision(25, 0);
             // ROWID is NOT NULL with a newid() default and is absent from the entity on
             // purpose, so INSERTs let the database fill it.
         });

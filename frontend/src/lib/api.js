@@ -122,6 +122,8 @@ export const api = {
   ubahStatusTugas: (id, status) =>
     apiFetch(`/api/team/tugas/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   hapusTugas: (id) => apiFetch(`/api/team/tugas/${id}`, { method: 'DELETE' }),
+  // Rekap Tim (monitoring operasional: kehadiran + produktivitas tugas).
+  getRekapTim: () => apiFetch('/api/team/rekap'),
   // Unduh laporan tim (CSV) — mencakup seluruh level bawahan. Nama file dari server.
   unduhLaporanTim: () => apiDownload('/api/team/laporan', 'Laporan-Tim.csv'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),

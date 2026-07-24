@@ -126,7 +126,9 @@ export default function MyPersonalLayout() {
       />
       <div className="app-shell__main">
         <TopBar
+          dark
           title="My Personal"
+          titleLogo="/personal.png"
           name={summary?.nama}
           subtitle={summary?.jabatan}
           onMenuClick={openMobile}

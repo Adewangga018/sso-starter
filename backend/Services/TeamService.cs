@@ -19,10 +19,12 @@ public class TeamService
     private static readonly string[] StatusValid = ["Baru", "Dikerjakan", "Selesai", "Batal"];
 
     private readonly ApplicationDbContext _db;
+    private readonly GcsDbContext _gcs;
 
-    public TeamService(ApplicationDbContext db)
+    public TeamService(ApplicationDbContext db, GcsDbContext gcs)
     {
         _db = db;
+        _gcs = gcs;
     }
 
     public async Task<TeamDto> GetTeamAsync(string idKaryawan, bool semua)
@@ -328,6 +330,200 @@ public class TeamService
         }
     }
 
+    // ---- Rekap Tim (monitoring operasional) ----
+
+    // Menyusun rekap kehadiran + produktivitas tugas seluruh level bawahan dari data yang ada.
+    // Return null bila di luar struktur atau bukan atasan (tak punya bawahan langsung).
+    public async Task<TeamRekapDto?> RekapTimAsync(string idKaryawan)
+    {
+        var conn = _db.Database.GetDbConnection();
+        var mustClose = conn.State != ConnectionState.Open;
+        if (mustClose)
+        {
+            await conn.OpenAsync();
+        }
+
+        try
+        {
+            int myJabatan;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT TOP 1 j.id_jabatan
+                    FROM grading.penempatan p
+                    JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
+                    WHERE p.id_karyawan = @nik AND p.status = 'Aktif'";
+                AddParam(cmd, "@nik", idKaryawan);
+                var res = await cmd.ExecuteScalarAsync();
+                if (res is null)
+                {
+                    return null;
+                }
+                myJabatan = Convert.ToInt32(res);
+            }
+
+            if (!await ExistsBawahanLangsung(conn, myJabatan))
+            {
+                return null;
+            }
+
+            List<MemberRow> rows;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT h.kedalaman, j.id_jabatan, j.nama_jabatan, b.kode, j.jg,
+                           p.id_karyawan, p.nama, u.nama
+                    FROM grading.jabatan_hirarki h
+                    JOIN grading.jabatan j ON j.id_jabatan = h.id_jabatan_bawahan
+                    JOIN grading.band    b ON b.id_band    = j.id_band
+                    LEFT JOIN grading.unit_organisasi u ON u.id_unit = j.id_unit
+                    LEFT JOIN grading.penempatan p ON p.id_jabatan = j.id_jabatan AND p.status = 'Aktif'
+                    WHERE h.id_jabatan_atasan = @jab AND h.kedalaman >= 1
+                    ORDER BY h.kedalaman, j.id_band, j.nama_jabatan";
+                AddParam(cmd, "@jab", myJabatan);
+                rows = await ReadMembers(cmd);
+            }
+
+            var ids = rows.Where(m => m.IdKaryawan is not null).Select(m => m.IdKaryawan!).Distinct().ToList();
+            var todayWib = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+
+            var hadirIni = await KehadiranHariIni(ids);
+
+            // Periode rekap: minggu ini (mulai Senin) & bulan ini (mulai tanggal 1). Hari kerja
+            // = Senin–Jumat saja. Pembilang = jumlah hari kerja BERJALAN (s/d hari ini).
+            var diffSenin = ((int)todayWib.DayOfWeek + 6) % 7; // Minggu=0 -> 6, Senin -> 0
+            var awalMinggu = todayWib.AddDays(-diffSenin);
+            var awalBulan = new DateOnly(todayWib.Year, todayWib.Month, 1);
+            var hariKerjaMinggu = HitungHariKerja(awalMinggu, todayWib);
+            var hariKerjaBulan = HitungHariKerja(awalBulan, todayWib);
+
+            // Kehadiran per anggota pada HARI KERJA, gabungan kedua sumber (kamera + fingerprint/SDM),
+            // dihitung unik per (pegawai, tanggal) agar tak dobel.
+            Dictionary<string, int> hadirMinggu = new();
+            Dictionary<string, int> hadirBulan = new();
+            if (ids.Count > 0)
+            {
+                var sejak = awalMinggu < awalBulan ? awalMinggu : awalBulan;
+                var sejakDt = sejak.ToDateTime(TimeOnly.MinValue);
+                var besokDt = todayWib.AddDays(1).ToDateTime(TimeOnly.MinValue);
+
+                var kameraDays = await _db.Attendances
+                    .Where(a => a.Tanggal >= sejak && a.Tanggal <= todayWib && a.CheckIn != null && ids.Contains(a.KodePegawai))
+                    .Select(a => new { a.KodePegawai, a.Tanggal })
+                    .Distinct()
+                    .ToListAsync();
+
+                var sdmDays = await _gcs.AbsensiLog
+                    .Where(a => a.Tanggal >= sejakDt && a.Tanggal < besokDt && a.CheckIn != null && ids.Contains(a.KodePegawai))
+                    .Select(a => new { a.KodePegawai, a.Tanggal })
+                    .ToListAsync();
+
+                var pairs = new HashSet<(string Kode, DateOnly Tgl)>();
+                foreach (var r in kameraDays) pairs.Add((r.KodePegawai, r.Tanggal));
+                foreach (var r in sdmDays) pairs.Add((r.KodePegawai, DateOnly.FromDateTime(r.Tanggal)));
+
+                foreach (var (kode, tgl) in pairs)
+                {
+                    // Hanya hari kerja (Sen–Jum) yang dihitung dalam rekap kehadiran.
+                    if (tgl.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                    {
+                        continue;
+                    }
+                    if (tgl >= awalMinggu)
+                    {
+                        hadirMinggu[kode] = hadirMinggu.GetValueOrDefault(kode) + 1;
+                    }
+                    if (tgl >= awalBulan)
+                    {
+                        hadirBulan[kode] = hadirBulan.GetValueOrDefault(kode) + 1;
+                    }
+                }
+            }
+
+            // Beban tugas per anggota (aktif / selesai / terlambat).
+            Dictionary<string, (int Aktif, int Selesai, int Terlambat)> beban = new();
+            if (ids.Count > 0)
+            {
+                var agg = await _db.Tugas
+                    .Where(t => ids.Contains(t.IdPenerima))
+                    .GroupBy(t => t.IdPenerima)
+                    .Select(g => new
+                    {
+                        Id = g.Key,
+                        Aktif = g.Count(x => x.Status == "Baru" || x.Status == "Dikerjakan"),
+                        Selesai = g.Count(x => x.Status == "Selesai"),
+                        Terlambat = g.Count(x => (x.Status == "Baru" || x.Status == "Dikerjakan")
+                            && x.Tenggat != null && x.Tenggat < todayWib),
+                    })
+                    .ToListAsync();
+                beban = agg.ToDictionary(x => x.Id, x => (x.Aktif, x.Selesai, x.Terlambat));
+            }
+
+            var anggota = rows.Select(m =>
+            {
+                var terisi = m.IdKaryawan is not null;
+                var (aktif, selesai, terlambat) = terisi && beban.TryGetValue(m.IdKaryawan!, out var b) ? b : (0, 0, 0);
+                return new RekapAnggotaDto(
+                    m.Kedalaman, m.IdKaryawan, terisi ? m.Nama ?? "-" : "(kosong)", m.Jabatan, m.Unit, m.Band, m.Jg,
+                    Terisi: terisi,
+                    HadirHariIni: terisi && hadirIni.Contains(m.IdKaryawan!),
+                    HadirMinggu: terisi && hadirMinggu.TryGetValue(m.IdKaryawan!, out var hm) ? hm : 0,
+                    HadirBulan: terisi && hadirBulan.TryGetValue(m.IdKaryawan!, out var hb) ? hb : 0,
+                    TugasAktif: aktif, TugasSelesai: selesai, TugasTerlambat: terlambat);
+            }).ToList();
+
+            var terisiCount = anggota.Count(a => a.Terisi);
+            var kosong = anggota.Count - terisiCount;
+            var hadirCount = anggota.Count(a => a.HadirHariIni);
+            var belumAbsen = terisiCount - hadirCount;
+            var totalTerlambat = anggota.Sum(a => a.TugasTerlambat);
+            var totalAktif = anggota.Sum(a => a.TugasAktif);
+            var totalSelesai = anggota.Sum(a => a.TugasSelesai);
+
+            var peringatan = new List<string>();
+            if (totalTerlambat > 0)
+            {
+                peringatan.Add($"{totalTerlambat} tugas melewati tenggat dan belum selesai.");
+            }
+            if (belumAbsen > 0)
+            {
+                peringatan.Add($"{belumAbsen} anggota belum tercatat hadir hari ini.");
+            }
+            if (kosong > 0)
+            {
+                peringatan.Add($"{kosong} formasi jabatan masih kosong.");
+            }
+
+            return new TeamRekapDto(
+                TotalFormasi: anggota.Count, Terisi: terisiCount, Kosong: kosong,
+                HadirHariIni: hadirCount, BelumAbsen: belumAbsen, FormasiKosong: kosong,
+                HariKerjaMinggu: hariKerjaMinggu, HariKerjaBulan: hariKerjaBulan,
+                TugasAktif: totalAktif, TugasSelesai: totalSelesai, TugasTerlambat: totalTerlambat,
+                Anggota: anggota, Peringatan: peringatan);
+        }
+        finally
+        {
+            if (mustClose)
+            {
+                await conn.CloseAsync();
+            }
+        }
+    }
+
+    // Jumlah hari kerja (Senin–Jumat) dalam rentang inklusif [dari, sampai].
+    private static int HitungHariKerja(DateOnly dari, DateOnly sampai)
+    {
+        var n = 0;
+        for (var d = dari; d <= sampai; d = d.AddDays(1))
+        {
+            if (d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+            {
+                n++;
+            }
+        }
+        return n;
+    }
+
     private static void Line(System.Text.StringBuilder sb, string label, string value)
         => sb.Append($"{Csv(label)};{Csv(value)}\r\n");
 
@@ -458,6 +654,8 @@ public class TeamService
         Terisi: m.IdKaryawan is not null,
         HadirHariIni: m.IdKaryawan is not null && hadir.Contains(m.IdKaryawan));
 
+    // Hadir hari ini = tercatat check-in di SALAH SATU sumber, sama seperti My Personal:
+    // absensi kamera (db_mygcs.attendances) ATAU fingerprint/SDM (GCS.vw_web_sdm_absensi).
     private async Task<HashSet<string>> KehadiranHariIni(List<string> ids)
     {
         if (ids.Count == 0)
@@ -465,12 +663,24 @@ public class TeamService
             return [];
         }
         var todayWib = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
-        var present = await _db.Attendances
+        var startWib = todayWib.ToDateTime(TimeOnly.MinValue);
+        var endWib = startWib.AddDays(1);
+
+        var kamera = await _db.Attendances
             .Where(a => a.Tanggal == todayWib && a.CheckIn != null && ids.Contains(a.KodePegawai))
             .Select(a => a.KodePegawai)
             .Distinct()
             .ToListAsync();
-        return present.ToHashSet();
+
+        var sdm = await _gcs.AbsensiLog
+            .Where(a => a.Tanggal >= startWib && a.Tanggal < endWib && a.CheckIn != null && ids.Contains(a.KodePegawai))
+            .Select(a => a.KodePegawai)
+            .Distinct()
+            .ToListAsync();
+
+        var present = kamera.ToHashSet();
+        present.UnionWith(sdm);
+        return present;
     }
 
     private static async Task<bool> ExistsBawahanLangsung(DbConnection conn, int myJabatan)

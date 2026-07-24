@@ -16,6 +16,8 @@ import AdminJuriPage from './pages/AdminJuriPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyTeamPage from './pages/MyTeamPage'
+import RekapTimPage from './pages/RekapTimPage'
+import MyTeamLayout from './layouts/MyTeamLayout'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import AbsensiPage from './pages/AbsensiPage'
@@ -64,7 +66,10 @@ export default function App() {
               <Route index element={<DashboardPage />} />
             </Route>
 
-            <Route path="/team" element={<MyTeamPage />} />
+            <Route path="/team" element={<MyTeamLayout />}>
+              <Route index element={<MyTeamPage />} />
+              <Route path="rekap" element={<RekapTimPage />} />
+            </Route>
 
             <Route path="/my-personal" element={<MyPersonalLayout />}>
               <Route index element={<Navigate to="profil" replace />} />

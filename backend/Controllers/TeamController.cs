@@ -39,6 +39,23 @@ public class TeamController : ControllerBase
         return Ok(await _team.GetTeamAsync(user.Nik, semua));
     }
 
+    // Rekap Tim (monitoring operasional: kehadiran + produktivitas tugas). Hanya untuk atasan.
+    [HttpGet("rekap")]
+    public async Task<ActionResult<TeamRekapDto>> Rekap()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        var rekap = await _team.RekapTimAsync(user.Nik);
+        if (rekap is null)
+        {
+            return NotFound(new { message = "Rekap tim hanya tersedia untuk atasan yang memiliki bawahan." });
+        }
+        return Ok(rekap);
+    }
+
     // Unduh laporan tim (CSV siap-Excel) mencakup seluruh level bawahan. Hanya untuk atasan.
     [HttpGet("laporan")]
     public async Task<IActionResult> Laporan()

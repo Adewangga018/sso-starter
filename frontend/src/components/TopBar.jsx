@@ -16,7 +16,7 @@ import './TopBar.css'
  * @param {function} onMenuClick - membuka sidebar di layar kecil.
  * @param {function} onLogout   - dipanggil dari menu profil.
  */
-export default function TopBar({ title, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
+export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const { isAdmin } = useAuth()
 
@@ -63,7 +63,9 @@ export default function TopBar({ title, name, subtitle, logoSrc, dark = false, o
             <Menu size={20} />
           </button>
         )}
-        {title && <h1 className="topbar__title">{title}</h1>}
+        {titleLogo
+          ? <img src={titleLogo} alt={title} className="topbar__title-logo" />
+          : title && <h1 className="topbar__title">{title}</h1>}
       </div>
 
       <div className="topbar__actions" ref={actionsRef}>

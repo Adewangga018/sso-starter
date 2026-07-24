@@ -32,6 +32,18 @@ const MODULE_ROUTES = {
   'my-team': '/team',
 }
 
+// Logo tiap modul (di /public). Bila ada, tampil menggantikan ikon lucide pada tile.
+const MODULE_LOGOS = {
+  'my-personal': '/personal.png',
+  'my-office': '/office.png',
+  'my-prosedur': '/prosedur.png',
+  'my-health': '/health.png',
+  'my-innovation': '/innovation.png',
+  'my-asset': '/asset.png',
+  'my-progress': '/progress.png',
+  'my-team': '/team.png',
+}
+
 export default function DashboardPage() {
   const { summary } = useOutletContext()
   const navigate = useNavigate()
@@ -71,13 +83,18 @@ export default function DashboardPage() {
         {modules.map((mod) => {
           const Icon = ICONS[mod.icon] ?? Users
           const target = MODULE_ROUTES[mod.key]
+          const logo = MODULE_LOGOS[mod.key]
 
           if (!mod.enabled || !target) {
             return (
               <div className="module-tile module-tile--disabled" key={mod.key} aria-disabled="true">
-                <div className="module-tile__icon">
-                  <Icon size={24} />
-                </div>
+                {logo ? (
+                  <img src={logo} alt={mod.label} className="module-tile__logo" />
+                ) : (
+                  <div className="module-tile__icon">
+                    <Icon size={24} />
+                  </div>
+                )}
                 <div className="module-tile__body">
                   <div className="module-tile__label">{mod.label}</div>
                   <div className="module-tile__subtitle">{mod.subtitle}</div>
@@ -97,9 +114,13 @@ export default function DashboardPage() {
               onClick={() => navigate(target)}
               aria-label={`Buka modul ${mod.label}`}
             >
-              <div className="module-tile__icon module-tile__icon--active">
-                <Icon size={24} />
-              </div>
+              {logo ? (
+                <img src={logo} alt={mod.label} className="module-tile__logo" />
+              ) : (
+                <div className="module-tile__icon module-tile__icon--active">
+                  <Icon size={24} />
+                </div>
+              )}
               <div className="module-tile__body">
                 <div className="module-tile__label">{mod.label}</div>
                 <div className="module-tile__subtitle">{mod.subtitle}</div>

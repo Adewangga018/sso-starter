@@ -77,12 +77,21 @@
   cursor: pointer;
   flex-shrink: 0;
 }
+.topbar--dark .topbar__menu-btn { background: rgba(255, 255, 255, 0.12); color: #fff; }
 
 .topbar__title {
   font-size: 20px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Logo modul menggantikan judul teks di header (tampil putih di atas topbar hijau tua). */
+.topbar__title-logo {
+  height: 30px;
+  width: auto;
+  max-width: 190px;
+  object-fit: contain;
+  display: block;
 }
 
 .topbar__actions {

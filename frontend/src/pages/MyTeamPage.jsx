@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ArrowLeft, Briefcase, Building2, CheckCircle2, ChevronUp, CircleDashed, CircleSlash,
+  Briefcase, Building2, CheckCircle2, ChevronUp, CircleDashed, CircleSlash,
   Clock, ClipboardList, Download, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
@@ -61,39 +60,62 @@ export default function MyTeamPage() {
   const [saving, setSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
-  const reload = useCallback(async (s) => {
-    setLoading(true)
+  const reload = useCallback(async (s, silent = false) => {
+    if (!silent) setLoading(true)
     setError('')
     try {
       const d = await api.getMyTeam(s)
       setData(d)
       setTab((prev) => (prev === 'diberikan' && !d.punyaTim ? 'saya' : d.punyaTim && prev === 'saya' && (d.tugasUntukSaya?.length ?? 0) === 0 ? 'diberikan' : prev))
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal memuat data tim.')
+      if (!silent) setError(err instanceof ApiError ? err.message : 'Gagal memuat data tim.')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => { reload(semua) }, [semua, reload])
 
+  // Jumlah perubahan status yang sedang dikirim ke server. Selama > 0, polling diam-diam
+  // dilewati agar tidak menimpa perubahan optimistis dengan data lama yang belum ter-commit.
+  const pendingMoves = useRef(0)
+
+  // Near real-time: refresh diam-diam berkala + saat window difokuskan, agar perubahan dari
+  // akun lain (bawahan memindah status, atasan memberi tugas) muncul tanpa reload manual.
+  // Dilewati saat sedang drag / menyimpan / ada perpindahan status yang belum tersimpan.
+  useEffect(() => {
+    const tick = () => {
+      if (!document.hidden && !dragId && !saving && pendingMoves.current === 0) {
+        reload(semua, true)
+      }
+    }
+    const id = setInterval(tick, 8000)
+    window.addEventListener('focus', tick)
+    return () => { clearInterval(id); window.removeEventListener('focus', tick) }
+  }, [semua, reload, dragId, saving])
+
   // Pindahkan status tugas (drag & drop) — optimistis, revert bila gagal.
   async function moveTask(id, newStatus) {
     setDragId(null); setDragOver(null)
-    let changed = false
-    setData((d) => {
-      const upd = (list) => (list ?? []).map((t) => {
-        if (t.id === id && t.status !== newStatus) { changed = true; return { ...t, status: newStatus } }
-        return t
-      })
-      return { ...d, tugasUntukSaya: upd(d.tugasUntukSaya), tugasDiberikan: upd(d.tugasDiberikan) }
-    })
-    if (!changed) return
+
+    // Tentukan perubahan dari state SAAT INI. (Jangan mengandalkan efek samping di dalam
+    // updater setData: React tak menjalankannya sinkron, sehingga API bisa terlewat dan
+    // status balik lagi saat refresh — inilah bug sebelumnya.)
+    const current = [...(data?.tugasUntukSaya ?? []), ...(data?.tugasDiberikan ?? [])]
+      .find((t) => t.id === id)
+    if (!current || current.status === newStatus) return
+
+    const upd = (list) => (list ?? []).map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    setData((d) => ({ ...d, tugasUntukSaya: upd(d.tugasUntukSaya), tugasDiberikan: upd(d.tugasDiberikan) }))
+
+    pendingMoves.current += 1
     try {
       await api.ubahStatusTugas(id, newStatus)
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mengubah status.' })
       reload(semua)
+    } finally {
+      pendingMoves.current -= 1
     }
   }
 
@@ -167,34 +189,27 @@ export default function MyTeamPage() {
 
   return (
     <div className="mt">
-      <Link to="/dashboard" className="mt__back"><ArrowLeft size={16} /> Dashboard</Link>
+      <div className="mt__intro">
+        <h2 className="mt__intro-title">Tim &amp; Tugas</h2>
+        <p className="mt__intro-sub">Pantau tim dan kelola delegasi tugas dalam satu layar.</p>
+      </div>
 
-      {/* Hero */}
-      <header className="mt__hero">
-        <div className="mt__hero-main">
-          <div className="mt__hero-icon"><Users2 size={26} /></div>
-          <div>
-            <h1>My Team</h1>
-            <p>Pantau tim & kelola tugas dalam satu layar.</p>
+      {data?.jabatanSaya && (
+        <div className="mt__context">
+          <div className="mt__context-pos">
+            <Briefcase size={15} />
+            <span className="mt__context-role">{data.jabatanSaya}</span>
+            {data.bandSaya && <span className="mt-chip">Band {data.bandSaya}</span>}
+            {data.jgSaya != null && <span className="mt-chip">JG {data.jgSaya}</span>}
           </div>
-        </div>
-        {data?.jabatanSaya && (
-          <div className="mt__hero-meta">
-            <div className="mt__hero-pos">
-              <Briefcase size={14} />
-              <span>{data.jabatanSaya}</span>
-              {data.bandSaya && <span className="mt__hero-badge">Band {data.bandSaya}</span>}
-              {data.jgSaya != null && <span className="mt__hero-badge">JG {data.jgSaya}</span>}
+          {data.atasan && (
+            <div className="mt__context-atasan">
+              <ChevronUp size={14} /> Atasan: <b>{data.atasan.nama ?? 'belum terisi'}</b>
+              <span className="mt__context-atasan-role">· {data.atasan.jabatan}</span>
             </div>
-            {data.atasan && (
-              <div className="mt__hero-atasan">
-                <ChevronUp size={14} /> Atasan: <b>{data.atasan.nama ?? 'belum terisi'}</b>
-                <span className="mt__hero-atasan-role">· {data.atasan.jabatan}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </header>
+          )}
+        </div>
+      )}
 
       {error && <div className="mt__alert mt__alert--err">{error}</div>}
       {msg && <div className={`mt__alert mt__alert--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
@@ -263,14 +278,9 @@ export default function MyTeamPage() {
                   )}
                 </div>
                 {data.punyaTim && (
-                  <div className="mt-board__actions">
-                    <button type="button" className="mt-btn mt-btn--ghost" onClick={unduhLaporan} disabled={downloading} title="Unduh laporan tim seluruh level (CSV)">
-                      {downloading ? <Loader2 size={15} className="mt__spin" /> : <Download size={15} />} Unduh Laporan
-                    </button>
-                    <button type="button" className="mt-btn" onClick={() => setFormOpen((v) => !v)}>
-                      <Plus size={15} /> Beri Tugas
-                    </button>
-                  </div>
+                  <button type="button" className="mt-btn" onClick={() => setFormOpen((v) => !v)}>
+                    <Plus size={15} /> Beri Tugas
+                  </button>
                 )}
               </div>
 
