@@ -91,6 +91,27 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* Scrollbar menyatu dengan latar hijau sidebar (Firefox). */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* Chromium/WebKit: track transparan (ikut hijau sidebar), thumb hijau muda samar. */
+.sidebar__nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar__nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .sidebar__section-label {

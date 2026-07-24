@@ -11,12 +11,14 @@ import './inovasi.css'
 export default function InovasiList() {
   const ctx = useOutletContext() || {}
   const base = ctx.base ?? '/my-innovation'
+  const isApprover = ctx.isApprover === true
   const navigate = useNavigate()
   const dialog = useDialog()
 
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
   const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
 
   async function load() {
     try {
@@ -30,14 +32,16 @@ export default function InovasiList() {
   }
   useEffect(() => { load() }, [])
 
+  // Opsi status diturunkan dari data yang ada (bukan daftar statis) agar selalu relevan.
+  const statusOptions = useMemo(() => [...new Set((rows ?? []).map((r) => r.status).filter(Boolean))].sort(), [rows])
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    const list = rows ?? []
-    if (!term) return list
-    return list.filter((r) =>
-      [r.noRegistrasi, r.jenis, r.namaGugus, r.judul, r.status, r.namaDepartemen, r.ketuaNama]
-        .some((v) => (v ?? '').toString().toLowerCase().includes(term)))
-  }, [rows, search])
+    return (rows ?? []).filter((r) =>
+      (!status || r.status === status) &&
+      (!term || [r.noRegistrasi, r.jenis, r.namaGugus, r.judul, r.status, r.namaDepartemen, r.ketuaNama]
+        .some((v) => (v ?? '').toString().toLowerCase().includes(term))))
+  }, [rows, search, status])
 
   async function handleDelete(row) {
     if (!(await dialog.confirm({ title: 'Hapus Risalah', message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"?`, danger: true, confirmText: 'Hapus' }))) return
@@ -54,9 +58,17 @@ export default function InovasiList() {
       {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
       <div className="inv__toolbar">
-        <div className="inv__search">
-          <span className="inv__search-icon"><Search size={16} /></span>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari no. registrasi, metodologi, nama gugus, judul, status..." />
+        <div className="inv__filters">
+          <div className="inv__search">
+            <span className="inv__search-icon"><Search size={16} /></span>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari no. registrasi, metodologi, nama gugus, judul, status..." />
+          </div>
+          {isApprover && (
+            <select className="inv__select" value={status} onChange={(e) => setStatus(e.target.value)} title="Filter status">
+              <option value="">Semua Status</option>
+              {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="inv__btn inv__btn--ghost" onClick={load} title="Muat ulang"><RotateCw size={15} /></button>

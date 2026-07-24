@@ -1,7 +1,9 @@
 // Visualisasi diagram tulang ikan (Ishikawa) dari data P.6 Fishbone.
-// Tiap faktor punya rantai "Penyebab Teridentifikasi" (kotak bergaris) yang
-// mengakar keluar dari rusuk, berakhir pada "Akar Penyebab Dominan" (kotak
-// terisi). Seluruh teks ditampilkan penuh (dibungkus multi-baris, tanpa "...").
+// Urutan rusuk dibaca dari garis tengah ke luar: penyebab ke-1, ke-2, dst
+// (kotak bergaris; penyebab terakhir = akar terdalam, kotak terisi), lalu kotak
+// faktor (judul) di ujung rusuk. "Akar Penyebab
+// Dominan" sengaja tidak digambar di sini — cukup tampil pada tabel P.6.
+// Seluruh teks ditampilkan penuh (dibungkus multi-baris, tanpa "...").
 const COLORS = ['#1f6b39', '#2f7d4f', '#3b6ea5', '#a5762f', '#7a4fa3', '#b0533a']
 const CAP = 6 // maksimum penyebab yang divisualkan per faktor
 
@@ -43,27 +45,25 @@ export default function FishboneDiagram({ fishbone = [], masalah }) {
   const items = (fishbone || []).filter((f) => f.faktor)
   if (!items.length) return null
 
-  const RIB = 84, GAP = 8, FACT_H = 26, LINE_H = 12, PAD = 8
+  const RIB = 46, GAP = 8, FACT_H = 26, LINE_H = 12, PAD = 8
   const BW = 168, CAUSE_CHARS = 28
-  const AW = 172, AKAR_CHARS = 28, AKAR_HEAD = 13
   const spineX0 = 40, headX = 1020, W = 1240
 
-  // Geometri rantai + sisi (atas/bawah) per faktor.
+  // Geometri rantai + sisi (atas/bawah) per faktor. Jarak "near" diukur dari
+  // ujung rusuk (dekat garis tengah) ke arah luar: penyebab dulu, faktor terakhir.
   const factors = items.map((f, i) => {
     const causes = splitCauses(f.penyebab).map((text) => {
       const lines = wrap(text, CAUSE_CHARS)
       return { lines, h: lines.length * LINE_H + PAD }
     })
-    const akarLines = f.akarDominan ? wrap(f.akarDominan, AKAR_CHARS) : null
-    const akarH = akarLines ? akarLines.length * LINE_H + PAD + AKAR_HEAD : 0
 
-    let d = FACT_H / 2 + GAP
+    let d = 0
     const placed = causes.map((c) => { const near = d; d += c.h + GAP; return { ...c, near } })
-    const akarNear = akarLines ? d : null
-    if (akarLines) d += akarH + GAP
+    const factNear = d // sisi dalam kotak faktor
+    d += FACT_H
     const factW = Math.max(130, FAKTOR_LABEL(f.faktor).length * 7.3 + 26)
     const dir = SIDE[f.faktor] ?? (i % 2 === 0 ? -1 : 1)
-    return { f, i, causes: placed, akarLines, akarH, akarNear, extent: d, factW, dir }
+    return { f, i, causes: placed, factNear, extent: RIB + d, factW, dir }
   })
 
   // Sebar horizontal: kelompok atas & bawah masing-masing merata sepanjang tulang,
@@ -79,7 +79,7 @@ export default function FishboneDiagram({ fishbone = [], masalah }) {
   const maxExtent = Math.max(...factors.map((x) => x.extent))
   const headLines = wrap(masalah || 'Masalah Utama', 20)
   const headH = Math.max(92, headLines.length * 15 + 26)
-  const midY = Math.max(190, RIB + maxExtent + 20, headH / 2 + 20)
+  const midY = Math.max(190, maxExtent + 20, headH / 2 + 20)
   const H = midY * 2
 
   return (
@@ -94,51 +94,37 @@ export default function FishboneDiagram({ fishbone = [], masalah }) {
           {headLines.map((ln, i) => <tspan key={i} x={headX + 110} dy={i === 0 ? 0 : 15}>{ln}</tspan>)}
         </text>
 
-        {factors.map(({ f, i, causes, akarLines, akarH, akarNear, factW, dir, baseX }) => {
+        {factors.map(({ f, i, causes, factNear, factW, dir, baseX }) => {
           const tipX = baseX - 62
-          const tipY = midY + dir * RIB
+          const tipY = midY + dir * RIB // ujung rusuk diagonal = pangkal rantai
           const color = COLORS[i % COLORS.length]
-          const endD = akarNear != null ? akarNear + akarH
-            : (causes.length ? causes[causes.length - 1].near + causes[causes.length - 1].h : FACT_H / 2)
+          const factTopY = dir === 1 ? tipY + dir * factNear : tipY + dir * (factNear + FACT_H)
 
           return (
             <g key={i}>
-              {/* Rusuk diagonal spine -> faktor */}
+              {/* Rusuk diagonal spine -> pangkal rantai */}
               <line x1={baseX} y1={midY} x2={tipX} y2={tipY} stroke={color} strokeWidth={2.5} />
-              {/* Konektor rantai penyebab */}
-              {(causes.length > 0 || akarNear != null) && (
-                <line x1={tipX} y1={tipY + dir * (FACT_H / 2)} x2={tipX} y2={tipY + dir * endD} stroke={color} strokeWidth={1.4} />
-              )}
-              {/* Kotak penyebab (bergaris) */}
+              {/* Konektor vertikal: pangkal rantai -> kotak faktor di ujung */}
+              <line x1={tipX} y1={tipY} x2={tipX} y2={tipY + dir * factNear} stroke={color} strokeWidth={1.4} />
+              {/* Kotak penyebab (bergaris), urut dari garis tengah ke luar */}
               {causes.map((c, ci) => {
                 const nearY = tipY + dir * c.near
                 const topY = dir === 1 ? nearY : nearY - c.h
+                // Penyebab terakhir (paling luar) = akar terdalam -> kotak terisi.
+                const last = ci === causes.length - 1
                 return (
                   <g key={ci}>
-                    <rect x={tipX - BW / 2} y={topY} width={BW} height={c.h} rx={4} fill="#fff" stroke={color} strokeWidth={1.2} />
+                    <rect x={tipX - BW / 2} y={topY} width={BW} height={c.h} rx={4}
+                      fill={last ? color : '#fff'} stroke={last ? '#14331f' : color} strokeWidth={last ? 2 : 1.2} />
                     {c.lines.map((ln, li) => (
-                      <text key={li} x={tipX} y={topY + 4 + LINE_H * (li + 0.85)} fill="#2c3a30" fontSize={9.5} textAnchor="middle">{ln}</text>
+                      <text key={li} x={tipX} y={topY + 4 + LINE_H * (li + 0.85)} fill={last ? '#fff' : '#2c3a30'} fontSize={9.5} fontWeight={last ? 700 : 400} textAnchor="middle">{ln}</text>
                     ))}
                   </g>
                 )
               })}
-              {/* Akar penyebab dominan = kotak terisi */}
-              {akarLines && (() => {
-                const nearY = tipY + dir * akarNear
-                const topY = dir === 1 ? nearY : nearY - akarH
-                return (
-                  <g>
-                    <rect x={tipX - AW / 2} y={topY} width={AW} height={akarH} rx={5} fill={color} stroke="#14331f" strokeWidth={2} />
-                    <text x={tipX} y={topY + 11} fill="#fff" fontSize={8.5} fontWeight={700} textAnchor="middle">AKAR{f.prioritas ? ` · Prioritas ${f.prioritas}` : ''}</text>
-                    {akarLines.map((ln, li) => (
-                      <text key={li} x={tipX} y={topY + AKAR_HEAD + 4 + LINE_H * (li + 0.85)} fill="#fff" fontSize={9.5} textAnchor="middle">{ln}</text>
-                    ))}
-                  </g>
-                )
-              })()}
-              {/* Kotak faktor (lebar mengikuti panjang label) */}
-              <rect x={tipX - factW / 2} y={tipY - FACT_H / 2} width={factW} height={FACT_H} rx={6} fill={color} />
-              <text x={tipX} y={tipY + 5} fill="#fff" fontSize={12} fontWeight={700} textAnchor="middle">{FAKTOR_LABEL(f.faktor)}</text>
+              {/* Kotak faktor (judul) di ujung rusuk, lebar mengikuti panjang label */}
+              <rect x={tipX - factW / 2} y={factTopY} width={factW} height={FACT_H} rx={6} fill={color} />
+              <text x={tipX} y={factTopY + FACT_H / 2 + 4} fill="#fff" fontSize={12} fontWeight={700} textAnchor="middle">{FAKTOR_LABEL(f.faktor)}</text>
             </g>
           )
         })}

@@ -11,8 +11,8 @@ using SsoBackend.Models.Inovasi;
 
 namespace SsoBackend.Controllers;
 
-// Penilaian Juri untuk My Innovation. Admin menyusun STREAM (panel 4 orang:
-// 1 Ketua, 2 Anggota, 1 Sekretaris) & menugaskannya ke sebuah gugus. Ketua &
+// Penilaian Juri untuk My Innovation. Admin menyusun STREAM (panel 5 orang:
+// 1 Ketua, 3 Anggota, 1 Sekretaris) & menugaskannya ke sebuah gugus. Ketua &
 // Anggota memberi skor 1-10 per kriteria (rubrik GIO/SS atau 5R sesuai jenis
 // gugus); Sekretaris hanya melihat. Otorisasi in-code (tidak pakai
 // [Authorize(Roles=...)]), konsisten dengan controller lain.
@@ -23,6 +23,7 @@ public class PenilaianController : ControllerBase
 {
     private const string AdminRole = "Admin";
     private const string JuriRole = "Juri";
+    private const string PengelolaJuriRole = "PengelolaJuri";
 
     private readonly InovasiDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -33,8 +34,14 @@ public class PenilaianController : ControllerBase
         _userManager = userManager;
     }
 
-    private bool IsAdmin() =>
-        User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
+    private bool HasRole(string role) =>
+        User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == role);
+
+    private bool IsAdmin() => HasRole(AdminRole);
+
+    // Boleh mengelola penjurian: Admin IT ATAU Pengelola Juri (koordinator yang
+    // ditunjuk Admin; haknya terbatas pada Stream Penilai & Penugasan ke Inovasi).
+    private bool IsPengelola() => IsAdmin() || HasRole(PengelolaJuriRole);
 
     private string? Uid() => _userManager.GetUserId(User);
 
@@ -69,7 +76,7 @@ public class PenilaianController : ControllerBase
     [HttpGet("juri-users")]
     public async Task<IActionResult> JuriUsers()
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var users = await _userManager.GetUsersInRoleAsync(JuriRole);
         var rows = users
             .OrderBy(u => u.FullName)
@@ -84,7 +91,7 @@ public class PenilaianController : ControllerBase
     [HttpGet("stream")]
     public async Task<IActionResult> ListStream()
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var streams = await _db.PenilaianStream.AsNoTracking()
             .Include(s => s.Anggota)
             .OrderByDescending(s => s.Id)
@@ -95,7 +102,7 @@ public class PenilaianController : ControllerBase
     [HttpGet("stream/{id:int}")]
     public async Task<IActionResult> GetStream(int id)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var s = await _db.PenilaianStream.AsNoTracking().Include(x => x.Anggota).FirstOrDefaultAsync(x => x.Id == id);
         return s is null ? NotFound() : Ok(ToStreamDto(s));
     }
@@ -103,7 +110,7 @@ public class PenilaianController : ControllerBase
     [HttpPost("stream")]
     public async Task<IActionResult> CreateStream([FromBody] SaveStreamRequest req)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         if (string.IsNullOrWhiteSpace(req.Nama)) return BadRequest(new { message = "Nama stream wajib diisi." });
         var err = await ValidateAnggotaAsync(req.Anggota);
         if (err != null) return BadRequest(new { message = err });
@@ -135,7 +142,7 @@ public class PenilaianController : ControllerBase
     [HttpPut("stream/{id:int}")]
     public async Task<IActionResult> UpdateStream(int id, [FromBody] SaveStreamRequest req)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var s = await _db.PenilaianStream.Include(x => x.Anggota).FirstOrDefaultAsync(x => x.Id == id);
         if (s is null) return NotFound();
         if (string.IsNullOrWhiteSpace(req.Nama)) return BadRequest(new { message = "Nama stream wajib diisi." });
@@ -166,7 +173,7 @@ public class PenilaianController : ControllerBase
     [HttpDelete("stream/{id:int}")]
     public async Task<IActionResult> DeleteStream(int id)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var s = await _db.PenilaianStream.FirstOrDefaultAsync(x => x.Id == id);
         if (s is null) return NotFound();
         if (await _db.PenilaianPenugasan.AnyAsync(p => p.IdStream == id))
@@ -183,15 +190,15 @@ public class PenilaianController : ControllerBase
             .Select(a => new StreamAnggotaDto(a.Id, a.UserId, a.Nik, a.Nama, a.Peran))
             .ToList());
 
-    // Komposisi wajib: 1 Ketua, 2 Anggota, 1 Sekretaris; semua user ada & ber-role Juri.
+    // Komposisi wajib: 1 Ketua, 3 Anggota, 1 Sekretaris; semua user ada & ber-role Juri.
     private async Task<string?> ValidateAnggotaAsync(IReadOnlyList<StreamAnggotaInput>? anggota)
     {
         if (anggota is null || anggota.Count == 0) return "Anggota stream wajib diisi.";
         var ketua = anggota.Count(a => a.Peran == "Ketua");
         var ang = anggota.Count(a => a.Peran == "Anggota");
         var sek = anggota.Count(a => a.Peran == "Sekretaris");
-        if (ketua != 1 || ang != 2 || sek != 1)
-            return "Komposisi stream harus tepat: 1 Ketua, 2 Anggota, dan 1 Sekretaris.";
+        if (ketua != 1 || ang != 3 || sek != 1)
+            return "Komposisi stream harus tepat: 1 Ketua, 3 Anggota, dan 1 Sekretaris.";
         var ids = anggota.Select(a => a.UserId).ToList();
         if (ids.Any(string.IsNullOrWhiteSpace)) return "Ada anggota tanpa pengguna terpilih.";
         if (ids.Distinct().Count() != ids.Count) return "Seorang pengguna terpilih lebih dari satu peran.";
@@ -211,9 +218,11 @@ public class PenilaianController : ControllerBase
     [HttpGet("gugus-options")]
     public async Task<IActionResult> GugusOptions()
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
+        // Hanya inovasi yang SUDAH menuntaskan verifikasi Pengesahan Akhir
+        // (status "Selesai") yang boleh dinilai juri.
         var rows = await _db.Gugus.AsNoTracking()
-            .Where(g => g.Status != "Draft")
+            .Where(g => g.Status == "Selesai")
             .OrderByDescending(g => g.Id)
             .Select(g => new GugusOptionDto(g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.Judul, g.Status))
             .ToListAsync();
@@ -223,7 +232,7 @@ public class PenilaianController : ControllerBase
     [HttpGet("penugasan")]
     public async Task<IActionResult> ListPenugasan()
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var rows = await (
             from p in _db.PenilaianPenugasan.AsNoTracking()
             join s in _db.PenilaianStream on p.IdStream equals s.Id
@@ -238,8 +247,12 @@ public class PenilaianController : ControllerBase
     [HttpPost("penugasan")]
     public async Task<IActionResult> CreatePenugasan([FromBody] CreatePenugasanRequest req)
     {
-        if (!IsAdmin()) return Forbid();
-        if (!await _db.Gugus.AnyAsync(g => g.Id == req.IdGugus)) return NotFound(new { message = "Inovasi tidak ditemukan." });
+        if (!IsPengelola()) return Forbid();
+        var gugus = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(g => g.Id == req.IdGugus);
+        if (gugus is null) return NotFound(new { message = "Inovasi tidak ditemukan." });
+        // Hanya inovasi yang sudah menuntaskan verifikasi Pengesahan Akhir.
+        if (gugus.Status != "Selesai")
+            return BadRequest(new { message = "Inovasi belum menuntaskan Pengesahan Akhir, sehingga belum bisa dinilai." });
         if (!await _db.PenilaianStream.AnyAsync(s => s.Id == req.IdStream)) return NotFound(new { message = "Stream tidak ditemukan." });
         if (await _db.PenilaianPenugasan.AnyAsync(p => p.IdGugus == req.IdGugus && p.Status == "Berjalan"))
             return BadRequest(new { message = "Inovasi ini sudah memiliki penugasan yang sedang berjalan." });
@@ -260,7 +273,7 @@ public class PenilaianController : ControllerBase
     [HttpPost("penugasan/{id:int}/tutup")]
     public async Task<IActionResult> TutupPenugasan(int id)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var p = await _db.PenilaianPenugasan.FirstOrDefaultAsync(x => x.Id == id);
         if (p is null) return NotFound();
         p.Status = "Selesai";
@@ -271,7 +284,7 @@ public class PenilaianController : ControllerBase
     [HttpDelete("penugasan/{id:int}")]
     public async Task<IActionResult> DeletePenugasan(int id)
     {
-        if (!IsAdmin()) return Forbid();
+        if (!IsPengelola()) return Forbid();
         var p = await _db.PenilaianPenugasan.FirstOrDefaultAsync(x => x.Id == id);
         if (p is null) return NotFound();
         _db.PenilaianPenugasan.Remove(p);   // skor cascade
@@ -312,7 +325,7 @@ public class PenilaianController : ControllerBase
 
         var me = await _db.PenilaianStreamAnggota.AsNoTracking()
             .FirstOrDefaultAsync(a => a.IdStream == p.IdStream && a.UserId == uid);
-        if (me is null && !IsAdmin()) return Forbid();
+        if (me is null && !IsPengelola()) return Forbid();
 
         var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == p.IdGugus);
         if (g is null) return NotFound();
@@ -396,10 +409,75 @@ public class PenilaianController : ControllerBase
         if (p is null) return NotFound();
         var member = await _db.PenilaianStreamAnggota.AsNoTracking()
             .AnyAsync(a => a.IdStream == p.IdStream && a.UserId == uid);
-        if (!member && !IsAdmin()) return Forbid();
+        if (!member && !IsPengelola()) return Forbid();
         var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == p.IdGugus);
         if (g is null) return NotFound();
         return Ok(await BuildHasilAsync(p, FormFor(g.Jenis)));
+    }
+
+    // =======================================================================
+    // Rekap nilai seluruh risalah yang sudah dinilai - dipakai kolom "Kategori
+    // Penghargaan" pada Roadmap Inovasi. Hanya membaca hasil agregat (bukan skor
+    // per juri), sehingga aman dibuka pengguna biasa. Bila satu gugus punya lebih
+    // dari satu penugasan, yang dipakai adalah penugasan terbaru.
+    // =======================================================================
+    [HttpGet("rekap")]
+    public async Task<ActionResult<IReadOnlyList<RekapNilaiDto>>> Rekap()
+    {
+        // Penugasan terbaru per gugus.
+        var penugasan = await (
+            from p in _db.PenilaianPenugasan.AsNoTracking()
+            join g in _db.Gugus.AsNoTracking() on p.IdGugus equals g.Id
+            select new { p.Id, p.IdGugus, p.IdStream, p.Status, g.Jenis }
+        ).ToListAsync();
+        if (penugasan.Count == 0) return Ok(Array.Empty<RekapNilaiDto>());
+
+        var terbaru = penugasan.GroupBy(x => x.IdGugus)
+            .Select(grp => grp.OrderByDescending(x => x.Id).First())
+            .ToList();
+        var idPenugasan = terbaru.Select(x => x.Id).ToHashSet();
+        var idStream = terbaru.Select(x => x.IdStream).ToHashSet();
+
+        var kriteria = await _db.PenilaianKriteria.AsNoTracking().Where(k => k.Aktif).ToListAsync();
+        var bobot = kriteria.ToDictionary(k => k.Id, k => k.BobotPersen);
+        var jumlahKriteria = kriteria.GroupBy(k => k.JenisForm).ToDictionary(grp => grp.Key, grp => grp.Count());
+
+        var anggota = await _db.PenilaianStreamAnggota.AsNoTracking()
+            .Where(a => idStream.Contains(a.IdStream) && a.Peran != "Sekretaris")
+            .Select(a => new { a.IdStream, a.UserId }).ToListAsync();
+        var anggotaPerStream = anggota.GroupBy(a => a.IdStream)
+            .ToDictionary(grp => grp.Key, grp => grp.Select(a => a.UserId).ToList());
+
+        var skor = await _db.PenilaianSkor.AsNoTracking()
+            .Where(x => idPenugasan.Contains(x.IdPenugasan))
+            .Select(x => new { x.IdPenugasan, x.IdKriteria, x.PenilaiUserId, x.Nilai }).ToListAsync();
+        var skorPerPenugasan = skor.GroupBy(x => x.IdPenugasan).ToDictionary(grp => grp.Key, grp => grp.ToList());
+
+        var hasil = new List<RekapNilaiDto>(terbaru.Count);
+        foreach (var p in terbaru)
+        {
+            var form = FormFor(p.Jenis);
+            var totalKriteria = jumlahKriteria.GetValueOrDefault(form);
+            var penilai = anggotaPerStream.GetValueOrDefault(p.IdStream) ?? new List<string>();
+            var baris = skorPerPenugasan.GetValueOrDefault(p.Id) ?? new();
+
+            var nilaiLengkap = new List<decimal>();
+            foreach (var userId in penilai)
+            {
+                var mine = baris.Where(x => x.PenilaiUserId == userId).ToList();
+                if (totalKriteria == 0 || mine.Count < totalKriteria) continue;   // belum tuntas
+                decimal nilai = 0m;
+                foreach (var sc in mine)
+                    if (bobot.TryGetValue(sc.IdKriteria, out var b)) nilai += (sc.Nilai / 10m) * b;
+                nilaiLengkap.Add(Math.Round(nilai, 2));
+            }
+
+            var akhir = nilaiLengkap.Count > 0 ? Math.Round(nilaiLengkap.Average(), 2) : 0m;
+            hasil.Add(new RekapNilaiDto(p.IdGugus, akhir,
+                nilaiLengkap.Count > 0 ? Kategori(akhir) : "-",
+                p.Status, nilaiLengkap.Count, penilai.Count));
+        }
+        return Ok(hasil);
     }
 
     // Nilai per penilai = SUM(nilai/10 * bobot_persen) (0..100). Nilai akhir stream

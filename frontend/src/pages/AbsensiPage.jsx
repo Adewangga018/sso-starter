@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import AbsensiKamera from './AbsensiKamera'
 import './AbsensiPage.css'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+]
 
 const COLUMNS = [
   { key: 'tanggal', label: 'Tanggal', className: 'absensi__col-tanggal' },
@@ -35,6 +40,14 @@ function formatTanggal(value) {
   return `${dd}-${mm}-${date.getFullYear()}`
 }
 
+// Bulan (1-12) & tahun sebuah baris; null bila tanggalnya tidak terbaca.
+function periodeBaris(value) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return { bulan: date.getMonth() + 1, tahun: date.getFullYear() }
+}
+
 export default function AbsensiPage() {
   const [rows, setRows] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -42,6 +55,9 @@ export default function AbsensiPage() {
   const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState({ key: 'tanggal', direction: 'desc' })
+  // Log ditampilkan per bulan. '' pada bulan = seluruh bulan pada tahun terpilih.
+  const [bulan, setBulan] = useState('')
+  const [tahun, setTahun] = useState('')
 
   const loadRows = useCallback(() => {
     setLoadError('')
@@ -64,15 +80,49 @@ export default function AbsensiPage() {
     loadRows()
   }, [loadRows])
 
+  // Tahun yang benar-benar punya data, terbaru di atas.
+  const tahunOptions = useMemo(() => {
+    const set = new Set()
+    for (const r of rows ?? []) {
+      const p = periodeBaris(r.tanggal)
+      if (p) set.add(p.tahun)
+    }
+    return [...set].sort((a, b) => b - a)
+  }, [rows])
+
+  // Setelah data termuat, buka pada bulan berjalan bila ada datanya; jika tidak,
+  // pada bulan terbaru yang tersedia. Dijalankan sekali saja - tanpa penanda ini
+  // pilihan "Semua Tahun" dari pengguna akan langsung tertimpa lagi.
+  const periodeAwalDipasang = useRef(false)
+  useEffect(() => {
+    if (periodeAwalDipasang.current || !rows?.length) return
+    const periode = rows.map((r) => periodeBaris(r.tanggal)).filter(Boolean)
+    if (periode.length === 0) return
+    periodeAwalDipasang.current = true
+    const now = new Date()
+    const adaSekarang = periode.some((p) => p.tahun === now.getFullYear() && p.bulan === now.getMonth() + 1)
+    if (adaSekarang) {
+      setTahun(now.getFullYear())
+      setBulan(now.getMonth() + 1)
+      return
+    }
+    const terbaru = periode.reduce((a, b) => (b.tahun > a.tahun || (b.tahun === a.tahun && b.bulan > a.bulan) ? b : a))
+    setTahun(terbaru.tahun)
+    setBulan(terbaru.bulan)
+  }, [rows])
+
   const filtered = useMemo(() => {
     if (!rows) return []
     const term = search.trim().toLowerCase()
-    if (!term) return rows
-    return rows.filter((r) =>
-      [formatTanggal(r.tanggal), r.namaHari, r.checkIn, r.checkOut, r.catatanMangkir]
+    return rows.filter((r) => {
+      const p = periodeBaris(r.tanggal)
+      if (tahun !== '' && p?.tahun !== Number(tahun)) return false
+      if (bulan !== '' && p?.bulan !== Number(bulan)) return false
+      if (!term) return true
+      return [formatTanggal(r.tanggal), r.namaHari, r.checkIn, r.checkOut, r.catatanMangkir]
         .some((v) => (v ?? '').toString().toLowerCase().includes(term))
-    )
-  }, [rows, search])
+    })
+  }, [rows, search, bulan, tahun])
 
   const sorted = useMemo(() => {
     const list = [...filtered]
@@ -119,6 +169,16 @@ export default function AbsensiPage() {
     setPage(1)
   }
 
+  function handlePeriodeChange(setter, value) {
+    setter(value === '' ? '' : Number(value))
+    setPage(1)
+  }
+
+  // Label periode untuk ringkasan di bawah tabel.
+  const labelPeriode = tahun === ''
+    ? 'seluruh periode'
+    : bulan === '' ? `tahun ${tahun}` : `${BULAN[Number(bulan) - 1]} ${tahun}`
+
   return (
     <div className="absensi">
       <AbsensiKamera onSubmitted={loadRows} />
@@ -136,6 +196,32 @@ export default function AbsensiPage() {
       ) : (
       <div className="absensi__card">
         <div className="absensi__section-title">Log Absensi</div>
+
+        <div className="absensi__periode">
+          <label className="absensi__filter">
+            Bulan
+            <select value={bulan} onChange={(e) => handlePeriodeChange(setBulan, e.target.value)}>
+              <option value="">Semua Bulan</option>
+              {BULAN.map((nama, i) => (
+                <option key={nama} value={i + 1}>
+                  {nama}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="absensi__filter">
+            Tahun
+            <select value={tahun} onChange={(e) => handlePeriodeChange(setTahun, e.target.value)}>
+              <option value="">Semua Tahun</option>
+              {tahunOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <div className="absensi__toolbar">
           <label className="absensi__page-size">
@@ -193,16 +279,18 @@ export default function AbsensiPage() {
               {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={COLUMNS.length + 1} className="absensi__no-data">
-                    Tidak ada data.
+                    Tidak ada data absensi pada {labelPeriode}.
                   </td>
                 </tr>
               )}
-              {pageRows.map((row) => {
+              {pageRows.map((row, i) => {
                 const weekend = isWeekend(row.namaHari)
                 const hasCatatan = Boolean((row.catatanMangkir ?? '').trim())
                 return (
                   <tr key={`${row.tanggal}-${row._seq}`}>
-                    <td>{row._seq}</td>
+                    {/* Nomor urut mengikuti baris yang tampil, bukan urutan global,
+                        agar tetap mulai dari 1 pada tiap bulan yang dipilih. */}
+                    <td>{startIdx + i + 1}</td>
                     <td>
                       {weekend ? (
                         <span className="absensi__badge absensi__badge--red">{formatTanggal(row.tanggal)}</span>
@@ -250,8 +338,8 @@ export default function AbsensiPage() {
         <div className="absensi__footer">
           <div className="absensi__footer-info">
             {totalEntries === 0
-              ? 'Menampilkan 0 entri'
-              : `Menampilkan ${startIdx + 1} sampai ${Math.min(startIdx + pageSize, totalEntries)} dari ${totalEntries} entri`}
+              ? `Menampilkan 0 entri pada ${labelPeriode}`
+              : `Menampilkan ${startIdx + 1} sampai ${Math.min(startIdx + pageSize, totalEntries)} dari ${totalEntries} entri pada ${labelPeriode}`}
           </div>
           <div className="absensi__pagination">
             <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>

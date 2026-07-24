@@ -18,7 +18,6 @@ namespace SsoBackend.Controllers;
 public class InovasiController : ControllerBase
 {
     private static readonly string[] Faktor4M1E = ["Man", "Method", "Machine", "Material", "Environment"];
-    private static readonly string[] TahapanPdca = ["PLAN", "DO", "CHECK", "ACTION"];
     private static readonly string[] AllowedExt = [".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"];
     private const long MaxUploadBytes = 15 * 1024 * 1024;
 
@@ -82,6 +81,7 @@ public class InovasiController : ControllerBase
                 g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode, g.Judul,
                 g.NamaDepartemen, g.NamaKompartemen, g.Status, g.PlanDisahkan, g.CreatedByNik,
                 g.IdDepartemen, g.IdKompartemen, g.CreatedAt, g.UpdatedAt,
+                GagasanJudul = _db.Gagasan.Where(x => x.Id == g.IdGagasan).Select(x => x.Judul).FirstOrDefault(),
                 KetuaNama = g.Anggota.Where(a => a.Peran == "Ketua").Select(a => a.Nama).FirstOrDefault(),
                 PeranAnggota = g.Anggota.Where(a => a.Nik == nik).Select(a => a.Peran).FirstOrDefault(),
                 PeranPengesah = g.Pengesahan.Where(p => p.Nik == nik).Select(p => p.Peran).FirstOrDefault(),
@@ -96,9 +96,33 @@ public class InovasiController : ControllerBase
                 : g.PeranAnggota ?? g.PeranPengesah
                     ?? (scopeDept != null && g.IdDepartemen == scopeDept ? "Verifikator"
                         : scopeKomp != null && g.IdKompartemen == scopeKomp ? "GM" : "-"),
-            g.KetuaNama, g.CreatedAt, g.UpdatedAt)).ToList();
+            g.KetuaNama, g.CreatedAt, g.UpdatedAt, g.GagasanJudul)).ToList();
 
         return Ok(new GugusListDto(items));
+    }
+
+    // -------------------------------------------------------- history approval
+    // Jejak Lembar Pengesahan (PLAN & FINAL) risalah yang menyangkut pengguna:
+    // miliknya, tempat ia jadi anggota, atau yang ia tandatangani. Satu baris =
+    // satu langkah pengesahan, sehingga Manager/GM bisa menelusuri risalah apa
+    // saja yang pernah ia verifikasi beserta waktunya.
+    [HttpGet("history/gugus")]
+    public async Task<ActionResult<RiwayatApprovalListDto>> HistoryApproval()
+    {
+        var (nik, _) = await IdentitasAsync();
+        if (nik is null) return Unauthorized(new { message = "Akun tidak tertaut ke NIK pegawai." });
+
+        var items = await _db.Gugus.AsNoTracking()
+            .Where(g => g.CreatedByNik == nik || g.Anggota.Any(a => a.Nik == nik) || g.Pengesahan.Any(p => p.Nik == nik))
+            .SelectMany(g => g.Pengesahan, (g, p) => new RiwayatApprovalDto(
+                "Inovasi", g.Id, g.NoRegistrasi, g.Judul ?? g.NamaGugus, g.Jenis,
+                g.NamaDepartemen ?? g.NamaKompartemen, p.Tahap,
+                p.Peran, p.Nik, p.Nama, p.Status, p.Komentar, p.Tgl,
+                g.Status, g.CreatedAt, p.Nik == nik))
+            .ToListAsync();
+
+        var sorted = items.OrderByDescending(x => x.Tgl ?? x.TargetCreatedAt).ToList();
+        return Ok(new RiwayatApprovalListDto(sorted));
     }
 
     // ---------------------------------------------------------------- create
@@ -163,8 +187,11 @@ public class InovasiController : ControllerBase
 
         return Ok(new GugusDetailDto(
             g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode,
-            g.IdDepartemen, g.NamaDepartemen, g.IdKompartemen, g.NamaKompartemen,
-            g.Judul, g.LatarBelakang, g.MasalahUtama, g.VerifikasiAkar, g.IdGagasan, g.ActionTemaBerikutnya,
+            g.IdDepartemen, g.NamaDepartemen, g.IdKompartemen, g.NamaKompartemen, g.BagianSeksi,
+            g.Judul, g.LatarBelakang, g.MasalahUtama, g.VerifikasiAkar, g.VerifikasiStatistik,
+            g.AreaLokasi, g.ProfilDenahPath, g.ProfilDenahNama, g.DampakPositif, g.DampakPositifLainnya,
+            g.LimaRJadwal, g.LimaRCatatan, g.LimaRDokumentasi,
+            g.IdGagasan, g.ActionTemaBerikutnya,
             g.Status, g.PlanDisahkan, g.CreatedByNik, g.CreatedByNama, bisaEdit,
             IsOwner: g.CreatedByNik == nik,
             g.CreatedAt, g.UpdatedAt, g.SubmittedAt,
@@ -202,11 +229,21 @@ public class InovasiController : ControllerBase
 
         g.NamaGugus = req.NamaGugus?.Trim();
         g.TemaKe = req.TemaKe;
+        g.BagianSeksi = req.BagianSeksi;
         if (!string.IsNullOrWhiteSpace(req.Periode)) g.Periode = req.Periode.Trim();
         g.Judul = req.Judul?.Trim();
         g.LatarBelakang = req.LatarBelakang;
         g.MasalahUtama = req.MasalahUtama?.Trim();
         g.VerifikasiAkar = req.VerifikasiAkar;
+        // Bagian khusus 5R (diabaikan/null untuk SS & GIO).
+        g.AreaLokasi = req.AreaLokasi;
+        g.ProfilDenahPath = req.ProfilDenahPath;
+        g.ProfilDenahNama = req.ProfilDenahNama;
+        g.DampakPositif = req.DampakPositif;
+        g.DampakPositifLainnya = req.DampakPositifLainnya;
+        g.LimaRJadwal = req.LimaRJadwal;
+        g.LimaRCatatan = req.LimaRCatatan;
+        g.LimaRDokumentasi = req.LimaRDokumentasi;
         g.UpdatedAt = DateTime.Now;
 
         Replace(g.Anggota, req.Anggota, (a, d, i) =>
@@ -250,8 +287,9 @@ public class InovasiController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(g.NamaGugus))
             return BadRequest(new { message = "Nama gugus wajib diisi sebelum diajukan." });
-        if (string.IsNullOrWhiteSpace(g.Judul))
-            return BadRequest(new { message = "Judul (P.8) wajib diisi sebelum diajukan." });
+        // 5R (F-5R-02) tidak memuat Judul; SS/GIO wajib.
+        if (g.Jenis != "5R" && string.IsNullOrWhiteSpace(g.Judul))
+            return BadRequest(new { message = "Judul inovasi wajib diisi sebelum diajukan." });
         if (!g.Anggota.Any(a => a.Peran == "Fasilitator"))
             return BadRequest(new { message = "Fasilitator wajib ditetapkan sebelum diajukan." });
 
@@ -368,8 +406,10 @@ public class InovasiController : ControllerBase
             }
             else if (planRows.All(p => p.Status == "Disetujui"))
             {
-                g.Status = "Divalidasi";
-                g.PlanDisahkan = true;   // DO/CHECK/ACTION terbuka
+                g.PlanDisahkan = true;
+                // 5R hanya punya SATU Lembar Pengesahan -> langsung Selesai.
+                // SS/GIO lanjut ke tahap DO/CHECK/ACTION (Divalidasi).
+                g.Status = g.Jenis == "5R" ? "Selesai" : "Divalidasi";
             }
             else if (row.Peran == "Fasilitator")
             {
@@ -420,6 +460,7 @@ public class InovasiController : ControllerBase
         if (g.Result is not null) return g.Result;
         var gugus = g.Value!;
 
+        gugus.VerifikasiStatistik = req.VerifikasiStatistik;   // C.3, hanya diisi risalah GIO
         Replace(gugus.CheckPerbandingan, req.CheckPerbandingan, (x, d, i) => { x.Sebelum = d.Sebelum; x.Sesudah = d.Sesudah; x.Urutan = i; });
         Replace(gugus.CheckSasaran, req.CheckSasaran, (x, d, i) => { x.SasaranText = d.Sasaran; x.Sebelum = d.Sebelum; x.Target = d.Target; x.Sesudah = d.Sesudah; x.PersenCapaian = d.PersenCapaian; x.Urutan = i; });
         Replace(gugus.CheckBiaya, req.CheckBiaya, (x, d, i) => { x.Komponen = d.Komponen; x.Perhitungan = d.Perhitungan; x.Nilai = d.Nilai; x.Urutan = i; });
@@ -689,13 +730,11 @@ public class InovasiController : ControllerBase
         _ => "SS",
     };
 
-    // Periode inovasi berjalan lintas tahun (mis. Agustus-Mei). Bila sudah lewat
-    // pertengahan tahun, periode berikutnya {tahun}/{tahun+1}, jika belum
-    // {tahun-1}/{tahun}.
+    // Periode inovasi ditentukan dari tahun berjalan saja: 2026 -> "2026/2027",
+    // 2027 -> "2027/2028".
     private static string DefaultPeriode()
     {
-        var now = DateTime.Now;
-        var awal = now.Month >= 6 ? now.Year : now.Year - 1;
+        var awal = DateTime.Now.Year;
         return $"{awal}/{awal + 1}";
     }
 

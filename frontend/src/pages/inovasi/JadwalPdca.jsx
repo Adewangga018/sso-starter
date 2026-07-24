@@ -2,25 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarRange, X } from 'lucide-react'
 import './inovasi.css'
 
-// P.3 Jadwal Kegiatan (PDCA). Kolom bulan dikelompokkan per tahun sesuai Periode
-// (mis. 2026/2027 -> Jun-Des 2026, Jan-Mei 2027). Pemilih "Dari-Sampai" membatasi
+// P.3 Jadwal Kegiatan (PDCA). Kolom bulan urut Januari s/d Desember pada tahun
+// awal Periode (mis. 2026/2027 -> Jan-Des 2026). Pemilih "Dari-Sampai" membatasi
 // kolom yang tampil. Tiap sel (tahapan x Rencana/Realisasi x bulan) menyimpan
 // rentang tanggal yang dipilih lewat kalender.
 const MONTHS = [
-  [6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'],
-  [12, 'Des'], [1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'],
+  [1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'], [6, 'Jun'],
+  [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des'],
 ]
 
 const pad = (n) => String(n).padStart(2, '0')
 const lastDay = (year, m) => new Date(year, m, 0).getDate() // m: 1-12
 const dayOf = (iso) => (iso ? Number(iso.slice(8, 10)) : null)
 
-// Periode "2026/2027" -> tahun tiap bulan (bulan 6-12 = tahun awal, 1-5 = tahun akhir).
+// Periode "2026/2027" -> semua bulan memakai tahun awal periode (2026).
 function buildCols(periode) {
-  const [a, b] = String(periode || '').split('/')
-  const y1 = Number(a) || new Date().getFullYear()
-  const y2 = Number(b) || y1 + 1
-  return MONTHS.map(([m, label]) => ({ m, label, year: m >= 6 ? y1 : y2 }))
+  const y1 = Number(String(periode || '').split('/')[0]) || new Date().getFullYear()
+  return MONTHS.map(([m, label]) => ({ m, label, year: y1 }))
 }
 
 function fmtRange(r) {
@@ -89,7 +87,7 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode }) {
         <table className="inv__subtable inv__jadwal">
           <thead>
             <tr>
-              <th rowSpan={2} style={{ width: 70 }}>Tahapan</th>
+              <th rowSpan={2} style={{ width: 150 }}>Tahapan</th>
               <th rowSpan={2} style={{ width: 74 }}>Ket.</th>
               {yearGroups.map((y) => <th key={y.year} colSpan={y.span} style={{ textAlign: 'center' }}>{y.year}</th>)}
               <th rowSpan={2} style={{ width: 52 }}>Jml.</th>
@@ -101,7 +99,7 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode }) {
           <tbody>
             {jadwal.map((row, idx) => (
               <tr key={`${row.tahapan}-${row.jenis}`}>
-                {row.jenis === 'Rencana' && <td rowSpan={2} style={{ fontWeight: 700, verticalAlign: 'middle' }}>{row.tahapan}</td>}
+                {row.jenis === 'Rencana' && <td rowSpan={2} style={{ fontWeight: 700, verticalAlign: 'middle' }}>{row.label || row.tahapan}</td>}
                 <td>{row.jenis}</td>
                 {shown.map((c) => {
                   const r = row.ranges?.[c.m]
@@ -132,7 +130,7 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode }) {
 
       {openCell && (
         <CellDateModal
-          tahapan={jadwal[openCell.idx].tahapan}
+          tahapan={jadwal[openCell.idx].label || jadwal[openCell.idx].tahapan}
           jenis={jadwal[openCell.idx].jenis}
           col={openCell.col}
           range={jadwal[openCell.idx].ranges?.[openCell.col.m]}

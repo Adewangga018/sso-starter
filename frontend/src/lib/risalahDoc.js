@@ -5,12 +5,15 @@
 // dan pengguna dapat menyimpannya kembali sebagai .docx bila perlu. Tanpa
 // dependensi tambahan sehingga andal di lingkungan offline.
 //
-// Tata letak mengikuti Form Risalah Sistem Saran (PDCA): Identitas, Anggota,
-// PLAN (P.1-P.8) + Lembar Pengesahan PLAN, lalu DO/CHECK/ACTION + Pengesahan
-// Akhir bila tahapannya sudah terisi. Bagian yang kosong otomatis dilewati,
-// sehingga ekspor setelah PLAN disahkan hanya memuat bagian PLAN.
+// Tata letak & penomoran bagian mengikuti form resmi tiap metodologi (lihat
+// pages/inovasi/inovasiTemplate.js): SS/5R memakai PDCA dengan PLAN P.1-P.8,
+// GIO memakai form F-GIO-01/DELTA dengan PLAN P.1-P.10 dan CHECK C.1-C.5.
+// Urutan: Identitas, Anggota, PLAN + Lembar Pengesahan PLAN, lalu DO/CHECK/ACTION
+// + Pengesahan Akhir bila tahapannya sudah terisi. Bagian yang kosong otomatis
+// dilewati, sehingga ekspor setelah PLAN disahkan hanya memuat bagian PLAN.
 
 import { jenisLabel } from '../pages/inovasi/statusClass'
+import { bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_TAHAP, LIMA_R_BULAN, LIMA_R_STEP } from '../pages/inovasi/inovasiTemplate'
 
 function esc(v) {
   if (v === null || v === undefined || v === '') return '-'
@@ -35,14 +38,13 @@ function table(headers, rows) {
   return `<table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>`
 }
 
-// P.3 Jadwal (PDCA) sebagai grid: kolom bulan dikelompokkan per tahun sesuai
-// Periode, sel terarsir bila terjadwal & memuat rentang tanggal (dari `rentang`).
+// Jadwal Kegiatan sebagai grid: baris = tahapan (PDCA untuk SS/5R, 8 Langkah DELTA
+// untuk GIO) x Rencana/Realisasi; kolom bulan urut Januari s/d Desember pada tahun
+// awal Periode, sel terarsir bila terjadwal & memuat rentang tanggal (dari `rentang`).
 function jadwalGrid(d) {
-  const MONTHS = [[6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des'], [1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei']]
-  const [a, b] = String(d.periode || '').split('/')
-  const y1 = Number(a) || ''
-  const y2 = Number(b) || (y1 ? y1 + 1 : '')
-  const cols = MONTHS.map(([m, l]) => ({ m, l, year: m >= 6 ? y1 : y2 }))
+  const MONTHS = [[1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'], [6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des']]
+  const y1 = Number(String(d.periode || '').split('/')[0]) || ''
+  const cols = MONTHS.map(([m, l]) => ({ m, l, year: y1 }))
   const yg = []
   cols.forEach((c) => { const last = yg[yg.length - 1]; if (last && last.year === c.year) last.span += 1; else yg.push({ year: c.year, span: 1 }) })
 
@@ -51,9 +53,9 @@ function jadwalGrid(d) {
   const getRow = (t, j) => arr(d.jadwal).find((x) => x.tahapan === t && x.jenis === j)
 
   const bodyRows = []
-  for (const t of ['PLAN', 'DO', 'CHECK', 'ACTION']) {
+  for (const t of tahapanJadwal(d.jenis)) {
     ['Rencana', 'Realisasi'].forEach((j, ji) => {
-      const row = getRow(t, j)
+      const row = getRow(t.kode, j)
       const bulan = row?.bulan ? String(row.bulan).split(',').map(Number).filter(Boolean) : []
       const ranges = parseR(row?.rentang)
       const cells = cols.map((c) => {
@@ -62,8 +64,8 @@ function jadwalGrid(d) {
         const fg = on && j === 'Rencana' ? '#fff' : '#22402c'
         return `<td style="text-align:center;background:${fill};color:${fg};font-size:8.5pt">${dayRange(ranges[c.m])}</td>`
       }).join('')
-      const tahCell = ji === 0 ? `<td rowspan="2" style="font-weight:bold;vertical-align:middle">${t}</td>` : ''
-      const jmlCell = ji === 0 ? `<td rowspan="2" style="text-align:center;vertical-align:middle;font-weight:bold">${esc(getRow(t, 'Rencana')?.jumlah ?? '')}</td>` : ''
+      const tahCell = ji === 0 ? `<td rowspan="2" style="font-weight:bold;vertical-align:middle">${esc(t.label)}</td>` : ''
+      const jmlCell = ji === 0 ? `<td rowspan="2" style="text-align:center;vertical-align:middle;font-weight:bold">${esc(getRow(t.kode, 'Rencana')?.jumlah ?? '')}</td>` : ''
       bodyRows.push(`<tr>${tahCell}<td>${j}</td>${cells}${jmlCell}</tr>`)
     })
   }
@@ -71,7 +73,7 @@ function jadwalGrid(d) {
   const yHead = yg.map((g) => `<th colspan="${g.span}" style="text-align:center">${esc(g.year)}</th>`).join('')
   const mHead = cols.map((c) => `<th style="text-align:center">${esc(c.l)}</th>`).join('')
   return `<table><thead>`
-    + `<tr><th rowspan="2" style="width:11%">Tahapan</th><th rowspan="2" style="width:11%">Ket.</th>${yHead}<th rowspan="2" style="width:6%">Jml.</th></tr>`
+    + `<tr><th rowspan="2" style="width:18%">Tahapan</th><th rowspan="2" style="width:9%">Ket.</th>${yHead}<th rowspan="2" style="width:6%">Jml.</th></tr>`
     + `<tr>${mHead}</tr></thead><tbody>${bodyRows.join('')}</tbody></table>`
 }
 
@@ -101,8 +103,83 @@ function signBlock(pengesahan, tahap) {
   return `<table><tbody><tr>${cells}</tr></tbody></table>`
 }
 
-function buildBody(d, mode) {
+// Risalah 5R (Form F-5R-02) - struktur berbeda dari SS/GIO; sub-bagian C/D/F
+// dari kolom JSON. Satu Lembar Pengesahan (tanpa PLAN/DO/CHECK/ACTION).
+function buildBody5R(d) {
+  const parse = (s) => { try { return s ? JSON.parse(s) : {} } catch { return {} } }
+  const jadwal = parse(d.limaRJadwal)
+  const catatan = parse(d.limaRCatatan)
+  const dok = parse(d.limaRDokumentasi)
   const parts = []
+
+  parts.push(sectionTitle('A. Identitas Gugus'))
+  parts.push(table([{ label: 'Keterangan', width: '30%' }, { label: 'Isi' }], [
+    ['No. Registrasi', esc(d.noRegistrasi)],
+    ['Nama Gugus', esc(d.namaGugus)],
+    ['Kompartemen', esc(d.namaKompartemen)],
+    ['Bagian', esc(d.bagianSeksi)],
+    ['Area / Lokasi 5R', esc(d.areaLokasi)],
+    ['Periode Program', esc(d.periode)],
+  ]))
+
+  parts.push(sectionTitle('B. Susunan Anggota Gugus'))
+  parts.push(table(
+    [{ label: 'No', width: '5%' }, { label: 'Peran', width: '15%' }, { label: 'Nama Lengkap' }, { label: 'NIK', width: '12%' }, { label: 'Jabatan' }, { label: 'Komp. Dep / Bagian' }],
+    arr(d.anggota).map((a, i) => [i + 1, esc(a.peran), esc(a.nama), esc(a.nik), esc(a.jabatan), esc(a.depBagian)]),
+  ))
+
+  // C. Jadwal (tahap x Bulan 1..N)
+  const bulanHead = Array.from({ length: LIMA_R_BULAN }, (_, i) => ({ label: `B${i + 1}` }))
+  parts.push(sectionTitle('C. Jadwal Kegiatan'))
+  parts.push(table(
+    [{ label: 'No', width: '5%' }, { label: 'Tahap' }, ...bulanHead],
+    LIMA_R_TAHAP.map((t, i) => {
+      const set = new Set(jadwal?.[t.kode] || [])
+      return [i + 1, esc(t.label), ...Array.from({ length: LIMA_R_BULAN }, (_, k) => (set.has(k + 1) ? '<div style="text-align:center">●</div>' : ''))]
+    }),
+  ))
+
+  // D. Catatan Pertemuan
+  parts.push(sectionTitle('D. Catatan Pertemuan'))
+  parts.push(table(
+    [{ label: 'Tahapan 5R', width: '20%' }, ...LIMA_R_STEP.map((r) => ({ label: r.kode }))],
+    [['Tanggal', 'tanggal'], ['Jam', 'jam'], ['% Kehadiran', 'kehadiran']].map(([label, field]) =>
+      [`<b>${label}</b>`, ...LIMA_R_STEP.map((r) => esc(catatan?.[r.kode]?.[field]))]),
+  ))
+
+  // E. Profil 5R
+  parts.push(sectionTitle('E. Profil 5R'))
+  parts.push(paragraph(d.profilDenahNama ? `Denah: ${d.profilDenahNama}` : '(belum ada denah)'))
+
+  // F. Dokumentasi R1-R5
+  for (const r of LIMA_R_STEP) {
+    const blok = dok?.[r.kode] || {}
+    parts.push(sectionTitle(`F. Dokumentasi ${r.label}`))
+    parts.push(table(
+      [{ label: 'No', width: '5%' }, { label: 'Kegiatan' }, { label: 'Permasalahan' }, { label: 'Aktivitas Perbaikan' }, { label: 'Hasil yang Dicapai' }],
+      arr(blok.rows).map((x, i) => [i + 1, esc(x.kegiatan), esc(x.permasalahan), esc(x.aktivitas), esc(x.hasil)]),
+    ))
+    const daftar = (list) => (arr(list).length ? arr(list).map((f) => esc(f.nama)).join('<br/>') : '-')
+    parts.push(table(
+      [{ label: 'SEBELUM', width: '50%' }, { label: 'PROSES & SESUDAH' }],
+      [[daftar(blok.sebelum), daftar(blok.prosesSesudah)]],
+    ))
+  }
+
+  // G. Dampak Positif
+  parts.push(sectionTitle('G. Dampak Positif Pelaksanaan 5R'))
+  parts.push(paragraph(d.dampakPositif))
+  if (txt(d.dampakPositifLainnya)) { parts.push(sectionTitle('Dampak Positif Lainnya')); parts.push(paragraph(d.dampakPositifLainnya)) }
+
+  parts.push(sectionTitle('Lembar Pengesahan'))
+  parts.push(signBlock(d.pengesahan, 'PLAN'))
+  return parts.join('\n')
+}
+
+function buildBody(d, mode) {
+  if (d.jenis === '5R') return buildBody5R(d)
+  const parts = []
+  const B = bagian(d.jenis)   // penomoran bagian mengikuti metodologi
 
   // A. Identitas
   parts.push(sectionTitle('A. Identitas Gugus'))
@@ -112,7 +189,8 @@ function buildBody(d, mode) {
       ['No. Registrasi', esc(d.noRegistrasi)],
       ['Nama Gugus', esc(d.namaGugus)],
       ['Metodologi', esc(jenisLabel(d.jenis))],
-      ['Departemen', esc(d.namaDepartemen)],
+      ['Unit / Departemen', esc(d.namaDepartemen)],
+      ['Bagian / Seksi', esc(d.bagianSeksi)],
       ['Kompartemen', esc(d.namaKompartemen)],
       ['Tema ke-', esc(d.temaKe)],
       ['Periode Inovasi', esc(d.periode)],
@@ -123,7 +201,7 @@ function buildBody(d, mode) {
   parts.push(sectionTitle('B. Susunan Anggota Gugus'))
   parts.push(table(
     [{ label: 'No', width: '5%' }, { label: 'Peran', width: '15%' }, { label: 'Nama Lengkap' }, { label: 'NIK', width: '12%' }, { label: 'Jabatan' }, { label: 'Dep / Bagian' }],
-    arr(d.anggota).map((a, i) => [i + 1, esc(a.nama), esc(a.peran), esc(a.nik), esc(a.jabatan), esc(a.depBagian)]),
+    arr(d.anggota).map((a, i) => [i + 1, esc(a.peran), esc(a.nama), esc(a.nik), esc(a.jabatan), esc(a.depBagian)]),
   ))
 
   // ---- PLAN ----
@@ -141,13 +219,28 @@ function buildBody(d, mode) {
     ))
   }
 
+  // GIO: stratifikasi & Pareto mendahului jadwal (form F-GIO-01).
+  if (B.pareto && has(d.pareto)) {
+    const total = arr(d.pareto).reduce((s, x) => s + (Number(x.frekuensi) || 0), 0) || 1
+    let cum = 0
+    parts.push(sectionTitle(`${B.pareto} Stratifikasi & Diagram Pareto (Penentuan Masalah Dominan)`))
+    parts.push(table(
+      [{ label: 'No', width: '5%' }, { label: 'Kategori / Jenis Masalah' }, { label: 'Frekuensi', width: '12%' }, { label: '% Kontribusi', width: '13%' }, { label: '% Kumulatif', width: '13%' }],
+      arr(d.pareto).map((x, i) => {
+        const pct = ((Number(x.frekuensi) || 0) / total) * 100
+        cum += pct
+        return [i + 1, esc(x.kategori), esc(x.frekuensi), `${pct.toFixed(1)}%`, `${cum.toFixed(1)}%`]
+      }),
+    ))
+  }
+
   if (has(d.jadwal)) {
-    parts.push(sectionTitle('P.3 Jadwal Kegiatan (PDCA)'))
+    parts.push(sectionTitle(`${B.jadwal} ${B.jadwalTitle}`))
     parts.push(jadwalGrid(d))
   }
 
   if (has(d.sasaran)) {
-    parts.push(sectionTitle('P.4 Penentuan Sasaran (SMART)'))
+    parts.push(sectionTitle(`${B.sasaran} Penentuan Sasaran (SMART)`))
     parts.push(table(
       [{ label: 'No', width: '5%' }, { label: 'Sasaran' }, { label: 'Kondisi Sebelum' }, { label: 'Target' }, { label: 'Indikator Keberhasilan' }],
       arr(d.sasaran).map((x, i) => [i + 1, esc(x.sasaran), esc(x.kondisiSebelum), esc(x.target), esc(x.indikator)]),
@@ -155,31 +248,30 @@ function buildBody(d, mode) {
   }
 
   if (has(d.qcdse)) {
-    parts.push(sectionTitle('P.5 Dampak Masalah terhadap QCDSE'))
+    parts.push(sectionTitle(`${B.qcdse} Dampak Masalah terhadap QCDSE + M`))
     parts.push(table(
-      [{ label: 'Aspek', width: '18%' }, { label: 'Dampak Kualitatif' }, { label: 'Dampak Kuantitatif' }],
+      [{ label: 'Aspek', width: '18%' }, { label: 'Dampak Kualitatif' }, { label: 'Dampak Kuantitatif (didukung data)' }],
       arr(d.qcdse).map((x) => [esc(x.aspek), esc(x.dampakKualitatif), esc(x.dampakKuantitatif)]),
     ))
   }
 
   if (has(d.fishbone)) {
-    parts.push(sectionTitle('P.6 Analisa Akar Penyebab Masalah (Diagram Tulang Ikan / Fishbone)'))
+    parts.push(sectionTitle(`${B.fishbone} Analisa Akar Penyebab Masalah (Diagram Tulang Ikan / Fishbone)`))
     parts.push(table(
-      [{ label: 'Faktor', width: '18%' }, { label: 'Penyebab Teridentifikasi' }, { label: 'Akar Penyebab Dominan' }, { label: 'Prioritas', width: '10%' }],
-      arr(d.fishbone).map((x) => [esc(x.faktor), esc(x.penyebab), esc(x.akarDominan), esc(x.prioritas)]),
+      [{ label: 'Faktor', width: '18%' }, { label: 'Penyebab yang Teridentifikasi' }, { label: 'Akar Penyebab Dominan' }, { label: 'Prioritas', width: '10%' }],
+      arr(d.fishbone).map((x) => [esc(faktorLabel(x.faktor)), esc(x.penyebab), esc(x.akarDominan), esc(x.prioritas)]),
     ))
-    parts.push(FISH_MARKER) // titik sisip diagram fishbone (React) tepat di bawah tabel P.6
+    parts.push(FISH_MARKER) // titik sisip diagram fishbone (React) tepat di bawah tabel
   }
-  if (txt(d.verifikasiAkar)) { parts.push(sectionTitle('Verifikasi Akar (Pareto)')); parts.push(paragraph(d.verifikasiAkar)) }
-  if (has(d.pareto)) {
-    parts.push(table(
-      [{ label: 'No', width: '5%' }, { label: 'Kategori' }, { label: 'Frekuensi', width: '15%' }],
-      arr(d.pareto).map((x, i) => [i + 1, esc(x.kategori), esc(x.frekuensi)]),
-    ))
+
+  // GIO: verifikasi akar penyebab dominan dengan data kuantitatif.
+  if (B.verifikasiAkar && txt(d.verifikasiAkar)) {
+    parts.push(sectionTitle(`${B.verifikasiAkar} Verifikasi Akar Penyebab Dominan (Data / Scatter Diagram / Histogram)`))
+    parts.push(paragraph(d.verifikasiAkar))
   }
 
   if (has(d.rencanaPerbaikan)) {
-    parts.push(sectionTitle('P.7 Rencana Perbaikan (5W + 2H)'))
+    parts.push(sectionTitle(`${B.rencana} Rencana Perbaikan (5W + 2H)`))
     parts.push(table(
       [{ label: 'Akar Penyebab' }, { label: 'What' }, { label: 'Why' }, { label: 'Where' }, { label: 'When' }, { label: 'Who' }, { label: 'How' }, { label: 'How Much' }],
       arr(d.rencanaPerbaikan).map((x) => [esc(x.akarPenyebab), esc(x.what), esc(x.why), esc(x.where), esc(x.when), esc(x.who), esc(x.how), esc(x.howMuch)]),
@@ -187,7 +279,7 @@ function buildBody(d, mode) {
   }
 
   if (txt(d.judul)) {
-    parts.push(sectionTitle(`P.8 Judul ${d.jenis === 'GIO' ? 'Gugus Inovasi Operasi (GIO)' : d.jenis === '5R' ? 'Program 5R' : 'Sistem Saran (SS)'}`))
+    parts.push(sectionTitle(`${B.judul} ${judulBagianJudul(d.jenis)}`))
     parts.push(`<p style="text-align:center;font-weight:bold;font-size:12pt">"${esc(d.judul)}"</p>`)
   }
 
@@ -197,21 +289,28 @@ function buildBody(d, mode) {
   // ---- DO / CHECK / ACTION (hanya bila terisi) ----
   const adaDo = has(d.doPelaksanaan) || has(d.doKendala)
   const adaCheck = has(d.checkPerbandingan) || has(d.checkSasaran) || has(d.checkBiaya) || has(d.checkRisiko)
+    || txt(d.verifikasiStatistik)
   const adaAction = has(d.actionStandarisasi) || has(d.actionTindakLanjut) || txt(d.actionTemaBerikutnya)
 
   if (mode === 'full' && adaDo) {
     parts.push(stageBanner('DO — Melaksanakan Perbaikan'))
     if (has(d.doPelaksanaan)) {
+      // Form F-GIO-01 tidak memuat kolom Tanggal pada D.1.
+      const adaTanggal = d.jenis !== 'GIO'
       parts.push(sectionTitle('D.1 Pelaksanaan Perbaikan & Monitoring'))
       parts.push(table(
-        [{ label: 'No', width: '5%' }, { label: 'Tahapan Pelaksanaan' }, { label: 'Tanggal', width: '14%' }, { label: 'Monitoring Hasil' }, { label: 'Evidence' }],
-        arr(d.doPelaksanaan).map((x, i) => [i + 1, esc(x.tahapanKegiatan), esc(x.tanggal), esc(x.monitoringHasil), esc(x.evidenceNama)]),
+        [{ label: 'No', width: '5%' }, { label: 'Tahapan Kegiatan' },
+          ...(adaTanggal ? [{ label: 'Tanggal', width: '14%' }] : []),
+          { label: 'Monitoring Hasil Perbaikan' }, { label: 'Foto / Evidence' }],
+        arr(d.doPelaksanaan).map((x, i) => [i + 1, esc(x.tahapanKegiatan),
+          ...(adaTanggal ? [esc(x.tanggal)] : []),
+          esc(x.monitoringHasil), esc(x.evidenceNama)]),
       ))
     }
     if (has(d.doKendala)) {
       parts.push(sectionTitle('D.2 Kendala Selama Pelaksanaan & Solusinya'))
       parts.push(table(
-        [{ label: 'No', width: '5%' }, { label: 'Kendala' }, { label: 'Solusi / Tindakan' }, { label: 'Waktu', width: '14%' }, { label: 'PIC', width: '14%' }],
+        [{ label: 'No', width: '5%' }, { label: 'Kendala' }, { label: 'Solusi / Tindakan yang Diambil' }, { label: 'Waktu', width: '14%' }, { label: 'PIC', width: '14%' }],
         arr(d.doKendala).map((x, i) => [i + 1, esc(x.kendala), esc(x.solusi), esc(x.waktu), esc(x.pic)]),
       ))
     }
@@ -220,28 +319,34 @@ function buildBody(d, mode) {
   if (mode === 'full' && adaCheck) {
     parts.push(stageBanner('CHECK — Evaluasi Hasil Perbaikan'))
     if (has(d.checkPerbandingan)) {
-      parts.push(sectionTitle('C.1 Perbandingan Kondisi Sebelum & Sesudah'))
+      const pSebelum = periodeSebelum(d.periode)
+      parts.push(sectionTitle(`${B.cPerbandingan} Perbandingan Kondisi Sebelum & Sesudah Perbaikan`))
       parts.push(table(
-        [{ label: 'No', width: '5%' }, { label: 'Sebelum' }, { label: 'Sesudah' }],
+        [{ label: 'No', width: '5%' }, { label: `SEBELUM${pSebelum ? ` (periode ${pSebelum})` : ''}` }, { label: `SESUDAH${d.periode ? ` (periode ${d.periode})` : ''}` }],
         arr(d.checkPerbandingan).map((x, i) => [i + 1, esc(x.sebelum), esc(x.sesudah)]),
       ))
     }
     if (has(d.checkSasaran)) {
-      parts.push(sectionTitle('C.2 Pencapaian Sasaran Perbaikan'))
+      parts.push(sectionTitle(`${B.cSasaran} Pencapaian Sasaran Perbaikan`))
       parts.push(table(
         [{ label: 'Sasaran' }, { label: 'Sebelum' }, { label: 'Target' }, { label: 'Sesudah' }, { label: '% Capaian', width: '12%' }],
         arr(d.checkSasaran).map((x) => [esc(x.sasaran), esc(x.sebelum), esc(x.target), esc(x.sesudah), esc(x.persenCapaian)]),
       ))
     }
+    // GIO: pembuktian statistik hasil perbaikan.
+    if (B.cStatistik && txt(d.verifikasiStatistik)) {
+      parts.push(sectionTitle(`${B.cStatistik} Verifikasi Statistik Hasil Perbaikan (Control Chart / Histogram)`))
+      parts.push(paragraph(d.verifikasiStatistik))
+    }
     if (has(d.checkBiaya)) {
-      parts.push(sectionTitle('C.3 Analisa Manfaat & Biaya'))
+      parts.push(sectionTitle(`${B.cBiaya} Analisa Manfaat & Biaya (Cost-Benefit)`))
       parts.push(table(
         [{ label: 'Komponen' }, { label: 'Perhitungan / Dasar' }, { label: 'Nilai' }],
         arr(d.checkBiaya).map((x) => [esc(x.komponen), esc(x.perhitungan), esc(x.nilai)]),
       ))
     }
     if (has(d.checkRisiko)) {
-      parts.push(sectionTitle('C.4 Analisa Risiko / Dampak Negatif'))
+      parts.push(sectionTitle(`${B.cRisiko} Analisa Risiko / Dampak Negatif & Penanganannya`))
       parts.push(table(
         [{ label: 'Potensi Dampak Negatif' }, { label: 'Rencana Penanganan / Mitigasi' }],
         arr(d.checkRisiko).map((x) => [esc(x.dampakNegatif), esc(x.mitigasi)]),
@@ -252,9 +357,9 @@ function buildBody(d, mode) {
   if (mode === 'full' && adaAction) {
     parts.push(stageBanner('ACTION — Standarisasi & Rencana Tindak Lanjut'))
     if (has(d.actionStandarisasi)) {
-      parts.push(sectionTitle('A.1 Standarisasi Hasil Perbaikan'))
+      parts.push(sectionTitle('A.1 Standardisasi Hasil Perbaikan (menjadi SOP Perusahaan)'))
       parts.push(table(
-        [{ label: 'No', width: '5%' }, { label: 'Standar Baru (SOP/IK/Format)' }, { label: 'No. Dokumen' }, { label: 'Tgl. Berlaku', width: '14%' }, { label: 'PIC', width: '14%' }],
+        [{ label: 'No', width: '5%' }, { label: 'Standar Baru (SOP / Instruksi Kerja / Format)' }, { label: 'No. Dokumen' }, { label: 'Tgl. Berlaku', width: '14%' }, { label: 'PIC', width: '14%' }],
         arr(d.actionStandarisasi).map((x, i) => [i + 1, esc(x.standarBaru), esc(x.noDokumen), esc(x.tglBerlaku), esc(x.pic)]),
       ))
     }

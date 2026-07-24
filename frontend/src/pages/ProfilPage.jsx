@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
-import { Loader2, Upload } from 'lucide-react'
-import { api, ApiError } from '../lib/api'
+import { useEffect, useRef, useState } from 'react'
+import { Camera, Loader2, Trash2, Upload } from 'lucide-react'
+import { api, ApiError, isEmptyDataError } from '../lib/api'
 import PdfPopupModal from '../components/PdfPopupModal'
+import PhotoCropModal from '../components/PhotoCropModal'
 import BerkasFileRow from '../components/BerkasFileRow'
 import ChildrenSection from '../components/ChildrenSection'
 import WilayahFields from '../components/WilayahFields'
 import './ProfilPage.css'
+
+const PHOTO_ACCEPT = 'image/png,image/jpeg'
 
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan']
 const STATUS_KARYAWAN_OPTIONS = ['BP', 'IK', 'Layanan Jasa', 'PKWT', 'Tetap']
@@ -229,6 +232,21 @@ export default function ProfilPage() {
   const [uploadingKey, setUploadingKey] = useState(null)
   const [uploadMsg, setUploadMsg] = useState(null)
 
+  // Foto profil (avatar lingkaran). photoUrl = blob object URL; disimpan juga di
+  // ref agar bisa di-revoke saat diganti / unmount tanpa memicu render ulang.
+  const [photoUrl, setPhotoUrl] = useState(null)
+  const photoUrlRef = useRef(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoMsg, setPhotoMsg] = useState(null)
+  const [cropSrc, setCropSrc] = useState(null) // data URL foto yang sedang di-crop
+  const photoInputRef = useRef(null)
+
+  const setPhoto = (url) => {
+    if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current)
+    photoUrlRef.current = url
+    setPhotoUrl(url)
+  }
+
   useEffect(() => {
     let cancelled = false
     api
@@ -240,6 +258,7 @@ export default function ProfilPage() {
           setForm(initForm(data))
           setEditing(true)
         }
+        if (data.hasPhoto) loadPhoto()
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat data profil.')
@@ -247,7 +266,20 @@ export default function ProfilPage() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Bersihkan object URL foto saat komponen dilepas.
+  useEffect(() => () => { if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current) }, [])
+
+  async function loadPhoto() {
+    try {
+      const doc = await api.getProfilePhoto()
+      setPhoto(doc.url)
+    } catch (err) {
+      if (!isEmptyDataError(err)) setPhoto(null) // 404 = belum ada foto: diamkan
+    }
+  }
 
   async function reloadProfile() {
     setProfile(await api.getPersonalProfile())
@@ -305,6 +337,52 @@ export default function ProfilPage() {
     const file = e.target.files?.[0]
     e.target.value = '' // allow re-selecting the same file later
     handleUpload(uploadKey, file, label, doUpload)
+  }
+
+  // Foto profil: pilih berkas -> baca jadi data URL -> buka modal crop lingkaran.
+  function onPickPhoto(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/^image\/(png|jpe?g)$/i.test(file.type)) {
+      setPhotoMsg({ type: 'err', text: 'Foto harus berupa JPG atau PNG.' })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(String(reader.result))
+    reader.readAsDataURL(file)
+  }
+
+  // Modal crop selesai: unggah hasil (blob JPEG), tampilkan langsung sebagai avatar.
+  async function saveCroppedPhoto(blob) {
+    setPhotoBusy(true)
+    setPhotoMsg(null)
+    try {
+      await api.uploadProfilePhoto(blob)
+      setPhoto(URL.createObjectURL(blob)) // pratinjau instan tanpa fetch ulang
+      setProfile((p) => (p ? { ...p, hasPhoto: true } : p))
+      setCropSrc(null)
+      setPhotoMsg({ type: 'ok', text: 'Foto profil berhasil diperbarui.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menyimpan foto profil.' })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoBusy(true)
+    setPhotoMsg(null)
+    try {
+      await api.deleteProfilePhoto()
+      setPhoto(null)
+      setProfile((p) => (p ? { ...p, hasPhoto: false } : p))
+      setPhotoMsg({ type: 'ok', text: 'Foto profil dihapus.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menghapus foto profil.' })
+    } finally {
+      setPhotoBusy(false)
+    }
   }
 
   // Upload control for a single berkas document; only rendered while editing (see BerkasFileRow
@@ -378,12 +456,44 @@ export default function ProfilPage() {
   return (
     <div className="profil">
       <div className="profil__header">
-        <div className="profil__avatar">{profile.namaLengkap?.charAt(0)?.toUpperCase() ?? '?'}</div>
+        <div className={`profil__avatar${editing ? ' profil__avatar--editable' : ''}`}>
+          {photoUrl
+            ? <img src={photoUrl} alt="Foto profil" className="profil__avatar-img" />
+            : <span>{profile.namaLengkap?.charAt(0)?.toUpperCase() ?? '?'}</span>}
+          {editing && (
+            <button
+              type="button"
+              className="profil__avatar-edit"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoBusy}
+              title="Ubah foto profil"
+              aria-label="Ubah foto profil"
+            >
+              {photoBusy ? <Loader2 size={15} className="profil__spin" /> : <Camera size={15} />}
+            </button>
+          )}
+          <input ref={photoInputRef} type="file" accept={PHOTO_ACCEPT} hidden onChange={onPickPhoto} />
+        </div>
         <div className="profil__header-text">
           <h2>{profile.namaLengkap}</h2>
           <span className={`profil__status-pill${profile.isActive ? '' : ' profil__status-pill--inactive'}`}>
             {profile.isActive ? 'Karyawan Aktif' : 'Karyawan Nonaktif'}
           </span>
+          {editing && (
+            <div className="profil__photo-actions">
+              <button type="button" className="profil__photo-link" onClick={() => photoInputRef.current?.click()} disabled={photoBusy}>
+                {photoUrl ? 'Ubah foto' : 'Tambah foto'}
+              </button>
+              {photoUrl && (
+                <button type="button" className="profil__photo-link profil__photo-link--danger" onClick={removePhoto} disabled={photoBusy}>
+                  <Trash2 size={12} /> Hapus foto
+                </button>
+              )}
+            </div>
+          )}
+          {photoMsg && editing && (
+            <div className={`profil__photo-msg profil__photo-msg--${photoMsg.type === 'ok' ? 'ok' : 'err'}`}>{photoMsg.text}</div>
+          )}
         </div>
         {editing ? (
           <div className="profil__edit-actions">
@@ -588,6 +698,15 @@ export default function ProfilPage() {
         doc={modal.doc}
         error={modal.error}
       />
+
+      {cropSrc && (
+        <PhotoCropModal
+          src={cropSrc}
+          busy={photoBusy}
+          onCancel={() => { if (!photoBusy) setCropSrc(null) }}
+          onConfirm={saveCroppedPhoto}
+        />
+      )}
     </div>
   )
 }

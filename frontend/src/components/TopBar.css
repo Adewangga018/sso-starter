@@ -57,6 +57,10 @@
 }
 .topbar__admin-link:hover { background: #f9d7d3; }
 
+/* Panel Juri: nada hijau agar terbaca sebagai panel terpisah dari Admin (merah). */
+.topbar__admin-link--juri { background: #e6f4ea; color: #1f7a3d; }
+.topbar__admin-link--juri:hover { background: #d3ecdb; }
+
 .topbar__left {
   display: flex;
   align-items: center;

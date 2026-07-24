@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useDialog } from '../components/DialogProvider'
 import './AdminJuriPage.css'
 
-const EMPTY_FORM = { id: null, nama: '', keterangan: '', ketua: '', anggota1: '', anggota2: '', sekretaris: '' }
+const EMPTY_FORM = { id: null, nama: '', keterangan: '', ketua: '', anggota1: '', anggota2: '', anggota3: '', sekretaris: '' }
 
 function gugusLabel(g) {
   const jenis = g.jenis === '5R' ? '5R' : g.jenis
@@ -15,7 +15,11 @@ function gugusLabel(g) {
 }
 
 export default function AdminJuriPage() {
-  const { isAdmin } = useAuth()
+  // Admin IT maupun Pengelola Juri (koordinator penjurian) boleh mengelola
+  // Stream Penilai & Penugasan ke Inovasi. `bolehKelola` = hak masuk halaman ini;
+  // `isAdmin` dipakai khusus untuk tautan ke area Admin (mis. Manajemen Pengguna).
+  const { isPengelolaJuri, isAdmin } = useAuth()
+  const bolehKelola = isPengelolaJuri
   const dialog = useDialog()
   const [juriUsers, setJuriUsers] = useState([])
   const [streams, setStreams] = useState([])
@@ -45,10 +49,10 @@ export default function AdminJuriPage() {
     }
   }, [])
 
-  useEffect(() => { if (isAdmin) loadAll() }, [isAdmin, loadAll])
+  useEffect(() => { if (bolehKelola) loadAll() }, [bolehKelola, loadAll])
 
-  if (!isAdmin) {
-    return <div className="admin-juri"><p className="admin-juri__forbidden">Akses ditolak. Hanya Admin IT.</p></div>
+  if (!bolehKelola) {
+    return <div className="admin-juri"><p className="admin-juri__forbidden">Akses ditolak. Hanya Admin IT atau Pengelola Juri.</p></div>
   }
 
   const nameOf = (id) => { const u = juriUsers.find((x) => x.id === id); return u ? (u.nama ?? u.email) : id }
@@ -67,16 +71,17 @@ export default function AdminJuriPage() {
       ketua: s.anggota.find((a) => a.peran === 'Ketua')?.userId ?? '',
       anggota1: ang[0]?.userId ?? '',
       anggota2: ang[1]?.userId ?? '',
+      anggota3: ang[2]?.userId ?? '',
       sekretaris: s.anggota.find((a) => a.peran === 'Sekretaris')?.userId ?? '',
     })
     setMsg(null)
   }
 
   async function saveStream() {
-    const picks = [form.ketua, form.anggota1, form.anggota2, form.sekretaris]
+    const picks = [form.ketua, form.anggota1, form.anggota2, form.anggota3, form.sekretaris]
     if (!form.nama.trim()) return setMsg({ type: 'err', text: 'Nama stream wajib diisi.' })
-    if (picks.some((p) => !p)) return setMsg({ type: 'err', text: 'Lengkapi 4 anggota: 1 Ketua, 2 Anggota, 1 Sekretaris.' })
-    if (new Set(picks).size !== 4) return setMsg({ type: 'err', text: 'Setiap orang hanya boleh satu peran.' })
+    if (picks.some((p) => !p)) return setMsg({ type: 'err', text: 'Lengkapi 5 anggota: 1 Ketua, 3 Anggota, 1 Sekretaris.' })
+    if (new Set(picks).size !== 5) return setMsg({ type: 'err', text: 'Setiap orang hanya boleh satu peran.' })
 
     const build = (userId, peran) => {
       const u = juriUsers.find((x) => x.id === userId)
@@ -90,6 +95,7 @@ export default function AdminJuriPage() {
         build(form.ketua, 'Ketua'),
         build(form.anggota1, 'Anggota'),
         build(form.anggota2, 'Anggota'),
+        build(form.anggota3, 'Anggota'),
         build(form.sekretaris, 'Sekretaris'),
       ],
     }
@@ -148,15 +154,15 @@ export default function AdminJuriPage() {
   return (
     <div className="admin-juri">
       <div className="admin-juri__head">
-        <Link to="/admin" className="admin-juri__back"><ArrowLeft size={16} /> Panel Admin</Link>
+        <Link to="/my-innovation" className="admin-juri__back"><ArrowLeft size={16} /> My Innovation</Link>
         <h1><Gavel size={20} /> Juri &amp; Penilaian Inovasi</h1>
       </div>
 
       <div className="admin-juri__note">
         <Info size={15} />
         <span>
-          Tandai pengguna sebagai <b>Juri</b> dahulu di <Link to="/admin/users">Manajemen Pengguna</Link>.
-          Satu <b>stream</b> berisi 4 orang: <b>1 Ketua, 2 Anggota, 1 Sekretaris</b>. Ketua &amp; Anggota memberi nilai;
+          Pengguna harus ditandai sebagai <b>Juri</b> dahulu{isAdmin ? <> di <Link to="/admin/users">Manajemen Pengguna</Link></> : <> oleh Admin IT di Manajemen Pengguna</>}.
+          Satu <b>stream</b> berisi 5 orang: <b>1 Ketua, 3 Anggota, 1 Sekretaris</b>. Ketua &amp; Anggota memberi nilai;
           Sekretaris hanya melihat. Tugaskan stream ke sebuah inovasi agar mulai dinilai.
         </span>
       </div>
@@ -181,17 +187,18 @@ export default function AdminJuriPage() {
               <label>Keterangan (opsional)</label>
               <input value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} placeholder="mis. Penilai Konvensi 2026" />
             </div>
-            {juriUsers.length < 4 && (
+            {juriUsers.length < 5 && (
               <div className="admin-juri__alert admin-juri__alert--err">
-                Butuh minimal 4 pengguna ber-role Juri. Saat ini {juriUsers.length}. Tandai dulu di Manajemen Pengguna.
+                Butuh minimal 5 pengguna ber-role Juri. Saat ini {juriUsers.length}. Tandai dulu di Manajemen Pengguna.
               </div>
             )}
             <div className="admin-juri__slots">
               {[
-                ['ketua', 'Ketua', [form.anggota1, form.anggota2, form.sekretaris]],
-                ['anggota1', 'Anggota 1', [form.ketua, form.anggota2, form.sekretaris]],
-                ['anggota2', 'Anggota 2', [form.ketua, form.anggota1, form.sekretaris]],
-                ['sekretaris', 'Sekretaris', [form.ketua, form.anggota1, form.anggota2]],
+                ['ketua', 'Ketua', [form.anggota1, form.anggota2, form.anggota3, form.sekretaris]],
+                ['anggota1', 'Anggota 1', [form.ketua, form.anggota2, form.anggota3, form.sekretaris]],
+                ['anggota2', 'Anggota 2', [form.ketua, form.anggota1, form.anggota3, form.sekretaris]],
+                ['anggota3', 'Anggota 3', [form.ketua, form.anggota1, form.anggota2, form.sekretaris]],
+                ['sekretaris', 'Sekretaris', [form.ketua, form.anggota1, form.anggota2, form.anggota3]],
               ].map(([key, label, others]) => (
                 <div className="admin-juri__field" key={key}>
                   <label>{label}</label>

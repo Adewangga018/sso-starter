@@ -98,6 +98,9 @@ export function AuthProvider({ children }) {
   const hasRole = (r) => isAuthenticated && (Array.isArray(roles) ? roles.includes(r) : roles === r)
   const isAdmin = hasRole('Admin')
   const isJuri = hasRole('Juri')
+  // Koordinator penjurian: hanya boleh mengelola Stream Penilai & Penugasan ke
+  // Inovasi. Admin IT otomatis termasuk.
+  const isPengelolaJuri = isAdmin || hasRole('PengelolaJuri')
 
   const value = {
     user: isAuthenticated
@@ -107,6 +110,7 @@ export function AuthProvider({ children }) {
     isAuthenticated,
     isAdmin,
     isJuri,
+    isPengelolaJuri,
     initializing,
     login,
     logout,

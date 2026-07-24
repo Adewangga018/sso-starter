@@ -22,6 +22,7 @@ export default function GagasanList() {
   const [rows, setRows] = useState(null)
   const [err, setErr] = useState('')
   const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailId, setDetailId] = useState(null)
 
@@ -37,15 +38,22 @@ export default function GagasanList() {
   }
   useEffect(() => { load() }, [])
 
+  // Cakupan dasar: approver hanya melihat gagasan yang perlu ia proses (bukan miliknya).
+  const scoped = useMemo(() => {
+    const list = rows ?? []
+    return isApprover ? list.filter((r) => r.peranSaya !== 'Pengaju') : list
+  }, [rows, isApprover])
+
+  // Opsi status diturunkan dari data yang ada (bukan daftar statis) agar selalu relevan.
+  const statusOptions = useMemo(() => [...new Set(scoped.map((r) => r.status).filter(Boolean))].sort(), [scoped])
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    let list = rows ?? []
-    // Approver hanya menampilkan gagasan yang perlu ia proses (bukan miliknya).
-    if (isApprover) list = list.filter((r) => r.peranSaya !== 'Pengaju')
-    if (!term) return list
-    return list.filter((r) => [r.noRegistrasi, r.judul, r.status, r.namaDepartemenAsal, r.namaDepartemenTujuan, r.metodologi]
-      .some((v) => (v ?? '').toString().toLowerCase().includes(term)))
-  }, [rows, search, isApprover])
+    return scoped.filter((r) =>
+      (!status || r.status === status) &&
+      (!term || [r.noRegistrasi, r.judul, r.status, r.namaDepartemenAsal, r.namaDepartemenTujuan, r.metodologi]
+        .some((v) => (v ?? '').toString().toLowerCase().includes(term))))
+  }, [scoped, search, status])
 
   async function del(row) {
     if (!(await dialog.confirm({ title: 'Hapus Gagasan', message: `Hapus gagasan "${row.judul}"?`, danger: true, confirmText: 'Hapus' }))) return
@@ -69,9 +77,17 @@ export default function GagasanList() {
       {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
       <div className="inv__toolbar">
-        <div className="inv__search">
-          <span className="inv__search-icon"><Search size={16} /></span>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari no. registrasi, judul, status..." />
+        <div className="inv__filters">
+          <div className="inv__search">
+            <span className="inv__search-icon"><Search size={16} /></span>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari no. registrasi, judul, status..." />
+          </div>
+          {isApprover && (
+            <select className="inv__select" value={status} onChange={(e) => setStatus(e.target.value)} title="Filter status">
+              <option value="">Semua Status</option>
+              {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="inv__btn inv__btn--ghost" onClick={load} title="Muat ulang"><RotateCw size={15} /></button>

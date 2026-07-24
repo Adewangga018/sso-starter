@@ -10,7 +10,7 @@
    MODEL
      - penilaian_kriteria      : master rubrik (di-seed) per jenis_form + tahap.
      - penilaian_stream        : panel juri (dibuat Admin).
-     - penilaian_stream_anggota: 4 anggota per stream = 1 Ketua, 2 Anggota,
+     - penilaian_stream_anggota: 5 anggota per stream = 1 Ketua, 3 Anggota,
                                  1 Sekretaris (komposisi divalidasi di aplikasi).
      - penilaian_penugasan     : menautkan satu stream ke satu gugus (inovasi).
      - penilaian_skor          : skor 1-10 per (penugasan, kriteria, penilai).
@@ -23,7 +23,7 @@
 
    PERHITUNGAN (dihitung di aplikasi, bukan di DB)
      nilai_penilai = SUM(nilai/10 * bobot_persen)          -> skala 0..100
-     hasil_stream  = rata-rata nilai_penilai (Ketua + 2 Anggota)
+     hasil_stream  = rata-rata nilai_penilai (Ketua + 3 Anggota)
      kategori: >=94 Platinum | >=87 Gold | >=79 Silver | >=61 Bronze | <61 Partisipatif
 
    CARA PAKAI
@@ -100,7 +100,7 @@ ELSE PRINT 'LEWATI: inovasi.penilaian_stream sudah ada.';
 GO
 
 /* ---------------------------------------------------------------------------
-   penilaian_stream_anggota - 4 anggota/stream. peran: Ketua|Anggota|Sekretaris.
+   penilaian_stream_anggota - 5 anggota/stream. peran: Ketua|Anggota|Sekretaris.
    nik & nama = snapshot untuk tampilan tanpa join lintas domain.
    --------------------------------------------------------------------------- */
 IF OBJECT_ID('inovasi.penilaian_stream_anggota', 'U') IS NULL

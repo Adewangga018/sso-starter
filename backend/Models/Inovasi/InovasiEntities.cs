@@ -13,10 +13,22 @@ public class Gugus
     public string? NamaDepartemen { get; set; }
     public int? IdKompartemen { get; set; }
     public string? NamaKompartemen { get; set; }
+    public string? BagianSeksi { get; set; }             // A. Identitas - Bagian / Seksi
     public string? Judul { get; set; }
     public string? LatarBelakang { get; set; }
     public string? MasalahUtama { get; set; }
-    public string? VerifikasiAkar { get; set; }   // GIO P.8 Verifikasi Akar Penyebab Dominan
+    public string? VerifikasiAkar { get; set; }        // GIO P.8 Verifikasi Akar Penyebab Dominan
+    public string? VerifikasiStatistik { get; set; }   // GIO C.3 Verifikasi Statistik Hasil Perbaikan
+
+    // --- Khusus Risalah 5R (Form F-5R-02) ---
+    public string? AreaLokasi { get; set; }            // A. Area / Lokasi 5R
+    public string? ProfilDenahPath { get; set; }       // E. gambar denah - path berkas
+    public string? ProfilDenahNama { get; set; }       // E. gambar denah - nama berkas
+    public string? DampakPositif { get; set; }         // G. dampak positif pelaksanaan
+    public string? DampakPositifLainnya { get; set; }  // G. dampak positif lainnya
+    public string? LimaRJadwal { get; set; }           // C. jadwal (JSON)
+    public string? LimaRCatatan { get; set; }          // D. catatan pertemuan (JSON)
+    public string? LimaRDokumentasi { get; set; }      // F. dokumentasi R1-R5 (JSON)
     public int? IdGagasan { get; set; }            // tautan ke gagasan sumbernya
     public string? ActionTemaBerikutnya { get; set; }
     public string Status { get; set; } = "Draft";
@@ -75,7 +87,8 @@ public class Jadwal
 {
     public int Id { get; set; }
     public int IdGugus { get; set; }
-    public string Tahapan { get; set; } = "PLAN";  // PLAN|DO|CHECK|ACTION
+    // SS/5R: PLAN|DO|CHECK|ACTION. GIO: 8 Langkah DELTA sebagai kode L1..L8.
+    public string Tahapan { get; set; } = "PLAN";
     public string Jenis { get; set; } = "Rencana"; // Rencana|Realisasi
     public string? Bulan { get; set; }             // csv "6,7" (bulan yang terisi)
     public int? Jumlah { get; set; }
@@ -314,7 +327,7 @@ public class PenilaianStream
     public List<PenilaianStreamAnggota> Anggota { get; set; } = new();
 }
 
-// Anggota stream: 1 Ketua, 2 Anggota, 1 Sekretaris (komposisi divalidasi di app).
+// Anggota stream: 1 Ketua, 3 Anggota, 1 Sekretaris (komposisi divalidasi di app).
 public class PenilaianStreamAnggota
 {
     public int Id { get; set; }

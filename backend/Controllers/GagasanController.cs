@@ -76,7 +76,7 @@ public class GagasanController : ControllerBase
             .Select(g => new
             {
                 g.Id, g.NoRegistrasi, g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan,
-                g.Status, g.CreatedByNik, g.IdGugus, g.CreatedAt,
+                g.Status, g.CreatedByNik, g.CreatedByNama, g.IdGugus, g.CreatedAt,
                 PeranAppr = g.Approval.Where(a => a.Nik == nik).Select(a => a.Peran).FirstOrDefault(),
             })
             .ToListAsync();
@@ -93,9 +93,34 @@ public class GagasanController : ControllerBase
             (g.IdGugus is int gid && gugusNoReg.TryGetValue(gid, out var gn) ? gn : null) ?? g.NoRegistrasi,
             g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan, g.Status,
             PeranSaya: g.CreatedByNik == nik ? "Pengaju" : g.PeranAppr ?? "-",
-            g.IdGugus, g.CreatedAt)).ToList();
+            g.IdGugus, g.CreatedAt, g.CreatedByNik, g.CreatedByNama)).ToList();
 
         return Ok(new GagasanListDto(items));
+    }
+
+    // ---- history approval gagasan ----
+    // Satu baris per langkah approval. Approver melihat langkah yang menjadi
+    // tanggung jawabnya (termasuk yang masih "Menunggu"), pengaju melihat
+    // seluruh rantai persetujuan gagasannya sendiri.
+    [HttpGet("/inovasi/history/gagasan")]
+    public async Task<ActionResult<RiwayatApprovalListDto>> HistoryApproval()
+    {
+        var (nik, _) = await IdentitasAsync();
+        if (nik is null) return Unauthorized(new { message = "Akun tidak tertaut ke NIK pegawai." });
+
+        var items = await _db.Gagasan.AsNoTracking()
+            .Where(g => g.CreatedByNik == nik || g.Approval.Any(a => a.Nik == nik))
+            .SelectMany(g => g.Approval, (g, a) => new RiwayatApprovalDto(
+                "Gagasan", g.Id, g.NoRegistrasi, g.Judul, g.Metodologi,
+                g.NamaDepartemenTujuan ?? g.NamaDepartemenAsal, null,
+                a.Peran, a.Nik, a.Nama, a.Status, a.Komentar, a.Tgl,
+                g.Status, g.CreatedAt, a.Nik == nik))
+            .ToListAsync();
+
+        // Urut terbaru dahulu; langkah yang belum diproses (Tgl null) memakai
+        // waktu pembuatan gagasan agar tetap berdampingan dengan rantainya.
+        var sorted = items.OrderByDescending(x => x.Tgl ?? x.TargetCreatedAt).ToList();
+        return Ok(new RiwayatApprovalListDto(sorted));
     }
 
     // ---- create ----
@@ -389,10 +414,11 @@ public class GagasanController : ControllerBase
         return "Dikirim";
     }
 
+    // Periode inovasi ditentukan dari tahun berjalan saja: 2026 -> "2026/2027",
+    // 2027 -> "2027/2028".
     private static string DefaultPeriode()
     {
-        var now = DateTime.Now;
-        var awal = now.Month >= 6 ? now.Year : now.Year - 1;
+        var awal = DateTime.Now.Year;
         return $"{awal}/{awal + 1}";
     }
 }

@@ -23,7 +23,8 @@ public record GugusRingkasDto(
     string PeranSaya,          // Ketua | Sekretaris | Anggota | Fasilitator | Pembina | Pengaju
     string? KetuaNama,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    string? GagasanJudul = null);   // judul Sumbang Gagasan asal (bila risalah lahir dari gagasan)
 
 public record GugusListDto(IReadOnlyList<GugusRingkasDto> Items);
 
@@ -65,10 +66,20 @@ public record GugusDetailDto(
     string? NamaDepartemen,
     int? IdKompartemen,
     string? NamaKompartemen,
+    string? BagianSeksi,
     string? Judul,
     string? LatarBelakang,
     string? MasalahUtama,
     string? VerifikasiAkar,
+    string? VerifikasiStatistik,
+    string? AreaLokasi,
+    string? ProfilDenahPath,
+    string? ProfilDenahNama,
+    string? DampakPositif,
+    string? DampakPositifLainnya,
+    string? LimaRJadwal,
+    string? LimaRCatatan,
+    string? LimaRDokumentasi,
     int? IdGagasan,
     string? ActionTemaBerikutnya,
     string Status,
@@ -103,6 +114,7 @@ public record SavePlanRequest(
     string? NamaGugus,
     int? TemaKe,
     string? Periode,
+    string? BagianSeksi,
     string? Judul,
     string? LatarBelakang,
     string? MasalahUtama,
@@ -114,15 +126,25 @@ public record SavePlanRequest(
     IReadOnlyList<ParetoDto>? Pareto,
     IReadOnlyList<QcdseDto>? Qcdse,
     IReadOnlyList<FishboneDto>? Fishbone,
-    IReadOnlyList<RencanaPerbaikanDto>? RencanaPerbaikan);
+    IReadOnlyList<RencanaPerbaikanDto>? RencanaPerbaikan,
+    // Khusus 5R (null untuk SS/GIO).
+    string? AreaLokasi = null,
+    string? ProfilDenahPath = null,
+    string? ProfilDenahNama = null,
+    string? DampakPositif = null,
+    string? DampakPositifLainnya = null,
+    string? LimaRJadwal = null,
+    string? LimaRCatatan = null,
+    string? LimaRDokumentasi = null);
 
 // --- Payload simpan tahap DO ---
 public record SaveDoRequest(
     IReadOnlyList<DoPelaksanaanDto>? DoPelaksanaan,
     IReadOnlyList<DoKendalaDto>? DoKendala);
 
-// --- Payload simpan tahap CHECK ---
+// --- Payload simpan tahap CHECK (VerifikasiStatistik = C.3, khusus GIO) ---
 public record SaveCheckRequest(
+    string? VerifikasiStatistik,
     IReadOnlyList<CheckPerbandinganDto>? CheckPerbandingan,
     IReadOnlyList<CheckSasaranDto>? CheckSasaran,
     IReadOnlyList<CheckBiayaDto>? CheckBiaya,
@@ -156,7 +178,8 @@ public record GagasanApprovalDto(int Id, int Urutan, string Peran, string? Nik, 
 
 public record GagasanRingkasDto(int Id, string? NoRegistrasi, string Judul, string? Metodologi,
     string? NamaDepartemenAsal, string? NamaDepartemenTujuan, string Status, string PeranSaya,
-    int? IdGugus, DateTime CreatedAt);
+    int? IdGugus, DateTime CreatedAt,
+    string? CreatedByNik = null, string? CreatedByNama = null);
 
 public record GagasanListDto(IReadOnlyList<GagasanRingkasDto> Items);
 
@@ -178,6 +201,31 @@ public record DaftarGagasanResultDto(int IdGugus, string Jenis, string Base);
 
 // Peran pengguna pada modul inovasi (untuk menu berbeda approver vs karyawan).
 public record InovasiPeranDto(string Peran, bool BolehApprove);  // Peran: GM | Manager | Karyawan
+
+// ============================================================================
+// History Approval - jejak persetujuan gagasan/risalah. Satu baris = satu
+// langkah approval. Dipakai menu History: approver (Manager/GM) menelusuri apa
+// saja yang pernah ia verifikasi/setujui, pengaju melihat perjalanan usulannya.
+// ============================================================================
+public record RiwayatApprovalDto(
+    string Kind,             // Gagasan | Inovasi
+    int IdTarget,
+    string? NoRegistrasi,
+    string? Judul,
+    string? Metodologi,      // SS | GIO | 5R
+    string? Unit,            // departemen / kompartemen
+    string? Tahap,           // PLAN | FINAL (risalah); null untuk gagasan
+    string Peran,
+    string? Nik,
+    string? Nama,
+    string StatusLangkah,    // Menunggu | Disetujui | Revisi | Ditolak
+    string? Komentar,
+    DateTime? Tgl,
+    string StatusTarget,
+    DateTime TargetCreatedAt,
+    bool Saya);
+
+public record RiwayatApprovalListDto(IReadOnlyList<RiwayatApprovalDto> Items);
 
 // ============================================================================
 // Penilaian Juri (stream) - rubrik GIO/SS & 5R, panel juri, penugasan, skor.
@@ -221,6 +269,11 @@ public record PenilaianDetailDto(int IdPenugasan, string Status, GugusHeaderDto 
     IReadOnlyList<PenilaianKriteriaDto> Kriteria,
     IReadOnlyList<SkorDto> SkorSaya,
     PenilaianHasilDto Hasil);
+
+// Rekap nilai juri per risalah (dipakai Roadmap Inovasi). NilaiAkhir 0 bila belum
+// ada penilai yang mengisi seluruh kriteria; Kategori mengikuti ambang rubrik.
+public record RekapNilaiDto(int IdGugus, decimal NilaiAkhir, string Kategori,
+    string StatusPenilaian, int PenilaiLengkap, int PenilaiTotal);
 
 public record SkorInput(int IdKriteria, byte Nilai, string? Catatan);
 public record SaveSkorRequest(IReadOnlyList<SkorInput> Skor);

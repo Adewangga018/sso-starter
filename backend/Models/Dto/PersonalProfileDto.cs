@@ -118,4 +118,8 @@ public record PersonalProfileDto(
     // filled in yet - covers both a fresh self-registration in progress and a pre-existing
     // HR/legacy row that predates this rule. Drives the "*" markers, the Simpan validation, and
     // (via DashboardSummaryDto) whether the other My Personal modules are unlocked.
-    bool ProfileComplete = true);
+    bool ProfileComplete = true,
+    // True when a profile photo file exists for this employee in Profile:PhotoPath
+    // (named {ID_KARYAWAN}.jpg). The SPA fetches it via GET /personal/profile/photo and
+    // shows it as the circular avatar; when false it falls back to the initial letter.
+    bool HasPhoto = false);

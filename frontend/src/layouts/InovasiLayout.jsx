@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import {
-  Award,
+  BarChart3,
   BookOpen,
   CheckSquare,
   ClipboardCheck,
   ClipboardList,
+  FileCheck2,
   Gavel,
-  History,
+  Layers,
   LayoutGrid,
   Lightbulb,
   ListChecks,
   Map,
+  Medal,
   MessageSquarePlus,
   Trophy,
+  UserCheck,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
@@ -34,15 +37,26 @@ function buildSections(peran, isJuri) {
   const panduan = { key: 'panduan', label: 'Panduan Inovasi', icon: BookOpen, to: `${BASE}/panduan` }
   const daftar = { key: 'daftar', label: 'Daftar Inovasi', icon: ClipboardList, to: `${BASE}/daftar` }
 
-  // Seksi Juri: muncul untuk siapa pun ber-role Juri (lepas dari band/jabatan).
-  const juriSection = {
-    label: 'Menu Juri',
-    items: [{ key: 'penilaian', label: 'Daftar Penilaian', icon: Gavel, to: `${BASE}/penilaian` }],
+  // Seksi Juri. Pengelolaan Stream & Penugasan kini diakses lewat tombol "Panel
+  // Juri" di topbar (bukan sidebar), karena pengelola belum tentu Admin IT.
+  // Sidebar hanya menyisakan daftar tugas menilai untuk anggota ber-role Juri.
+  const juriItems = []
+  if (isJuri) juriItems.push({ key: 'penilaian', label: 'Daftar Penilaian', icon: Gavel, to: `${BASE}/penilaian` })
+  const juriSection = { label: 'Menu Juri', items: juriItems }
+  const withJuri = (sections) => (juriItems.length ? [...sections, juriSection] : sections)
+
+  // History = jejak approval. Dipakai semua peran: approver menelusuri apa yang
+  // pernah ia verifikasi/setujui, pengaju menelusuri perjalanan usulannya.
+  const historySection = {
+    label: 'History',
+    items: [
+      { key: 'hist-gagasan', label: 'History Approval Gagasan', icon: FileCheck2, to: `${BASE}/history/gagasan` },
+      { key: 'hist-inovasi', label: 'History Approval Inovasi', icon: UserCheck, to: `${BASE}/history/inovasi` },
+    ],
   }
-  const withJuri = (sections) => (isJuri ? [...sections, juriSection] : sections)
 
   // Manager & GM hanya melakukan persetujuan (tidak menyumbang gagasan). Sidebar
-  // mereka ramping: menu persetujuan + pemantauan risalah + panduan verifikasi.
+  // mereka ramping: menu persetujuan + pemantauan risalah + jejak approval sendiri.
   if (peran === 'Manager' || peran === 'GM') {
     const gagasanItem = peran === 'Manager'
       ? { key: 'gagasan', label: 'Verifikasi Gagasan', icon: ClipboardCheck, to: `${BASE}/gagasan` }
@@ -51,6 +65,7 @@ function buildSections(peran, isJuri) {
       { items: [dashboard] },
       { label: 'Menu Utama', items: [beranda, panduan] },
       { label: peran === 'Manager' ? 'Menu Verifikasi' : 'Menu Persetujuan', items: [gagasanItem, daftar] },
+      historySection,
     ])
   }
 
@@ -70,12 +85,15 @@ function buildSections(peran, isJuri) {
       label: 'Rekap Kegiatan Inovasi',
       items: [
         { key: 'roadmap', label: 'Roadmap Inovasi', icon: Map, to: `${BASE}/roadmap` },
-        { key: 'ranking', label: 'Ranking Inovasi', icon: Award, to: `${BASE}/ranking` },
+        { key: 'rekap-gagasan', label: 'Sumbang Gagasan', icon: MessageSquarePlus, to: `${BASE}/rekap/gagasan` },
+        { key: 'rekap-metodologi', label: 'Inovasi Per Metodologi', icon: Layers, to: `${BASE}/rekap/metodologi` },
+        { key: 'ranking', label: 'Ranking', icon: Medal, to: `${BASE}/rekap/ranking` },
+        { key: 'grafik-gagasan', label: 'Grafik Sumbang Gagasan', icon: BarChart3, to: `${BASE}/rekap/grafik-gagasan` },
       ],
     },
+    historySection,
     {
       items: [
-        { key: 'history', label: 'History', icon: History, to: `${BASE}/history` },
         { key: 'konvensi', label: 'Menu Konvensi', icon: Trophy, to: `${BASE}/konvensi` },
       ],
     },

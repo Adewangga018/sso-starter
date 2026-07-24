@@ -114,7 +114,8 @@ public class PersonalController : ControllerBase
                 [],
                 [],
                 Registered: false,
-                ProfileComplete: false));
+                ProfileComplete: false,
+                HasPhoto: FindProfilePhoto(user.Nik) is not null));
         }
 
         var anak = await _db.MstAnakPegawai
@@ -169,7 +170,8 @@ public class PersonalController : ControllerBase
             DateOnly.FromDateTime(pegawai.CREATED_AT),
             anak,
             berkas,
-            ProfileComplete: ProfileRules.IsComplete(pegawai));
+            ProfileComplete: ProfileRules.IsComplete(pegawai),
+            HasPhoto: FindProfilePhoto(pegawai.ID_KARYAWAN) is not null);
 
         return Ok(dto);
     }
@@ -818,6 +820,151 @@ public class PersonalController : ControllerBase
 
         await _audit.LogAsync("profile.document.updated", pegawai.ID_KARYAWAN, User.FindFirstValue("email"),
             $"Pegawai {pegawai.ID_KARYAWAN} memperbarui akta anak (id {idAnak}).");
+
+        return NoContent();
+    }
+
+    // --- Profile photo (foto profil) -----------------------------------------
+    // Disimpan sebagai file {ID_KARYAWAN}.jpg pada share EASy (Profile:PhotoPath),
+    // sejajar dengan foto absensi. TIDAK dicatat di database - keberadaan file =
+    // pegawai punya foto. Foto sudah di-crop lingkaran (persegi 1:1) di sisi klien.
+    private static readonly string[] AllowedPhotoExt = [".jpg", ".png"];
+    private const long MaxPhotoBytes = 5 * 1024 * 1024;
+
+    // Kode karyawan yang aman dipakai sebagai nama file (huruf/angka saja).
+    private static string SafeKode(string? idKaryawan)
+    {
+        var s = new string((idKaryawan ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+        return string.IsNullOrEmpty(s) ? "pegawai" : s;
+    }
+
+    // Path fisik foto profil bila ada (jpg diutamakan, lalu png), else null.
+    private string? FindProfilePhoto(string? idKaryawan)
+    {
+        var dir = _config["Profile:PhotoPath"];
+        if (string.IsNullOrWhiteSpace(dir) || string.IsNullOrWhiteSpace(idKaryawan))
+        {
+            return null;
+        }
+
+        var safe = SafeKode(idKaryawan);
+        foreach (var ext in AllowedPhotoExt)
+        {
+            var p = Path.Combine(dir, safe + ext);
+            if (System.IO.File.Exists(p))
+            {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    // Mengalirkan foto profil pemilik akun (dipakai sebagai avatar lingkaran).
+    [HttpGet("profile/photo")]
+    public async Task<IActionResult> GetProfilePhoto()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var path = FindProfilePhoto(user.Nik);
+        if (path is null)
+        {
+            return NotFound(new { message = "Foto profil belum tersedia." });
+        }
+
+        var ct = Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+        return File(System.IO.File.OpenRead(path), ct);
+    }
+
+    // Mengunggah / mengganti foto profil (hasil crop lingkaran; JPG/PNG, maks 5 MB).
+    [HttpPost("profile/photo")]
+    [RequestSizeLimit(MaxPhotoBytes)]
+    public async Task<IActionResult> UploadProfilePhoto(IFormFile file)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Foto kosong." });
+        }
+        if (file.Length > MaxPhotoBytes)
+        {
+            return BadRequest(new { message = "Ukuran foto maksimal 5 MB." });
+        }
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext == ".jpeg") ext = ".jpg";
+        if (!AllowedPhotoExt.Contains(ext))
+        {
+            return BadRequest(new { message = "Foto harus berupa JPG atau PNG." });
+        }
+
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+        }
+
+        var dir = _config["Profile:PhotoPath"];
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = "Penyimpanan foto profil belum dikonfigurasi (Profile:PhotoPath). Hubungi IT.",
+            });
+        }
+
+        var safe = SafeKode(user.Nik);
+        try
+        {
+            Directory.CreateDirectory(dir);
+            // Satu foto per pegawai: buang varian ekstensi lain sebelum menulis.
+            foreach (var other in AllowedPhotoExt)
+            {
+                if (string.Equals(other, ext, StringComparison.OrdinalIgnoreCase)) continue;
+                var prev = Path.Combine(dir, safe + other);
+                if (System.IO.File.Exists(prev))
+                {
+                    try { System.IO.File.Delete(prev); } catch { /* best effort */ }
+                }
+            }
+
+            await using var stream = System.IO.File.Create(Path.Combine(dir, safe + ext));
+            await file.CopyToAsync(stream);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Gagal menyimpan foto profil ke {Dir} untuk {Id}", dir, safe);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Gagal menyimpan foto profil ke penyimpanan. Hubungi IT.",
+            });
+        }
+
+        await _audit.LogAsync("profile.photo.updated", user.Nik, User.FindFirstValue("email"),
+            $"Pegawai {user.Nik} memperbarui foto profil.");
+
+        return NoContent();
+    }
+
+    // Menghapus foto profil (kembali ke avatar huruf inisial).
+    [HttpDelete("profile/photo")]
+    public async Task<IActionResult> DeleteProfilePhoto()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+        }
+
+        var path = FindProfilePhoto(user.Nik);
+        if (path is not null)
+        {
+            try { System.IO.File.Delete(path); } catch { /* best effort */ }
+            await _audit.LogAsync("profile.photo.deleted", user.Nik, User.FindFirstValue("email"),
+                $"Pegawai {user.Nik} menghapus foto profil.");
+        }
 
         return NoContent();
     }

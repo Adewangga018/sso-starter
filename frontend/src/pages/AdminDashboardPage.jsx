@@ -15,7 +15,7 @@ const TILES = [
     desc: 'Kelola akun, aktif/nonaktif, buka kunci, dan toggle hak Admin IT.',
   },
   {
-    to: '/admin/juri',
+    to: '/juri',
     icon: Gavel,
     title: 'Juri & Penilaian Inovasi',
     desc: 'Susun stream juri (Ketua/Anggota/Sekretaris) & tugaskan menilai inovasi.',

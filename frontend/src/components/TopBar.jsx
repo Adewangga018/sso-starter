@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, Menu, ShieldCheck } from 'lucide-react'
+import { Bell, ChevronDown, Gavel, LogOut, Menu, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './TopBar.css'
 
@@ -18,7 +18,7 @@ import './TopBar.css'
  */
 export default function TopBar({ title, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
-  const { isAdmin } = useAuth()
+  const { isAdmin, isPengelolaJuri } = useAuth()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -67,6 +67,14 @@ export default function TopBar({ title, name, subtitle, logoSrc, dark = false, o
       </div>
 
       <div className="topbar__actions" ref={actionsRef}>
+        {/* Panel Juri berdiri sendiri (bukan sub-menu Admin): pengelola stream
+            juri belum tentu Admin IT. Untuk Admin yang juga pengelola, tampil
+            berdampingan dengan Panel Admin. */}
+        {isPengelolaJuri && (
+          <Link to="/juri" className="topbar__admin-link topbar__admin-link--juri" title="Panel Juri & Penilaian Inovasi">
+            <Gavel size={16} /> Panel Juri
+          </Link>
+        )}
         {isAdmin && (
           <Link to="/admin" className="topbar__admin-link" title="Panel Admin IT">
             <ShieldCheck size={16} /> Panel Admin

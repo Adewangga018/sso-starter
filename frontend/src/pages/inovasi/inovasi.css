@@ -580,8 +580,63 @@
 }
 
 /* ============================================================================
-   Roadmap Inovasi - garis waktu perjalanan risalah (PDCA) dikelompokkan periode.
+   Roadmap Inovasi - tabel rekap + garis waktu perjalanan risalah (PDCA).
    ============================================================================ */
+/* Judul halaman + tombol Download sebaris. */
+.inv__road-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Baris filter (Periode / Metodologi / Kompartemen) - satu kolom per filter. */
+.inv__road-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+.inv__road-filters .inv__select { width: 100%; }
+@media (max-width: 720px) {
+  .inv__road-filters { grid-template-columns: 1fr; }
+}
+
+/* Navigasi halaman tabel rekap. */
+.inv__pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+/* Pemisah antara tabel rekap dan garis waktu. */
+.inv__road-section {
+  margin: 30px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--inv-line);
+  font-size: 15px;
+  color: var(--inv-green-dark);
+}
+
+/* Badge Kategori Penghargaan hasil penilaian juri. */
+.inv__kat {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.inv__kat--platinum     { background: #e8ecf5; color: #3b4a6b; border: 1px solid #c3cee4; }
+.inv__kat--gold         { background: #fdf3d6; color: #7a5b12; border: 1px solid #e8d295; }
+.inv__kat--silver       { background: #eef1ef; color: #4f5a53; border: 1px solid #cdd6d0; }
+.inv__kat--bronze       { background: #f6e6da; color: #7d4a24; border: 1px solid #e0bfa2; }
+.inv__kat--partisipatif { background: #eef3ec; color: #46614e; border: 1px solid #cfded3; }
+
 .inv__road-period {
   display: flex;
   align-items: center;
@@ -755,4 +810,114 @@
 .inv__jadwal-cell:hover {
   outline: 1.5px solid var(--inv-green);
   outline-offset: -1.5px;
+}
+
+/* --- Rekap Kegiatan Inovasi & History --------------------------------- */
+/* Baris filter: beberapa select + pencarian dalam satu baris di atas tabel. */
+.inv__filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 260px;
+}
+.inv__filters .inv__select {
+  min-width: 150px;
+}
+/* Kartu ringkasan yang sekaligus jadi filter (mis. metodologi). */
+.inv__stat--btn {
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.inv__stat--btn:hover {
+  border-color: var(--inv-green);
+}
+.inv__stat--on {
+  border-color: var(--inv-green);
+  box-shadow: 0 0 0 2px rgba(31, 107, 57, 0.12);
+}
+/* Penanda selesai/belum pada kolom tahapan. */
+.inv__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #f0f3f0;
+  color: #9aa79d;
+}
+.inv__tick--on {
+  background: #e6f3ea;
+  color: var(--inv-green-dark);
+}
+/* Baris yang merupakan tindakan pengguna sendiri pada History Approval. */
+.inv__row--mine td {
+  background: #f6fbf7;
+}
+.inv__chip-saya {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e6f3ea;
+  color: var(--inv-green-dark);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+/* Panel "Riwayat Approval" saat satu baris History dibuka. */
+.inv__timeline {
+  padding: 6px 2px;
+}
+.inv__timeline-head {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--inv-green-dark);
+  margin-bottom: 6px;
+}
+.inv__timeline-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--inv-line);
+}
+.inv__timeline-what {
+  font-size: 13px;
+  color: var(--inv-ink);
+}
+.inv__timeline-who {
+  font-size: 12px;
+  color: var(--inv-muted);
+  margin-top: 2px;
+}
+.inv__timeline-when {
+  font-size: 12px;
+  color: var(--inv-muted);
+  white-space: nowrap;
+}
+/* Kartu grafik (SVG digambar sendiri, tanpa pustaka chart). */
+.inv__chart-card {
+  background: #fff;
+  border: 1px solid var(--inv-line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.inv__chart-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--inv-ink);
+}
+.inv__chart-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+.inv__chart-row .inv__chart-card {
+  margin-bottom: 0;
 }

@@ -19,6 +19,39 @@
   margin-bottom: 18px;
 }
 
+/* Pemilih periode log absensi (bulan & tahun) - di atas toolbar tabel. */
+.absensi__periode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.absensi__filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+}
+
+.absensi__filter select {
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+  min-width: 132px;
+  outline: none;
+}
+
+.absensi__filter select:focus {
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
 .absensi__toolbar {
   display: flex;
   align-items: center;

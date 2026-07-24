@@ -20,6 +20,7 @@ public class AdminController : ControllerBase
 {
     private const string AdminRole = "Admin";
     private const string JuriRole = "Juri";
+    private const string PengelolaJuriRole = "PengelolaJuri";
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _db;
@@ -71,6 +72,7 @@ public class AdminController : ControllerBase
 
         var adminIds = (await _userManager.GetUsersInRoleAsync(AdminRole)).Select(u => u.Id).ToHashSet();
         var juriIds = (await _userManager.GetUsersInRoleAsync(JuriRole)).Select(u => u.Id).ToHashSet();
+        var pengelolaIds = (await _userManager.GetUsersInRoleAsync(PengelolaJuriRole)).Select(u => u.Id).ToHashSet();
         var me = _userManager.GetUserId(User);
 
         var query = _userManager.Users.AsNoTracking();
@@ -98,6 +100,7 @@ public class AdminController : ControllerBase
             isActive = u.IsActive,
             isAdmin = adminIds.Contains(u.Id),
             isJuri = juriIds.Contains(u.Id),
+            isPengelolaJuri = pengelolaIds.Contains(u.Id),
             locked = u.LockoutEnd.HasValue && u.LockoutEnd > now,
             twoFactor = u.TwoFactorEnabled,
             isSelf = u.Id == me,
@@ -170,6 +173,38 @@ public class AdminController : ControllerBase
         {
             await _userManager.RemoveFromRoleAsync(user, JuriRole);
             await _audit.LogAsync("role.juri_revoked", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
+        }
+
+        return NoContent();
+    }
+
+    // Grant/revoke the PengelolaJuri (jury coordinator) role. Holders may ONLY
+    // manage Stream Penilai & Penugasan ke Inovasi in My Innovation - no other
+    // Admin IT privileges.
+    [HttpPost("users/{id}/role/pengelola-juri")]
+    public async Task<IActionResult> SetPengelolaJuri(string id, [FromBody] ToggleRequest req)
+    {
+        if (!IsAdmin())
+        {
+            return Forbid();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound(new { message = "Pengguna tidak ditemukan." });
+        }
+
+        var isPengelola = await _userManager.IsInRoleAsync(user, PengelolaJuriRole);
+        if (req.Enabled && !isPengelola)
+        {
+            await _userManager.AddToRoleAsync(user, PengelolaJuriRole);
+            await _audit.LogAsync("role.pengelola_juri_granted", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
+        }
+        else if (!req.Enabled && isPengelola)
+        {
+            await _userManager.RemoveFromRoleAsync(user, PengelolaJuriRole);
+            await _audit.LogAsync("role.pengelola_juri_revoked", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
         }
 
         return NoContent();

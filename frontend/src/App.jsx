@@ -35,8 +35,11 @@ import InovasiForm from './pages/inovasi/InovasiForm'
 import GagasanList from './pages/inovasi/GagasanList'
 import InovasiPegawai from './pages/inovasi/InovasiPegawai'
 import InovasiRoadmap from './pages/inovasi/InovasiRoadmap'
-import InovasiRanking from './pages/inovasi/InovasiRanking'
-import InovasiHistory from './pages/inovasi/InovasiHistory'
+import RankingPage from './pages/inovasi/RankingPage'
+import RekapGagasan from './pages/inovasi/RekapGagasan'
+import RekapMetodologi from './pages/inovasi/RekapMetodologi'
+import GrafikGagasan from './pages/inovasi/GrafikGagasan'
+import HistoryApproval from './pages/inovasi/HistoryApproval'
 import InovasiKonvensi from './pages/inovasi/InovasiKonvensi'
 import InovasiPenilaianList from './pages/inovasi/InovasiPenilaianList'
 import InovasiPenilaianForm from './pages/inovasi/InovasiPenilaianForm'
@@ -59,7 +62,10 @@ export default function App() {
             <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/admin/documents" element={<AdminDocumentsPage />} />
             <Route path="/admin/locations" element={<AdminLocationsPage />} />
-            <Route path="/admin/juri" element={<AdminJuriPage />} />
+            {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
+                belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
+            <Route path="/juri" element={<AdminJuriPage />} />
+            <Route path="/admin/juri" element={<Navigate to="/juri" replace />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
             </Route>
@@ -88,8 +94,18 @@ export default function App() {
               <Route path="panduan" element={<InovasiPanduan />} />
               <Route path="pegawai" element={<InovasiPegawai />} />
               <Route path="roadmap" element={<InovasiRoadmap />} />
-              <Route path="ranking" element={<InovasiRanking />} />
-              <Route path="history" element={<InovasiHistory />} />
+              <Route path="rekap/gagasan" element={<RekapGagasan />} />
+              <Route path="rekap/metodologi" element={<RekapMetodologi />} />
+              {/* Ranking Sumbang Gagasan & Ranking Inovasi kini satu menu bertab;
+                  dua rute lama diarahkan ke sana agar tautan lama tetap hidup. */}
+              <Route path="rekap/ranking" element={<RankingPage />} />
+              <Route path="rekap/ranking-gagasan" element={<Navigate to="../rekap/ranking" replace />} />
+              <Route path="rekap/grafik-gagasan" element={<GrafikGagasan />} />
+              <Route path="ranking" element={<Navigate to="../rekap/ranking" replace />} />
+              {/* History dipecah mengikuti objek yang disetujui: gagasan & risalah. */}
+              <Route path="history" element={<Navigate to="gagasan" replace />} />
+              <Route path="history/gagasan" element={<HistoryApproval kind="gagasan" />} />
+              <Route path="history/inovasi" element={<HistoryApproval kind="inovasi" />} />
               <Route path="konvensi" element={<InovasiKonvensi />} />
               <Route path="penilaian" element={<InovasiPenilaianList />} />
               <Route path="penilaian/:penugasanId" element={<InovasiPenilaianForm />} />

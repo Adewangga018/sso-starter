@@ -126,6 +126,15 @@ export const api = {
   unduhLaporanTim: () => apiDownload('/api/team/laporan', 'Laporan-Tim.csv'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
   updateProfile: (payload) => apiFetch('/api/personal/profile', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Foto profil (avatar lingkaran). getProfilePhoto mengembalikan { url, contentType }
+  // (blob object URL) - caller wajib URL.revokeObjectURL saat selesai; 404 = belum ada foto.
+  getProfilePhoto: () => apiBlob('/api/personal/profile/photo'),
+  uploadProfilePhoto: (blob) => {
+    const body = new FormData()
+    body.append('file', blob, 'profile.jpg')
+    return apiFetch('/api/personal/profile/photo', { method: 'POST', body })
+  },
+  deleteProfilePhoto: () => apiFetch('/api/personal/profile/photo', { method: 'DELETE' }),
   uploadDocument: (key, file) => {
     const body = new FormData()
     body.append('file', file)
@@ -245,6 +254,10 @@ export const api = {
   listDepartemenInovasi: () => apiFetch('/api/inovasi/departemen'),
   getInovasiPeran: () => apiFetch('/api/inovasi/peran'),
 
+  // History Approval - jejak langkah persetujuan (siapa memproses apa, kapan)
+  historyApprovalGagasan: () => apiFetch('/api/inovasi/history/gagasan'),
+  historyApprovalInovasi: () => apiFetch('/api/inovasi/history/gugus'),
+
   // Penilaian Juri (Bearer). Rubrik + stream (Admin) + penugasan + sisi juri.
   getPenilaianKriteria: (jenisForm) => apiFetch(`/api/inovasi/penilaian/kriteria?jenisForm=${encodeURIComponent(jenisForm ?? '')}`),
   // Admin: seluruh pengguna ber-role Juri (tanpa batas 100)
@@ -266,6 +279,8 @@ export const api = {
   getPenilaian: (penugasanId) => apiFetch(`/api/inovasi/penilaian/${penugasanId}`),
   savePenilaianSkor: (penugasanId, payload) => apiFetch(`/api/inovasi/penilaian/${penugasanId}/skor`, { method: 'PUT', body: JSON.stringify(payload) }),
   getPenilaianHasil: (penugasanId) => apiFetch(`/api/inovasi/penilaian/${penugasanId}/hasil`),
+  // Rekap nilai akhir + kategori penghargaan seluruh risalah (Roadmap Inovasi).
+  getRekapNilai: () => apiFetch('/api/inovasi/penilaian/rekap'),
 
   // authentication (cookie flow)
   login: (email, password) => post('/api/account/login', { email, password }),
@@ -297,6 +312,8 @@ export const api = {
     apiFetch(`/api/admin/users/${id}/role/admin`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   setUserJuri: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/role/juri`, { method: 'POST', body: JSON.stringify({ enabled }) }),
+  setUserPengelolaJuri: (id, enabled) =>
+    apiFetch(`/api/admin/users/${id}/role/pengelola-juri`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   setUserActive: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),

@@ -1,0 +1,172 @@
+.crop__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 38, 31, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.crop__modal {
+  width: min(380px, 100%);
+  background: var(--gcs-white, #fff);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+}
+
+.crop__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.crop__head h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.crop__x {
+  border: none;
+  background: none;
+  color: var(--gcs-text-muted, #6b7772);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.crop__x:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.crop__hint {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted, #6b7772);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.crop__stage {
+  position: relative;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #10231b;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.crop__stage:active {
+  cursor: grabbing;
+}
+
+.crop__stage canvas {
+  display: block;
+}
+
+/* Bingkai lingkaran: menggelapkan area luar + cincin putih penanda. */
+.crop__mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.crop__mask::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(16, 35, 27, 0.5);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: -2px;
+}
+
+.crop__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.crop__zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.crop__zoom input[type='range'] {
+  flex: 1;
+  accent-color: var(--gcs-green-600, #2f6c3f);
+}
+
+.crop__zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gcs-border, #dbe3dc);
+  border-radius: 8px;
+  background: var(--gcs-white, #fff);
+  color: var(--gcs-text, #223029);
+  cursor: pointer;
+}
+
+.crop__zoom-btn:hover:not(:disabled) {
+  border-color: var(--gcs-green-600, #2f6c3f);
+  color: var(--gcs-green-600, #2f6c3f);
+}
+
+.crop__zoom-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.crop__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.crop__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--gcs-green-900, #1f4f2c);
+  color: #fff;
+}
+
+.crop__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.crop__btn--ghost {
+  background: none;
+  border: 1px solid var(--gcs-border, #dbe3dc);
+  color: var(--gcs-text, #223029);
+}
+
+.crop__spin {
+  animation: crop-spin 0.8s linear infinite;
+}
+
+@keyframes crop-spin {
+  to { transform: rotate(360deg); }
+}
