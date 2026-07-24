@@ -13,22 +13,21 @@ export default function PegawaiPicker({ open, onClose, onPick, gugusId, existing
   const [loading, setLoading] = useState(false)
   const taken = new Set((existingNiks ?? []).filter(Boolean).map(String))
 
+  // Saat dibuka / kata kunci < 2 huruf: tampilkan daftar default sesuai cakupan
+  // gugus (dep./kompartemen) tanpa perlu mengetik. >= 2 huruf: cari lebih luas.
   useEffect(() => {
     if (!open) return
     const term = q.trim()
-    if (term.length < 2) {
-      setRows([])
-      return
-    }
+    const cari = term.length >= 2 ? term : ''
     let live = true
     setLoading(true)
     const t = setTimeout(() => {
       api
-        .cariPegawaiInovasi(term, gugusId)
+        .cariPegawaiInovasi(cari, gugusId)
         .then((d) => live && setRows(d))
         .catch(() => live && setRows([]))
         .finally(() => live && setLoading(false))
-    }, 300)
+    }, cari ? 300 : 0)
     return () => {
       live = false
       clearTimeout(t)
@@ -46,13 +45,16 @@ export default function PegawaiPicker({ open, onClose, onPick, gugusId, existing
           <h3 style={{ margin: 0, fontSize: 16 }}>Cari Pegawai</h3>
           <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>
         </div>
-        <div className="inv__search" style={{ marginBottom: 12 }}>
+        <div className="inv__search" style={{ marginBottom: 8 }}>
           <span className="inv__search-icon"><Search size={16} /></span>
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ketik nama atau NIK (min. 2 huruf)..." />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ketik nama atau NIK untuk mencari lebih luas..." />
         </div>
+        <p className="inv__hint" style={{ marginTop: 0, marginBottom: 12 }}>Pegawai satu departemen/kompartemen tampil otomatis. Ketik (min. 2 huruf) untuk mencari lebih luas.</p>
         <div style={{ overflowY: 'auto' }}>
-          {loading && <div className="inv__hint">Mencari...</div>}
-          {!loading && q.trim().length >= 2 && rows.length === 0 && <div className="inv__hint">Tidak ada hasil.</div>}
+          {loading && <div className="inv__hint">Memuat...</div>}
+          {!loading && rows.length === 0 && (
+            <div className="inv__hint">{q.trim().length >= 2 ? 'Tidak ada hasil.' : 'Belum ada pegawai pada cakupan ini.'}</div>
+          )}
           <table className="inv__subtable">
             <tbody>
               {rows.map((p) => {

@@ -240,7 +240,7 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
 
   async function daftar() {
     const nama = await dialog.prompt({
-      title: 'Daftarkan ke SERGIO',
+      title: 'Daftarkan Inovasi',
       label: 'Nama gugus untuk risalah:',
       defaultValue: g.judul?.slice(0, 40) || '',
       required: true,
@@ -332,7 +332,7 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
             {g.siapDaftar && (
               <div className="inv__banner inv__banner--ok" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span>Gagasan disetujui. Daftarkan menjadi risalah {g.metodologi}. Anda (Ketua) akan mengisi nama gugus, Sekretaris, Anggota, dan Fasilitator di form risalah.</span>
-                <button type="button" className="inv__btn inv__btn--primary" onClick={daftar} disabled={busy}>Daftarkan ke SERGIO</button>
+                <button type="button" className="inv__btn inv__btn--primary" onClick={daftar} disabled={busy}>Daftarkan Inovasi</button>
               </div>
             )}
           </div>

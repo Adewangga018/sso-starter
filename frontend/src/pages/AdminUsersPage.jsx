@@ -103,6 +103,7 @@ export default function AdminUsersPage() {
               <th>ID Karyawan</th>
               <th>Status</th>
               <th className="admin-users__col-center">Admin IT</th>
+              <th className="admin-users__col-center">Juri</th>
               <th className="admin-users__col-center">Aktif</th>
               <th></th>
             </tr>
@@ -139,6 +140,17 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="admin-users__col-center">
                   <Switch
+                    checked={u.isJuri}
+                    disabled={busyId === u.id}
+                    title="Tandai pengguna sebagai Juri (dapat ditempatkan di stream penilaian)"
+                    onChange={() =>
+                      runAction(u.id, () => api.setUserJuri(u.id, !u.isJuri),
+                        !u.isJuri ? `${u.fullName ?? u.email} kini Juri.` : `Peran Juri ${u.fullName ?? u.email} dicabut.`)
+                    }
+                  />
+                </td>
+                <td className="admin-users__col-center">
+                  <Switch
                     checked={u.isActive}
                     disabled={busyId === u.id || u.isSelf}
                     title={u.isSelf ? 'Tidak bisa menonaktifkan akun sendiri' : 'Aktif/nonaktifkan akun'}
@@ -163,7 +175,7 @@ export default function AdminUsersPage() {
               </tr>
             ))}
             {!users.length && !loading && (
-              <tr><td colSpan={6} className="admin-users__empty">Tidak ada pengguna.</td></tr>
+              <tr><td colSpan={7} className="admin-users__empty">Tidak ada pengguna.</td></tr>
             )}
           </tbody>
         </table>

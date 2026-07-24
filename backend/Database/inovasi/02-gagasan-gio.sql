@@ -5,7 +5,7 @@
      - inovasi.gagasan          : usulan awal (judul + latar belakang) yang
                                    dinilai berjenjang: Fasilitator (Manager) ->
                                    Verifikator (GM) -> VP Dep. Asal -> VP Dep.
-                                   Tujuan -> lalu didaftarkan ke SERGIO (jadi gugus).
+                                   Tujuan -> lalu didaftarkan Inovasi (jadi gugus).
      - inovasi.gagasan_approval : langkah persetujuan + catatan tiap approver.
      - inovasi.pareto           : P.3 Stratifikasi & Pareto (khusus GIO).
      - kolom baru pada inovasi.gugus: verifikasi_akar (GIO P.8), id_gagasan

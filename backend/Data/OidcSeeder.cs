@@ -13,7 +13,7 @@ public class OidcSeeder : IHostedService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _configuration;
 
-    private static readonly string[] Roles = ["Admin", "AdminModul", "Karyawan"];
+    private static readonly string[] Roles = ["Admin", "AdminModul", "Karyawan", "Juri"];
 
     public OidcSeeder(IServiceProvider services, IConfiguration configuration)
     {

@@ -209,6 +209,7 @@ export const api = {
   getInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}`),
   saveInovasiPlan: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/plan`, { method: 'PUT', body: JSON.stringify(payload) }),
   submitInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}/submit`, { method: 'POST' }),
+  submitFinalInovasi: (id) => apiFetch(`/api/inovasi/gugus/${id}/submit-final`, { method: 'POST' }),
   actPengesahan: (id, pid, payload) => apiFetch(`/api/inovasi/gugus/${id}/pengesahan/${pid}`, { method: 'POST', body: JSON.stringify(payload) }),
   saveInovasiDo: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/do`, { method: 'PUT', body: JSON.stringify(payload) }),
   saveInovasiCheck: (id, payload) => apiFetch(`/api/inovasi/gugus/${id}/check`, { method: 'PUT', body: JSON.stringify(payload) }),
@@ -220,6 +221,16 @@ export const api = {
     return apiFetch(`/api/inovasi/gugus/${id}/upload`, { method: 'POST', body })
   },
   cariPegawaiInovasi: (q, gugusId) => apiFetch(`/api/inovasi/pegawai?q=${encodeURIComponent(q ?? '')}${gugusId ? `&gugusId=${encodeURIComponent(gugusId)}` : ''}`),
+  // Direktori pegawai (halaman Daftar Pegawai): seluruh pegawai + filter dep/komp.
+  listPegawaiDirektori: ({ q, departemenId, kompartemenId } = {}) => {
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (departemenId) p.set('departemenId', departemenId)
+    if (kompartemenId) p.set('kompartemenId', kompartemenId)
+    const qs = p.toString()
+    return apiFetch(`/api/inovasi/pegawai-direktori${qs ? `?${qs}` : ''}`)
+  },
+  listKompartemenInovasi: () => apiFetch('/api/inovasi/kompartemen'),
   // Return { url, contentType } - blob object URL; revoke it when done.
   getInovasiFile: (id, path) => apiBlob(`/api/inovasi/gugus/${id}/file?path=${encodeURIComponent(path)}`),
 
@@ -233,6 +244,28 @@ export const api = {
   deleteGagasan: (id) => apiFetch(`/api/inovasi/gagasan/${id}`, { method: 'DELETE' }),
   listDepartemenInovasi: () => apiFetch('/api/inovasi/departemen'),
   getInovasiPeran: () => apiFetch('/api/inovasi/peran'),
+
+  // Penilaian Juri (Bearer). Rubrik + stream (Admin) + penugasan + sisi juri.
+  getPenilaianKriteria: (jenisForm) => apiFetch(`/api/inovasi/penilaian/kriteria?jenisForm=${encodeURIComponent(jenisForm ?? '')}`),
+  // Admin: seluruh pengguna ber-role Juri (tanpa batas 100)
+  listJuriUsers: () => apiFetch('/api/inovasi/penilaian/juri-users'),
+  // Admin: kelola stream
+  listPenilaianStream: () => apiFetch('/api/inovasi/penilaian/stream'),
+  getPenilaianStream: (id) => apiFetch(`/api/inovasi/penilaian/stream/${id}`),
+  createPenilaianStream: (payload) => apiFetch('/api/inovasi/penilaian/stream', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePenilaianStream: (id, payload) => apiFetch(`/api/inovasi/penilaian/stream/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deletePenilaianStream: (id) => apiFetch(`/api/inovasi/penilaian/stream/${id}`, { method: 'DELETE' }),
+  // Admin: penugasan
+  listPenilaianGugusOptions: () => apiFetch('/api/inovasi/penilaian/gugus-options'),
+  listPenugasan: () => apiFetch('/api/inovasi/penilaian/penugasan'),
+  createPenugasan: (payload) => apiFetch('/api/inovasi/penilaian/penugasan', { method: 'POST', body: JSON.stringify(payload) }),
+  tutupPenugasan: (id) => apiFetch(`/api/inovasi/penilaian/penugasan/${id}/tutup`, { method: 'POST' }),
+  deletePenugasan: (id) => apiFetch(`/api/inovasi/penilaian/penugasan/${id}`, { method: 'DELETE' }),
+  // Juri
+  listTugasPenilaian: () => apiFetch('/api/inovasi/penilaian/tugas'),
+  getPenilaian: (penugasanId) => apiFetch(`/api/inovasi/penilaian/${penugasanId}`),
+  savePenilaianSkor: (penugasanId, payload) => apiFetch(`/api/inovasi/penilaian/${penugasanId}/skor`, { method: 'PUT', body: JSON.stringify(payload) }),
+  getPenilaianHasil: (penugasanId) => apiFetch(`/api/inovasi/penilaian/${penugasanId}/hasil`),
 
   // authentication (cookie flow)
   login: (email, password) => post('/api/account/login', { email, password }),
@@ -262,6 +295,8 @@ export const api = {
   getAdminUsers: (q) => apiFetch(`/api/admin/users?q=${encodeURIComponent(q ?? '')}`),
   setUserAdmin: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/role/admin`, { method: 'POST', body: JSON.stringify({ enabled }) }),
+  setUserJuri: (id, enabled) =>
+    apiFetch(`/api/admin/users/${id}/role/juri`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   setUserActive: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),

@@ -12,6 +12,7 @@ import AdminDocumentsPage from './pages/AdminDocumentsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminLocationsPage from './pages/AdminLocationsPage'
+import AdminJuriPage from './pages/AdminJuriPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyTeamPage from './pages/MyTeamPage'
@@ -32,6 +33,13 @@ import InovasiPanduan from './pages/inovasi/InovasiPanduan'
 import InovasiList from './pages/inovasi/InovasiList'
 import InovasiForm from './pages/inovasi/InovasiForm'
 import GagasanList from './pages/inovasi/GagasanList'
+import InovasiPegawai from './pages/inovasi/InovasiPegawai'
+import InovasiRoadmap from './pages/inovasi/InovasiRoadmap'
+import InovasiRanking from './pages/inovasi/InovasiRanking'
+import InovasiHistory from './pages/inovasi/InovasiHistory'
+import InovasiKonvensi from './pages/inovasi/InovasiKonvensi'
+import InovasiPenilaianList from './pages/inovasi/InovasiPenilaianList'
+import InovasiPenilaianForm from './pages/inovasi/InovasiPenilaianForm'
 
 export default function App() {
   return (
@@ -51,6 +59,7 @@ export default function App() {
             <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/admin/documents" element={<AdminDocumentsPage />} />
             <Route path="/admin/locations" element={<AdminLocationsPage />} />
+            <Route path="/admin/juri" element={<AdminJuriPage />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
             </Route>
@@ -77,6 +86,13 @@ export default function App() {
               <Route path="daftar/:id" element={<InovasiForm />} />
               <Route path="beranda" element={<InovasiBeranda />} />
               <Route path="panduan" element={<InovasiPanduan />} />
+              <Route path="pegawai" element={<InovasiPegawai />} />
+              <Route path="roadmap" element={<InovasiRoadmap />} />
+              <Route path="ranking" element={<InovasiRanking />} />
+              <Route path="history" element={<InovasiHistory />} />
+              <Route path="konvensi" element={<InovasiKonvensi />} />
+              <Route path="penilaian" element={<InovasiPenilaianList />} />
+              <Route path="penilaian/:penugasanId" element={<InovasiPenilaianForm />} />
             </Route>
 
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,

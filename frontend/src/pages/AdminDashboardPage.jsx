@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, Boxes, FolderLock, KeyRound, MapPin, ShieldAlert, ShieldCheck, Users, UsersRound,
+  ArrowLeft, Boxes, FolderLock, Gavel, KeyRound, MapPin, ShieldAlert, ShieldCheck, Users, UsersRound,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,12 @@ const TILES = [
     icon: UsersRound,
     title: 'Manajemen Pengguna & Role',
     desc: 'Kelola akun, aktif/nonaktif, buka kunci, dan toggle hak Admin IT.',
+  },
+  {
+    to: '/admin/juri',
+    icon: Gavel,
+    title: 'Juri & Penilaian Inovasi',
+    desc: 'Susun stream juri (Ketua/Anggota/Sekretaris) & tugaskan menilai inovasi.',
   },
   {
     to: '/admin/audit',

@@ -23,6 +23,9 @@ const arr = (v) => (Array.isArray(v) ? v : [])
 const has = (v) => arr(v).length > 0
 const txt = (v) => (v !== null && v !== undefined && String(v).trim() !== '')
 
+// Penanda posisi diagram fishbone (disisipkan komponen React di modal Detail).
+const FISH_MARKER = '<!--@@FISHBONE@@-->'
+
 // Tabel generik: headers = [{label, width?}], rows = [[cell, cell, ...]]
 function table(headers, rows) {
   const th = headers.map((h) => `<th${h.width ? ` style="width:${h.width}"` : ''}>${esc(h.label)}</th>`).join('')
@@ -30,6 +33,46 @@ function table(headers, rows) {
     ? rows.map((r) => `<tr>${r.map((c) => `<td>${c === '' || c == null ? '-' : c}</td>`).join('')}</tr>`).join('')
     : `<tr><td colspan="${headers.length}" style="text-align:center;color:#888">Belum ada data.</td></tr>`
   return `<table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>`
+}
+
+// P.3 Jadwal (PDCA) sebagai grid: kolom bulan dikelompokkan per tahun sesuai
+// Periode, sel terarsir bila terjadwal & memuat rentang tanggal (dari `rentang`).
+function jadwalGrid(d) {
+  const MONTHS = [[6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des'], [1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei']]
+  const [a, b] = String(d.periode || '').split('/')
+  const y1 = Number(a) || ''
+  const y2 = Number(b) || (y1 ? y1 + 1 : '')
+  const cols = MONTHS.map(([m, l]) => ({ m, l, year: m >= 6 ? y1 : y2 }))
+  const yg = []
+  cols.forEach((c) => { const last = yg[yg.length - 1]; if (last && last.year === c.year) last.span += 1; else yg.push({ year: c.year, span: 1 }) })
+
+  const parseR = (s) => { if (!s) return {}; try { const o = JSON.parse(s); const r = {}; for (const [m, v] of Object.entries(o)) if (Array.isArray(v) && v[0]) r[Number(m)] = { start: v[0], end: v[1] || v[0] }; return r } catch { return {} } }
+  const dayRange = (rg) => { if (!rg?.start) return ''; const s = Number(rg.start.slice(8, 10)); const e = rg.end ? Number(rg.end.slice(8, 10)) : s; return s === e ? `${s}` : `${s}-${e}` }
+  const getRow = (t, j) => arr(d.jadwal).find((x) => x.tahapan === t && x.jenis === j)
+
+  const bodyRows = []
+  for (const t of ['PLAN', 'DO', 'CHECK', 'ACTION']) {
+    ['Rencana', 'Realisasi'].forEach((j, ji) => {
+      const row = getRow(t, j)
+      const bulan = row?.bulan ? String(row.bulan).split(',').map(Number).filter(Boolean) : []
+      const ranges = parseR(row?.rentang)
+      const cells = cols.map((c) => {
+        const on = bulan.includes(c.m) || ranges[c.m]
+        const fill = on ? (j === 'Rencana' ? '#1f4f2c' : '#a7d3b0') : ''
+        const fg = on && j === 'Rencana' ? '#fff' : '#22402c'
+        return `<td style="text-align:center;background:${fill};color:${fg};font-size:8.5pt">${dayRange(ranges[c.m])}</td>`
+      }).join('')
+      const tahCell = ji === 0 ? `<td rowspan="2" style="font-weight:bold;vertical-align:middle">${t}</td>` : ''
+      const jmlCell = ji === 0 ? `<td rowspan="2" style="text-align:center;vertical-align:middle;font-weight:bold">${esc(getRow(t, 'Rencana')?.jumlah ?? '')}</td>` : ''
+      bodyRows.push(`<tr>${tahCell}<td>${j}</td>${cells}${jmlCell}</tr>`)
+    })
+  }
+
+  const yHead = yg.map((g) => `<th colspan="${g.span}" style="text-align:center">${esc(g.year)}</th>`).join('')
+  const mHead = cols.map((c) => `<th style="text-align:center">${esc(c.l)}</th>`).join('')
+  return `<table><thead>`
+    + `<tr><th rowspan="2" style="width:11%">Tahapan</th><th rowspan="2" style="width:11%">Ket.</th>${yHead}<th rowspan="2" style="width:6%">Jml.</th></tr>`
+    + `<tr>${mHead}</tr></thead><tbody>${bodyRows.join('')}</tbody></table>`
 }
 
 function sectionTitle(t) {
@@ -100,10 +143,7 @@ function buildBody(d, mode) {
 
   if (has(d.jadwal)) {
     parts.push(sectionTitle('P.3 Jadwal Kegiatan (PDCA)'))
-    parts.push(table(
-      [{ label: 'Tahapan', width: '18%' }, { label: 'Jenis', width: '18%' }, { label: 'Bulan' }, { label: 'Jml', width: '10%' }],
-      arr(d.jadwal).map((x) => [esc(x.tahapan), esc(x.jenis), esc(x.bulan), esc(x.jumlah)]),
-    ))
+    parts.push(jadwalGrid(d))
   }
 
   if (has(d.sasaran)) {
@@ -123,11 +163,12 @@ function buildBody(d, mode) {
   }
 
   if (has(d.fishbone)) {
-    parts.push(sectionTitle('P.6 Analisa Akar Penyebab Masalah (Fishbone)'))
+    parts.push(sectionTitle('P.6 Analisa Akar Penyebab Masalah (Diagram Tulang Ikan / Fishbone)'))
     parts.push(table(
       [{ label: 'Faktor', width: '18%' }, { label: 'Penyebab Teridentifikasi' }, { label: 'Akar Penyebab Dominan' }, { label: 'Prioritas', width: '10%' }],
       arr(d.fishbone).map((x) => [esc(x.faktor), esc(x.penyebab), esc(x.akarDominan), esc(x.prioritas)]),
     ))
+    parts.push(FISH_MARKER) // titik sisip diagram fishbone (React) tepat di bawah tabel P.6
   }
   if (txt(d.verifikasiAkar)) { parts.push(sectionTitle('Verifikasi Akar (Pareto)')); parts.push(paragraph(d.verifikasiAkar)) }
   if (has(d.pareto)) {
@@ -235,54 +276,37 @@ function buildBody(d, mode) {
   return parts.join('\n')
 }
 
-// Membungkus body ke dokumen Word HTML lengkap.
-function wrapDocument(title, bodyHtml) {
-  return `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8"/>
-<title>${esc(title)}</title>
-<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
-<style>
-@page { size: A4; margin: 2cm; }
-body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; }
-h1 { font-size: 16pt; text-align: center; margin: 0 0 2pt; }
-h2 { background: #1f4f2c; color: #fff; padding: 6pt 8pt; font-size: 12pt; margin: 14pt 0 6pt; }
-p.sec { font-weight: bold; background: #eef3ec; border-left: 3px solid #1f4f2c; padding: 4pt 6pt; margin: 10pt 0 4pt; }
-div.para { border: 1px solid #bbb; padding: 6pt; margin-bottom: 10pt; white-space: normal; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 10pt; }
-th, td { border: 1px solid #555; padding: 4pt 5pt; vertical-align: top; font-size: 10pt; text-align: left; }
-th { background: #e9efe6; font-weight: bold; }
-.sub { text-align: center; color: #555; font-size: 10pt; margin-bottom: 12pt; }
-</style>
-</head>
-<body>
-${bodyHtml}
-</body>
-</html>`
-}
+// CSS diberi prefiks ".rd" agar tidak bocor ke seluruh aplikasi saat disisipkan
+// lewat dangerouslySetInnerHTML pada modal Detail.
+const SCOPED_CSS = `
+.rd { font-family: inherit; font-size: 13px; color: #1a1f1b; }
+.rd .rd-h1 { font-size: 16px; text-align: center; margin: 0 0 2px; }
+.rd .rd-sub { text-align: center; color: #667; font-size: 12px; margin-bottom: 12px; }
+.rd h2 { background: #1f4f2c; color: #fff; padding: 6px 9px; font-size: 13px; margin: 16px 0 6px; border-radius: 5px; }
+.rd p.sec { font-weight: 700; background: #eef3ec; border-left: 3px solid #1f4f2c; padding: 4px 7px; margin: 10px 0 4px; }
+.rd div.para { border: 1px solid #d7ded8; border-radius: 5px; padding: 7px; margin-bottom: 10px; white-space: pre-wrap; }
+.rd table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
+.rd th, .rd td { border: 1px solid #c4cec6; padding: 4px 6px; vertical-align: top; font-size: 12px; text-align: left; }
+.rd th { background: #e9efe6; font-weight: 700; }
+`
 
 /**
- * Unduh risalah sebagai berkas Word (.doc).
+ * Menghasilkan HTML (ter-scope) seluruh isi risalah untuk modal Detail, terpecah
+ * di titik diagram fishbone (tepat di bawah tabel P.6) sehingga komponen diagram
+ * React dapat disisipkan di antara `before` dan `after`. Bukan untuk diunduh.
  * @param {object} data - GugusDetailDto lengkap (hasil api.getInovasi).
- * @param {{ mode?: 'plan'|'full' }} opts - 'plan' hanya bagian PLAN; 'full' seluruh tahapan.
+ * @param {{ mode?: 'plan'|'full' }} opts
+ * @returns {{ before: string, after: string }}
  */
-export function exportRisalahWord(data, { mode = 'full' } = {}) {
+export function renderRisalahHtml(data, { mode = 'full' } = {}) {
   const jl = jenisLabel(data.jenis)
-  const judulDok = `Risalah ${jl}${data.namaGugus ? ' - ' + data.namaGugus : ''}`
   const header = `
-    <h1>RISALAH ${esc((jl || '').toUpperCase())}</h1>
-    <div class="sub">PT Gresik Cipta Sejahtera &nbsp;|&nbsp; No. Reg: ${esc(data.noRegistrasi)} &nbsp;|&nbsp; Status: ${esc(data.status)}</div>`
-  const html = wrapDocument(judulDok, header + buildBody(data, mode))
-
-  const blob = new Blob(['﻿', html], { type: 'application/msword' })
-  const url = URL.createObjectURL(blob)
-  const safe = (judulDok || 'Risalah').replace(/[^\w\-. ]+/g, '_')
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${safe}${mode === 'plan' ? ' (PLAN)' : ''}.doc`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+    <h1 class="rd-h1">RISALAH ${esc((jl || '').toUpperCase())}</h1>
+    <div class="rd-sub">PT Gresik Cipta Sejahtera &middot; No. Reg: ${esc(data.noRegistrasi)} &middot; Status: ${esc(data.status)}</div>`
+  const body = buildBody(data, mode)
+  const [b, a] = body.split(FISH_MARKER)
+  return {
+    before: `<style>${SCOPED_CSS}</style><div class="rd">${header}${b}</div>`,
+    after: a != null ? `<div class="rd">${a}</div>` : '',
+  }
 }

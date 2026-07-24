@@ -40,6 +40,13 @@ public class InovasiDbContext : DbContext
     public DbSet<Gagasan> Gagasan => Set<Gagasan>();
     public DbSet<GagasanApproval> GagasanApproval => Set<GagasanApproval>();
 
+    // Penilaian Juri
+    public DbSet<PenilaianKriteria> PenilaianKriteria => Set<PenilaianKriteria>();
+    public DbSet<PenilaianStream> PenilaianStream => Set<PenilaianStream>();
+    public DbSet<PenilaianStreamAnggota> PenilaianStreamAnggota => Set<PenilaianStreamAnggota>();
+    public DbSet<PenilaianPenugasan> PenilaianPenugasan => Set<PenilaianPenugasan>();
+    public DbSet<PenilaianSkor> PenilaianSkor => Set<PenilaianSkor>();
+
     // grading read-models
     public DbSet<UnitOrganisasi> UnitOrganisasi => Set<UnitOrganisasi>();
     public DbSet<Jabatan> Jabatan => Set<Jabatan>();
@@ -103,6 +110,7 @@ public class InovasiDbContext : DbContext
             e.Property(x => x.Jenis).HasColumnName("jenis");
             e.Property(x => x.Bulan).HasColumnName("bulan");
             e.Property(x => x.Jumlah).HasColumnName("jumlah");
+            e.Property(x => x.Rentang).HasColumnName("rentang");
         }, g => g.Jadwal);
 
         MapChild<Sasaran>(b, "sasaran", e =>
@@ -277,6 +285,67 @@ public class InovasiDbContext : DbContext
             e.Property(x => x.Metodologi).HasColumnName("metodologi");
             e.Property(x => x.Tgl).HasColumnName("tgl");
             e.HasOne<Gagasan>().WithMany(g => g.Approval).HasForeignKey(x => x.IdGagasan).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Penilaian Juri ---
+        b.Entity<PenilaianKriteria>(e =>
+        {
+            e.ToTable("penilaian_kriteria", "inovasi");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.JenisForm).HasColumnName("jenis_form");
+            e.Property(x => x.Tahap).HasColumnName("tahap");
+            e.Property(x => x.No).HasColumnName("no");
+            e.Property(x => x.Kriteria).HasColumnName("kriteria");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.BobotPersen).HasColumnName("bobot_persen").HasColumnType("decimal(5,2)");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+        });
+        b.Entity<PenilaianStream>(e =>
+        {
+            e.ToTable("penilaian_stream", "inovasi");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.DibuatOleh).HasColumnName("dibuat_oleh");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+        b.Entity<PenilaianStreamAnggota>(e =>
+        {
+            e.ToTable("penilaian_stream_anggota", "inovasi");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdStream).HasColumnName("id_stream");
+            e.Property(x => x.UserId).HasColumnName("user_id");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Peran).HasColumnName("peran");
+            e.HasOne<PenilaianStream>().WithMany(s => s.Anggota).HasForeignKey(x => x.IdStream).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<PenilaianPenugasan>(e =>
+        {
+            e.ToTable("penilaian_penugasan", "inovasi");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdGugus).HasColumnName("id_gugus");
+            e.Property(x => x.IdStream).HasColumnName("id_stream");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.DibuatOleh).HasColumnName("dibuat_oleh");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+        b.Entity<PenilaianSkor>(e =>
+        {
+            e.ToTable("penilaian_skor", "inovasi");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdPenugasan).HasColumnName("id_penugasan");
+            e.Property(x => x.IdKriteria).HasColumnName("id_kriteria");
+            e.Property(x => x.PenilaiUserId).HasColumnName("penilai_user_id");
+            e.Property(x => x.Nilai).HasColumnName("nilai");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DiubahPada).HasColumnName("diubah_pada");
         });
 
         // --- grading read-models (read-only) ---

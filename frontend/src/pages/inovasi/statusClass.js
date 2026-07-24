@@ -24,6 +24,7 @@ export function statusClass(status) {
     case 'Disetujui GM Kompartemen Asal':
     case 'Disetujui GM Kompartemen Tujuan':
     case 'Divalidasi':
+    case 'Pengesahan Akhir':
       return 'inv__status--divalidasi'
     case 'Terdaftar':
     case 'Selesai':
@@ -33,6 +34,7 @@ export function statusClass(status) {
     case 'Revisi':
     case 'Revisi Verifikator':
     case 'Revisi GM':
+    case 'Revisi Akhir':
       return 'inv__status--revisi'
     default:
       return 'inv__status--draft'

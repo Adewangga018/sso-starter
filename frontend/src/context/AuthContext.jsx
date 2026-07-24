@@ -95,8 +95,9 @@ export function AuthProvider({ children }) {
   useIdleLogout(isAuthenticated, useCallback(() => logout(), [logout]))
 
   const roles = oidcUser?.profile?.role
-  const isAdmin = isAuthenticated &&
-    (Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin')
+  const hasRole = (r) => isAuthenticated && (Array.isArray(roles) ? roles.includes(r) : roles === r)
+  const isAdmin = hasRole('Admin')
+  const isJuri = hasRole('Juri')
 
   const value = {
     user: isAuthenticated
@@ -105,6 +106,7 @@ export function AuthProvider({ children }) {
     summary,
     isAuthenticated,
     isAdmin,
+    isJuri,
     initializing,
     login,
     logout,

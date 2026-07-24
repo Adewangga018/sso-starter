@@ -170,7 +170,7 @@ public class InovasiController : ControllerBase
             g.CreatedAt, g.UpdatedAt, g.SubmittedAt,
             g.Anggota.OrderBy(a => a.Urutan).Select(a => new AnggotaDto(a.Id, a.Peran, a.Nik, a.Nama, a.Jabatan, a.DepBagian, a.Urutan)).ToList(),
             g.DataPendukung.OrderBy(x => x.Urutan).Select(x => new DataPendukungDto(x.Id, x.Indikator, x.KondisiAwal, x.SumberKeterangan, x.LampiranPath, x.LampiranNama, x.LampiranLink, x.Urutan)).ToList(),
-            g.Jadwal.Select(x => new JadwalDto(x.Id, x.Tahapan, x.Jenis, x.Bulan, x.Jumlah)).ToList(),
+            g.Jadwal.Select(x => new JadwalDto(x.Id, x.Tahapan, x.Jenis, x.Bulan, x.Jumlah, x.Rentang)).ToList(),
             g.Sasaran.OrderBy(x => x.Urutan).Select(x => new SasaranDto(x.Id, x.SasaranText, x.KondisiSebelum, x.Target, x.Indikator, x.Urutan)).ToList(),
             g.Pareto.OrderBy(x => x.Urutan).Select(x => new ParetoDto(x.Id, x.Kategori, x.Frekuensi, x.Urutan)).ToList(),
             g.Qcdse.Select(x => new QcdseDto(x.Id, x.Aspek, x.DampakKualitatif, x.DampakKuantitatif)).ToList(),
@@ -218,7 +218,7 @@ public class InovasiController : ControllerBase
             x.Indikator = d.Indikator; x.KondisiAwal = d.KondisiAwal; x.SumberKeterangan = d.SumberKeterangan;
             x.LampiranPath = d.LampiranPath; x.LampiranNama = d.LampiranNama; x.LampiranLink = d.LampiranLink; x.Urutan = i;
         });
-        Replace(g.Jadwal, req.Jadwal, (x, d, i) => { x.Tahapan = d.Tahapan; x.Jenis = d.Jenis; x.Bulan = d.Bulan; x.Jumlah = d.Jumlah; });
+        Replace(g.Jadwal, req.Jadwal, (x, d, i) => { x.Tahapan = d.Tahapan; x.Jenis = d.Jenis; x.Bulan = d.Bulan; x.Jumlah = d.Jumlah; x.Rentang = d.Rentang; });
         Replace(g.Sasaran, req.Sasaran, (x, d, i) => { x.SasaranText = d.Sasaran; x.KondisiSebelum = d.KondisiSebelum; x.Target = d.Target; x.Indikator = d.Indikator; x.Urutan = i; });
         Replace(g.Pareto, req.Pareto, (x, d, i) => { x.Kategori = d.Kategori; x.Frekuensi = d.Frekuensi; x.Urutan = i; });
         Replace(g.Qcdse, req.Qcdse, (x, d, i) => { x.Aspek = d.Aspek; x.DampakKualitatif = d.DampakKualitatif; x.DampakKuantitatif = d.DampakKuantitatif; });
@@ -283,10 +283,53 @@ public class InovasiController : ControllerBase
         return Ok(new { message = "Risalah diajukan ke Lembar Pengesahan tahap PLAN.", noRegistrasi = g.NoRegistrasi });
     }
 
+    // ------------------------------------------------------- submit final
+    // Mengajukan risalah ke Lembar Pengesahan AKHIR (tahap FINAL) setelah
+    // DO/CHECK/ACTION terisi. Membuat baris pengesahan akhir (Ketua auto-setuju).
+    [HttpPost("gugus/{id:int}/submit-final")]
+    public async Task<IActionResult> SubmitFinal(int id)
+    {
+        var (nik, nama) = await IdentitasAsync();
+        if (nik is null) return Unauthorized();
+
+        var g = await LoadFullAsync(id, tracking: true);
+        if (g is null) return NotFound(new { message = "Inovasi tidak ditemukan." });
+        if (g.CreatedByNik != nik) return Forbid();
+        if (!g.PlanDisahkan)
+            return BadRequest(new { message = "PLAN belum disahkan; sahkan PLAN dahulu." });
+        if (g.Status is "Pengesahan Akhir" or "Selesai")
+            return BadRequest(new { message = "Pengesahan akhir sudah diajukan." });
+
+        var adaTahap =
+            g.DoPelaksanaan.Count > 0 || g.DoKendala.Count > 0 ||
+            g.CheckPerbandingan.Count > 0 || g.CheckSasaran.Count > 0 ||
+            g.ActionStandarisasi.Count > 0 || g.ActionTindakLanjut.Count > 0 ||
+            !string.IsNullOrWhiteSpace(g.ActionTemaBerikutnya);
+        if (!adaTahap)
+            return BadRequest(new { message = "Isi tahap DO / CHECK / ACTION dahulu sebelum pengesahan akhir." });
+
+        var lama = g.Pengesahan.Where(p => p.Tahap == "FINAL").ToList();
+        _db.Pengesahan.RemoveRange(lama);
+
+        var fasil = g.Anggota.FirstOrDefault(a => a.Peran == "Fasilitator");
+        var pembinaDept = await _org.ResolveKepalaUnitAsync(g.IdDepartemen);
+        var pembinaKomp = await _org.ResolveKepalaUnitAsync(g.IdKompartemen);
+
+        g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Ketua Gugus", Nik = nik, Nama = nama ?? nik, Urutan = 0, Status = "Disetujui", Tgl = DateTime.Now });
+        g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Urutan = 1, Status = "Menunggu" });
+        g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Pembina Tk. Departemen", Nik = pembinaDept?.Nik, Nama = pembinaDept?.Nama, Urutan = 2, Status = "Menunggu" });
+        g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Pembina Tk. Kompartemen", Nik = pembinaKomp?.Nik, Nama = pembinaKomp?.Nama, Urutan = 3, Status = "Menunggu" });
+
+        g.Status = "Pengesahan Akhir";
+        g.UpdatedAt = DateTime.Now;
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Risalah diajukan ke Lembar Pengesahan Akhir." });
+    }
+
     // ------------------------------------------------------ pengesahan action
     // Fasilitator / Pembina menyetujui / menolak / meminta revisi baris
     // pengesahan miliknya. Setelah SEMUA baris PLAN 'Disetujui', DO/CHECK/ACTION
-    // terbuka (plan_disahkan = 1).
+    // terbuka (plan_disahkan = 1). Setelah SEMUA baris FINAL 'Disetujui' -> Selesai.
     [HttpPost("gugus/{id:int}/pengesahan/{pid:int}")]
     public async Task<IActionResult> ActPengesahan(int id, int pid, PengesahanActionRequest req)
     {
@@ -332,6 +375,17 @@ public class InovasiController : ControllerBase
             {
                 g.Status = "Diverifikasi";
             }
+        }
+        else if (row.Tahap == "FINAL")
+        {
+            var finalRows = g.Pengesahan.Where(p => p.Tahap == "FINAL").ToList();
+            if (aksi == "Ditolak")
+                g.Status = "Ditolak";
+            else if (aksi == "Revisi")
+                g.Status = "Revisi Akhir";   // pengaju bisa perbaiki DO/CHECK/ACTION lalu ajukan ulang
+            else if (finalRows.All(p => p.Status == "Disetujui"))
+                g.Status = "Selesai";
+            // selain itu tetap "Pengesahan Akhir" (menunggu tanda tangan berikutnya)
         }
 
         await _db.SaveChangesAsync();
@@ -478,7 +532,10 @@ public class InovasiController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDto>>> CariPegawai([FromQuery] string q, [FromQuery] int? gugusId = null)
     {
         var term = (q ?? string.Empty).Trim();
-        if (term.Length < 2) return Ok(Array.Empty<InovasiPegawaiDto>());
+
+        // Tanpa kata kunci: tampilkan daftar default sesuai cakupan (departemen /
+        // kompartemen) agar pengguna tidak harus mengetik lebih dulu.
+        if (term.Length < 2) return Ok(await DefaultPegawaiAsync(gugusId));
 
         var rows = await _gcs.PegawaiSdm
             .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
@@ -492,20 +549,125 @@ public class InovasiController : ControllerBase
             var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid);
             if (g is not null && (g.Jenis == "SS" || g.Jenis == "5R"))
             {
-                // Kandidat yang orgnya tak dapat diresolve (mis. pegawai tanpa baris
-                // penempatan seperti intern) tetap ditampilkan agar tidak terblokir.
-                var map = await _org.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
-                rows = rows.Where(r =>
+                // Filter ketat: SS hanya departemen yang sama, 5R hanya kompartemen
+                // yang sama. Hanya diberlakukan bila cakupan gugus diketahui.
+                var scopeId = g.Jenis == "SS" ? g.IdDepartemen : g.IdKompartemen;
+                if (scopeId is not null)
                 {
-                    if (!map.TryGetValue(r.Nik, out var o)) return true;
-                    return g.Jenis == "SS"
-                        ? (o.IdDepartemen is null || o.IdDepartemen == g.IdDepartemen)
-                        : (o.IdKompartemen is null || o.IdKompartemen == g.IdKompartemen);
-                }).ToList();
+                    var map = await _org.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
+                    rows = rows.Where(r =>
+                        map.TryGetValue(r.Nik, out var o) &&
+                        (g.Jenis == "SS" ? o.IdDepartemen == scopeId : o.IdKompartemen == scopeId)
+                    ).ToList();
+                }
             }
         }
 
         return Ok(rows.Take(20).ToList());
+    }
+
+    // --------------------------------------------------- direktori pegawai (semua)
+    // Halaman "Daftar Pegawai": seluruh pegawai aktif, dapat disaring per Departemen
+    // / Kompartemen (dari data org grading) dan dicari via nama/NIK. Kolom departemen
+    // & kompartemen diisi hasil resolusi org (kosong untuk pegawai non-organik).
+    [HttpGet("pegawai-direktori")]
+    public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDirektoriDto>>> Direktori(
+        [FromQuery] string? q = null, [FromQuery] int? departemenId = null, [FromQuery] int? kompartemenId = null)
+    {
+        var term = (q ?? string.Empty).Trim();
+
+        IQueryable<Models.Gcs.PegawaiSdm> query = _gcs.PegawaiSdm.Where(p => p.data_aktif == "Aktif");
+        if (term.Length >= 2)
+            query = query.Where(p => p.nama!.Contains(term) || p.Nik.Contains(term));
+
+        // Saring per cakupan org (departemen lebih spesifik daripada kompartemen).
+        if (departemenId is int dId)
+        {
+            var arr = (await _org.ListNiksInScopeAsync(dId, true)).ToArray();
+            query = query.Where(p => arr.Contains(p.Nik));
+        }
+        else if (kompartemenId is int kId)
+        {
+            var arr = (await _org.ListNiksInScopeAsync(kId, false)).ToArray();
+            query = query.Where(p => arr.Contains(p.Nik));
+        }
+
+        var roster = await query
+            .OrderBy(p => p.nama)
+            .Take(500)
+            .Select(p => new { p.Nik, Nama = p.nama, Jabatan = p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
+            .ToListAsync();
+
+        // Resolusi departemen/kompartemen untuk kolom (kosong bila pegawai non-organik).
+        var orgMap = await _org.ResolveManyAsync(roster.Select(r => r.Nik).ToList());
+        var items = roster.Select(r =>
+        {
+            orgMap.TryGetValue(r.Nik, out var o);
+            return new InovasiPegawaiDirektoriDto(r.Nik, r.Nama ?? r.Nik, r.Jabatan, r.Unit, o?.NamaDepartemen, o?.NamaKompartemen);
+        }).ToList();
+
+        return Ok(items);
+    }
+
+    // Daftar pegawai default (tanpa kata kunci) sesuai cakupan:
+    //   - dengan gugusId : cakupan gugus (5R -> kompartemen; SS/GIO -> departemen asal)
+    //   - tanpa gugusId  : cakupan departemen (fallback kompartemen) pengguna login
+    // Grading (penempatan/jabatan/unit) hanya memuat pegawai organik; bila cakupan
+    // tak dapat ditentukan atau kosong (mis. akun tak tertaut grading), turunkan ke
+    // daftar pegawai aktif umum agar tabel tidak kosong - kecuali cakupan ketat
+    // (SS/5R) yang memang harus terbatas pada satu departemen/kompartemen.
+    private async Task<IReadOnlyList<InovasiPegawaiDto>> DefaultPegawaiAsync(int? gugusId)
+    {
+        int? scopeId = null;
+        var asDept = true;
+        var strict = false;
+
+        if (gugusId is int gid)
+        {
+            var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid);
+            if (g is not null)
+            {
+                asDept = g.Jenis != "5R";
+                scopeId = asDept ? g.IdDepartemen : g.IdKompartemen;
+                strict = g.Jenis == "SS" || g.Jenis == "5R";
+            }
+        }
+        else
+        {
+            var (nik, _) = await IdentitasAsync();
+            if (nik is not null)
+            {
+                var org = await _org.ResolveAsync(nik);
+                if (org.IdDepartemen is not null) { scopeId = org.IdDepartemen; asDept = true; }
+                else if (org.IdKompartemen is not null) { scopeId = org.IdKompartemen; asDept = false; }
+            }
+        }
+
+        if (scopeId is int sid)
+        {
+            var niks = await _org.ListNiksInScopeAsync(sid, asDept);
+            if (niks.Count > 0)
+            {
+                var nikArr = niks.ToArray();
+                var scoped = await _gcs.PegawaiSdm
+                    .Where(p => p.data_aktif == "Aktif" && nikArr.Contains(p.Nik))
+                    .OrderBy(p => p.nama)
+                    .Take(100)
+                    .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+                    .ToListAsync();
+                if (scoped.Count > 0) return scoped;
+            }
+            // Cakupan ketat tetap terbatas: kembalikan kosong bila tak ada kandidat.
+            if (strict) return Array.Empty<InovasiPegawaiDto>();
+        }
+
+        // Fallback: pegawai aktif umum (akun tak tertaut grading / cakupan kosong).
+        return await _gcs.PegawaiSdm
+            .Where(p => p.data_aktif == "Aktif")
+            .OrderBy(p => p.nama)
+            .Take(100)
+            .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+            .ToListAsync();
     }
 
     // =======================================================================
@@ -580,6 +742,13 @@ public class InovasiController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         if (band == 2 && g.IdDepartemen != null && g.IdDepartemen == org.IdDepartemen) return true;
         if (band == 1 && g.IdKompartemen != null && g.IdKompartemen == org.IdKompartemen) return true;
+        // Juri yang ditugaskan menilai gugus ini boleh melihat risalah (read-only).
+        var juri = await (
+            from pp in _db.PenilaianPenugasan
+            join a in _db.PenilaianStreamAnggota on pp.IdStream equals a.IdStream
+            where pp.IdGugus == g.Id && a.Nik == nik
+            select a.Id).AnyAsync();
+        if (juri) return true;
         return false;
     }
 

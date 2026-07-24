@@ -77,8 +77,10 @@ public class Jadwal
     public int IdGugus { get; set; }
     public string Tahapan { get; set; } = "PLAN";  // PLAN|DO|CHECK|ACTION
     public string Jenis { get; set; } = "Rencana"; // Rencana|Realisasi
-    public string? Bulan { get; set; }             // csv "6,7"
+    public string? Bulan { get; set; }             // csv "6,7" (bulan yang terisi)
     public int? Jumlah { get; set; }
+    // Rentang tanggal per sel bulan, JSON: {"7":["2026-07-01","2026-07-15"],...}
+    public string? Rentang { get; set; }
 }
 
 public class Sasaran
@@ -281,6 +283,69 @@ public class GagasanApproval
     public string? Komentar { get; set; }
     public string? Metodologi { get; set; }
     public DateTime? Tgl { get; set; }
+}
+
+// --- Penilaian Juri: rubrik + stream (panel) + penugasan + skor.
+//     Lihat backend/Database/inovasi/05-penilaian.sql. ---
+
+// Master rubrik (di-seed). jenis_form: 'GIO-SS' (untuk SS & GIO) | '5R'.
+public class PenilaianKriteria
+{
+    public int Id { get; set; }
+    public string JenisForm { get; set; } = "GIO-SS";  // GIO-SS | 5R
+    public string Tahap { get; set; } = "PLAN";        // PLAN|DO|CHECK|ACTION|MAKALAH|PRESENTATION
+    public int No { get; set; }
+    public string Kriteria { get; set; } = string.Empty;
+    public string? Keterangan { get; set; }            // panduan penilaian (dari JUKLAK)
+    public decimal BobotPersen { get; set; }
+    public bool Aktif { get; set; } = true;
+}
+
+// Panel juri (dibuat & dikelola Admin).
+public class PenilaianStream
+{
+    public int Id { get; set; }
+    public string Nama { get; set; } = string.Empty;
+    public string? Keterangan { get; set; }
+    public bool Aktif { get; set; } = true;
+    public string? DibuatOleh { get; set; }            // Users.Id
+    public DateTime DibuatPada { get; set; }
+
+    public List<PenilaianStreamAnggota> Anggota { get; set; } = new();
+}
+
+// Anggota stream: 1 Ketua, 2 Anggota, 1 Sekretaris (komposisi divalidasi di app).
+public class PenilaianStreamAnggota
+{
+    public int Id { get; set; }
+    public int IdStream { get; set; }
+    public string UserId { get; set; } = string.Empty; // Users.Id
+    public string? Nik { get; set; }
+    public string? Nama { get; set; }
+    public string Peran { get; set; } = "Anggota";     // Ketua | Anggota | Sekretaris
+}
+
+// Menautkan satu stream ke satu gugus (inovasi) untuk dinilai.
+public class PenilaianPenugasan
+{
+    public int Id { get; set; }
+    public int IdGugus { get; set; }
+    public int IdStream { get; set; }
+    public string Status { get; set; } = "Berjalan";   // Berjalan | Selesai
+    public string? DibuatOleh { get; set; }
+    public DateTime DibuatPada { get; set; }
+}
+
+// Skor 1-10 per (penugasan, kriteria, penilai). Ketua/Anggota saja.
+public class PenilaianSkor
+{
+    public int Id { get; set; }
+    public int IdPenugasan { get; set; }
+    public int IdKriteria { get; set; }
+    public string PenilaiUserId { get; set; } = string.Empty;  // Users.Id
+    public byte Nilai { get; set; }                    // 1..10
+    public string? Catatan { get; set; }
+    public DateTime DiubahPada { get; set; }
 }
 
 // --- Read-only refleksi tabel grading (di db_mygcs) untuk resolusi unit

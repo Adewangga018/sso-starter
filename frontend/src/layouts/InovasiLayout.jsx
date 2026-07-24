@@ -6,6 +6,7 @@ import {
   CheckSquare,
   ClipboardCheck,
   ClipboardList,
+  Gavel,
   History,
   LayoutGrid,
   Lightbulb,
@@ -27,30 +28,34 @@ import './AppShell.css'
 // approver (Manager/GM) berbeda: hanya melihat & memproses persetujuan.
 const BASE = '/my-innovation'
 
-function buildSections(peran) {
+function buildSections(peran, isJuri) {
   const dashboard = { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard', variant: 'home' }
   const beranda = { key: 'beranda', label: 'Beranda', icon: Lightbulb, to: `${BASE}/beranda` }
   const panduan = { key: 'panduan', label: 'Panduan Inovasi', icon: BookOpen, to: `${BASE}/panduan` }
   const daftar = { key: 'daftar', label: 'Daftar Inovasi', icon: ClipboardList, to: `${BASE}/daftar` }
 
+  // Seksi Juri: muncul untuk siapa pun ber-role Juri (lepas dari band/jabatan).
+  const juriSection = {
+    label: 'Menu Juri',
+    items: [{ key: 'penilaian', label: 'Daftar Penilaian', icon: Gavel, to: `${BASE}/penilaian` }],
+  }
+  const withJuri = (sections) => (isJuri ? [...sections, juriSection] : sections)
+
   // Manager & GM hanya melakukan persetujuan (tidak menyumbang gagasan). Sidebar
-  // mereka ramping: hanya menu persetujuan + pemantauan risalah, tanpa menu
-  // yang masih terkunci ("Segera hadir") maupun "Sumbang Gagasan".
+  // mereka ramping: menu persetujuan + pemantauan risalah + panduan verifikasi.
   if (peran === 'Manager' || peran === 'GM') {
     const gagasanItem = peran === 'Manager'
       ? { key: 'gagasan', label: 'Verifikasi Gagasan', icon: ClipboardCheck, to: `${BASE}/gagasan` }
       : { key: 'gagasan', label: 'Persetujuan Gagasan', icon: CheckSquare, to: `${BASE}/gagasan` }
-    // Tanpa "Panduan Inovasi": panduan ditujukan untuk penyusun gagasan/risalah,
-    // sedangkan Manager & GM hanya menyetujui.
-    return [
+    return withJuri([
       { items: [dashboard] },
-      { label: 'Menu Utama', items: [beranda] },
+      { label: 'Menu Utama', items: [beranda, panduan] },
       { label: peran === 'Manager' ? 'Menu Verifikasi' : 'Menu Persetujuan', items: [gagasanItem, daftar] },
-    ]
+    ])
   }
 
-  // Karyawan: ruang kerja penuh (Sumbang Gagasan + menu lain yang menyusul).
-  return [
+  // Karyawan: ruang kerja penuh.
+  return withJuri([
     { items: [dashboard] },
     { label: 'Menu Utama', items: [beranda, panduan] },
     {
@@ -58,27 +63,27 @@ function buildSections(peran) {
       items: [
         { key: 'gagasan', label: 'Sumbang Gagasan', icon: MessageSquarePlus, to: `${BASE}/gagasan` },
         daftar,
-        { key: 'pegawai', label: 'Daftar Pegawai', icon: ListChecks, disabled: true, disabledReason: 'Segera hadir' },
+        { key: 'pegawai', label: 'Daftar Pegawai', icon: ListChecks, to: `${BASE}/pegawai` },
       ],
     },
     {
       label: 'Rekap Kegiatan Inovasi',
       items: [
-        { key: 'roadmap', label: 'Roadmap Inovasi', icon: Map, disabled: true, disabledReason: 'Segera hadir' },
-        { key: 'ranking', label: 'Ranking Inovasi', icon: Award, disabled: true, disabledReason: 'Segera hadir' },
+        { key: 'roadmap', label: 'Roadmap Inovasi', icon: Map, to: `${BASE}/roadmap` },
+        { key: 'ranking', label: 'Ranking Inovasi', icon: Award, to: `${BASE}/ranking` },
       ],
     },
     {
       items: [
-        { key: 'history', label: 'History', icon: History, disabled: true, disabledReason: 'Segera hadir' },
-        { key: 'konvensi', label: 'Menu Konvensi', icon: Trophy, disabled: true, disabledReason: 'Segera hadir' },
+        { key: 'history', label: 'History', icon: History, to: `${BASE}/history` },
+        { key: 'konvensi', label: 'Menu Konvensi', icon: Trophy, to: `${BASE}/konvensi` },
       ],
     },
-  ]
+  ])
 }
 
 export default function InovasiLayout() {
-  const { summary, logout, refreshSummary } = useAuth()
+  const { summary, logout, refreshSummary, isJuri } = useAuth()
   const { collapsed, toggleCollapsed, mobileOpen, openMobile, closeMobile } = useSidebarState()
 
   const [peran, setPeran] = useState(null) // { peran: 'GM'|'Manager'|'Karyawan', bolehApprove }
@@ -100,7 +105,7 @@ export default function InovasiLayout() {
         logoSrc="/LOGO GCS.png"
         title="My Innovation"
         subtitle={isApprover ? `${peran.peran} - ${peran.peran === 'Manager' ? 'Verifikasi' : 'Persetujuan'}` : 'SS / GIO / 5R'}
-        sections={buildSections(peran?.peran ?? 'Karyawan')}
+        sections={buildSections(peran?.peran ?? 'Karyawan', isJuri)}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapsed}
         mobileOpen={mobileOpen}

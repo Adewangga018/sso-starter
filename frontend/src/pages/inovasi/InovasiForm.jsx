@@ -3,10 +3,11 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
-  FileDown,
+  Eye,
   FileUp,
   Link2,
   Lock,
+  Plus,
   Save,
   Send,
   UserPlus,
@@ -16,8 +17,10 @@ import { api, ApiError } from '../../lib/api'
 import { useDialog } from '../../components/DialogProvider'
 import RepeatTable from './RepeatTable'
 import PegawaiPicker from './PegawaiPicker'
+import FishboneDiagram from './FishboneDiagram'
+import JadwalPdca from './JadwalPdca'
 import { jenisLabel, statusClass } from './statusClass'
-import { exportRisalahWord } from '../../lib/risalahDoc'
+import { renderRisalahHtml } from '../../lib/risalahDoc'
 import './inovasi.css'
 
 const ASPEK = [
@@ -28,13 +31,29 @@ const ASPEK = [
   ['E', 'Environment'],
   ['M', 'Morale'],
 ]
-const FAKTOR = ['Man', 'Method', 'Machine', 'Material', 'Environment']
+const FAKTOR = ['Man', 'Method', 'Material', 'Machine', 'Environment']
 const TAHAPAN = ['PLAN', 'DO', 'CHECK', 'ACTION']
-const MONTHS = [
-  [6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'],
-  [12, 'Des'], [1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'],
-]
 const STEPS = ['PLAN', 'DO', 'CHECK', 'ACTION']
+
+// P.3 rentang tanggal per sel bulan disimpan JSON {"7":["2026-07-01","2026-07-15"]}.
+function parseRentang(s) {
+  if (!s) return {}
+  try {
+    const obj = JSON.parse(s)
+    const out = {}
+    for (const [m, v] of Object.entries(obj)) {
+      if (Array.isArray(v) && v[0]) out[Number(m)] = { start: v[0], end: v[1] || v[0] }
+    }
+    return out
+  } catch { return {} }
+}
+function serializeRentang(ranges) {
+  const obj = {}
+  for (const [m, r] of Object.entries(ranges || {})) {
+    if (r?.start) obj[m] = [r.start, r.end || r.start]
+  }
+  return Object.keys(obj).length ? JSON.stringify(obj) : null
+}
 
 export default function InovasiForm() {
   const { id } = useParams()
@@ -49,6 +68,7 @@ export default function InovasiForm() {
   const [banner, setBanner] = useState(null) // {type, text}
   const [saving, setSaving] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // --- editable state ---
   const [ident, setIdent] = useState({ namaGugus: '', temaKe: '', periode: '', judul: '', latarBelakang: '', masalahUtama: '', verifikasiAkar: '' })
@@ -89,12 +109,10 @@ export default function InovasiForm() {
     for (const t of TAHAPAN) {
       for (const j of ['Rencana', 'Realisasi']) {
         const found = (d.jadwal ?? []).find((x) => x.tahapan === t && x.jenis === j)
-        jad.push({
-          tahapan: t,
-          jenis: j,
-          bulanArr: found?.bulan ? found.bulan.split(',').map((n) => Number(n)).filter(Boolean) : [],
-          jumlah: found?.jumlah ?? '',
-        })
+        const ranges = parseRentang(found?.rentang)
+        const legacy = found?.bulan ? found.bulan.split(',').map((n) => Number(n)).filter(Boolean) : []
+        const bulanArr = Array.from(new Set([...legacy, ...Object.keys(ranges).map(Number)]))
+        jad.push({ tahapan: t, jenis: j, ranges, bulanArr, jumlah: found?.jumlah ?? '' })
       }
     }
     setJadwal(jad)
@@ -104,10 +122,11 @@ export default function InovasiForm() {
       const f = (d.qcdse ?? []).find((x) => x.aspek === a)
       return { aspek: a, dampakKualitatif: f?.dampakKualitatif ?? '', dampakKuantitatif: f?.dampakKuantitatif ?? '' }
     }))
-    // fishbone fixed 5 rows
+    // fishbone fixed 5 rows; penyebab disimpan sebagai daftar (satu per baris).
     setFishbone(FAKTOR.map((fk) => {
       const f = (d.fishbone ?? []).find((x) => x.faktor === fk)
-      return { faktor: fk, penyebab: f?.penyebab ?? '', akarDominan: f?.akarDominan ?? '', prioritas: f?.prioritas ?? '' }
+      const items = (f?.penyebab ?? '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+      return { faktor: fk, penyebabItems: items, penyebab: items.join('\n'), akarDominan: f?.akarDominan ?? '', prioritas: f?.prioritas ?? '' }
     }))
     setRencana(d.rencanaPerbaikan ?? [])
     setDoPel(d.doPelaksanaan ?? [])
@@ -134,7 +153,10 @@ export default function InovasiForm() {
   useEffect(() => { load() }, [load])
 
   const editPlan = data?.bisaEdit === true
+  // DO/CHECK/ACTION dapat diedit setelah PLAN disahkan, dan terkunci lagi saat
+  // pengesahan akhir sudah diajukan atau risalah Selesai.
   const editLanjut = data?.isOwner === true && data?.planDisahkan === true
+    && data?.status !== 'Pengesahan Akhir' && data?.status !== 'Selesai'
   const isGio = data?.jenis === 'GIO'
   const is5R = data?.jenis === '5R'
   // Batas & cakupan anggota per metodologi:
@@ -163,6 +185,13 @@ export default function InovasiForm() {
     setTimeout(() => setBanner(null), 4000)
   }
 
+  // --- Penyebab fishbone sebagai daftar; penyebab (string) selalu disinkronkan
+  // dari penyebabItems agar diagram & payload ikut terbarui.
+  const applyItems = (idx, items) => setFishbone((p) => p.map((r, i) => (i === idx ? { ...r, penyebabItems: items, penyebab: items.join('\n') } : r)))
+  const addPenyebab = (idx) => setFishbone((p) => p.map((r, i) => (i === idx ? { ...r, penyebabItems: [...(r.penyebabItems || []), ''] } : r)))
+  const setPenyebabItem = (idx, ci, val) => applyItems(idx, (fishbone[idx]?.penyebabItems || []).map((s, j) => (j === ci ? val : s)))
+  const removePenyebabItem = (idx, ci) => applyItems(idx, (fishbone[idx]?.penyebabItems || []).filter((_, j) => j !== ci))
+
   // ---- save handlers ----
   function buildPlanPayload() {
     return {
@@ -175,11 +204,14 @@ export default function InovasiForm() {
       verifikasiAkar: ident.verifikasiAkar || null,
       anggota: anggota.map((a, i) => ({ id: a.id ?? 0, peran: a.peran, nik: a.nik || null, nama: a.nama, jabatan: a.jabatan || null, depBagian: a.depBagian || null, urutan: i + 1 })),
       dataPendukung: dataPendukung.map((x) => ({ id: 0, indikator: x.indikator || null, kondisiAwal: x.kondisiAwal || null, sumberKeterangan: x.sumberKeterangan || null, lampiranPath: x.lampiranPath || null, lampiranNama: x.lampiranNama || null, lampiranLink: x.lampiranLink || null, urutan: 0 })),
-      jadwal: jadwal.map((j) => ({ id: 0, tahapan: j.tahapan, jenis: j.jenis, bulan: (j.bulanArr || []).join(','), jumlah: j.jumlah === '' ? null : Number(j.jumlah) })),
+      jadwal: jadwal.map((j) => ({ id: 0, tahapan: j.tahapan, jenis: j.jenis, bulan: (j.bulanArr || []).join(','), jumlah: j.jumlah === '' || j.jumlah == null ? null : Number(j.jumlah), rentang: serializeRentang(j.ranges) })),
       sasaran: sasaran.map((x) => ({ id: 0, sasaran: x.sasaran || null, kondisiSebelum: x.kondisiSebelum || null, target: x.target || null, indikator: x.indikator || null, urutan: 0 })),
       pareto: pareto.map((x) => ({ id: 0, kategori: x.kategori || null, frekuensi: x.frekuensi === '' || x.frekuensi == null ? null : Number(x.frekuensi), urutan: 0 })),
       qcdse: qcdse.filter((x) => (x.dampakKualitatif || x.dampakKuantitatif)).map((x) => ({ id: 0, aspek: x.aspek, dampakKualitatif: x.dampakKualitatif || null, dampakKuantitatif: x.dampakKuantitatif || null })),
-      fishbone: fishbone.filter((x) => (x.penyebab || x.akarDominan || x.prioritas !== '')).map((x) => ({ id: 0, faktor: x.faktor, penyebab: x.penyebab || null, akarDominan: x.akarDominan || null, prioritas: x.prioritas === '' ? null : Number(x.prioritas) })),
+      fishbone: fishbone.map((x) => ({
+        ...x,
+        penyebab: (x.penyebabItems || []).map((s) => s.trim()).filter(Boolean).join('\n'),
+      })).filter((x) => (x.penyebab || x.akarDominan || x.prioritas !== '')).map((x) => ({ id: 0, faktor: x.faktor, penyebab: x.penyebab || null, akarDominan: x.akarDominan || null, prioritas: x.prioritas === '' ? null : Number(x.prioritas) })),
       rencanaPerbaikan: rencana.map((x) => ({ id: 0, akarPenyebab: x.akarPenyebab || null, what: x.what || null, why: x.why || null, where: x.where || null, when: x.when || null, who: x.who || null, how: x.how || null, howMuch: x.howMuch || null, urutan: 0 })),
     }
   }
@@ -264,6 +296,22 @@ export default function InovasiForm() {
     await api.saveInovasiPlan(id, buildPlanPayload())
   }
 
+  async function submitFinal() {
+    if (!(await dialog.confirm({
+      title: 'Ajukan Pengesahan Akhir',
+      message: 'Ajukan hasil DO/CHECK/ACTION untuk pengesahan akhir? Tahapan tidak bisa diubah lagi kecuali diminta revisi.',
+      confirmText: 'Ajukan',
+    }))) return
+    setSaving(true)
+    try {
+      await api.submitFinalInovasi(id)
+      await load()
+      notify('ok', 'Risalah diajukan ke Lembar Pengesahan Akhir.')
+    } catch (e) {
+      notify('err', e instanceof ApiError ? e.message : 'Gagal mengajukan pengesahan akhir.')
+    } finally { setSaving(false) }
+  }
+
   async function actPengesahan(pid, aksi) {
     let komentar = null
     if (aksi === 'Ditolak' || aksi === 'Revisi') {
@@ -316,14 +364,19 @@ export default function InovasiForm() {
   const planLocked = !editPlan
   const lanjutTersedia = data?.planDisahkan === true
 
-  // Ekspor Word: bagian PLAN tersedia begitu isian terisi (tak menunggu disahkan);
-  // versi Lengkap tersedia bila PLAN sudah disahkan atau ada isian DO/CHECK/ACTION.
+  // Tombol Detail muncul begitu risalah punya isi (judul/latar belakang/anggota).
   const adaBaris = (a) => Array.isArray(a) && a.length > 0
   const bisaExportPlan = Boolean(data?.judul || data?.latarBelakang || data?.masalahUtama || adaBaris(data?.anggota) || data?.planDisahkan)
-  const bisaExportLengkap = data?.planDisahkan === true
-    || adaBaris(data?.doPelaksanaan) || adaBaris(data?.doKendala)
+
+  // Pengesahan akhir: butuh isi DO/CHECK/ACTION; baris FINAL yang sudah ada.
+  const adaTahapAkhir = adaBaris(data?.doPelaksanaan) || adaBaris(data?.doKendala)
     || adaBaris(data?.checkPerbandingan) || adaBaris(data?.checkSasaran)
     || adaBaris(data?.actionStandarisasi) || adaBaris(data?.actionTindakLanjut)
+    || Boolean(data?.actionTemaBerikutnya)
+  const finalRows = (data?.pengesahan ?? []).filter((p) => p.tahap === 'FINAL')
+  const finalDiajukan = finalRows.length > 0 && data?.status !== 'Revisi Akhir'
+  const bisaAjukanAkhir = data?.isOwner === true && data?.planDisahkan === true
+    && !finalDiajukan && data?.status !== 'Selesai' && adaTahapAkhir
 
   // Syarat sebelum risalah bisa diajukan ke Lembar Pengesahan.
   const perluNamaGugus = !ident.namaGugus?.trim()
@@ -351,14 +404,9 @@ export default function InovasiForm() {
         </div>
         {bisaExportPlan && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="inv__btn inv__btn--soft" onClick={() => exportRisalahWord(data, { mode: 'plan' })} title="Unduh bagian PLAN (isi yang sudah diinput) sebagai Word">
-              <FileDown size={15} /> Word (PLAN)
+            <button type="button" className="inv__btn inv__btn--primary" onClick={() => setDetailOpen(true)} title="Lihat keseluruhan isi risalah (termasuk diagram fishbone)">
+              <Eye size={15} /> Detail
             </button>
-            {bisaExportLengkap && (
-              <button type="button" className="inv__btn inv__btn--primary" onClick={() => exportRisalahWord(data, { mode: 'full' })} title="Unduh risalah lengkap (semua tahapan yang telah diisi) sebagai Word">
-                <FileDown size={15} /> Word (Lengkap)
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -399,6 +447,8 @@ export default function InovasiForm() {
           return [...prev, { id: 0, peran: 'Anggota', nik: p.nik, nama: p.nama, jabatan: p.jabatan ?? '', depBagian: p.unit ?? '' }]
         })}
       />
+
+      {detailOpen && <RisalahDetailModal data={data} onClose={() => setDetailOpen(false)} />}
     </div>
   )
 
@@ -414,7 +464,9 @@ export default function InovasiForm() {
             <label className="inv__field"><span>Tema ke-</span>
               <input type="number" min={1} value={ident.temaKe} disabled={planLocked} onChange={(e) => setIdent({ ...ident, temaKe: e.target.value })} /></label>
             <label className="inv__field"><span>Periode Inovasi</span>
-              <input value={ident.periode} disabled={planLocked} onChange={(e) => setIdent({ ...ident, periode: e.target.value })} /></label>
+              <select value={ident.periode} disabled={planLocked} onChange={(e) => setIdent({ ...ident, periode: e.target.value })}>
+                {periodeOptions(ident.periode).map((p) => <option key={p} value={p}>{p}</option>)}
+              </select></label>
           </div>
           <div className="inv__form-row">
             <label className="inv__field"><span>No. Registrasi</span><input value={data.noRegistrasi ?? '(terbit saat diajukan)'} disabled /></label>
@@ -490,38 +542,7 @@ export default function InovasiForm() {
 
         {/* P.3 Jadwal */}
         <Section tag="P.3" title="Jadwal Kegiatan (PDCA)">
-          <div style={{ overflowX: 'auto' }}>
-            <table className="inv__subtable">
-              <thead>
-                <tr>
-                  <th style={{ width: 80 }}>Tahapan</th>
-                  <th style={{ width: 80 }}>Ket.</th>
-                  {MONTHS.map(([n, l]) => <th key={n} style={{ textAlign: 'center', width: 34 }}>{l}</th>)}
-                  <th style={{ width: 60 }}>Jml.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jadwal.map((row, idx) => (
-                  <tr key={`${row.tahapan}-${row.jenis}`}>
-                    {row.jenis === 'Rencana' && <td rowSpan={2} style={{ fontWeight: 700, verticalAlign: 'middle' }}>{row.tahapan}</td>}
-                    <td>{row.jenis}</td>
-                    {MONTHS.map(([n]) => {
-                      const on = row.bulanArr.includes(n)
-                      return (
-                        <td key={n} style={{ textAlign: 'center', background: on ? (row.jenis === 'Rencana' ? '#1f4f2c' : '#a7d3b0') : undefined, cursor: planLocked ? 'default' : 'pointer' }}
-                          onClick={() => {
-                            if (planLocked) return
-                            setJadwal((prev) => prev.map((r, i) => i === idx ? { ...r, bulanArr: on ? r.bulanArr.filter((m) => m !== n) : [...r.bulanArr, n] } : r))
-                          }} />
-                      )
-                    })}
-                    <td>{planLocked ? (row.jumlah || '-') : <input type="number" min={0} value={row.jumlah} onChange={(e) => setJadwal((prev) => prev.map((r, i) => i === idx ? { ...r, jumlah: e.target.value } : r))} />}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="inv__hint">Klik sel bulan untuk mengarsir (hijau tua = Rencana, hijau muda = Realisasi).</p>
+          <JadwalPdca jadwal={jadwal} setJadwal={setJadwal} readOnly={planLocked} periode={ident.periode || data.periode} />
         </Section>
 
         {/* P.4 Sasaran */}
@@ -584,11 +605,12 @@ export default function InovasiForm() {
         </Section>
 
         {/* P.6 Fishbone */}
-        <Section tag="P.6" title="Analisa Akar Penyebab (Fishbone)">
+        <Section tag="P.6" title="Analisa Akar Penyebab Masalah (Diagram Tulang Ikan / Fishbone)">
           <label className="inv__field" style={{ marginBottom: 12 }}>
             <span>Masalah Utama (kepala tulang ikan)</span>
             <input value={ident.masalahUtama} disabled={planLocked} onChange={(e) => setIdent({ ...ident, masalahUtama: e.target.value })} placeholder="mis. Tata kelola dokumen belum efektif" />
           </label>
+          <p className="inv__hint" style={{ marginTop: 0 }}>Tiap faktor bisa memiliki <b>beberapa Penyebab Teridentifikasi</b> (tambah dengan tombol). Setiap penyebab menjadi cabang pada diagram fishbone. <b>Akar Penyebab Dominan</b> adalah akar terakhir yang akan diselesaikan (ditampilkan sebagai <b>kotak terisi</b> pada diagram).</p>
           <div style={{ overflowX: 'auto' }}>
             <table className="inv__subtable">
               <thead><tr><th style={{ width: 120 }}>Faktor</th><th>Penyebab Teridentifikasi</th><th>Akar Penyebab Dominan</th><th style={{ width: 90 }}>Prioritas (1-5)</th></tr></thead>
@@ -596,7 +618,24 @@ export default function InovasiForm() {
                 {fishbone.map((row, idx) => (
                   <tr key={row.faktor}>
                     <td style={{ fontWeight: 700 }}>{row.faktor}</td>
-                    <td>{planLocked ? (row.penyebab || '-') : <textarea rows={2} value={row.penyebab} onChange={(e) => setFishbone((p) => p.map((r, i) => i === idx ? { ...r, penyebab: e.target.value } : r))} />}</td>
+                    <td>
+                      {planLocked ? (
+                        (row.penyebabItems || []).length
+                          ? <ul style={{ margin: 0, paddingLeft: 18 }}>{row.penyebabItems.map((c, ci) => <li key={ci}>{c}</li>)}</ul>
+                          : '-'
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {(row.penyebabItems || []).map((c, ci) => (
+                            <div key={ci} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <span style={{ fontSize: 11, color: '#8a978c', minWidth: 14 }}>{ci + 1}.</span>
+                              <input style={{ flex: 1 }} value={c} placeholder={`Penyebab ${ci + 1}`} onChange={(e) => setPenyebabItem(idx, ci, e.target.value)} />
+                              <button type="button" className="inv__icon-btn inv__icon-btn--danger" title="Hapus penyebab" onClick={() => removePenyebabItem(idx, ci)}><X size={13} /></button>
+                            </div>
+                          ))}
+                          <button type="button" className="inv__btn inv__btn--soft" style={{ alignSelf: 'flex-start', padding: '4px 10px' }} onClick={() => addPenyebab(idx)}><Plus size={13} /> Tambah penyebab</button>
+                        </div>
+                      )}
+                    </td>
                     <td>{planLocked ? (row.akarDominan || '-') : <textarea rows={2} value={row.akarDominan} onChange={(e) => setFishbone((p) => p.map((r, i) => i === idx ? { ...r, akarDominan: e.target.value } : r))} />}</td>
                     <td>{planLocked ? (row.prioritas || '-') : <input type="number" min={1} max={5} value={row.prioritas} onChange={(e) => setFishbone((p) => p.map((r, i) => i === idx ? { ...r, prioritas: e.target.value } : r))} />}</td>
                   </tr>
@@ -604,15 +643,9 @@ export default function InovasiForm() {
               </tbody>
             </table>
           </div>
-          {/* Preview: akar dominan diberi box, diurut prioritas */}
-          <div className="inv__fishbone">
-            {fishbone.filter((f) => f.akarDominan).sort((a, b) => (a.prioritas || 9) - (b.prioritas || 9)).map((f) => (
-              <div className="inv__fish-factor" key={f.faktor}>
-                <h4>{f.faktor}{f.prioritas ? <span className="inv__prio">{f.prioritas}</span> : null}</h4>
-                {f.penyebab && <div className="inv__fish-cause">{f.penyebab}</div>}
-                <div className="inv__fish-root">{f.akarDominan}</div>
-              </div>
-            ))}
+          {/* Visualisasi diagram tulang ikan (Ishikawa) - di bawah tabel P.6 */}
+          <div style={{ marginTop: 12 }}>
+            <FishboneDiagram fishbone={fishbone} masalah={ident.masalahUtama || data.judul} />
           </div>
         </Section>
 
@@ -653,7 +686,7 @@ export default function InovasiForm() {
         </Section>
 
         {/* Pengesahan */}
-        {renderPengesahan()}
+        {renderSignBlock('PLAN')}
 
         {/* Aksi PLAN */}
         {(editPlan) && (
@@ -679,20 +712,24 @@ export default function InovasiForm() {
     )
   }
 
-  function renderPengesahan() {
-    const planRows = (data.pengesahan ?? []).filter((p) => p.tahap === 'PLAN')
-    if (planRows.length === 0) {
+  function renderSignBlock(tahap) {
+    const rows = (data.pengesahan ?? []).filter((p) => p.tahap === tahap)
+    const isPlan = tahap === 'PLAN'
+    const title = isPlan ? 'Lembar Pengesahan Tahap PLAN' : 'Lembar Pengesahan Akhir (Tahap DO–CHECK–ACTION)'
+    if (rows.length === 0) {
       return (
-        <Section tag="✓" title="Lembar Pengesahan Tahap PLAN">
-          <p className="inv__hint">Belum ada lembar pengesahan. Ajukan risalah untuk memulai proses tanda tangan.</p>
+        <Section tag="✓" title={title}>
+          <p className="inv__hint">{isPlan
+            ? 'Belum ada lembar pengesahan. Ajukan risalah untuk memulai proses tanda tangan.'
+            : 'Belum ada lembar pengesahan akhir. Lengkapi DO/CHECK/ACTION lalu ajukan pengesahan akhir.'}</p>
         </Section>
       )
     }
     return (
-      <Section tag="✓" title="Lembar Pengesahan Tahap PLAN">
-        <p className="inv__hint">Urutan: Ketua Gugus &rarr; Fasilitator (verifikasi) &rarr; Pembina Tk. Departemen &rarr; Pembina Tk. Kompartemen (validasi). DO/CHECK/ACTION terbuka setelah semua disetujui.</p>
+      <Section tag="✓" title={title}>
+        <p className="inv__hint">Urutan: Ketua Gugus &rarr; Fasilitator (verifikasi) &rarr; Pembina Tk. Departemen &rarr; Pembina Tk. Kompartemen (validasi).{isPlan ? ' DO/CHECK/ACTION terbuka setelah semua disetujui.' : ' Risalah berstatus Selesai setelah semua disetujui.'}</p>
         <div className="inv__sign-grid">
-          {planRows.map((p) => (
+          {rows.map((p) => (
             <div className="inv__sign" key={p.id}>
               <div className="inv__sign-role">{p.peran}</div>
               <div className="inv__sign-name">{p.nama ?? '(belum ditetapkan)'}</div>
@@ -816,6 +853,14 @@ export default function InovasiForm() {
             value={actTema} disabled={ro} onChange={(e) => setActTema(e.target.value)} />
         </Section>
         {editLanjut && <div className="inv__actions-bar"><button type="button" className="inv__btn inv__btn--primary" onClick={saveAction} disabled={saving}><Save size={16} /> Simpan ACTION</button></div>}
+
+        {/* Pengesahan Akhir */}
+        {renderSignBlock('FINAL')}
+        {bisaAjukanAkhir && (
+          <div className="inv__actions-bar">
+            <button type="button" className="inv__btn inv__btn--primary" onClick={submitFinal} disabled={saving}><Send size={16} /> Ajukan Pengesahan Akhir</button>
+          </div>
+        )}
       </>
     )
   }
@@ -829,6 +874,41 @@ function Section({ tag, title, children }) {
         <h3>{title}</h3>
       </div>
       {children}
+    </div>
+  )
+}
+
+// Pilihan Periode Inovasi (tahun bersilang), mulai 2026/2027 sampai beberapa tahun
+// ke depan. Nilai lama yang tidak ada di daftar tetap disertakan agar tak hilang.
+function periodeOptions(current) {
+  const start = 2026
+  const end = Math.max(new Date().getFullYear() + 3, start + 4)
+  const opts = []
+  for (let y = start; y <= end; y++) opts.push(`${y}/${y + 1}`)
+  if (current && !opts.includes(current)) opts.unshift(current)
+  return opts
+}
+
+// Modal Detail: menampilkan keseluruhan isi risalah (read-only). Diagram fishbone
+// disisipkan tepat di bawah tabel P.6 (bukan di paling atas). Pengganti unduhan Word.
+function RisalahDetailModal({ data, onClose }) {
+  const adaFishbone = (data.fishbone ?? []).some((f) => f.penyebab || f.akarDominan)
+  const { before, after } = renderRisalahHtml(data, { mode: 'full' })
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.5)', display: 'grid', placeItems: 'center', zIndex: 70, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(920px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column', padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 17 }}>Detail Risalah</h3>
+          <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>
+        </div>
+        <div style={{ overflowY: 'auto' }}>
+          <div dangerouslySetInnerHTML={{ __html: before }} />
+          {adaFishbone && after && (
+            <div style={{ margin: '2px 0 12px' }}><FishboneDiagram fishbone={data.fishbone} masalah={data.masalahUtama || data.judul} /></div>
+          )}
+          {after && <div dangerouslySetInnerHTML={{ __html: after }} />}
+        </div>
+      </div>
     </div>
   )
 }

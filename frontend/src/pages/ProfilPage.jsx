@@ -461,7 +461,7 @@ export default function ProfilPage() {
           </Row>
           <Row label="Status Pernikahan" editing={editing} required={requiredNow} display={
             profile.isMarried ? (
-              <button type="button" className="profil__link" onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}>
+              <button type="button" className="profil__link" onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}>
                 {profile.statusNikah}
               </button>
             ) : (profile.statusNikah ?? '-')

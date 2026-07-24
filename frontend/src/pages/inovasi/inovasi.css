@@ -113,7 +113,7 @@
 
 /* --- Halaman umum modul --- */
 .inv {
-  max-width: 1100px;
+  max-width: 1600px;
 }
 .inv__title {
   margin: 0 0 4px;
@@ -209,6 +209,16 @@
   transform: translateY(-50%);
   color: var(--inv-muted);
 }
+.inv__select {
+  padding: 9px 12px;
+  border: 1px solid var(--inv-line);
+  border-radius: 9px;
+  font-size: 13.5px;
+  background: #fff;
+  color: var(--inv-ink);
+  min-width: 190px;
+  max-width: 100%;
+}
 .inv__btn {
   display: inline-flex;
   align-items: center;
@@ -268,6 +278,14 @@
   border-top: 1px solid var(--inv-line);
   vertical-align: middle;
 }
+.inv__typechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.inv__typechip svg { flex: none; }
 .inv__table tr:hover td {
   background: #fafcfa;
 }
@@ -559,4 +577,182 @@
   font-weight: 700;
   padding: 1px 0;
   margin-left: 6px;
+}
+
+/* ============================================================================
+   Roadmap Inovasi - garis waktu perjalanan risalah (PDCA) dikelompokkan periode.
+   ============================================================================ */
+.inv__road-period {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 12px;
+}
+.inv__road-period:first-of-type { margin-top: 8px; }
+.inv__road-period h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--inv-green-dark);
+  white-space: nowrap;
+}
+.inv__road-period::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--inv-line);
+}
+.inv__road-count {
+  font-size: 11.5px;
+  color: var(--inv-green-dark);
+  background: var(--inv-green-soft);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.inv__road-card {
+  border: 1px solid var(--inv-line);
+  border-radius: 12px;
+  padding: 14px 16px 18px;
+  margin-bottom: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inv__road-card:hover {
+  border-color: var(--inv-green);
+  box-shadow: 0 3px 12px rgba(31, 79, 44, 0.09);
+}
+.inv__road-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.inv__road-jenis {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--inv-green-dark);
+  background: var(--inv-green-soft);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-right: 8px;
+}
+.inv__road-title {
+  font-weight: 700;
+  color: var(--inv-ink);
+  font-size: 14.5px;
+}
+.inv__road-sub {
+  font-size: 12px;
+  color: var(--inv-muted);
+  margin-top: 3px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* stepper PDCA */
+.inv__steps-track {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 4px;
+}
+.inv__stepnode {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  text-align: center;
+  min-width: 0;
+}
+.inv__stepnode::before,
+.inv__stepnode::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  height: 2px;
+  background: var(--inv-line);
+}
+.inv__stepnode::before { left: 0; right: 50%; }
+.inv__stepnode::after { left: 50%; right: 0; }
+.inv__stepnode:first-child::before { display: none; }
+.inv__stepnode:last-child::after { display: none; }
+.inv__stepnode--done::before,
+.inv__stepnode--done::after,
+.inv__stepnode--active::before { background: var(--inv-green); }
+.inv__stepdot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--inv-line);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.inv__stepnode--done .inv__stepdot {
+  background: var(--inv-green);
+  border-color: var(--inv-green);
+}
+.inv__stepnode--active .inv__stepdot {
+  border-color: var(--inv-green);
+  box-shadow: 0 0 0 4px var(--inv-green-soft);
+}
+.inv__stepnode--active .inv__stepdot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--inv-green);
+}
+.inv__steplabel {
+  font-size: 10.5px;
+  margin-top: 7px;
+  color: var(--inv-muted);
+  line-height: 1.25;
+}
+.inv__stepnode--done .inv__steplabel,
+.inv__stepnode--active .inv__steplabel {
+  color: var(--inv-ink);
+  font-weight: 600;
+}
+
+/* --- P.3 Jadwal (PDCA) grid + pemilih rentang bulan --- */
+.inv__jadwal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.inv__jadwal-win {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--inv-muted);
+}
+.inv__jadwal-win select {
+  padding: 5px 8px;
+  border: 1px solid var(--inv-line);
+  border-radius: 7px;
+  font-size: 12.5px;
+  background: #fff;
+}
+.inv__jadwal-cell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+  white-space: nowrap;
+}
+.inv__jadwal-cell:hover {
+  outline: 1.5px solid var(--inv-green);
+  outline-offset: -1.5px;
 }

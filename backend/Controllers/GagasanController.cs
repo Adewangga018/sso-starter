@@ -40,6 +40,11 @@ public class GagasanController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<UnitRingkas>>> Departemen()
         => Ok(await _org.ListDepartemenAsync());
 
+    // ---- daftar Kompartemen (untuk filter direktori pegawai) ----
+    [HttpGet("/inovasi/kompartemen")]
+    public async Task<ActionResult<IReadOnlyList<UnitRingkas>>> Kompartemen()
+        => Ok(await _org.ListKompartemenAsync());
+
     // ---- peran pengguna pada modul inovasi (menu approver vs karyawan) ----
     [HttpGet("/inovasi/peran")]
     public async Task<ActionResult<InovasiPeranDto>> Peran()
@@ -76,8 +81,17 @@ public class GagasanController : ControllerBase
             })
             .ToListAsync();
 
+        // Setelah terdaftar, gunakan nomor registrasi risalah agar sama dengan Daftar Inovasi.
+        var gugusIds = rows.Where(r => r.IdGugus != null).Select(r => r.IdGugus!.Value).Distinct().ToList();
+        var gugusNoReg = gugusIds.Count == 0
+            ? new Dictionary<int, string?>()
+            : await _db.Gugus.AsNoTracking().Where(x => gugusIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.NoRegistrasi);
+
         var items = rows.Select(g => new GagasanRingkasDto(
-            g.Id, g.NoRegistrasi, g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan, g.Status,
+            g.Id,
+            (g.IdGugus is int gid && gugusNoReg.TryGetValue(gid, out var gn) ? gn : null) ?? g.NoRegistrasi,
+            g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan, g.Status,
             PeranSaya: g.CreatedByNik == nik ? "Pengaju" : g.PeranAppr ?? "-",
             g.IdGugus, g.CreatedAt)).ToList();
 
@@ -159,8 +173,12 @@ public class GagasanController : ControllerBase
             a.Id, a.Urutan, a.Peran, a.Nik, a.Nama, a.Status, a.Komentar, a.Metodologi, a.Tgl,
             BisaSaya: BisaTandaTangan(steps, a, nik))).ToList();
 
+        // Setelah terdaftar, tampilkan nomor registrasi risalah agar sama dengan Daftar Inovasi.
+        var noReg = g.IdGugus is null ? g.NoRegistrasi
+            : await _db.Gugus.Where(x => x.Id == g.IdGugus).Select(x => x.NoRegistrasi).FirstOrDefaultAsync() ?? g.NoRegistrasi;
+
         return Ok(new GagasanDetailDto(
-            g.Id, g.NoRegistrasi, g.Judul, g.LatarBelakang, g.Masalah, g.Solusi, g.Metodologi, g.CreatedByNik, g.CreatedByNama,
+            g.Id, noReg, g.Judul, g.LatarBelakang, g.Masalah, g.Solusi, g.Metodologi, g.CreatedByNik, g.CreatedByNama,
             g.IdDepartemenAsal, g.NamaDepartemenAsal, g.IdDepartemenTujuan, g.NamaDepartemenTujuan,
             g.Status, g.IdGugus, bisaEdit, isOwner, siapDaftar, g.CreatedAt, g.SubmittedAt, approvalDtos));
     }
@@ -244,7 +262,7 @@ public class GagasanController : ControllerBase
         return Ok(new { g.Status });
     }
 
-    // ---- daftarkan ke SERGIO (buat gugus; Ketua isi anggota sendiri) ----
+    // ---- daftarkan Inovasi (buat gugus; Ketua isi anggota sendiri) ----
     [HttpPost("{id:int}/daftar")]
     public async Task<ActionResult<DaftarGagasanResultDto>> Daftar(int id, DaftarGagasanRequest req)
     {
@@ -270,12 +288,16 @@ public class GagasanController : ControllerBase
         var namaKomp = g.NamaKompartemenTujuan ?? g.NamaKompartemenAsal;
 
         var periode = string.IsNullOrWhiteSpace(req.Periode) ? DefaultPeriode() : req.Periode.Trim();
+        // Nomor registrasi inovasi diterbitkan saat daftar (bukan saat submit) agar
+        // sama antara Verifikasi Gagasan dan Daftar Inovasi. Format per-metodologi.
+        var noReg = await _org.GenerateNoRegistrasiAsync(jenis!, periode, idDept, idKomp);
         var gugus = new Gugus
         {
             Jenis = jenis!,
             Periode = periode,
             TemaKe = req.TemaKe,
             NamaGugus = req.NamaGugus?.Trim(),
+            NoRegistrasi = noReg,
             Judul = g.Judul,
             LatarBelakang = g.LatarBelakang,
             MasalahUtama = g.Masalah,

@@ -1,0 +1,56 @@
+/* Memakai token tema --gcs-* (tema terang, konsisten dengan halaman admin lain). */
+.admin-juri { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+.admin-juri__head { margin-bottom: 14px; }
+.admin-juri__back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; color: var(--gcs-green-600); text-decoration: none; }
+.admin-juri__back:hover { color: var(--gcs-green-900); }
+.admin-juri__head h1 { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; margin: 8px 0 0; color: var(--gcs-ink); }
+.admin-juri__head h1 svg { color: var(--gcs-green-600); }
+
+.admin-juri__note { display: flex; gap: 10px; align-items: flex-start; background: rgba(47, 108, 63, 0.08); color: var(--gcs-green-900); border: 1px solid rgba(47, 108, 63, 0.2); border-radius: 10px; padding: 11px 14px; font-size: 0.85rem; margin-bottom: 16px; }
+.admin-juri__note svg { flex-shrink: 0; margin-top: 1px; color: var(--gcs-green-600); }
+.admin-juri__note a { color: var(--gcs-green-700); font-weight: 600; }
+
+.admin-juri__alert { border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 12px; }
+.admin-juri__alert--ok { background: rgba(47, 108, 63, 0.1); color: var(--gcs-green-600); }
+.admin-juri__alert--err { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
+
+.admin-juri__section { margin-top: 24px; }
+.admin-juri__section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.admin-juri__section-head h2 { font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 7px; color: var(--gcs-ink); }
+.admin-juri__section-head h2 svg { color: var(--gcs-green-600); }
+
+.admin-juri__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.admin-juri__card { border: 1px solid var(--gcs-border); border-radius: 12px; padding: 14px; background: var(--gcs-white); }
+.admin-juri__card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; align-items: center; color: var(--gcs-ink); }
+.admin-juri__members { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.admin-juri__member { display: flex; justify-content: space-between; gap: 8px; font-size: 0.85rem; color: var(--gcs-ink); }
+.admin-juri__role { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--gcs-text-muted); }
+.admin-juri__role--ketua { color: var(--gcs-gold-700); }
+.admin-juri__role--sekretaris { color: #6d28d9; }
+
+.admin-juri__card-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.admin-juri__btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-ink); border-radius: 8px; padding: 8px 13px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.admin-juri__btn:hover { background: var(--gcs-bg); }
+.admin-juri__btn--primary { background: var(--gcs-green-600); border-color: var(--gcs-green-600); color: #fff; }
+.admin-juri__btn--primary:hover { background: var(--gcs-green-700); }
+.admin-juri__btn--danger { color: #c0392b; border-color: rgba(192, 57, 43, 0.35); background: rgba(192, 57, 43, 0.06); }
+.admin-juri__btn--danger:hover { background: rgba(192, 57, 43, 0.14); }
+.admin-juri__btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.admin-juri__form { border: 1px solid var(--gcs-border); border-radius: 12px; padding: 16px; background: var(--gcs-white); margin-bottom: 16px; }
+.admin-juri__field { margin-bottom: 12px; }
+.admin-juri__field label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.admin-juri__field input, .admin-juri__field select { width: 100%; padding: 9px 11px; border: 1px solid var(--gcs-border); border-radius: 8px; font-size: 0.9rem; background: var(--gcs-white); color: var(--gcs-ink); }
+.admin-juri__field input:focus, .admin-juri__field select:focus { outline: none; border-color: var(--gcs-gold-500); }
+.admin-juri__field input::placeholder { color: var(--gcs-text-muted); }
+.admin-juri__slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+
+.admin-juri__table-wrap { overflow-x: auto; border: 1px solid var(--gcs-border); border-radius: 12px; background: var(--gcs-white); }
+.admin-juri__table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.admin-juri__table th, .admin-juri__table td { text-align: left; padding: 11px 13px; border-bottom: 1px solid var(--gcs-border); color: var(--gcs-ink); }
+.admin-juri__table tr:last-child td { border-bottom: none; }
+.admin-juri__table th { background: var(--gcs-bg); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .03em; color: var(--gcs-text-muted); font-weight: 600; }
+.admin-juri__empty { color: var(--gcs-text-muted); font-size: 0.88rem; padding: 16px 4px; text-align: center; }
+.admin-juri__forbidden { color: #c0392b; text-align: center; padding: 40px 0; }
+.admin-juri__muted { color: var(--gcs-text-muted); }

@@ -34,7 +34,7 @@ public record CreateGugusRequest(string Jenis, string Periode, int? TemaKe, stri
 public record AnggotaDto(int Id, string Peran, string? Nik, string Nama, string? Jabatan, string? DepBagian, int Urutan);
 public record DataPendukungDto(int Id, string? Indikator, string? KondisiAwal, string? SumberKeterangan,
     string? LampiranPath, string? LampiranNama, string? LampiranLink, int Urutan);
-public record JadwalDto(int Id, string Tahapan, string Jenis, string? Bulan, int? Jumlah);
+public record JadwalDto(int Id, string Tahapan, string Jenis, string? Bulan, int? Jumlah, string? Rentang);
 public record SasaranDto(int Id, string? Sasaran, string? KondisiSebelum, string? Target, string? Indikator, int Urutan);
 public record ParetoDto(int Id, string? Kategori, int? Frekuensi, int Urutan);
 public record QcdseDto(int Id, string Aspek, string? DampakKualitatif, string? DampakKuantitatif);
@@ -143,6 +143,11 @@ public record InovasiUploadDto(string Path, string Nama, string Url);
 // --- Pencarian pegawai untuk menambah anggota ---
 public record InovasiPegawaiDto(string Nik, string Nama, string? Jabatan, string? Unit);
 
+// Baris direktori pegawai (halaman Daftar Pegawai): sama seperti InovasiPegawaiDto
+// namun disertai departemen & kompartemen hasil resolusi org untuk kolom & filter.
+public record InovasiPegawaiDirektoriDto(string Nik, string Nama, string? Jabatan, string? Unit,
+    string? Departemen, string? Kompartemen);
+
 // ============================================================================
 // Sumbang Gagasan
 // ============================================================================
@@ -173,3 +178,49 @@ public record DaftarGagasanResultDto(int IdGugus, string Jenis, string Base);
 
 // Peran pengguna pada modul inovasi (untuk menu berbeda approver vs karyawan).
 public record InovasiPeranDto(string Peran, bool BolehApprove);  // Peran: GM | Manager | Karyawan
+
+// ============================================================================
+// Penilaian Juri (stream) - rubrik GIO/SS & 5R, panel juri, penugasan, skor.
+// ============================================================================
+
+public record PenilaianKriteriaDto(int Id, string JenisForm, string Tahap, int No, string Kriteria, decimal BobotPersen, string? Keterangan);
+
+// Pengguna ber-role Juri (untuk pemilih anggota stream).
+public record JuriUserDto(string Id, string? Nama, string? Nik, string? Email);
+
+// --- Kelola stream (Admin) ---
+public record StreamAnggotaDto(int Id, string UserId, string? Nik, string? Nama, string Peran);
+public record StreamDto(int Id, string Nama, string? Keterangan, bool Aktif, IReadOnlyList<StreamAnggotaDto> Anggota);
+public record StreamAnggotaInput(string UserId, string? Nik, string? Nama, string Peran); // Peran: Ketua|Anggota|Sekretaris
+public record SaveStreamRequest(string Nama, string? Keterangan, bool Aktif, IReadOnlyList<StreamAnggotaInput> Anggota);
+
+// --- Penugasan stream -> gugus (Admin) ---
+public record GugusOptionDto(int Id, string Jenis, string? NoRegistrasi, string? NamaGugus, string? Judul, string Status);
+public record PenugasanDto(int Id, int IdGugus, int IdStream, string StreamNama, string Status,
+    string Jenis, string? NoRegistrasi, string? NamaGugus, string? Judul, DateTime DibuatPada);
+public record CreatePenugasanRequest(int IdGugus, int IdStream);
+
+// --- Sisi Juri ---
+// Ringkas: satu penugasan yang perlu dinilai/dilihat oleh juri saat ini.
+public record TugasPenilaianDto(int IdPenugasan, int IdGugus, string Jenis, string JenisForm,
+    string? NoRegistrasi, string? NamaGugus, string? Judul, string Periode,
+    string PeranSaya, bool BisaNilai, string Status);
+
+public record GugusHeaderDto(int Id, string Jenis, string? NoRegistrasi, string? NamaGugus, string? Judul,
+    string Periode, string? NamaDepartemen, string? NamaKompartemen, string Status);
+
+public record SkorDto(int IdKriteria, byte Nilai, string? Catatan);
+
+public record PenilaiHasilDto(string UserId, string? Nama, string Peran, decimal Nilai, string Kategori, int Terisi);
+
+public record PenilaianHasilDto(decimal NilaiAkhir, string Kategori, int JumlahKriteria,
+    IReadOnlyList<PenilaiHasilDto> Penilai);
+
+public record PenilaianDetailDto(int IdPenugasan, string Status, GugusHeaderDto Gugus, string JenisForm,
+    string PeranSaya, bool BisaNilai,
+    IReadOnlyList<PenilaianKriteriaDto> Kriteria,
+    IReadOnlyList<SkorDto> SkorSaya,
+    PenilaianHasilDto Hasil);
+
+public record SkorInput(int IdKriteria, byte Nilai, string? Catatan);
+public record SaveSkorRequest(IReadOnlyList<SkorInput> Skor);

@@ -70,6 +70,30 @@ public class OrgResolver
         return result;
     }
 
+    // Semua NIK penempatan aktif yang berada dalam cakupan sebuah unit
+    // (departemen bila asDepartemen, atau kompartemen). Kebalikan dari ResolveAsync:
+    // dipakai untuk menampilkan daftar pegawai default (tanpa mengetik) pada
+    // pemilih anggota gugus & halaman Daftar Pegawai.
+    public async Task<IReadOnlyList<string>> ListNiksInScopeAsync(int scopeUnitId, bool asDepartemen)
+    {
+        var units = await LoadUnitsAsync();
+        var pairs = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.Status == "Aktif" && j.IdUnit != null
+            select new { p.IdKaryawan, j.IdUnit }).ToListAsync();
+
+        var niks = new HashSet<string>();
+        foreach (var pr in pairs)
+        {
+            if (pr.IdUnit is not int uid || string.IsNullOrWhiteSpace(pr.IdKaryawan)) continue;
+            var org = ResolveFromUnits(units, uid);
+            var match = asDepartemen ? org.IdDepartemen == scopeUnitId : org.IdKompartemen == scopeUnitId;
+            if (match) niks.Add(pr.IdKaryawan);
+        }
+        return niks.ToList();
+    }
+
     // Nama jabatan aktif (grading) untuk mengisi kolom Jabatan anggota.
     public async Task<string?> ResolveJabatanNamaAsync(string? nik)
     {
@@ -133,18 +157,31 @@ public class OrgResolver
             .ToListAsync();
     }
 
-    // Nomor registrasi gugus: {jenis}-{urut departemen}/{urut kompartemen}/{tahun}.
+    // Daftar Kompartemen - untuk filter direktori pegawai.
+    public async Task<IReadOnlyList<UnitRingkas>> ListKompartemenAsync()
+    {
+        return await _db.UnitOrganisasi
+            .Where(u => u.Tipe == "Kompartemen")
+            .OrderBy(u => u.Nama)
+            .Select(u => new UnitRingkas(u.IdUnit, u.Nama, u.Tipe))
+            .ToListAsync();
+    }
+
+    // Nomor registrasi gugus: {jenis}-{urut per-jenis di departemen}/{urut per-jenis
+    // di kompartemen}/{tahun}. Urutan dihitung PER metodologi sehingga nomor
+    // menunjukkan jumlah inovasi SS/5R/GIO dari departemen & kompartemen, plus tahun.
+    // Contoh: "SS-03/07/2026" = SS ke-3 di departemen, ke-7 di kompartemen, tahun 2026.
     public async Task<string> GenerateNoRegistrasiAsync(string jenis, string periode, int? idDepartemen, int? idKompartemen)
     {
         var tahun = periode.Length >= 4 ? periode[..4] : DateTime.Now.Year.ToString();
 
         var deptSeq = idDepartemen is null
             ? 1
-            : await _db.Gugus.CountAsync(g => g.IdDepartemen == idDepartemen && g.NoRegistrasi != null) + 1;
+            : await _db.Gugus.CountAsync(g => g.Jenis == jenis && g.IdDepartemen == idDepartemen && g.NoRegistrasi != null) + 1;
 
         var kompSeq = idKompartemen is null
             ? 1
-            : await _db.Gugus.CountAsync(g => g.IdKompartemen == idKompartemen && g.NoRegistrasi != null) + 1;
+            : await _db.Gugus.CountAsync(g => g.Jenis == jenis && g.IdKompartemen == idKompartemen && g.NoRegistrasi != null) + 1;
 
         return $"{jenis}-{deptSeq:00}/{kompSeq:00}/{tahun}";
     }
