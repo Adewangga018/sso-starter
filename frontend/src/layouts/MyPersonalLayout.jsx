@@ -68,6 +68,14 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
+          key: 'persetujuan',
+          label: 'Persetujuan',
+          icon: ClipboardCheck,
+          to: '/my-personal/persetujuan',
+          disabled: !profileComplete,
+          disabledReason: 'Lengkapi Profil terlebih dahulu',
+        },
+        {
           key: 'sppd',
           label: 'SPPD',
           icon: Plane,

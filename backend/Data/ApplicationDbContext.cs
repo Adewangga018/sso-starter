@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
+using SsoBackend.Models.Approval;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Office;
 
@@ -29,6 +30,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Cuti (schema cuti) — sistem cuti MyGCS baru, dikelola manual (raw SQL).
     public DbSet<CutiSaldo> CutiSaldo => Set<CutiSaldo>();
     public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
+    // Persetujuan terpadu (schema approval).
+    public DbSet<ApprovalPengajuan> ApprovalPengajuan => Set<ApprovalPengajuan>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -212,6 +215,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
             e.Property(x => x.JumlahHari).HasColumnName("jumlah_hari");
             e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Komentar).HasColumnName("komentar");
+            e.Property(x => x.TglPengajuan).HasColumnName("tgl_pengajuan");
+            e.Property(x => x.TglKeputusan).HasColumnName("tgl_keputusan");
+        });
+
+        builder.Entity<ApprovalPengajuan>(e =>
+        {
+            e.ToTable("pengajuan", "approval", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.RefId).HasColumnName("ref_id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.IdManager).HasColumnName("id_manager");
+            e.Property(x => x.Ringkasan).HasColumnName("ringkasan");
             e.Property(x => x.Status).HasColumnName("status");
             e.Property(x => x.Komentar).HasColumnName("komentar");
             e.Property(x => x.TglPengajuan).HasColumnName("tgl_pengajuan");

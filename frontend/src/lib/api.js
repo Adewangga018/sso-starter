@@ -162,6 +162,8 @@ export const api = {
   updateAnak: (idAnak, payload) =>
     apiFetch(`/api/personal/anak/${idAnak}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteAnak: (idAnak) => apiFetch(`/api/personal/anak/${idAnak}`, { method: 'DELETE' }),
+  getPersetujuan: () => apiFetch('/api/persetujuan'),
+  putusanPersetujuan: (id, payload) => apiFetch(`/api/persetujuan/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
   getCuti: () => apiFetch('/api/personal/cuti'),
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),

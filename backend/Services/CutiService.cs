@@ -150,31 +150,56 @@ public class CutiService
         return n;
     }
 
-    // Atasan pemohon dari struktur grading (jabatan.id_atasan -> penempatan aktif).
-    private async Task<string?> ResolveAtasanAsync(string nik)
+    // Penyetuju = MANAGER TERKAIT: ancestor terdekat pada band Manager-ke-atas (urutan <= 2,
+    // yaitu Manager/GM/Direksi) yang jabatannya terisi. Bila tak ada (mis. pemohon sudah
+    // Manager/GM), fallback ke atasan (ancestor) terdekat mana pun.
+    private Task<string?> ResolveAtasanAsync(string nik) => ResolveManagerAsync(nik);
+
+    private async Task<string?> ResolveManagerAsync(string nik)
     {
         var conn = _db.Database.GetDbConnection();
         var mustClose = conn.State != ConnectionState.Open;
         if (mustClose) await conn.OpenAsync();
         try
         {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            // 1) Manager terkait (band urutan <= 2), ancestor terdekat.
+            var manager = await ScalarAsync(conn, @"
                 SELECT TOP 1 pa.id_karyawan
                 FROM grading.penempatan p
-                JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
-                JOIN grading.penempatan pa ON pa.id_jabatan = j.id_atasan AND pa.status = 'Aktif'
-                WHERE p.id_karyawan = @nik AND p.status = 'Aktif'";
-            var pr = cmd.CreateParameter();
-            pr.ParameterName = "@nik";
-            pr.Value = nik;
-            cmd.Parameters.Add(pr);
-            var res = await cmd.ExecuteScalarAsync();
-            return res as string;
+                JOIN grading.jabatan_hirarki h ON h.id_jabatan_bawahan = p.id_jabatan AND h.kedalaman > 0
+                JOIN grading.jabatan ja ON ja.id_jabatan = h.id_jabatan_atasan
+                JOIN grading.band   ba ON ba.id_band   = ja.id_band AND ba.urutan <= 2
+                JOIN grading.penempatan pa ON pa.id_jabatan = ja.id_jabatan AND pa.status = 'Aktif'
+                WHERE p.id_karyawan = @nik AND p.status = 'Aktif'
+                ORDER BY h.kedalaman ASC", nik);
+            if (!string.IsNullOrWhiteSpace(manager))
+            {
+                return manager;
+            }
+            // 2) Fallback: ancestor (atasan) terdekat mana pun yang terisi.
+            return await ScalarAsync(conn, @"
+                SELECT TOP 1 pa.id_karyawan
+                FROM grading.penempatan p
+                JOIN grading.jabatan_hirarki h ON h.id_jabatan_bawahan = p.id_jabatan AND h.kedalaman > 0
+                JOIN grading.jabatan ja ON ja.id_jabatan = h.id_jabatan_atasan
+                JOIN grading.penempatan pa ON pa.id_jabatan = ja.id_jabatan AND pa.status = 'Aktif'
+                WHERE p.id_karyawan = @nik AND p.status = 'Aktif'
+                ORDER BY h.kedalaman ASC", nik);
         }
         finally
         {
             if (mustClose) await conn.CloseAsync();
         }
+    }
+
+    private static async Task<string?> ScalarAsync(System.Data.Common.DbConnection conn, string sql, string nik)
+    {
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        var pr = cmd.CreateParameter();
+        pr.ParameterName = "@nik";
+        pr.Value = nik;
+        cmd.Parameters.Add(pr);
+        return (await cmd.ExecuteScalarAsync()) as string;
     }
 }

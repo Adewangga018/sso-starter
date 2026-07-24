@@ -33,11 +33,13 @@ public class TiketController : ControllerBase
 
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
+    private readonly ApprovalService _approval;
 
-    public TiketController(GcsDbContext db, CurrentUserContext currentUser)
+    public TiketController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
     {
         _db = db;
         _currentUser = currentUser;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -103,6 +105,9 @@ public class TiketController : ControllerBase
 
         _db.WebSdmPesanTiket.Add(tiket);
         await _db.SaveChangesAsync();
+
+        var ringkasan = $"Pemesanan Tiket: {request.Keterangan.Trim()}";
+        await _approval.CreateAsync("Tiket", tiket.id.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
         var kode = await _db.WebSdmPesanTiket
             .Where(t => t.id == tiket.id)

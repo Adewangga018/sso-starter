@@ -28,6 +28,7 @@ import OfficeInbox from './pages/office/Inbox'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
+import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
 import IzinPage from './pages/IzinPage'
@@ -93,6 +94,7 @@ export default function App() {
               <Route index element={<Navigate to="profil" replace />} />
               <Route path="profil" element={<ProfilPage />} />
               <Route path="cuti" element={<CutiPage />} />
+              <Route path="persetujuan" element={<PersetujuanPage />} />
               <Route path="absensi" element={<AbsensiPage />} />
               <Route path="lembur" element={<SplPage />} />
               <Route path="izin" element={<IzinPage />} />

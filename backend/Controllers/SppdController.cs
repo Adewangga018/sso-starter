@@ -39,11 +39,13 @@ public class SppdController : ControllerBase
 
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
+    private readonly ApprovalService _approval;
 
-    public SppdController(GcsDbContext db, CurrentUserContext currentUser)
+    public SppdController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
     {
         _db = db;
         _currentUser = currentUser;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -147,6 +149,9 @@ public class SppdController : ControllerBase
 
         _db.WebSdmSppd.Add(sppd);
         await _db.SaveChangesAsync();
+
+        var ringkasan = $"SPPD {request.Jenis} ke {request.Tujuan.Trim()} · {request.TglBerangkat:dd MMM}–{request.TglPulang:dd MMM}";
+        await _approval.CreateAsync("SPPD", sppd.id.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
         // kode_sppd was rewritten by the trigger after the INSERT, so read the row back.
         var kode = await _db.WebSdmSppd
