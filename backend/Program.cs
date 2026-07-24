@@ -41,6 +41,7 @@ builder.Services.AddScoped<DocumentResolver>();
 builder.Services.AddScoped<OrgResolver>();
 builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<OfficeService>();
+builder.Services.AddScoped<CutiService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

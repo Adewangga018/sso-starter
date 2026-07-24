@@ -27,6 +27,7 @@ import MenungguSurat from './pages/office/MenungguSurat'
 import OfficeInbox from './pages/office/Inbox'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
+import CutiPage from './pages/CutiPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
 import IzinPage from './pages/IzinPage'
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="/my-personal" element={<MyPersonalLayout />}>
               <Route index element={<Navigate to="profil" replace />} />
               <Route path="profil" element={<ProfilPage />} />
+              <Route path="cuti" element={<CutiPage />} />
               <Route path="absensi" element={<AbsensiPage />} />
               <Route path="lembur" element={<SplPage />} />
               <Route path="izin" element={<IzinPage />} />

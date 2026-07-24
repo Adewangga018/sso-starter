@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
+using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Office;
 
 namespace SsoBackend.Data;
@@ -25,6 +26,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SuratDistribusi> SuratDistribusi => Set<SuratDistribusi>();
     public DbSet<SuratLampiran> SuratLampiran => Set<SuratLampiran>();
     public DbSet<SuratRiwayat> SuratRiwayat => Set<SuratRiwayat>();
+    // Cuti (schema cuti) — sistem cuti MyGCS baru, dikelola manual (raw SQL).
+    public DbSet<CutiSaldo> CutiSaldo => Set<CutiSaldo>();
+    public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -176,6 +180,42 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.OlehNama).HasColumnName("oleh_nama");
             e.Property(x => x.Catatan).HasColumnName("catatan");
             e.Property(x => x.Tgl).HasColumnName("tgl");
+        });
+
+        builder.Entity<CutiSaldo>(e =>
+        {
+            e.ToTable("saldo", "cuti", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Tmt).HasColumnName("tmt");
+            e.Property(x => x.Periode).HasColumnName("periode");
+            e.Property(x => x.Hak).HasColumnName("hak");
+            e.Property(x => x.CutiBersama).HasColumnName("cuti_bersama");
+            e.Property(x => x.Diambil).HasColumnName("diambil");
+            e.Property(x => x.Saldo).HasColumnName("saldo");
+            e.Property(x => x.TglCutoff).HasColumnName("tgl_cutoff");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+        });
+
+        builder.Entity<CutiPengajuan>(e =>
+        {
+            e.ToTable("pengajuan", "cuti", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.IdAtasan).HasColumnName("id_atasan");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.JumlahHari).HasColumnName("jumlah_hari");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Komentar).HasColumnName("komentar");
+            e.Property(x => x.TglPengajuan).HasColumnName("tgl_pengajuan");
+            e.Property(x => x.TglKeputusan).HasColumnName("tgl_keputusan");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

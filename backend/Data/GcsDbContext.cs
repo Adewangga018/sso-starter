@@ -29,6 +29,8 @@ public class GcsDbContext : DbContext
     public DbSet<WebSdmUmdl> WebSdmUmdl => Set<WebSdmUmdl>();
     public DbSet<WebSdmPesanTiket> WebSdmPesanTiket => Set<WebSdmPesanTiket>();
     public DbSet<WebSdmPesanTiketDetail> WebSdmPesanTiketDetail => Set<WebSdmPesanTiketDetail>();
+    public DbSet<WebSdmCutiHak> WebSdmCutiHak => Set<WebSdmCutiHak>();
+    public DbSet<WebSdmCutiView> WebSdmCutiView => Set<WebSdmCutiView>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -187,6 +189,36 @@ public class GcsDbContext : DbContext
             e.Property(x => x.ID_IJIN).HasPrecision(25, 0);
             // ROWID is NOT NULL with a newid() default and is absent from the entity on
             // purpose, so INSERTs let the database fill it.
+        });
+
+        // Cuti (SDM/EASy) — read-only. Hak per periode + view pengajuan/riwayat.
+        builder.Entity<WebSdmCutiHak>(e =>
+        {
+            e.ToTable("web_sdm_cuti_hak", "intranet");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdUser).HasColumnName("id_user");
+            e.Property(x => x.TglTerbit).HasColumnName("tgl_terbit");
+            e.Property(x => x.HakTahun).HasColumnName("hak_tahun");
+            e.Property(x => x.HakCuti).HasColumnName("hak_cuti");
+            e.Property(x => x.UtangCuti).HasColumnName("utang_cuti");
+            e.Property(x => x.AmbilCuti).HasColumnName("ambil_cuti");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.BersamaCuti).HasColumnName("bersama_cuti");
+            e.Property(x => x.TglBerakhir).HasColumnName("tgl_berakhir");
+        });
+
+        builder.Entity<WebSdmCutiView>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("vw_web_sdm_cuti", "intranet");
+            e.Property(x => x.KodeCuti).HasColumnName("kode_cuti");
+            e.Property(x => x.TglInput).HasColumnName("tgl_input");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdUser).HasColumnName("id_user");
+            e.Property(x => x.ListJenis).HasColumnName("list_jenis");
+            e.Property(x => x.TglApprove).HasColumnName("tgl_approve");
         });
 
         builder.Entity<TtdElektronik>(e =>

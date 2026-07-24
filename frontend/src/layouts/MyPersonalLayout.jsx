@@ -59,7 +59,14 @@ function buildSections(profileComplete) {
           disabled: !profileComplete,
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
-        { key: 'cuti', label: 'Cuti', icon: CalendarDays, disabled: true },
+        {
+          key: 'cuti',
+          label: 'Cuti',
+          icon: CalendarDays,
+          to: '/my-personal/cuti',
+          disabled: !profileComplete,
+          disabledReason: 'Lengkapi Profil terlebih dahulu',
+        },
         {
           key: 'sppd',
           label: 'SPPD',
