@@ -40,6 +40,7 @@ builder.Services.AddScoped<CurrentUserContext>();
 builder.Services.AddScoped<DocumentResolver>();
 builder.Services.AddScoped<OrgResolver>();
 builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<OfficeService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

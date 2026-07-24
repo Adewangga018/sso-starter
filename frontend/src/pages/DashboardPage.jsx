@@ -30,6 +30,7 @@ const MODULE_ROUTES = {
   'my-personal': '/my-personal/profil',
   'my-innovation': '/my-innovation',
   'my-team': '/team',
+  'my-office': '/my-office',
 }
 
 // Logo tiap modul (di /public). Bila ada, tampil menggantikan ikon lucide pada tile.

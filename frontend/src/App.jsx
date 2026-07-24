@@ -18,6 +18,13 @@ import DashboardPage from './pages/DashboardPage'
 import MyTeamPage from './pages/MyTeamPage'
 import RekapTimPage from './pages/RekapTimPage'
 import MyTeamLayout from './layouts/MyTeamLayout'
+import MyOfficeLayout from './layouts/MyOfficeLayout'
+import MyOfficeBeranda from './pages/office/MyOfficeBeranda'
+import BuatSurat from './pages/office/BuatSurat'
+import DaftarSurat from './pages/office/DaftarSurat'
+import SuratDetail from './pages/office/SuratDetail'
+import MenungguSurat from './pages/office/MenungguSurat'
+import OfficeInbox from './pages/office/Inbox'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import AbsensiPage from './pages/AbsensiPage'
@@ -69,6 +76,16 @@ export default function App() {
             <Route path="/team" element={<MyTeamLayout />}>
               <Route index element={<MyTeamPage />} />
               <Route path="rekap" element={<RekapTimPage />} />
+            </Route>
+
+            <Route path="/my-office" element={<MyOfficeLayout />}>
+              <Route index element={<MyOfficeBeranda />} />
+              <Route path="inbox" element={<OfficeInbox />} />
+              <Route path="buat" element={<BuatSurat />} />
+              <Route path="daftar" element={<DaftarSurat />} />
+              <Route path="review" element={<MenungguSurat mode="review" />} />
+              <Route path="approval" element={<MenungguSurat mode="approval" />} />
+              <Route path="surat/:id" element={<SuratDetail />} />
             </Route>
 
             <Route path="/my-personal" element={<MyPersonalLayout />}>

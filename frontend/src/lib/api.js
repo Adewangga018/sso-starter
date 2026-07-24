@@ -126,6 +126,26 @@ export const api = {
   getRekapTim: () => apiFetch('/api/team/rekap'),
   // Unduh laporan tim (CSV) — mencakup seluruh level bawahan. Nama file dari server.
   unduhLaporanTim: () => apiDownload('/api/team/laporan', 'Laporan-Tim.csv'),
+
+  // My Office (persuratan)
+  cariPegawaiOffice: (q) => apiFetch(`/api/office/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  getDaftarSurat: (status) => apiFetch(`/api/office/surat${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  getSuratDetail: (id) => apiFetch(`/api/office/surat/${id}`),
+  buatSurat: (payload) => apiFetch('/api/office/surat', { method: 'POST', body: JSON.stringify(payload) }),
+  kirimSurat: (id) => apiFetch(`/api/office/surat/${id}/kirim`, { method: 'POST' }),
+  batalSurat: (id) => apiFetch(`/api/office/surat/${id}/batal`, { method: 'POST' }),
+  getInboxOffice: () => apiFetch('/api/office/inbox'),
+  getMenungguReviewOffice: () => apiFetch('/api/office/review'),
+  getMenungguApprovalOffice: () => apiFetch('/api/office/approval'),
+  aksiPengesahanSurat: (id, payload) =>
+    apiFetch(`/api/office/surat/${id}/pengesahan`, { method: 'POST', body: JSON.stringify(payload) }),
+  uploadLampiranSurat: (id, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiFetch(`/api/office/surat/${id}/lampiran`, { method: 'POST', body })
+  },
+  hapusLampiranSurat: (id, lampId) => apiFetch(`/api/office/surat/${id}/lampiran/${lampId}`, { method: 'DELETE' }),
+  unduhLampiranSurat: (id, lampId, nama) => apiDownload(`/api/office/surat/${id}/lampiran/${lampId}`, nama || 'lampiran'),
   getPersonalProfile: () => apiFetch('/api/personal/profile'),
   updateProfile: (payload) => apiFetch('/api/personal/profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadDocument: (key, file) => {

@@ -25,7 +25,7 @@ public class DashboardController : ControllerBase
     private static readonly IReadOnlyList<ModuleTileDto> Modules = new[]
     {
         new ModuleTileDto("my-personal", "My Personal", "HR MANAGEMENT", "users", true),
-        new ModuleTileDto("my-office", "My Office", "SURAT-MENYURAT", "mail", false),
+        new ModuleTileDto("my-office", "My Office", "SURAT-MENYURAT", "mail", true),
         new ModuleTileDto("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", false),
         new ModuleTileDto("my-health", "My Health", "KESEHATAN", "activity", false),
         new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),

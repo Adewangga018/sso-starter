@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
+using SsoBackend.Models.Office;
 
 namespace SsoBackend.Data;
 
@@ -18,6 +19,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Tugas> Tugas => Set<Tugas>();
+    // My Office (schema office) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<Surat> Surat => Set<Surat>();
+    public DbSet<SuratPj> SuratPj => Set<SuratPj>();
+    public DbSet<SuratDistribusi> SuratDistribusi => Set<SuratDistribusi>();
+    public DbSet<SuratLampiran> SuratLampiran => Set<SuratLampiran>();
+    public DbSet<SuratRiwayat> SuratRiwayat => Set<SuratRiwayat>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -86,6 +93,89 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
             e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+        });
+
+        // My Office (schema office). Tabel dikelola manual (raw SQL) — ExcludeFromMigrations.
+        builder.Entity<Surat>(e =>
+        {
+            e.ToTable("surat", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Nomor).HasColumnName("nomor");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.Klasifikasi).HasColumnName("klasifikasi");
+            e.Property(x => x.Sifat).HasColumnName("sifat");
+            e.Property(x => x.Kecepatan).HasColumnName("kecepatan");
+            e.Property(x => x.Judul).HasColumnName("judul");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Isi).HasColumnName("isi");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.PembuatNik).HasColumnName("pembuat_nik");
+            e.Property(x => x.PembuatNama).HasColumnName("pembuat_nama");
+            e.Property(x => x.TanggalSurat).HasColumnName("tanggal_surat");
+            e.Property(x => x.BerlakuMulai).HasColumnName("berlaku_mulai");
+            e.Property(x => x.BerlakuSampai).HasColumnName("berlaku_sampai");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+
+            e.HasMany(x => x.PenanggungJawab).WithOne().HasForeignKey(x => x.IdSurat).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Distribusi).WithOne().HasForeignKey(x => x.IdSurat).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Lampiran).WithOne().HasForeignKey(x => x.IdSurat).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Riwayat).WithOne().HasForeignKey(x => x.IdSurat).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SuratPj>(e =>
+        {
+            e.ToTable("surat_pj", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.Peran).HasColumnName("peran");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Jabatan).HasColumnName("jabatan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Komentar).HasColumnName("komentar");
+            e.Property(x => x.Tgl).HasColumnName("tgl");
+        });
+
+        builder.Entity<SuratDistribusi>(e =>
+        {
+            e.ToTable("surat_distribusi", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.Tipe).HasColumnName("tipe");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Jabatan).HasColumnName("jabatan");
+        });
+
+        builder.Entity<SuratLampiran>(e =>
+        {
+            e.ToTable("surat_lampiran", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.NamaFile).HasColumnName("nama_file");
+            e.Property(x => x.Path).HasColumnName("path");
+            e.Property(x => x.Ukuran).HasColumnName("ukuran");
+            e.Property(x => x.Tipe).HasColumnName("tipe");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<SuratRiwayat>(e =>
+        {
+            e.ToTable("surat_riwayat", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.Aksi).HasColumnName("aksi");
+            e.Property(x => x.OlehNik).HasColumnName("oleh_nik");
+            e.Property(x => x.OlehNama).HasColumnName("oleh_nama");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.Tgl).HasColumnName("tgl");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.
