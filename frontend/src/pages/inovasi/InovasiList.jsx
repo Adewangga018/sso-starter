@@ -92,7 +92,10 @@ export default function InovasiList() {
             )}
             {filtered.map((r) => (
               <tr key={r.id}>
-                <td><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
+                <td>
+                  <span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span>
+                  {r.sudahDinilai && <span className="inv__status inv__status--dinilai" style={{ marginLeft: 6 }}>Sudah Dinilai</span>}
+                </td>
                 <td>{r.noRegistrasi ?? <span style={{ color: '#9aa79d' }}>-</span>}</td>
                 <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>
                 <td>{r.namaGugus ?? '-'}</td>

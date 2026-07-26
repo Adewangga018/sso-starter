@@ -20,7 +20,7 @@ import PegawaiPicker from './PegawaiPicker'
 import FishboneDiagram from './FishboneDiagram'
 import JadwalPdca from './JadwalPdca'
 import { jenisLabel, statusClass } from './statusClass'
-import { anggotaKeSlot, bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_TAHAP, LIMA_R_BULAN, LIMA_R_STEP } from './inovasiTemplate'
+import { anggotaKeSlot, bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_STEP } from './inovasiTemplate'
 import { renderRisalahHtml } from '../../lib/risalahDoc'
 import './inovasi.css'
 
@@ -35,22 +35,28 @@ const ASPEK = [
 const FAKTOR = ['Man', 'Method', 'Material', 'Machine', 'Environment']
 const STEPS = ['PLAN', 'DO', 'CHECK', 'ACTION']
 
-// P.3 rentang tanggal per sel bulan disimpan JSON {"7":["2026-07-01","2026-07-15"]}.
+// P.3 rentang tanggal per sel bulan disimpan JSON, dikunci year*100+bulan
+// (mis. {"202607":["2026-07-01","2026-07-15"]}) agar Periode 2 tahun (2026/2027)
+// tidak bentrok antara Jul 2026 & Jul 2027. Kunci diturunkan dari tanggal ISO-nya,
+// jadi data lama (dikunci bulan 1-12) tetap terbaca benar.
 function parseRentang(s) {
   if (!s) return {}
   try {
     const obj = JSON.parse(s)
     const out = {}
-    for (const [m, v] of Object.entries(obj)) {
-      if (Array.isArray(v) && v[0]) out[Number(m)] = { start: v[0], end: v[1] || v[0] }
+    for (const v of Object.values(obj)) {
+      if (Array.isArray(v) && v[0]) {
+        const ym = Number(v[0].slice(0, 4)) * 100 + Number(v[0].slice(5, 7))
+        out[ym] = { start: v[0], end: v[1] || v[0] }
+      }
     }
     return out
   } catch { return {} }
 }
 function serializeRentang(ranges) {
   const obj = {}
-  for (const [m, r] of Object.entries(ranges || {})) {
-    if (r?.start) obj[m] = [r.start, r.end || r.start]
+  for (const [ym, r] of Object.entries(ranges || {})) {
+    if (r?.start) obj[ym] = [r.start, r.end || r.start]
   }
   return Object.keys(obj).length ? JSON.stringify(obj) : null
 }
@@ -60,7 +66,7 @@ function emptyFiveR() {
   return {
     areaLokasi: '', profilDenahPath: '', profilDenahNama: '',
     dampakPositif: '', dampakPositifLainnya: '',
-    jadwal: {},        // { P0:[1,2], R1:[3], ... }  (indeks bulan 1..N)
+    // Jadwal (C) memakai tabel jadwal seperti SS/GIO; hanya D & F yang JSON di sini.
     catatan: {},       // { R1:{tanggal,jam,kehadiran}, ... }
     dokumentasi: {},   // { R1:{ rows:[{kegiatan,permasalahan,aktivitas,hasil}], sebelum:[{path,nama}], prosesSesudah:[{path,nama}] } }
   }
@@ -148,13 +154,18 @@ export default function InovasiForm() {
     setDataPendukung(d.dataPendukung ?? [])
     setPareto(d.pareto ?? [])
     // jadwal: satu baris per (tahapan x Rencana/Realisasi). Tahapan mengikuti
-    // metodologi - PDCA untuk SS/5R, 8 Langkah DELTA untuk GIO.
+    // metodologi - PDCA untuk SS/5R, 8 Langkah DELTA untuk GIO. Sel dikunci
+    // year*100+bulan; nilai `bulan` lama (1-12 tanpa tahun) dipetakan ke tahun
+    // awal Periode.
+    const y1 = Number(String(d.periode || '').split('/')[0]) || new Date().getFullYear()
     const jad = []
     for (const t of tahapanJadwal(d.jenis)) {
       for (const j of ['Rencana', 'Realisasi']) {
         const found = (d.jadwal ?? []).find((x) => x.tahapan === t.kode && x.jenis === j)
         const ranges = parseRentang(found?.rentang)
-        const legacy = found?.bulan ? found.bulan.split(',').map((n) => Number(n)).filter(Boolean) : []
+        const legacy = found?.bulan
+          ? found.bulan.split(',').map((n) => Number(n)).filter(Boolean).map((n) => (n < 100 ? y1 * 100 + n : n))
+          : []
         const bulanArr = Array.from(new Set([...legacy, ...Object.keys(ranges).map(Number)]))
         jad.push({ tahapan: t.kode, label: t.label, jenis: j, ranges, bulanArr, jumlah: found?.jumlah ?? '' })
       }
@@ -183,12 +194,11 @@ export default function InovasiForm() {
     setActTema(d.actionTemaBerikutnya ?? '')
     setActStd(d.actionStandarisasi ?? [])
     setActTl(d.actionTindakLanjut ?? [])
-    // 5R: bagian C/D/F dari kolom JSON; sisanya kolom biasa.
+    // 5R: bagian D/F dari kolom JSON; jadwal (C) memakai tabel jadwal (state di atas).
     setFiveR({
       areaLokasi: d.areaLokasi ?? '',
       profilDenahPath: d.profilDenahPath ?? '', profilDenahNama: d.profilDenahNama ?? '',
       dampakPositif: d.dampakPositif ?? '', dampakPositifLainnya: d.dampakPositifLainnya ?? '',
-      jadwal: parseJsonObj(d.limaRJadwal),
       catatan: parseJsonObj(d.limaRCatatan),
       dokumentasi: parseJsonObj(d.limaRDokumentasi),
     })
@@ -264,14 +274,16 @@ export default function InovasiForm() {
       temaKe: ident.temaKe === '' ? null : Number(ident.temaKe),
       periode: ident.periode,
       bagianSeksi: ident.bagianSeksi || null,
-      judul: null,
+      judul: ident.judul || null,
       anggota: anggotaPayload(),
+      // C. Jadwal 5R disimpan di tabel jadwal (sama seperti SS/GIO), memakai
+      // kolom bulan kalender + rentang tanggal per sel.
+      jadwal: jadwal.map((j) => ({ id: 0, tahapan: j.tahapan, jenis: j.jenis, bulan: (j.bulanArr || []).join(','), jumlah: j.jumlah === '' || j.jumlah == null ? null : Number(j.jumlah), rentang: serializeRentang(j.ranges) })),
       areaLokasi: fiveR.areaLokasi || null,
       profilDenahPath: fiveR.profilDenahPath || null,
       profilDenahNama: fiveR.profilDenahNama || null,
       dampakPositif: fiveR.dampakPositif || null,
       dampakPositifLainnya: fiveR.dampakPositifLainnya || null,
-      limaRJadwal: JSON.stringify(fiveR.jadwal ?? {}),
       limaRCatatan: JSON.stringify(fiveR.catatan ?? {}),
       limaRDokumentasi: JSON.stringify(fiveR.dokumentasi ?? {}),
     }
@@ -494,7 +506,7 @@ export default function InovasiForm() {
       notify('err', e instanceof ApiError ? e.message : 'Gagal mengunggah denah.')
     }
   }
-  const dokBlok = (d, r) => ({ rows: [], sebelum: [], prosesSesudah: [], ...(d?.[r] || {}) })
+  const dokBlok = (d, r) => ({ rows: [], sebelum: [], prosesSesudah: [], keterangan: {}, ...(d?.[r] || {}) })
   async function uploadDok(rKode, kategori, file) {
     try {
       const res = await api.uploadInovasiFile(id, file)
@@ -522,12 +534,12 @@ export default function InovasiForm() {
     dok[rKode] = { ...dokBlok(dok, rKode), rows }
     return { ...p, dokumentasi: dok }
   })
-  const toggleJadwal5R = (tahapKode, bulan) => setFiveR((p) => {
-    const jad = { ...(p.jadwal || {}) }
-    const cur = new Set(jad[tahapKode] || [])
-    if (cur.has(bulan)) cur.delete(bulan); else cur.add(bulan)
-    jad[tahapKode] = [...cur].sort((a, b) => a - b)
-    return { ...p, jadwal: jad }
+  const setDokKeterangan = (rKode, kategori, val) => setFiveR((p) => {
+    const dok = { ...(p.dokumentasi || {}) }
+    const cur = dokBlok(dok, rKode)
+    cur.keterangan = { ...(cur.keterangan || {}), [kategori]: val }
+    dok[rKode] = cur
+    return { ...p, dokumentasi: dok }
   })
   const setCatatan5R = (rKode, field, val) => setFiveR((p) => {
     const c = { ...(p.catatan || {}) }
@@ -541,8 +553,10 @@ export default function InovasiForm() {
     if (kosong(ident.bagianSeksi)) m.push('A. Identitas — Bagian')
     if (kosong(fiveR.areaLokasi)) m.push('A. Identitas — Area / Lokasi 5R')
     if (kosong(ident.periode)) m.push('A. Identitas — Periode Program')
+    if (kosong(ident.judul)) m.push('A. Identitas — Judul Program 5R')
     anggota.forEach((s) => { if (kosong(s.nama) && kosong(s.nik)) m.push(`B. Susunan Anggota — ${s.label} belum diisi`) })
-    if (!LIMA_R_TAHAP.some((t) => (fiveR.jadwal?.[t.kode] || []).length)) m.push('C. Jadwal Kegiatan — belum ada bulan terjadwal')
+    // Jadwal: minimal satu tahap punya baris Rencana dengan bulan terjadwal.
+    if (!jadwal.some((j) => j.jenis === 'Rencana' && (j.bulanArr || []).length)) m.push('C. Jadwal Kegiatan — belum ada bulan terjadwal')
     LIMA_R_STEP.forEach((r) => {
       const rows = fiveR.dokumentasi?.[r.kode]?.rows || []
       if (!rows.some((x) => !kosong(x.kegiatan))) m.push(`F. Dokumentasi ${r.label} — minimal satu Kegiatan`)
@@ -1237,12 +1251,14 @@ export default function InovasiForm() {
   // ================= 5R (Form F-5R-02) =================
   function renderFiveR() {
     const ro = planLocked
-    // Galeri berkas (foto/pdf) untuk satu kolom dokumentasi (Sebelum / Proses & Sesudah).
-    const galeri = (rKode, kategori, judul) => {
-      const list = fiveR.dokumentasi?.[rKode]?.[kategori] || []
+    // Isi satu sel dokumentasi (Sebelum / Proses & Sesudah): daftar berkas foto/pdf,
+    // tombol unggah, dan textbox keterangan sesuai template form cetak.
+    const galeriCell = (rKode, kategori) => {
+      const blok = fiveR.dokumentasi?.[rKode] || {}
+      const list = blok[kategori] || []
+      const ket = blok.keterangan?.[kategori] || ''
       return (
         <div>
-          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>{judul}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: ro ? 0 : 8 }}>
             {list.length === 0 && <span className="inv__hint" style={{ margin: 0 }}>{ro ? '-' : 'Belum ada berkas.'}</span>}
             {list.map((f, i) => (
@@ -1258,6 +1274,14 @@ export default function InovasiForm() {
               <input type="file" hidden accept=".png,.jpg,.jpeg,.pdf" onChange={(e) => e.target.files?.[0] && uploadDok(rKode, kategori, e.target.files[0])} />
             </label>
           )}
+          {ro
+            ? (ket && <p className="inv__hint" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', color: 'inherit' }}>{ket}</p>)
+            : <textarea
+                placeholder="Keterangan…"
+                value={ket}
+                onChange={(e) => setDokKeterangan(rKode, kategori, e.target.value)}
+                style={{ width: '100%', minHeight: 54, marginTop: 8, border: '1px solid var(--inv-line)', borderRadius: 8, padding: 8, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box' }}
+              />}
         </div>
       )
     }
@@ -1279,47 +1303,23 @@ export default function InovasiForm() {
             <label className="inv__field"><span>Kompartemen</span><input value={data.namaKompartemen ?? '-'} disabled /></label>
             <label className="inv__field"><span>Periode Program</span><input value={ident.periode || periodeSekarang()} disabled title="Ditentukan otomatis dari tahun risalah dibuat" /></label>
           </div>
+          <label className="inv__field" style={{ marginTop: 4 }}>
+            <span>Judul Program 5R</span>
+            <textarea style={{ width: '100%', minHeight: 54, border: '1px solid var(--inv-line)', borderRadius: 8, padding: 10, fontFamily: 'inherit', fontSize: 13.5 }}
+              value={ident.judul} disabled={ro}
+              placeholder="mis. Penerapan 5R di Gudang Umum untuk Menekan Waktu Pencarian Barang Sebesar 40% Selama 6 Bulan"
+              onChange={(e) => setIdent({ ...ident, judul: e.target.value })} />
+          </label>
         </Section>
 
         {/* B. Anggota (10 slot: 1 Ketua, 1 Sekretaris, 7 Anggota, 1 Fasilitator) */}
         {renderAnggotaSection()}
 
-        {/* C. Jadwal Kegiatan */}
+        {/* C. Jadwal Kegiatan - kolom bulan kalender mengikuti Periode (2 tahun),
+            rentang tanggal per sel. 5R: satu baris per tahap (tanpa Rencana/
+            Realisasi) dan tanpa kolom Jml. */}
         <Section tag="C" title="Jadwal Kegiatan">
-          <div style={{ overflowX: 'auto' }}>
-            <table className="inv__subtable inv__jadwal">
-              <thead>
-                <tr>
-                  <th style={{ width: 40, textAlign: 'center' }}>No</th>
-                  <th style={{ minWidth: 190 }}>Tahap</th>
-                  {Array.from({ length: LIMA_R_BULAN }, (_, i) => <th key={i} style={{ textAlign: 'center', minWidth: 42 }}>Bulan {i + 1}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {LIMA_R_TAHAP.map((t, ti) => {
-                  const aktif = new Set(fiveR.jadwal?.[t.kode] || [])
-                  return (
-                    <tr key={t.kode}>
-                      <td style={{ textAlign: 'center' }}>{ti + 1}</td>
-                      <td style={{ fontWeight: 700 }}>{t.label}</td>
-                      {Array.from({ length: LIMA_R_BULAN }, (_, i) => {
-                        const bulan = i + 1
-                        const on = aktif.has(bulan)
-                        return (
-                          <td key={i} className="inv__jadwal-cell"
-                            style={{ textAlign: 'center', background: on ? '#1f4f2c' : undefined, color: on ? '#fff' : undefined, cursor: ro ? 'default' : 'pointer' }}
-                            onClick={() => { if (!ro) toggleJadwal5R(t.kode, bulan) }}>
-                            {on ? '●' : ''}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="inv__hint">Klik sel bulan untuk menandai jadwal tiap tahap.</p>
+          <JadwalPdca jadwal={jadwal} setJadwal={setJadwal} readOnly={ro} periode={ident.periode || data.periode} fiveR />
         </Section>
 
         {/* D. Catatan Pertemuan */}
@@ -1349,6 +1349,11 @@ export default function InovasiForm() {
 
         {/* E. Profil 5R (denah) */}
         <Section tag="E" title="Profil 5R">
+          <label className="inv__field" style={{ marginBottom: 12 }}>
+            <span>Gambar Denah Ruang / Area</span>
+            <input value={fiveR.areaLokasi} disabled={ro} placeholder="mis. Gudang Lantai 2"
+              onChange={(e) => setFiveR((p) => ({ ...p, areaLokasi: e.target.value }))} />
+          </label>
           <p className="inv__hint" style={{ marginTop: 0 }}>Gambar denah ruang / area kerja.</p>
           {fiveR.profilDenahNama
             ? <span className="inv__lampiran"><FileUp size={12} /> <a style={{ cursor: 'pointer' }} onClick={() => viewFile(fiveR.profilDenahPath)}>{fiveR.profilDenahNama}</a>
@@ -1379,9 +1384,22 @@ export default function InovasiForm() {
                 { key: 'hasil', label: 'Hasil yang Dicapai', type: 'textarea' },
               ]}
             />
-            <div className="inv__form-row" style={{ marginTop: 12, gap: 16 }}>
-              {galeri(r.kode, 'sebelum', 'SEBELUM')}
-              {galeri(r.kode, 'prosesSesudah', 'PROSES & SESUDAH')}
+            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+              <table className="inv__subtable">
+                <thead>
+                  <tr><th colSpan={2} style={{ textAlign: 'center' }}>DOKUMENTASI {r.kode}</th></tr>
+                  <tr>
+                    <th style={{ textAlign: 'center', width: '50%' }}>SEBELUM</th>
+                    <th style={{ textAlign: 'center' }}>PROSES DAN SESUDAH</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ verticalAlign: 'top' }}>{galeriCell(r.kode, 'sebelum')}</td>
+                    <td style={{ verticalAlign: 'top' }}>{galeriCell(r.kode, 'prosesSesudah')}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </Section>
         ))}

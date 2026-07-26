@@ -51,6 +51,7 @@ public class InovasiDbContext : DbContext
     public DbSet<UnitOrganisasi> UnitOrganisasi => Set<UnitOrganisasi>();
     public DbSet<Jabatan> Jabatan => Set<Jabatan>();
     public DbSet<Penempatan> Penempatan => Set<Penempatan>();
+    public DbSet<PegawaiTkno> PegawaiTkno => Set<PegawaiTkno>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -386,6 +387,15 @@ public class InovasiDbContext : DbContext
             e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
             e.Property(x => x.Nama).HasColumnName("nama");
             e.Property(x => x.Status).HasColumnName("status");
+        });
+        b.Entity<PegawaiTkno>(e =>
+        {
+            e.ToTable("pegawai_tkno", "grading");
+            e.HasKey(x => x.IdKaryawan);
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.IdDepartemen).HasColumnName("id_departemen");
+            e.Property(x => x.IdKompartemen).HasColumnName("id_kompartemen");
+            e.Property(x => x.IdDirektorat).HasColumnName("id_direktorat");
         });
     }
 

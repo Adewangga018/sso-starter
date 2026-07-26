@@ -13,6 +13,7 @@
 .admin-juri__alert { border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 12px; }
 .admin-juri__alert--ok { background: rgba(47, 108, 63, 0.1); color: var(--gcs-green-600); }
 .admin-juri__alert--err { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
+.admin-juri__loading { color: var(--gcs-text-muted); font-size: 0.9rem; padding: 10px 0; }
 
 .admin-juri__section { margin-top: 24px; }
 .admin-juri__section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }

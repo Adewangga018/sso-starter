@@ -58,10 +58,13 @@ export const TAHAPAN_DELTA = [
   { kode: 'L8', label: '8. Menentukan Rencana Berikutnya' },
 ]
 
-export const tahapanJadwal = (jenis) => (jenis === 'GIO' ? TAHAPAN_DELTA : TAHAPAN_PDCA)
+// 5R memakai jadwal per tahap kegiatan (Persiapan, R1-R5, Evaluasi), namun kolom
+// bulan tetap kalender mengikuti Periode - sama seperti SS/GIO (lihat LIMA_R_TAHAP).
+export const tahapanJadwal = (jenis) =>
+  jenis === 'GIO' ? TAHAPAN_DELTA : jenis === '5R' ? LIMA_R_TAHAP : TAHAPAN_PDCA
 
 // --- Risalah 5R (Form F-5R-02) ----------------------------------------------
-// C. Jadwal Kegiatan 5R: tahap kegiatan (baris) x kolom "Bulan 1..N" generik.
+// C. Jadwal Kegiatan 5R: tahap kegiatan (baris) mengikuti kolom bulan kalender.
 export const LIMA_R_TAHAP = [
   { kode: 'P0', label: 'Persiapan & Sosialisasi' },
   { kode: 'R1', label: 'R1 – Ringkas' },
@@ -71,7 +74,6 @@ export const LIMA_R_TAHAP = [
   { kode: 'R5', label: 'R5 – Rajin' },
   { kode: 'EV', label: 'Evaluasi & Pelaporan' },
 ]
-export const LIMA_R_BULAN = 12   // jumlah kolom "Bulan n" pada jadwal 5R
 
 // D & F: kelima R beserta deskripsi (dipakai Catatan Pertemuan & Dokumentasi).
 export const LIMA_R_STEP = [
