@@ -39,10 +39,13 @@ builder.Services.AddDbContext<InovasiDbContext>(options =>
 builder.Services.AddScoped<CurrentUserContext>();
 builder.Services.AddScoped<DocumentResolver>();
 builder.Services.AddScoped<OrgResolver>();
+builder.Services.AddScoped<PosisiResolver>();
 builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<CutiService>();
 builder.Services.AddScoped<ApprovalService>();
+builder.Services.AddScoped<GajiService>();
+builder.Services.AddScoped<ModuleAccessService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

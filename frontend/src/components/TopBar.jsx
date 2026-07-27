@@ -18,7 +18,11 @@ import './TopBar.css'
  */
 export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
-  const { isAdmin, isPengelolaJuri } = useAuth()
+  const { isAdmin, isPengelolaJuri, summary } = useAuth()
+  // Tingkatan (level berbasis band) ditampilkan sebagai chip di samping jabatan.
+  // Disembunyikan bila sama persis dengan subtitle agar tidak dobel.
+  const tingkatan = summary?.tingkatan
+  const showTingkatan = tingkatan && tingkatan !== subtitle
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -119,7 +123,12 @@ export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark
             {name && (
               <div className="topbar__user-text">
                 <div className="topbar__user-name">{name}</div>
-                {subtitle && <div className="topbar__user-role">{subtitle}</div>}
+                {(subtitle || showTingkatan) && (
+                  <div className="topbar__user-role">
+                    {subtitle}
+                    {showTingkatan && <span className="topbar__tingkatan">{tingkatan}</span>}
+                  </div>
+                )}
               </div>
             )}
             <ChevronDown size={16} className={`topbar__chevron${menuOpen ? ' topbar__chevron--open' : ''}`} />
@@ -129,7 +138,12 @@ export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark
             <div className="topbar__popup topbar__popup--menu" role="menu">
               <div className="topbar__popup-user">
                 <div className="topbar__popup-name">{name}</div>
-                {subtitle && <div className="topbar__popup-role">{subtitle}</div>}
+                {(subtitle || showTingkatan) && (
+                  <div className="topbar__popup-role">
+                    {subtitle}
+                    {showTingkatan && <span className="topbar__tingkatan">{tingkatan}</span>}
+                  </div>
+                )}
               </div>
               <button type="button" className="topbar__popup-item" role="menuitem" onClick={onLogout}>
                 <LogOut size={15} /> Keluar

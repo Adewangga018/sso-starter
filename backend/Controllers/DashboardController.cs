@@ -15,11 +15,15 @@ public class DashboardController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
     private readonly GcsDbContext _db;
+    private readonly PosisiResolver _posisi;
+    private readonly ModuleAccessService _access;
 
-    public DashboardController(CurrentUserContext currentUser, GcsDbContext db)
+    public DashboardController(CurrentUserContext currentUser, GcsDbContext db, PosisiResolver posisi, ModuleAccessService access)
     {
         _currentUser = currentUser;
         _db = db;
+        _posisi = posisi;
+        _access = access;
     }
 
     private static readonly IReadOnlyList<ModuleTileDto> Modules = new[]
@@ -43,18 +47,38 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
-        // Jabatan hanya pelengkap tampilan: kalau pegawainya belum tertaut, dashboard tetap
-        // tampil tanpa baris jabatan - bukan alasan untuk menggagalkan seluruh halaman.
-        string? jabatan = null;
+        // Jabatan & tingkatan hanya pelengkap tampilan: kalau pegawainya belum tertaut,
+        // dashboard tetap tampil tanpa baris jabatan - bukan alasan menggagalkan halaman.
+        //
+        // Sumber jabatan/level: SISTEM GRADING BERBASIS BAND (PosisiResolver), sesuai
+        // dokumen "Data 85 Pegawai Organik". Untuk pegawai yang ADA di grading, jabatan
+        // struktural & tingkatan diambil dari sana (bersih; tidak ada "Lakma"/"Pjs ...").
+        // Untuk yang di luar grading (mis. TKNO), pakai jabatan legacy SDM setelah
+        // dibersihkan dari awalan pejabat sementara / label tanpa makna.
+        string? jabatan = null, tingkatan = null;
+        int? band = null;
         if (pegawai is not null)
         {
-            jabatan = await _db.PegawaiSdm
-                .Where(p => p.Nik == pegawai.ID_KARYAWAN)
-                .Select(p => p.nm_jabatan)
-                .FirstOrDefaultAsync();
+            var posisi = await _posisi.ResolveAsync(pegawai.ID_KARYAWAN);
+            tingkatan = posisi.Tingkatan;
+            band = posisi.Band;
+
+            if (posisi.Jabatan is not null)
+            {
+                jabatan = posisi.Jabatan;
+            }
+            else
+            {
+                var legacy = await _db.PegawaiSdm
+                    .Where(p => p.Nik == pegawai.ID_KARYAWAN)
+                    .Select(p => p.nm_jabatan)
+                    .FirstOrDefaultAsync();
+                jabatan = PosisiResolver.BersihkanJabatanLegacy(legacy);
+            }
         }
 
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
-        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), Modules, ProfileComplete: profileComplete));
+        var isAdminModulSdm = pegawai is not null && await _access.IsSdmAdminAsync(pegawai.ID_KARYAWAN);
+        return Ok(new DashboardSummaryDto(user.Name, jabatan, Modules, profileComplete, tingkatan, band, isAdminModulSdm));
     }
 }

@@ -28,6 +28,8 @@ import OfficeInbox from './pages/office/Inbox'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
+import GajiPage from './pages/GajiPage'
+import AdminGajiTarifPage from './pages/AdminGajiTarifPage'
 import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
@@ -76,6 +78,8 @@ export default function App() {
             {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
                 belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
             <Route path="/juri" element={<AdminJuriPage />} />
+            {/* Admin Modul SDM: konfigurasi tarif gaji (gate di dalam halaman via isAdminModulSdm). */}
+            <Route path="/modul-sdm/gaji-tarif" element={<AdminGajiTarifPage />} />
             <Route path="/admin/juri" element={<Navigate to="/juri" replace />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
@@ -100,6 +104,7 @@ export default function App() {
               <Route index element={<Navigate to="profil" replace />} />
               <Route path="profil" element={<ProfilPage />} />
               <Route path="cuti" element={<CutiPage />} />
+              <Route path="gaji" element={<GajiPage />} />
               <Route path="persetujuan" element={<PersetujuanPage />} />
               <Route path="absensi" element={<AbsensiPage />} />
               <Route path="lembur" element={<SplPage />} />

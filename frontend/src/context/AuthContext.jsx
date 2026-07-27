@@ -101,6 +101,9 @@ export function AuthProvider({ children }) {
   // Koordinator penjurian: hanya boleh mengelola Stream Penilai & Penugasan ke
   // Inovasi. Admin IT otomatis termasuk.
   const isPengelolaJuri = isAdmin || hasRole('PengelolaJuri')
+  // Admin Modul SDM: derivasi dari grading (Kabag SDM ke atas s/d GM SKP), dihitung
+  // di backend dan ikut di dashboard summary — bukan role Identity.
+  const isAdminModulSdm = summary?.isAdminModulSdm ?? false
 
   const value = {
     user: isAuthenticated
@@ -111,6 +114,7 @@ export function AuthProvider({ children }) {
     isAdmin,
     isJuri,
     isPengelolaJuri,
+    isAdminModulSdm,
     initializing,
     login,
     logout,
