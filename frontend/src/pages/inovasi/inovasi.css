@@ -332,6 +332,7 @@
 .inv__status--diverifikasi { background: #e3effb; color: #2f6aa8; }
 .inv__status--divalidasi { background: #e6f5ea; color: #2f6f3e; }
 .inv__status--selesai { background: #e6f5ea; color: #1f7a3a; }
+.inv__status--dinilai { background: #eef1fb; color: #3b4a86; border: 1px solid #cdd6f0; }
 .inv__status--ditolak { background: #fbeaea; color: #b03636; }
 .inv__status--revisi { background: #fdeede; color: #b26a13; }
 

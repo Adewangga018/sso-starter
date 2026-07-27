@@ -13,7 +13,7 @@
 // dilewati, sehingga ekspor setelah PLAN disahkan hanya memuat bagian PLAN.
 
 import { jenisLabel } from '../pages/inovasi/statusClass'
-import { bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_TAHAP, LIMA_R_BULAN, LIMA_R_STEP } from '../pages/inovasi/inovasiTemplate'
+import { bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_STEP } from '../pages/inovasi/inovasiTemplate'
 
 function esc(v) {
   if (v === null || v === undefined || v === '') return '-'
@@ -39,41 +39,67 @@ function table(headers, rows) {
 }
 
 // Jadwal Kegiatan sebagai grid: baris = tahapan (PDCA untuk SS/5R, 8 Langkah DELTA
-// untuk GIO) x Rencana/Realisasi; kolom bulan urut Januari s/d Desember pada tahun
-// awal Periode, sel terarsir bila terjadwal & memuat rentang tanggal (dari `rentang`).
+// untuk GIO). Kolom bulan mengikuti Periode (dua tahun, mis. 2026/2027 -> Jan 2026
+// s/d Des 2027), sel dikunci year*100+bulan, lalu dipangkas ke bulan pertama s/d
+// terakhir yang terjadwal - bulan yang tidak terpakai tidak ikut tampil (sama
+// seperti komponen JadwalPdca saat baca-saja). SS/GIO: tiap tahapan x Rencana/
+// Realisasi + kolom Jml. 5R: satu baris per tahapan, tanpa Rencana/Realisasi & Jml.
 function jadwalGrid(d) {
   const MONTHS = [[1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'], [6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des']]
-  const y1 = Number(String(d.periode || '').split('/')[0]) || ''
-  const cols = MONTHS.map(([m, l]) => ({ m, l, year: y1 }))
+  const is5R = d.jenis === '5R'
+  const partsY = String(d.periode || '').split('/').map((s) => Number(s.trim())).filter(Boolean)
+  const y1 = partsY[0] || new Date().getFullYear()
+  const years = partsY.length >= 2 ? [partsY[0], partsY[1]] : [y1, y1 + 1]
+  const semuaCols = []
+  for (const year of years) for (const [m, l] of MONTHS) semuaCols.push({ ym: year * 100 + m, m, l, year })
+
+  // Kunci sel diturunkan dari tanggal ISO -> tetap benar untuk data lama (kunci bulan 1-12).
+  const parseR = (s) => { if (!s) return {}; try { const o = JSON.parse(s); const r = {}; for (const v of Object.values(o)) if (Array.isArray(v) && v[0]) { const ym = Number(v[0].slice(0, 4)) * 100 + Number(v[0].slice(5, 7)); r[ym] = { start: v[0], end: v[1] || v[0] } } return r } catch { return {} } }
+  const dayRange = (rg) => { if (!rg?.start) return ''; const s = Number(rg.start.slice(8, 10)); const e = rg.end ? Number(rg.end.slice(8, 10)) : s; return s === e ? `${s}` : `${s}-${e}` }
+  const getRow = (t, j) => arr(d.jadwal).find((x) => x.tahapan === t && x.jenis === j)
+  const bulanYm = (row) => (row?.bulan ? String(row.bulan).split(',').map(Number).filter(Boolean).map((n) => (n < 100 ? y1 * 100 + n : n)) : [])
+
+  // Pangkas kolom ke rentang bulan yang terjadwal. Bila belum ada jadwal sama
+  // sekali, tampilkan seluruh Periode agar tabel tidak kehilangan kolom.
+  const terjadwal = new Set()
+  for (const row of arr(d.jadwal)) {
+    for (const ym of bulanYm(row)) terjadwal.add(ym)
+    for (const ym of Object.keys(parseR(row?.rentang))) terjadwal.add(Number(ym))
+  }
+  const dipakai = semuaCols.map((c, i) => (terjadwal.has(c.ym) ? i : -1)).filter((i) => i >= 0)
+  const cols = dipakai.length ? semuaCols.slice(dipakai[0], dipakai[dipakai.length - 1] + 1) : semuaCols
+
   const yg = []
   cols.forEach((c) => { const last = yg[yg.length - 1]; if (last && last.year === c.year) last.span += 1; else yg.push({ year: c.year, span: 1 }) })
 
-  const parseR = (s) => { if (!s) return {}; try { const o = JSON.parse(s); const r = {}; for (const [m, v] of Object.entries(o)) if (Array.isArray(v) && v[0]) r[Number(m)] = { start: v[0], end: v[1] || v[0] }; return r } catch { return {} } }
-  const dayRange = (rg) => { if (!rg?.start) return ''; const s = Number(rg.start.slice(8, 10)); const e = rg.end ? Number(rg.end.slice(8, 10)) : s; return s === e ? `${s}` : `${s}-${e}` }
-  const getRow = (t, j) => arr(d.jadwal).find((x) => x.tahapan === t && x.jenis === j)
+  const cellsFor = (row, dark) => cols.map((c) => {
+    const on = bulanYm(row).includes(c.ym) || parseR(row?.rentang)[c.ym]
+    const fill = on ? (dark ? '#1f4f2c' : '#a7d3b0') : ''
+    const fg = on && dark ? '#fff' : '#22402c'
+    return `<td style="text-align:center;background:${fill};color:${fg};font-size:8.5pt">${dayRange(parseR(row?.rentang)[c.ym])}</td>`
+  }).join('')
 
   const bodyRows = []
   for (const t of tahapanJadwal(d.jenis)) {
-    ['Rencana', 'Realisasi'].forEach((j, ji) => {
-      const row = getRow(t.kode, j)
-      const bulan = row?.bulan ? String(row.bulan).split(',').map(Number).filter(Boolean) : []
-      const ranges = parseR(row?.rentang)
-      const cells = cols.map((c) => {
-        const on = bulan.includes(c.m) || ranges[c.m]
-        const fill = on ? (j === 'Rencana' ? '#1f4f2c' : '#a7d3b0') : ''
-        const fg = on && j === 'Rencana' ? '#fff' : '#22402c'
-        return `<td style="text-align:center;background:${fill};color:${fg};font-size:8.5pt">${dayRange(ranges[c.m])}</td>`
-      }).join('')
-      const tahCell = ji === 0 ? `<td rowspan="2" style="font-weight:bold;vertical-align:middle">${esc(t.label)}</td>` : ''
-      const jmlCell = ji === 0 ? `<td rowspan="2" style="text-align:center;vertical-align:middle;font-weight:bold">${esc(getRow(t.kode, 'Rencana')?.jumlah ?? '')}</td>` : ''
-      bodyRows.push(`<tr>${tahCell}<td>${j}</td>${cells}${jmlCell}</tr>`)
-    })
+    if (is5R) {
+      const row = getRow(t.kode, 'Rencana') || getRow(t.kode, 'Realisasi')
+      bodyRows.push(`<tr><td style="font-weight:bold;vertical-align:middle">${esc(t.label)}</td>${cellsFor(row, true)}</tr>`)
+    } else {
+      ['Rencana', 'Realisasi'].forEach((j, ji) => {
+        const row = getRow(t.kode, j)
+        const tahCell = ji === 0 ? `<td rowspan="2" style="font-weight:bold;vertical-align:middle">${esc(t.label)}</td>` : ''
+        const jmlCell = ji === 0 ? `<td rowspan="2" style="text-align:center;vertical-align:middle;font-weight:bold">${esc(getRow(t.kode, 'Rencana')?.jumlah ?? '')}</td>` : ''
+        bodyRows.push(`<tr>${tahCell}<td>${j}</td>${cellsFor(row, j === 'Rencana')}${jmlCell}</tr>`)
+      })
+    }
   }
 
   const yHead = yg.map((g) => `<th colspan="${g.span}" style="text-align:center">${esc(g.year)}</th>`).join('')
   const mHead = cols.map((c) => `<th style="text-align:center">${esc(c.l)}</th>`).join('')
+  const ketHead = is5R ? '' : `<th rowspan="2" style="width:9%">Ket.</th>`
+  const jmlHead = is5R ? '' : `<th rowspan="2" style="width:6%">Jml.</th>`
   return `<table><thead>`
-    + `<tr><th rowspan="2" style="width:18%">Tahapan</th><th rowspan="2" style="width:9%">Ket.</th>${yHead}<th rowspan="2" style="width:6%">Jml.</th></tr>`
+    + `<tr><th rowspan="2" style="width:18%">Tahapan</th>${ketHead}${yHead}${jmlHead}</tr>`
     + `<tr>${mHead}</tr></thead><tbody>${bodyRows.join('')}</tbody></table>`
 }
 
@@ -107,7 +133,6 @@ function signBlock(pengesahan, tahap) {
 // dari kolom JSON. Satu Lembar Pengesahan (tanpa PLAN/DO/CHECK/ACTION).
 function buildBody5R(d) {
   const parse = (s) => { try { return s ? JSON.parse(s) : {} } catch { return {} } }
-  const jadwal = parse(d.limaRJadwal)
   const catatan = parse(d.limaRCatatan)
   const dok = parse(d.limaRDokumentasi)
   const parts = []
@@ -116,6 +141,7 @@ function buildBody5R(d) {
   parts.push(table([{ label: 'Keterangan', width: '30%' }, { label: 'Isi' }], [
     ['No. Registrasi', esc(d.noRegistrasi)],
     ['Nama Gugus', esc(d.namaGugus)],
+    ['Judul Program 5R', esc(d.judul)],
     ['Kompartemen', esc(d.namaKompartemen)],
     ['Bagian', esc(d.bagianSeksi)],
     ['Area / Lokasi 5R', esc(d.areaLokasi)],
@@ -128,16 +154,9 @@ function buildBody5R(d) {
     arr(d.anggota).map((a, i) => [i + 1, esc(a.peran), esc(a.nama), esc(a.nik), esc(a.jabatan), esc(a.depBagian)]),
   ))
 
-  // C. Jadwal (tahap x Bulan 1..N)
-  const bulanHead = Array.from({ length: LIMA_R_BULAN }, (_, i) => ({ label: `B${i + 1}` }))
+  // C. Jadwal - grid bulan kalender + rentang tanggal per sel (sama seperti SS/GIO).
   parts.push(sectionTitle('C. Jadwal Kegiatan'))
-  parts.push(table(
-    [{ label: 'No', width: '5%' }, { label: 'Tahap' }, ...bulanHead],
-    LIMA_R_TAHAP.map((t, i) => {
-      const set = new Set(jadwal?.[t.kode] || [])
-      return [i + 1, esc(t.label), ...Array.from({ length: LIMA_R_BULAN }, (_, k) => (set.has(k + 1) ? '<div style="text-align:center">●</div>' : ''))]
-    }),
-  ))
+  parts.push(jadwalGrid(d))
 
   // D. Catatan Pertemuan
   parts.push(sectionTitle('D. Catatan Pertemuan'))
@@ -149,6 +168,7 @@ function buildBody5R(d) {
 
   // E. Profil 5R
   parts.push(sectionTitle('E. Profil 5R'))
+  parts.push(paragraph(`Gambar Denah Ruang / Area : ${txt(d.areaLokasi) ? d.areaLokasi : '-'}`))
   parts.push(paragraph(d.profilDenahNama ? `Denah: ${d.profilDenahNama}` : '(belum ada denah)'))
 
   // F. Dokumentasi R1-R5
@@ -159,11 +179,23 @@ function buildBody5R(d) {
       [{ label: 'No', width: '5%' }, { label: 'Kegiatan' }, { label: 'Permasalahan' }, { label: 'Aktivitas Perbaikan' }, { label: 'Hasil yang Dicapai' }],
       arr(blok.rows).map((x, i) => [i + 1, esc(x.kegiatan), esc(x.permasalahan), esc(x.aktivitas), esc(x.hasil)]),
     ))
-    const daftar = (list) => (arr(list).length ? arr(list).map((f) => esc(f.nama)).join('<br/>') : '-')
-    parts.push(table(
-      [{ label: 'SEBELUM', width: '50%' }, { label: 'PROSES & SESUDAH' }],
-      [[daftar(blok.sebelum), daftar(blok.prosesSesudah)]],
-    ))
+    // Blok dokumentasi mengikuti template form cetak: judul "DOKUMENTASI Rn"
+    // membentang di atas dua kolom SEBELUM | PROSES DAN SESUDAH, tiap sel memuat
+    // daftar berkas lalu keterangan (bila diisi).
+    const cell = (kategori) => {
+      const files = arr(blok[kategori]).map((f) => esc(f.nama)).join('<br/>')
+      const ket = txt(blok?.keterangan?.[kategori]) ? `<div style="margin-top:4pt;font-size:9pt">${esc(blok.keterangan[kategori])}</div>` : ''
+      return `${files || '-'}${ket}`
+    }
+    parts.push(
+      '<table><thead>'
+      + `<tr><th colspan="2" style="text-align:center">DOKUMENTASI ${esc(r.kode)}</th></tr>`
+      + '<tr><th style="width:50%;text-align:center">SEBELUM</th><th style="text-align:center">PROSES DAN SESUDAH</th></tr>'
+      + '</thead><tbody><tr>'
+      + `<td style="vertical-align:top">${cell('sebelum')}</td>`
+      + `<td style="vertical-align:top">${cell('prosesSesudah')}</td>`
+      + '</tr></tbody></table>',
+    )
   }
 
   // G. Dampak Positif

@@ -43,8 +43,15 @@ export default function InovasiList() {
         .some((v) => (v ?? '').toString().toLowerCase().includes(term))))
   }, [rows, search, status])
 
+  // Menghapus risalah sekaligus menghapus Sumbang Gagasan sumbernya (lihat
+  // InovasiController.Delete) - disebutkan di konfirmasi agar tidak mengejutkan.
   async function handleDelete(row) {
-    if (!(await dialog.confirm({ title: 'Hapus Risalah', message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"?`, danger: true, confirmText: 'Hapus' }))) return
+    if (!(await dialog.confirm({
+      title: 'Hapus Risalah',
+      message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"? Sumbang Gagasan sumbernya${row.gagasanJudul ? ` ("${row.gagasanJudul}")` : ''} beserta riwayat persetujuannya ikut terhapus.`,
+      danger: true,
+      confirmText: 'Hapus',
+    }))) return
     try { await api.deleteInovasi(row.id); await load() } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menghapus.') }
   }
 
@@ -92,7 +99,10 @@ export default function InovasiList() {
             )}
             {filtered.map((r) => (
               <tr key={r.id}>
-                <td><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
+                <td>
+                  <span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span>
+                  {r.sudahDinilai && <span className="inv__status inv__status--dinilai" style={{ marginLeft: 6 }}>Sudah Dinilai</span>}
+                </td>
                 <td>{r.noRegistrasi ?? <span style={{ color: '#9aa79d' }}>-</span>}</td>
                 <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>
                 <td>{r.namaGugus ?? '-'}</td>

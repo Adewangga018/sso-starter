@@ -312,6 +312,7 @@ export const api = {
   listPenilaianGugusOptions: () => apiFetch('/api/inovasi/penilaian/gugus-options'),
   listPenugasan: () => apiFetch('/api/inovasi/penilaian/penugasan'),
   createPenugasan: (payload) => apiFetch('/api/inovasi/penilaian/penugasan', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePenugasan: (id, payload) => apiFetch(`/api/inovasi/penilaian/penugasan/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   tutupPenugasan: (id) => apiFetch(`/api/inovasi/penilaian/penugasan/${id}/tutup`, { method: 'POST' }),
   deletePenugasan: (id) => apiFetch(`/api/inovasi/penilaian/penugasan/${id}`, { method: 'DELETE' }),
   // Juri

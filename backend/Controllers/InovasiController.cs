@@ -74,7 +74,10 @@ public class InovasiController : ControllerBase
                 g.Anggota.Any(a => a.Nik == nik) ||
                 g.Pengesahan.Any(p => p.Nik == nik) ||
                 (scopeDept != null && g.IdDepartemen == scopeDept) ||
-                (scopeKomp != null && g.IdKompartemen == scopeKomp))
+                (scopeKomp != null && g.IdKompartemen == scopeKomp) ||
+                // Juri panel yang ditugaskan menilai risalah ini juga melihatnya.
+                _db.PenilaianPenugasan.Any(pp => pp.IdGugus == g.Id
+                    && _db.PenilaianStreamAnggota.Any(a => a.IdStream == pp.IdStream && a.Nik == nik)))
             .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
             .Select(g => new
             {
@@ -85,6 +88,12 @@ public class InovasiController : ControllerBase
                 KetuaNama = g.Anggota.Where(a => a.Peran == "Ketua").Select(a => a.Nama).FirstOrDefault(),
                 PeranAnggota = g.Anggota.Where(a => a.Nik == nik).Select(a => a.Peran).FirstOrDefault(),
                 PeranPengesah = g.Pengesahan.Where(p => p.Nik == nik).Select(p => p.Peran).FirstOrDefault(),
+                // Juri bila NIK saya ada di panel penilai yang ditugaskan ke risalah ini.
+                SayaJuri = _db.PenilaianPenugasan.Any(pp => pp.IdGugus == g.Id
+                    && _db.PenilaianStreamAnggota.Any(a => a.IdStream == pp.IdStream && a.Nik == nik)),
+                // Sudah dinilai bila ada penugasan juri yang memuat skor.
+                SudahDinilai = _db.PenilaianPenugasan.Any(pp => pp.IdGugus == g.Id
+                    && _db.PenilaianSkor.Any(s => s.IdPenugasan == pp.Id)),
             })
             .ToListAsync();
 
@@ -95,8 +104,9 @@ public class InovasiController : ControllerBase
                 g.CreatedByNik == nik ? "Pengaju"
                 : g.PeranAnggota ?? g.PeranPengesah
                     ?? (scopeDept != null && g.IdDepartemen == scopeDept ? "Verifikator"
-                        : scopeKomp != null && g.IdKompartemen == scopeKomp ? "GM" : "-"),
-            g.KetuaNama, g.CreatedAt, g.UpdatedAt, g.GagasanJudul)).ToList();
+                        : scopeKomp != null && g.IdKompartemen == scopeKomp ? "GM"
+                        : g.SayaJuri ? "Juri" : "-"),
+            g.KetuaNama, g.CreatedAt, g.UpdatedAt, g.GagasanJudul, g.SudahDinilai)).ToList();
 
         return Ok(new GugusListDto(items));
     }
@@ -489,6 +499,11 @@ public class InovasiController : ControllerBase
     }
 
     // ----------------------------------------------------------------- delete
+    // Risalah selalu lahir dari satu Sumbang Gagasan, jadi gagasan sumbernya ikut
+    // terhapus. Bila ditinggalkan, gagasan tetap berstatus "Terdaftar" sambil
+    // menunjuk risalah yang sudah tidak ada: tidak bisa dihapus (Delete gagasan
+    // menolak yang sudah terdaftar) maupun didaftarkan ulang - baris hantu di
+    // Sumbang Gagasan.
     [HttpDelete("gugus/{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -500,6 +515,12 @@ public class InovasiController : ControllerBase
         if (g.CreatedByNik != nik) return Forbid();
         if (g.Status is not ("Draft" or "Revisi"))
             return BadRequest(new { message = "Hanya risalah berstatus Draft/Revisi yang bisa dihapus." });
+
+        if (g.IdGagasan is int idGagasan)
+        {
+            var gagasan = await _db.Gagasan.FirstOrDefaultAsync(x => x.Id == idGagasan);
+            if (gagasan is not null) _db.Gagasan.Remove(gagasan);   // cascade: rantai approval
+        }
 
         _db.Gugus.Remove(g);   // cascade menghapus seluruh anak
         await _db.SaveChangesAsync();
@@ -569,8 +590,11 @@ public class InovasiController : ControllerBase
     //   SS  -> hanya departemen yang sama dengan gugus
     //   5R  -> hanya kompartemen yang sama dengan gugus
     //   GIO -> bebas (tanpa filter)
+    // q nullable + default null: tanpa `?` parameter dianggap WAJIB oleh [ApiController]
+    // (nullable reference types), sehingga `?q=` kosong ditolak 400 sebelum masuk aksi -
+    // itulah sebab daftar default (tanpa mengetik) sempat kosong.
     [HttpGet("pegawai")]
-    public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDto>>> CariPegawai([FromQuery] string q, [FromQuery] int? gugusId = null)
+    public async Task<ActionResult<IReadOnlyList<InovasiPegawaiDto>>> CariPegawai([FromQuery] string? q = null, [FromQuery] int? gugusId = null)
     {
         var term = (q ?? string.Empty).Trim();
 
@@ -666,11 +690,13 @@ public class InovasiController : ControllerBase
         if (gugusId is int gid)
         {
             var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid);
-            if (g is not null)
+            // Hanya SS (satu departemen) & 5R (satu kompartemen) yang dibatasi cakupan.
+            // GIO bebas: scopeId dibiarkan null -> jatuh ke daftar umum (semua pegawai).
+            if (g is not null && (g.Jenis == "SS" || g.Jenis == "5R"))
             {
-                asDept = g.Jenis != "5R";
+                asDept = g.Jenis == "SS";
                 scopeId = asDept ? g.IdDepartemen : g.IdKompartemen;
-                strict = g.Jenis == "SS" || g.Jenis == "5R";
+                strict = true;
             }
         }
         else

@@ -24,7 +24,8 @@ public record GugusRingkasDto(
     string? KetuaNama,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    string? GagasanJudul = null);   // judul Sumbang Gagasan asal (bila risalah lahir dari gagasan)
+    string? GagasanJudul = null,   // judul Sumbang Gagasan asal (bila risalah lahir dari gagasan)
+    bool SudahDinilai = false);    // ada penugasan juri yang sudah memuat skor
 
 public record GugusListDto(IReadOnlyList<GugusRingkasDto> Items);
 
@@ -247,6 +248,7 @@ public record GugusOptionDto(int Id, string Jenis, string? NoRegistrasi, string?
 public record PenugasanDto(int Id, int IdGugus, int IdStream, string StreamNama, string Status,
     string Jenis, string? NoRegistrasi, string? NamaGugus, string? Judul, DateTime DibuatPada);
 public record CreatePenugasanRequest(int IdGugus, int IdStream);
+public record UpdatePenugasanRequest(int IdStream);
 
 // --- Sisi Juri ---
 // Ringkas: satu penugasan yang perlu dinilai/dilihat oleh juri saat ini.

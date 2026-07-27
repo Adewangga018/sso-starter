@@ -27,26 +27,26 @@ export default function AdminJuriPage() {
   const [penugasan, setPenugasan] = useState([])
   const [form, setForm] = useState(null)
   const [assign, setAssign] = useState({ idGugus: '', idStream: '' })
+  const [editPenugasan, setEditPenugasan] = useState(null)   // { id, idStream } saat mengubah penugasan
   const [msg, setMsg] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const loadAll = useCallback(async () => {
     setError('')
-    try {
-      const [users, str, opts, pen] = await Promise.all([
-        api.listJuriUsers(),
-        api.listPenilaianStream(),
-        api.listPenilaianGugusOptions(),
-        api.listPenugasan(),
-      ])
-      setJuriUsers(users)
-      setStreams(str)
-      setGugusOptions(opts)
-      setPenugasan(pen)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal memuat data.')
-    }
+    setLoading(true)
+    // Muat paralel & tampilkan tiap bagian begitu datanya tiba (tidak menunggu
+    // seluruh permintaan selesai) agar Stream Penilai muncul lebih cepat.
+    const onErr = (err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat data.')
+    const jobs = [
+      api.listPenilaianStream().then(setStreams, onErr),
+      api.listPenugasan().then(setPenugasan, onErr),
+      api.listPenilaianGugusOptions().then(setGugusOptions, onErr),
+      api.listJuriUsers().then(setJuriUsers, onErr),
+    ]
+    await Promise.allSettled(jobs)
+    setLoading(false)
   }, [])
 
   useEffect(() => { if (bolehKelola) loadAll() }, [bolehKelola, loadAll])
@@ -139,6 +139,21 @@ export default function AdminJuriPage() {
     }
   }
 
+  async function simpanEditPenugasan() {
+    if (!editPenugasan?.idStream) return setMsg({ type: 'err', text: 'Pilih stream.' })
+    setBusy(true)
+    try {
+      await api.updatePenugasan(editPenugasan.id, { idStream: Number(editPenugasan.idStream) })
+      setEditPenugasan(null)
+      await loadAll()
+      setMsg({ type: 'ok', text: 'Penugasan diubah. Skor lama (bila ada) direset.' })
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mengubah penugasan.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function deletePenugasan(p) {
     const label = p.namaGugus || p.judul || `#${p.idGugus}`
     if (!(await dialog.confirm({ message: `Hapus penugasan untuk "${label}"? Skor yang sudah masuk ikut terhapus.`, danger: true }))) return
@@ -161,7 +176,7 @@ export default function AdminJuriPage() {
       <div className="admin-juri__note">
         <Info size={15} />
         <span>
-          Pengguna harus ditandai sebagai <b>Juri</b> dahulu{isAdmin ? <> di <Link to="/admin/users">Manajemen Pengguna</Link></> : <> oleh Admin IT di Manajemen Pengguna</>}.
+          Pengguna ber-role <b>Juri</b>, atau <b>Manager/GM</b>, dapat menjadi penilai{isAdmin ? <> (atur di <Link to="/admin/users">Manajemen Pengguna</Link>)</> : <> (diatur Admin IT)</>}.
           Satu <b>stream</b> berisi 5 orang: <b>1 Ketua, 3 Anggota, 1 Sekretaris</b>. Ketua &amp; Anggota memberi nilai;
           Sekretaris hanya melihat. Tugaskan stream ke sebuah inovasi agar mulai dinilai.
         </span>
@@ -169,6 +184,7 @@ export default function AdminJuriPage() {
 
       {error && <div className="admin-juri__alert admin-juri__alert--err">{error}</div>}
       {msg && <div className={`admin-juri__alert admin-juri__alert--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
+      {loading && <div className="admin-juri__loading">Memuat data penilaian…</div>}
 
       {/* ---------------- Streams ---------------- */}
       <div className="admin-juri__section">
@@ -276,17 +292,36 @@ export default function AdminJuriPage() {
             <tr><th>Inovasi</th><th>Stream</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
-            {penugasan.map((p) => (
-              <tr key={p.id}>
-                <td>{gugusLabel({ id: p.idGugus, jenis: p.jenis, noRegistrasi: p.noRegistrasi, namaGugus: p.namaGugus, judul: p.judul })}</td>
-                <td>{p.streamNama}</td>
-                <td>{p.status}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button type="button" className="admin-juri__btn admin-juri__btn--danger" onClick={() => deletePenugasan(p)}><Trash2 size={14} /> Hapus</button>
-                </td>
-              </tr>
-            ))}
-            {!penugasan.length && <tr><td colSpan={4} className="admin-juri__empty">Belum ada penugasan.</td></tr>}
+            {penugasan.map((p) => {
+              const editing = editPenugasan?.id === p.id
+              return (
+                <tr key={p.id}>
+                  <td>{gugusLabel({ id: p.idGugus, jenis: p.jenis, noRegistrasi: p.noRegistrasi, namaGugus: p.namaGugus, judul: p.judul })}</td>
+                  <td>
+                    {editing ? (
+                      <select value={editPenugasan.idStream} onChange={(e) => setEditPenugasan({ ...editPenugasan, idStream: e.target.value })}>
+                        {streams.filter((s) => s.aktif).map((s) => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                      </select>
+                    ) : p.streamNama}
+                  </td>
+                  <td>{p.status}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {editing ? (
+                      <div style={{ display: 'inline-flex', gap: 6 }}>
+                        <button type="button" className="admin-juri__btn admin-juri__btn--primary" disabled={busy} onClick={simpanEditPenugasan}>Simpan</button>
+                        <button type="button" className="admin-juri__btn" disabled={busy} onClick={() => setEditPenugasan(null)}>Batal</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'inline-flex', gap: 6 }}>
+                        <button type="button" className="admin-juri__btn" onClick={() => setEditPenugasan({ id: p.id, idStream: String(p.idStream) })}><Pencil size={14} /> Ubah</button>
+                        <button type="button" className="admin-juri__btn admin-juri__btn--danger" onClick={() => deletePenugasan(p)}><Trash2 size={14} /> Hapus</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+            {!penugasan.length && !loading && <tr><td colSpan={4} className="admin-juri__empty">Belum ada penugasan.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -78,11 +78,28 @@ public class PenilaianController : ControllerBase
     {
         if (!IsPengelola()) return Forbid();
         var users = await _userManager.GetUsersInRoleAsync(JuriRole);
-        var rows = users
+        // Manager & GM (band 1/2 pada grading) otomatis boleh menjadi juri.
+        var mgrNiks = await ManagerGmNiksAsync();
+        var mgrUsers = mgrNiks.Count == 0
+            ? new List<ApplicationUser>()
+            : await _userManager.Users.Where(u => u.Nik != null && mgrNiks.Contains(u.Nik)).ToListAsync();
+        var rows = users.Concat(mgrUsers)
+            .GroupBy(u => u.Id).Select(g => g.First())
             .OrderBy(u => u.FullName)
             .Select(u => new JuriUserDto(u.Id, u.FullName, u.Nik, u.Email))
             .ToList();
         return Ok(rows);
+    }
+
+    // NIK pegawai ber-band 1 (GM) atau 2 (Manager) - dianggap juri secara otomatis.
+    private async Task<List<string>> ManagerGmNiksAsync()
+    {
+        var niks = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.Status == "Aktif" && (j.IdBand == 1 || j.IdBand == 2) && p.IdKaryawan != null
+            select p.IdKaryawan).Distinct().ToListAsync();
+        return niks;
     }
 
     // =======================================================================
@@ -202,12 +219,16 @@ public class PenilaianController : ControllerBase
         var ids = anggota.Select(a => a.UserId).ToList();
         if (ids.Any(string.IsNullOrWhiteSpace)) return "Ada anggota tanpa pengguna terpilih.";
         if (ids.Distinct().Count() != ids.Count) return "Seorang pengguna terpilih lebih dari satu peran.";
+        var mgrNiks = (await ManagerGmNiksAsync()).ToHashSet();
         foreach (var a in anggota)
         {
             var u = await _userManager.FindByIdAsync(a.UserId);
             if (u is null) return "Pengguna tidak ditemukan.";
-            if (!await _userManager.IsInRoleAsync(u, JuriRole))
-                return $"{u.FullName ?? u.Email} belum berperan Juri. Aktifkan dulu di Manajemen Pengguna.";
+            // Boleh menilai bila ber-role Juri ATAU Manager/GM (band 1/2).
+            var boleh = await _userManager.IsInRoleAsync(u, JuriRole)
+                || (u.Nik is not null && mgrNiks.Contains(u.Nik));
+            if (!boleh)
+                return $"{u.FullName ?? u.Email} belum berperan Juri atau Manager/GM. Aktifkan dulu di Manajemen Pengguna.";
         }
         return null;
     }
@@ -268,6 +289,25 @@ public class PenilaianController : ControllerBase
         _db.PenilaianPenugasan.Add(p);
         await _db.SaveChangesAsync();
         return Ok(new { p.Id });
+    }
+
+    // Ubah stream penilai sebuah penugasan. Skor lama (dari stream sebelumnya)
+    // ikut terhapus agar hasil tidak bercampur antar panel.
+    [HttpPut("penugasan/{id:int}")]
+    public async Task<IActionResult> UpdatePenugasan(int id, [FromBody] UpdatePenugasanRequest req)
+    {
+        if (!IsPengelola()) return Forbid();
+        var p = await _db.PenilaianPenugasan.FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound();
+        if (!await _db.PenilaianStream.AnyAsync(s => s.Id == req.IdStream)) return NotFound(new { message = "Stream tidak ditemukan." });
+        if (p.IdStream != req.IdStream)
+        {
+            var skorLama = _db.PenilaianSkor.Where(x => x.IdPenugasan == id);
+            _db.PenilaianSkor.RemoveRange(skorLama);
+            p.IdStream = req.IdStream;
+            await _db.SaveChangesAsync();
+        }
+        return NoContent();
     }
 
     [HttpPost("penugasan/{id:int}/tutup")]

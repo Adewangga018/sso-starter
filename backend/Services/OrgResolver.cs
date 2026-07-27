@@ -36,7 +36,13 @@ public class OrgResolver
             where p.IdKaryawan == idKaryawan && p.Status == "Aktif"
             select j.IdUnit).FirstOrDefaultAsync();
 
-        return unitId is null ? new OrgUnit(null, null, null, null) : await ResolveUnitAsync(unitId.Value);
+        if (unitId is not null) return await ResolveUnitAsync(unitId.Value);
+
+        // Pegawai organik tak ditemukan di penempatan -> coba pegawai TKNO.
+        var tkno = await _db.PegawaiTkno.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.IdKaryawan == idKaryawan);
+        var tknoUnit = tkno?.IdDepartemen ?? tkno?.IdKompartemen;
+        return tknoUnit is null ? new OrgUnit(null, null, null, null) : await ResolveUnitAsync(tknoUnit.Value);
     }
 
     // Resolusi dept+komp mulai dari sebuah unit organisasi (mis. Departemen Tujuan).
@@ -67,6 +73,18 @@ public class OrgResolver
             if (pr.IdUnit is int uid && !result.ContainsKey(pr.IdKaryawan))
                 result[pr.IdKaryawan] = ResolveFromUnits(units, uid);
         }
+
+        // NIK yang belum ter-resolve organik -> lengkapi dari pegawai TKNO.
+        var sisa = distinct.Where(n => !result.ContainsKey(n)).ToList();
+        if (sisa.Count > 0)
+        {
+            var tkno = await _db.PegawaiTkno.AsNoTracking()
+                .Where(t => sisa.Contains(t.IdKaryawan))
+                .Select(t => new { t.IdKaryawan, Unit = t.IdDepartemen ?? t.IdKompartemen })
+                .ToListAsync();
+            foreach (var t in tkno)
+                if (t.Unit is int uid) result[t.IdKaryawan] = ResolveFromUnits(units, uid);
+        }
         return result;
     }
 
@@ -90,6 +108,18 @@ public class OrgResolver
             var org = ResolveFromUnits(units, uid);
             var match = asDepartemen ? org.IdDepartemen == scopeUnitId : org.IdKompartemen == scopeUnitId;
             if (match) niks.Add(pr.IdKaryawan);
+        }
+
+        // Pegawai TKNO (di luar penempatan) - ikut disaring lewat unit-nya sendiri.
+        var tkno = await _db.PegawaiTkno.AsNoTracking()
+            .Select(t => new { t.IdKaryawan, Unit = t.IdDepartemen ?? t.IdKompartemen })
+            .ToListAsync();
+        foreach (var t in tkno)
+        {
+            if (t.Unit is not int uid || string.IsNullOrWhiteSpace(t.IdKaryawan)) continue;
+            var org = ResolveFromUnits(units, uid);
+            var match = asDepartemen ? org.IdDepartemen == scopeUnitId : org.IdKompartemen == scopeUnitId;
+            if (match) niks.Add(t.IdKaryawan);
         }
         return niks.ToList();
     }

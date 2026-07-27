@@ -379,6 +379,17 @@ public class Jabatan
     public byte IdBand { get; set; }   // 1 = GM, 2 = Manager, dst
 }
 
+// Pegawai TKNO (non-organik) - tak masuk penempatan/jabatan organik. Kolom
+// id_departemen/id_kompartemen merujuk unit_organisasi.id_unit sehingga cakupan
+// organisasinya bisa di-resolve untuk pemilih anggota gugus.
+public class PegawaiTkno
+{
+    public string IdKaryawan { get; set; } = string.Empty;
+    public int? IdDepartemen { get; set; }
+    public int? IdKompartemen { get; set; }
+    public int? IdDirektorat { get; set; }
+}
+
 public class Penempatan
 {
     public int Id { get; set; }
