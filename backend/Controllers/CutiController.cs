@@ -10,6 +10,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/cuti")]
+[ModuleGate("my-personal")]
 public class CutiController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

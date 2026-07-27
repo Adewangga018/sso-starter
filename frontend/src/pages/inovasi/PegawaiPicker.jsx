@@ -38,9 +38,11 @@ export default function PegawaiPicker({ open, onClose, onPick, gugusId, existing
 
   return (
     <div onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.45)', display: 'grid', placeItems: 'center', zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()}
-        style={{ background: '#fff', borderRadius: 14, width: 'min(560px, 94vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 20 }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.45)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 12 }}>
+      {/* Tinggi maksimum lewat kelas (inv__sheet--short): butuh dvh + cadangan
+          vh, lihat inovasi.css. */}
+      <div className="inv__sheet--short" onClick={(e) => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 14, width: 'min(560px, 94vw)', display: 'flex', flexDirection: 'column', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 16 }}>Cari Pegawai</h3>
           <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>

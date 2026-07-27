@@ -386,16 +386,19 @@ export default function TiketPage() {
                   </td>
                 </tr>
               )}
+              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
+                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
+                  di ponsel - di lebar itu <thead> disembunyikan. */}
               {pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="tiket__col-status">
+                  <td className="tiket__col-status" data-label="Status">
                     <span className={`tiket__status${row.status === STATUS_DIBUAT ? '' : ' tiket__status--done'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="tiket__col-tgl">{formatTanggal(row.tglInput)}</td>
-                  <td className="tiket__col-kode">{row.kodeTiket}</td>
-                  <td className="tiket__col-pesan">
+                  <td className="tiket__col-tgl" data-label="Tgl Input">{formatTanggal(row.tglInput)}</td>
+                  <td className="tiket__col-kode" data-label="Kode Tiket">{row.kodeTiket}</td>
+                  <td className="tiket__col-pesan" data-label="Pemesanan">
                     {row.pemesanan?.length ? (
                       <ol className="tiket__list">
                         {row.pemesanan.map((p) => (
@@ -406,9 +409,9 @@ export default function TiketPage() {
                       <span className="tiket__source">Belum ada rincian</span>
                     )}
                   </td>
-                  <td className="tiket__col-ket">{row.keterangan}</td>
-                  <td className="tiket__col-source">{row.source}</td>
-                  <td className="tiket__col-aksi">
+                  <td className="tiket__col-ket" data-label="Keterangan">{row.keterangan}</td>
+                  <td className="tiket__col-source" data-label="Sumber Data">{row.source}</td>
+                  <td className="tiket__col-aksi" data-label="Aksi">
                     <div className="tiket__row-actions">
                       <button
                         type="button"

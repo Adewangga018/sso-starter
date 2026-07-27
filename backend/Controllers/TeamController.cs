@@ -12,6 +12,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("team")]
+[ModuleGate("my-team")]
 public class TeamController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

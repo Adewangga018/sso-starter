@@ -417,23 +417,26 @@ export default function IzinPage() {
                   </td>
                 </tr>
               )}
+              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
+                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
+                  di ponsel - di lebar itu <thead> disembunyikan. */}
               {pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="izin__col-status">
+                  <td className="izin__col-status" data-label="Status">
                     <span className={`izin__status${row.status === STATUS_DIBUAT ? '' : ' izin__status--done'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="izin__col-kode">{row.kodeIjin}</td>
-                  <td className="izin__col-ket">{row.keterangan}</td>
-                  <td className="izin__col-jam">{formatDateTime(row.jamMulai)}</td>
-                  <td className="izin__col-jam">{formatDateTime(row.jamSelesai)}</td>
-                  <td className="izin__col-jenis">
+                  <td className="izin__col-kode" data-label="Kode Izin">{row.kodeIjin}</td>
+                  <td className="izin__col-ket" data-label="Keterangan">{row.keterangan}</td>
+                  <td className="izin__col-jam" data-label="Jam Mulai">{formatDateTime(row.jamMulai)}</td>
+                  <td className="izin__col-jam" data-label="Jam Selesai">{formatDateTime(row.jamSelesai)}</td>
+                  <td className="izin__col-jenis" data-label="Jenis">
                     <div>{row.jenisIjin}</div>
                     <div className="izin__source">{row.source}</div>
                   </td>
-                  <td className="izin__col-kepentingan">{row.kepentinganIjin}</td>
-                  <td className="izin__col-aksi">
+                  <td className="izin__col-kepentingan" data-label="Kepentingan">{row.kepentinganIjin}</td>
+                  <td className="izin__col-aksi" data-label="Aksi">
                     <div className="izin__row-actions">
                       <button
                         type="button"

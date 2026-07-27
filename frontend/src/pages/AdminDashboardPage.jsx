@@ -39,10 +39,10 @@ const TILES = [
     desc: 'Atur titik geofence & radius kantor pusat, region, dan gudang.',
   },
   {
+    to: '/admin/modules',
     icon: Boxes,
-    title: 'Registrasi Modul',
-    desc: 'Daftarkan modul/aplikasi baru ke SSO.',
-    soon: 'Segera hadir',
+    title: 'Akses Modul',
+    desc: 'Aktif/nonaktifkan modul & tentukan siapa yang boleh membukanya (semua pengguna atau Admin IT).',
   },
   {
     icon: KeyRound,

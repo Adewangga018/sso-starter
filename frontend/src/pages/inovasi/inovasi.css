@@ -922,3 +922,346 @@
 .inv__chart-row .inv__chart-card {
   margin-bottom: 0;
 }
+
+/* ===========================================================================
+   Responsif
+   Sebagian besar tata letak modul ini sudah memakai grid auto-fit sehingga
+   menumpuk sendiri. Yang perlu diatur di sini: kontrol dengan min-width tetap,
+   tabel lebar, stepper mendatar, dan tabel isian (RepeatTable) yang kolomnya
+   bisa sampai delapan.
+   =========================================================================== */
+
+@media (max-width: 900px) {
+  /* min-width tetap pada select/pencarian membuat toolbar melebihi layar.
+     Di lebar ini semuanya dibiarkan menyusut mengikuti induknya. */
+  .inv__select,
+  .inv__filters .inv__select {
+    min-width: 0;
+  }
+
+  .inv__filters {
+    min-width: 0;
+  }
+
+  .inv__search {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .inv__title {
+    font-size: 18px;
+  }
+
+  .inv__card {
+    padding: 14px;
+  }
+
+  .inv__section-head h3 {
+    font-size: 14px;
+  }
+
+  /* Toolbar & filter jadi satu kolom - dua kontrol berdampingan di 360px
+     menyisakan ~150px untuk masing-masing. */
+  .inv__toolbar,
+  .inv__filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inv__toolbar > *,
+  .inv__filters > * {
+    width: 100%;
+  }
+
+  .inv__select {
+    width: 100%;
+  }
+
+  /* Tombol di dalam toolbar tetap berdampingan (ikon-ikon kecil), tidak
+     ikut melebar penuh. */
+  .inv__toolbar > div {
+    display: flex;
+  }
+
+  .inv__btn {
+    justify-content: center;
+    padding: 11px 15px;
+  }
+
+  .inv__actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inv__actions-bar .inv__btn {
+    width: 100%;
+  }
+
+  /* Tabel isian: tiap sel punya lebar minimum agar kolom tidak terhimpit
+     jadi 40px. Tabel lalu melebihi layar dan menggulir di pembungkusnya
+     (RepeatTable membungkus tabelnya dengan overflow-x: auto). Tabel
+     berkolom sedikit tetap muat tanpa gulir. */
+  .inv__subtable td,
+  .inv__subtable th {
+    min-width: 116px;
+  }
+
+  /* Kolom nomor & tombol hapus tidak butuh lebar minimum itu. */
+  .inv__subtable td.inv__rownum,
+  .inv__subtable th.inv__rownum,
+  .inv__subtable td.inv__rowdel,
+  .inv__subtable th.inv__rowdel {
+    min-width: 0;
+  }
+
+  /* Sel jadwal (P.3/P.4/C) sengaja sempit - satu sel = satu bulan. */
+  .inv__subtable td.inv__jadwal-cell {
+    min-width: 40px;
+  }
+
+  /* Stepper PDCA: label penuh tidak muat 4-8 langkah berdampingan, jadi
+     dikecilkan dan boleh digulir mendatar. */
+  .inv__steps-track {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .inv__steps-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .inv__stepnode {
+    flex: 0 0 84px;
+  }
+
+  .inv__steplabel {
+    font-size: 10px;
+  }
+
+  /* Tab PLAN/DO/CHECK/ACTION digulir mendatar, tidak menumpuk. */
+  .inv__steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 14px;
+  }
+
+  .inv__steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .inv__step {
+    flex: 0 0 auto;
+  }
+
+  /* Riwayat approval: waktu turun ke bawah, tidak lagi berdampingan. */
+  .inv__timeline-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .inv__timeline-when {
+    white-space: normal;
+  }
+
+  /* Pemilih rentang bulan jadwal: dua select sebaris tidak muat. */
+  .inv__jadwal-win {
+    flex: 1 1 100%;
+  }
+
+  .inv__jadwal-win select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Kartu ringkasan beranda: dua kolom masih terbaca di 360px. */
+  .inv__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .inv__stat {
+    padding: 12px 13px;
+  }
+
+  .inv__stat-num {
+    font-size: 21px;
+  }
+
+  /* Grafik: satu per baris (minmax 320px masih memaksa 2 kolom di tablet). */
+  .inv__chart-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Sasaran sentuh tombol ikon di tabel. */
+  .inv__icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .inv__row-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .inv__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inv__section-head {
+    /* Nomor bagian (P.1, C.3, ...) tetap di baris judul, tapi judul panjang
+       boleh membungkus. */
+    align-items: flex-start;
+  }
+
+  .inv__card {
+    padding: 12px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tinggi maksimum dialog yang digambar langsung di JSX (inline style).
+   Ditaruh di CSS, bukan inline, karena butuh dua deklarasi: dvh mengikuti
+   tinggi layar yang benar-benar terlihat di browser ponsel, sedangkan vh
+   dipertahankan sebagai cadangan untuk browser yang belum mengenal dvh.
+   Style object React tidak bisa memuat dua kunci max-height sekaligus.
+   --------------------------------------------------------------------------- */
+.inv__sheet--tall {
+  max-height: 92vh;
+  max-height: 92dvh;
+}
+
+.inv__sheet--mid {
+  max-height: 88vh;
+  max-height: 88dvh;
+}
+
+.inv__sheet--short {
+  max-height: 80vh;
+  max-height: 80dvh;
+}
+
+/* Di ponsel dialog memakai hampir seluruh tinggi & lebar layar. */
+@media (max-width: 640px) {
+  .inv__sheet--tall,
+  .inv__sheet--mid,
+  .inv__sheet--short {
+    max-height: 94vh;
+    max-height: 94dvh;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tabel daftar di ponsel
+   Dua perlakuan:
+   1. Semua .inv__table diberi lebar minimum + padding lebih rapat, sehingga
+      menggulir mendatar di dalam .inv__table-wrap dengan kolom yang masih
+      terbaca (tanpa ini 8-9 kolom terhimpit jadi ~40px per kolom).
+   2. Daftar utama (Daftar Inovasi & Sumbang Gagasan) memakai penanda
+      .inv__table-wrap--cards: barisnya berubah menjadi kartu bertumpuk dengan
+      judul dari atribut data-label pada <td>. Dipakai selektif, karena tabel
+      rekap/ranking justru lebih berguna dibandingkan berdampingan.
+   --------------------------------------------------------------------------- */
+@media (max-width: 720px) {
+  .inv__table {
+    min-width: 660px;
+  }
+
+  .inv__table th,
+  .inv__table td {
+    padding: 9px 11px;
+  }
+
+  /* --- mode kartu (opt-in) --- */
+  .inv__table-wrap--cards {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .inv__table-wrap--cards .inv__table {
+    display: block;
+    min-width: 0;
+  }
+
+  .inv__table-wrap--cards thead {
+    display: none;
+  }
+
+  .inv__table-wrap--cards tbody {
+    display: block;
+  }
+
+  .inv__table-wrap--cards tbody tr {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--inv-line);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .inv__table-wrap--cards tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .inv__table-wrap--cards td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    /* max-width inline pada sel judul dinetralkan - di mode kartu lebar
+       ditentukan flex. */
+    max-width: none;
+    padding: 9px 12px;
+    text-align: right;
+    border-bottom: 1px dashed var(--inv-line);
+  }
+
+  .inv__table-wrap--cards td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--inv-muted);
+  }
+
+  .inv__table-wrap--cards td > * {
+    min-width: 0;
+  }
+
+  .inv__table-wrap--cards td:last-child {
+    border-bottom: none;
+  }
+
+  /* Baris kosong ("Belum ada ...") bukan kartu. */
+  .inv__table-wrap--cards td.inv__no-data {
+    display: block;
+    text-align: center;
+  }
+
+  .inv__table-wrap--cards td.inv__no-data::before {
+    content: none;
+  }
+
+  .inv__table-wrap--cards tr:hover td {
+    background: none;
+  }
+}
+
+/* Sel judul dibatasi lebarnya agar kolom lain tidak terdorong. Ditaruh di CSS
+   (bukan inline style) supaya batas ini bisa dicabut saat tabel jadi kartu. */
+.inv__cell--wide {
+  max-width: 260px;
+}
+
+@media (max-width: 720px) {
+  .inv__table-wrap--cards td.inv__cell--wide {
+    max-width: none;
+  }
+}

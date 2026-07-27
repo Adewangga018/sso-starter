@@ -43,6 +43,10 @@ builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<CutiService>();
 builder.Services.AddScoped<ApprovalService>();
+// Akses modul (Panel Admin IT > Akses Modul). Di-cache di memori karena dibaca pada
+// setiap request modul lewat ModuleGateAttribute.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ModuleAccessService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

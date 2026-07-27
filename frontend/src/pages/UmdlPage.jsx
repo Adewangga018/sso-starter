@@ -338,21 +338,24 @@ export default function UmdlPage() {
                   </td>
                 </tr>
               )}
+              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
+                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
+                  di ponsel - di lebar itu <thead> disembunyikan. */}
               {pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="umdl__col-status">
+                  <td className="umdl__col-status" data-label="Status">
                     <span className={`umdl__status${row.status === STATUS_DIBUAT ? '' : ' umdl__status--done'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="umdl__col-tgl">{formatTanggal(row.tglUmdl)}</td>
-                  <td className="umdl__col-kode">
+                  <td className="umdl__col-tgl" data-label="Tgl UMDL">{formatTanggal(row.tglUmdl)}</td>
+                  <td className="umdl__col-kode" data-label="Kode UMDL">
                     <div>{row.kodeUmdl}</div>
                     {row.kodeIjin && <div className="umdl__source">Izin: {row.kodeIjin}</div>}
                   </td>
-                  <td className="umdl__col-ket">{row.keterangan}</td>
+                  <td className="umdl__col-ket" data-label="Keterangan">{row.keterangan}</td>
                   {isDibuatTab && (
-                    <td className="umdl__col-aksi">
+                    <td className="umdl__col-aksi" data-label="Aksi">
                       <div className="umdl__row-actions">
                         <button type="button" className="umdl__row-btn umdl__row-btn--edit" onClick={() => openEdit(row)} title="Ubah">
                           <Pencil size={15} />

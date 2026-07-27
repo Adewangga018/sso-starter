@@ -85,7 +85,9 @@ export default function InovasiList() {
         </div>
       </div>
 
-      <div className="inv__table-wrap">
+      {/* --cards: di ponsel (<=720px) tiap baris berubah jadi kartu bertumpuk,
+          judulnya diambil dari data-label tiap <td> - lihat inovasi.css. */}
+      <div className="inv__table-wrap inv__table-wrap--cards">
         <table className="inv__table">
           <thead>
             <tr>
@@ -99,18 +101,18 @@ export default function InovasiList() {
             )}
             {filtered.map((r) => (
               <tr key={r.id}>
-                <td>
+                <td data-label="Status">
                   <span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span>
                   {r.sudahDinilai && <span className="inv__status inv__status--dinilai" style={{ marginLeft: 6 }}>Sudah Dinilai</span>}
                 </td>
-                <td>{r.noRegistrasi ?? <span style={{ color: '#9aa79d' }}>-</span>}</td>
-                <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>
-                <td>{r.namaGugus ?? '-'}</td>
-                <td style={{ textAlign: 'center' }}>{r.temaKe ?? '-'}</td>
-                <td style={{ maxWidth: 240 }}>{r.judul ?? <span style={{ color: '#9aa79d' }}>(belum ada judul)</span>}</td>
-                <td>{r.namaDepartemen ?? r.namaKompartemen ?? '-'}</td>
-                <td>{r.peranSaya}</td>
-                <td>
+                <td data-label="No. Registrasi">{r.noRegistrasi ?? <span style={{ color: '#9aa79d' }}>-</span>}</td>
+                <td data-label="Metodologi" style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>
+                <td data-label="Nama Gugus">{r.namaGugus ?? '-'}</td>
+                <td data-label="Tema" style={{ textAlign: 'center' }}>{r.temaKe ?? '-'}</td>
+                <td data-label="Judul" className="inv__cell--wide">{r.judul ?? <span style={{ color: '#9aa79d' }}>(belum ada judul)</span>}</td>
+                <td data-label="Departemen">{r.namaDepartemen ?? r.namaKompartemen ?? '-'}</td>
+                <td data-label="Peran">{r.peranSaya}</td>
+                <td data-label="Aksi">
                   <div className="inv__row-actions" style={{ justifyContent: 'flex-end' }}>
                     <button type="button" className="inv__icon-btn" title="Buka" onClick={() => navigate(`${base}/daftar/${r.id}`)}><Eye size={15} /></button>
                     {r.peranSaya === 'Pengaju' && (r.status === 'Draft' || r.status === 'Revisi') && (

@@ -15,6 +15,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("inovasi")]
+[ModuleGate("my-innovation")]
 public class InovasiController : ControllerBase
 {
     private static readonly string[] Faktor4M1E = ["Man", "Method", "Machine", "Material", "Environment"];

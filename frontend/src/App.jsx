@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { DialogProvider } from './components/DialogProvider'
 import RequireAuth from './components/RequireAuth'
+import RequireModule from './components/RequireModule'
 import LoginPage from './pages/LoginPage'
 import CallbackPage from './pages/CallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -12,6 +13,7 @@ import AdminDocumentsPage from './pages/AdminDocumentsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminLocationsPage from './pages/AdminLocationsPage'
+import AdminModulesPage from './pages/AdminModulesPage'
 import AdminJuriPage from './pages/AdminJuriPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
@@ -73,6 +75,7 @@ export default function App() {
             <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/admin/documents" element={<AdminDocumentsPage />} />
             <Route path="/admin/locations" element={<AdminLocationsPage />} />
+            <Route path="/admin/modules" element={<AdminModulesPage />} />
             {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
                 belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
             <Route path="/juri" element={<AdminJuriPage />} />
@@ -81,60 +84,71 @@ export default function App() {
               <Route index element={<DashboardPage />} />
             </Route>
 
-            <Route path="/team" element={<MyTeamLayout />}>
-              <Route index element={<MyTeamPage />} />
-              <Route path="rekap" element={<RekapTimPage />} />
+            {/* Tiap modul dijaga RequireModule: kalau Admin IT menonaktifkannya atau
+                menguncinya ke Admin saja (Panel Admin > Akses Modul), rutenya dilempar
+                balik ke dashboard. Penegakan sebenarnya ada di server (ModuleGate). */}
+            <Route element={<RequireModule moduleKey="my-team" />}>
+              <Route path="/team" element={<MyTeamLayout />}>
+                <Route index element={<MyTeamPage />} />
+                <Route path="rekap" element={<RekapTimPage />} />
+              </Route>
             </Route>
 
-            <Route path="/my-office" element={<MyOfficeLayout />}>
-              <Route index element={<MyOfficeBeranda />} />
-              <Route path="inbox" element={<OfficeInbox />} />
-              <Route path="buat" element={<BuatSurat />} />
-              <Route path="daftar" element={<DaftarSurat />} />
-              <Route path="review" element={<MenungguSurat mode="review" />} />
-              <Route path="approval" element={<MenungguSurat mode="approval" />} />
-              <Route path="surat/:id" element={<SuratDetail />} />
+            <Route element={<RequireModule moduleKey="my-office" />}>
+              <Route path="/my-office" element={<MyOfficeLayout />}>
+                <Route index element={<MyOfficeBeranda />} />
+                <Route path="inbox" element={<OfficeInbox />} />
+                <Route path="buat" element={<BuatSurat />} />
+                <Route path="daftar" element={<DaftarSurat />} />
+                <Route path="review" element={<MenungguSurat mode="review" />} />
+                <Route path="approval" element={<MenungguSurat mode="approval" />} />
+                <Route path="surat/:id" element={<SuratDetail />} />
+              </Route>
             </Route>
 
-            <Route path="/my-personal" element={<MyPersonalLayout />}>
-              <Route index element={<Navigate to="profil" replace />} />
-              <Route path="profil" element={<ProfilPage />} />
-              <Route path="cuti" element={<CutiPage />} />
-              <Route path="persetujuan" element={<PersetujuanPage />} />
-              <Route path="absensi" element={<AbsensiPage />} />
-              <Route path="lembur" element={<SplPage />} />
-              <Route path="izin" element={<IzinPage />} />
-              <Route path="sppd" element={<SppdPage />} />
-              <Route path="umdl" element={<UmdlPage />} />
-              <Route path="tiket" element={<TiketPage />} />
+            <Route element={<RequireModule moduleKey="my-personal" />}>
+              <Route path="/my-personal" element={<MyPersonalLayout />}>
+                <Route index element={<Navigate to="profil" replace />} />
+                <Route path="profil" element={<ProfilPage />} />
+                <Route path="cuti" element={<CutiPage />} />
+                <Route path="persetujuan" element={<PersetujuanPage />} />
+                <Route path="absensi" element={<AbsensiPage />} />
+                <Route path="lembur" element={<SplPage />} />
+                <Route path="izin" element={<IzinPage />} />
+                <Route path="sppd" element={<SppdPage />} />
+                <Route path="umdl" element={<UmdlPage />} />
+                <Route path="tiket" element={<TiketPage />} />
+              </Route>
             </Route>
 
             {/* My Innovation: satu ruang kerja terpadu. Masuk = langsung Sumbang
                 Gagasan (metodologi SS/GIO/5R ditentukan GM saat menyetujui). */}
-            <Route path="/my-innovation" element={<InovasiLayout />}>
-              <Route index element={<Navigate to="gagasan" replace />} />
-              <Route path="gagasan" element={<GagasanList />} />
-              <Route path="daftar" element={<InovasiList />} />
-              <Route path="daftar/:id" element={<InovasiForm />} />
-              <Route path="beranda" element={<InovasiBeranda />} />
-              <Route path="panduan" element={<InovasiPanduan />} />
-              <Route path="pegawai" element={<InovasiPegawai />} />
-              <Route path="roadmap" element={<InovasiRoadmap />} />
-              <Route path="rekap/gagasan" element={<RekapGagasan />} />
-              <Route path="rekap/metodologi" element={<RekapMetodologi />} />
-              {/* Ranking Sumbang Gagasan & Ranking Inovasi kini satu menu bertab;
-                  dua rute lama diarahkan ke sana agar tautan lama tetap hidup. */}
-              <Route path="rekap/ranking" element={<RankingPage />} />
-              <Route path="rekap/ranking-gagasan" element={<Navigate to="../rekap/ranking" replace />} />
-              <Route path="rekap/grafik-gagasan" element={<GrafikGagasan />} />
-              <Route path="ranking" element={<Navigate to="../rekap/ranking" replace />} />
-              {/* History dipecah mengikuti objek yang disetujui: gagasan & risalah. */}
-              <Route path="history" element={<Navigate to="gagasan" replace />} />
-              <Route path="history/gagasan" element={<HistoryApproval kind="gagasan" />} />
-              <Route path="history/inovasi" element={<HistoryApproval kind="inovasi" />} />
-              <Route path="konvensi" element={<InovasiKonvensi />} />
-              <Route path="penilaian" element={<InovasiPenilaianList />} />
-              <Route path="penilaian/:penugasanId" element={<InovasiPenilaianForm />} />
+            <Route element={<RequireModule moduleKey="my-innovation" />}>
+              <Route path="/my-innovation" element={<InovasiLayout />}>
+                <Route index element={<Navigate to="gagasan" replace />} />
+                <Route path="gagasan" element={<GagasanList />} />
+                <Route path="daftar" element={<InovasiList />} />
+                <Route path="daftar/:id" element={<InovasiForm />} />
+                <Route path="beranda" element={<InovasiBeranda />} />
+                <Route path="panduan" element={<InovasiPanduan />} />
+                <Route path="pegawai" element={<InovasiPegawai />} />
+                <Route path="roadmap" element={<InovasiRoadmap />} />
+                <Route path="rekap/gagasan" element={<RekapGagasan />} />
+                <Route path="rekap/metodologi" element={<RekapMetodologi />} />
+                {/* Ranking Sumbang Gagasan & Ranking Inovasi kini satu menu bertab;
+                    dua rute lama diarahkan ke sana agar tautan lama tetap hidup. */}
+                <Route path="rekap/ranking" element={<RankingPage />} />
+                <Route path="rekap/ranking-gagasan" element={<Navigate to="../rekap/ranking" replace />} />
+                <Route path="rekap/grafik-gagasan" element={<GrafikGagasan />} />
+                <Route path="ranking" element={<Navigate to="../rekap/ranking" replace />} />
+                {/* History dipecah mengikuti objek yang disetujui: gagasan & risalah. */}
+                <Route path="history" element={<Navigate to="gagasan" replace />} />
+                <Route path="history/gagasan" element={<HistoryApproval kind="gagasan" />} />
+                <Route path="history/inovasi" element={<HistoryApproval kind="inovasi" />} />
+                <Route path="konvensi" element={<InovasiKonvensi />} />
+                <Route path="penilaian" element={<InovasiPenilaianList />} />
+                <Route path="penilaian/:penugasanId" element={<InovasiPenilaianForm />} />
+              </Route>
             </Route>
 
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,

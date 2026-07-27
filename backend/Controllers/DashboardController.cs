@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,26 +14,18 @@ namespace SsoBackend.Controllers;
 [Route("dashboard")]
 public class DashboardController : ControllerBase
 {
+    private const string AdminRole = "Admin";
+
     private readonly CurrentUserContext _currentUser;
     private readonly GcsDbContext _db;
+    private readonly ModuleAccessService _modules;
 
-    public DashboardController(CurrentUserContext currentUser, GcsDbContext db)
+    public DashboardController(CurrentUserContext currentUser, GcsDbContext db, ModuleAccessService modules)
     {
         _currentUser = currentUser;
         _db = db;
+        _modules = modules;
     }
-
-    private static readonly IReadOnlyList<ModuleTileDto> Modules = new[]
-    {
-        new ModuleTileDto("my-personal", "My Personal", "HR MANAGEMENT", "users", true),
-        new ModuleTileDto("my-office", "My Office", "SURAT-MENYURAT", "mail", true),
-        new ModuleTileDto("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", false),
-        new ModuleTileDto("my-health", "My Health", "KESEHATAN", "activity", false),
-        new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
-        new ModuleTileDto("my-asset", "My Asset", "ASET", "archive", false),
-        new ModuleTileDto("my-progress", "My Progress", "KPI", "trending-up", false),
-        new ModuleTileDto("my-team", "My Team", "KINERJA TIM", "users-round", true),
-    };
 
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
@@ -55,6 +48,12 @@ public class DashboardController : ControllerBase
         }
 
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
-        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), Modules, ProfileComplete: profileComplete));
+
+        // Kartu modul mengikuti Panel Admin IT > Akses Modul. Modul "khusus Admin" tidak
+        // dikirim sama sekali ke akun biasa.
+        var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
+        var modules = await _modules.GetTilesForAsync(isAdmin);
+
+        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), modules, ProfileComplete: profileComplete));
     }
 }

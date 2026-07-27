@@ -13,6 +13,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/umdl")]
+[ModuleGate("my-personal")]
 public class UmdlController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

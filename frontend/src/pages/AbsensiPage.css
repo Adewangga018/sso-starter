@@ -271,13 +271,91 @@
   font-weight: 600;
 }
 
-@media (max-width: 640px) {
-  .absensi__card {
-    padding: 18px 16px;
+/* ===========================================================================
+   Responsif
+   Log absensi tetap berbentuk tabel (bukan kartu): isinya tanggal & jam yang
+   justru lebih mudah dibandingkan antar-baris, dan satu bulan berarti ~30
+   kartu. Yang dilakukan di ponsel adalah merapatkan sel dan menurunkan lebar
+   minimum, sehingga tabel hampir muat dan sisa gulirnya pendek.
+   =========================================================================== */
+@media (max-width: 900px) {
+  .absensi__filter select {
+    min-width: 0;
+    flex: 1;
   }
 
   .absensi__search input {
     min-width: 0;
     flex: 1;
+  }
+
+  .absensi__search,
+  .absensi__page-size {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .absensi__title {
+    font-size: 18px;
+  }
+
+  .absensi__card {
+    padding: 14px 12px;
+  }
+
+  .absensi__periode {
+    gap: 8px;
+  }
+
+  .absensi__filter {
+    flex: 1 1 140px;
+  }
+
+  .absensi__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .absensi__search {
+    flex: 1;
+  }
+
+  .absensi__table {
+    /* 720 -> 560: dengan padding rapat di bawah ini, enam kolom tanggal/jam
+       muat di ~560px, jadi sisa gulir mendatarnya tinggal sedikit. */
+    min-width: 560px;
+    font-size: 12.5px;
+  }
+
+  .absensi__table th,
+  .absensi__table td {
+    padding: 10px 8px;
+  }
+
+  .absensi__badge {
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+
+  .absensi__badge--hari {
+    min-width: 56px;
+  }
+
+  .absensi__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .absensi__pagination {
+    justify-content: space-between;
+  }
+
+  .absensi__pagination button {
+    padding: 9px 16px;
   }
 }

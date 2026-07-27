@@ -1461,7 +1461,9 @@ function RisalahDetailModal({ data, onClose }) {
   const { before, after } = renderRisalahHtml(data, { mode: 'full' })
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.5)', display: 'grid', placeItems: 'center', zIndex: 70, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(920px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column', padding: 20 }}>
+      {/* Tinggi maksimum lewat kelas (inv__sheet--tall), bukan inline: butuh
+          dvh + cadangan vh, lihat inovasi.css. */}
+      <div className="inv__sheet--tall" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(920px, 96vw)', display: 'flex', flexDirection: 'column', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 17 }}>Detail Risalah</h3>
           <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>

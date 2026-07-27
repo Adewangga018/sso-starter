@@ -97,7 +97,10 @@ export default function DashboardPage() {
                   </div>
                 )}
                 <div className="module-tile__body">
-                  <div className="module-tile__label">{mod.label}</div>
+                  <div className="module-tile__label">
+                    {mod.label}
+                    {mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                  </div>
                   <div className="module-tile__subtitle">{mod.subtitle}</div>
                 </div>
                 <div className="module-tile__action module-tile__action--locked">
@@ -123,7 +126,12 @@ export default function DashboardPage() {
                 </div>
               )}
               <div className="module-tile__body">
-                <div className="module-tile__label">{mod.label}</div>
+                <div className="module-tile__label">
+                  {mod.label}
+                  {/* Hanya Admin IT yang bisa melihat kartu ini - penanda supaya jelas
+                      kenapa karyawan lain tidak menemukannya di dashboard mereka. */}
+                  {mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                </div>
                 <div className="module-tile__subtitle">{mod.subtitle}</div>
               </div>
               <div className="module-tile__action">

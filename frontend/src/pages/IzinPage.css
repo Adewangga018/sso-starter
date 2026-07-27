@@ -536,13 +536,234 @@
   cursor: not-allowed;
 }
 
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+
+/* Tablet: bilah aksi & toolbar mulai berdesakan, tabel masih berupa tabel
+   (menggulir mendatar di dalam .izin__table-wrap). */
+@media (max-width: 900px) {
+  .izin__actionbar {
+    flex-wrap: wrap;
+  }
+
+  .izin__filter {
+    flex-basis: 100%;
+    order: -1;
+  }
+
+  .izin__toolbar {
+    gap: 10px;
+  }
+
+  .izin__search input {
+    min-width: 0;
+  }
+
+  .izin__search {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .izin__search input {
+    flex: 1;
+  }
+}
+
+/* Ponsel & tablet kecil: tabel 8 kolom (min-width 1180px) tidak layak digulir
+   mendatar di layar 360px - tiap baris diubah menjadi kartu bertumpuk dengan
+   judul kolom diambil dari atribut data-label pada <td> (lihat IzinPage.jsx). */
+@media (max-width: 720px) {
+  .izin__table-wrap {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .izin__table {
+    display: block;
+    min-width: 0;
+    table-layout: auto;
+    font-size: 13px;
+  }
+
+  .izin__table thead {
+    display: none;
+  }
+
+  .izin__table tbody {
+    display: block;
+  }
+
+  .izin__table tbody tr {
+    display: block;
+    background: var(--gcs-white);
+    border: 1px solid var(--gcs-border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .izin__table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .izin__table td {
+    /* width dari .izin__col-* dinetralkan: di mode kartu lebar diatur flex.
+       Selektor ini (.izin__table td) lebih spesifik daripada .izin__col-ket
+       sehingga tidak perlu !important. */
+    width: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 12px;
+    text-align: right;
+    border-right: none;
+    border-bottom: 1px dashed var(--gcs-border);
+  }
+
+  .izin__table td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--gcs-text-muted);
+  }
+
+  /* Aturan dasar menghapus garis bawah seluruh sel di baris terakhir; di mode
+     kartu garis itu justru pemisah antar-isi, jadi dipasang kembali dan hanya
+     sel terakhir tiap kartu yang bersih. */
+  .izin__table tbody tr:last-child td {
+    border-bottom: 1px dashed var(--gcs-border);
+  }
+
+  .izin__table td:last-child {
+    border-bottom: none;
+  }
+
+  /* Baris "Tidak ada data" bukan kartu - tanpa label dan melebar penuh. */
+  .izin__table td.izin__no-data {
+    display: block;
+    text-align: center;
+    padding: 22px 12px;
+  }
+
+  .izin__table td.izin__no-data::before {
+    content: none;
+  }
+
+  .izin__table tbody tr:hover td {
+    background: none;
+  }
+
+  .izin__col-jam {
+    white-space: normal;
+  }
+
+  .izin__row-actions {
+    justify-content: flex-end;
+  }
+
+  /* Sasaran sentuh tombol aksi baris. */
+  .izin__row-btn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
 @media (max-width: 640px) {
+  .izin__page-title {
+    font-size: 18px;
+  }
+
   .izin__card {
-    padding: 16px;
+    padding: 14px;
+    border-radius: 0 0 12px 12px;
+  }
+
+  .izin__actionbar {
+    padding: 10px;
+  }
+
+  /* Tab bisa lebih banyak dari lebar layar - digulir mendatar, bukan menumpuk
+     (menumpuk membuat bingkai tab kehilangan bentuknya). */
+  .izin__tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .izin__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .izin__tab {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+  .izin__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 12px;
   }
 
   .izin__field {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  /* Modal: hampir layar penuh, dan tinggi memakai dvh supaya tombol Simpan di
+     dasar modal tidak tertutup bilah URL. */
+  .izin__modal-backdrop {
+    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
+    align-items: flex-end;
+  }
+
+  .izin__modal {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 14px;
+  }
+
+  .izin__modal-header {
+    padding: 14px 16px;
+  }
+
+  .izin__modal-header h3 {
+    font-size: 15.5px;
+  }
+
+  .izin__modal-body {
+    padding: 16px;
+  }
+
+  .izin__modal-footer {
+    /* Tombol kirim selebar modal - lebih mudah dijangkau jempol. */
+    padding-top: 4px;
+  }
+
+  .izin__submit {
+    width: 100%;
+    padding: 13px 20px;
+  }
+
+  .izin__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .izin__pagination {
+    justify-content: space-between;
+  }
+
+  .izin__pagination button {
+    padding: 9px 16px;
   }
 }

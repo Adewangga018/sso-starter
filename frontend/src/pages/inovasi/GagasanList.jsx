@@ -97,7 +97,9 @@ export default function GagasanList() {
         </div>
       </div>
 
-      <div className="inv__table-wrap">
+      {/* --cards: di ponsel (<=720px) tiap baris berubah jadi kartu bertumpuk,
+          judulnya diambil dari data-label tiap <td> - lihat inovasi.css. */}
+      <div className="inv__table-wrap inv__table-wrap--cards">
         <table className="inv__table">
           <thead>
             <tr>
@@ -109,14 +111,14 @@ export default function GagasanList() {
             {filtered.length === 0 && <tr><td className="inv__no-data" colSpan={8}>Belum ada gagasan.</td></tr>}
             {filtered.map((r) => (
               <tr key={r.id}>
-                <td><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
-                <td>{r.noRegistrasi ?? '-'}</td>
-                <td style={{ maxWidth: 260 }}>{r.judul}</td>
-                <td style={{ textAlign: 'center' }}>{r.metodologi ?? '-'}</td>
-                <td>{r.namaDepartemenAsal ?? '-'}</td>
-                <td>{r.namaDepartemenTujuan ?? <span style={{ color: '#9aa79d' }}>(sama)</span>}</td>
-                <td>{r.peranSaya}</td>
-                <td>
+                <td data-label="Status"><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
+                <td data-label="No. Registrasi">{r.noRegistrasi ?? '-'}</td>
+                <td data-label="Judul" className="inv__cell--wide">{r.judul}</td>
+                <td data-label="Metodologi" style={{ textAlign: 'center' }}>{r.metodologi ?? '-'}</td>
+                <td data-label="Dep. Asal">{r.namaDepartemenAsal ?? '-'}</td>
+                <td data-label="Dep. Tujuan">{r.namaDepartemenTujuan ?? <span style={{ color: '#9aa79d' }}>(sama)</span>}</td>
+                <td data-label="Peran">{r.peranSaya}</td>
+                <td data-label="Aksi">
                   <div className="inv__row-actions" style={{ justifyContent: 'flex-end' }}>
                     {r.idGugus
                       ? <button type="button" className="inv__btn inv__btn--soft" style={{ padding: '5px 10px' }} onClick={() => navigate(`/my-innovation/daftar/${r.idGugus}`)}>Buka Risalah</button>
@@ -165,7 +167,7 @@ function CreateModal({ onClose, onDone }) {
 
   return (
     <Backdrop onClose={onClose}>
-      <div style={modalStyle(560, true)}>
+      <div className="inv__sheet--mid" style={modalStyle(560)}>
         <ModalHead title="Sumbang Gagasan Baru" onClose={onClose} />
         <form onSubmit={submit} style={{ overflowY: 'auto' }}>
           <label className="inv__field" style={{ marginBottom: 12 }}>
@@ -273,7 +275,7 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
 
   return (
     <Backdrop onClose={onClose}>
-      <div style={modalStyle(640, true)}>
+      <div className="inv__sheet--mid" style={modalStyle(640)}>
         <ModalHead title="Detail Gagasan" onClose={onClose} />
         {!g ? <p className="inv__subtitle">Memuat...</p> : (
           <div style={{ overflowY: 'auto' }}>
@@ -375,8 +377,10 @@ function Backdrop({ children, onClose }) {
     </div>
   )
 }
-function modalStyle(w, tall) {
-  return { background: '#fff', borderRadius: 14, width: `min(${w}px, 94vw)`, maxHeight: tall ? '88vh' : undefined, display: 'flex', flexDirection: 'column', padding: 20 }
+// Tinggi maksimum dipegang kelas .inv__sheet--mid (bukan inline) supaya bisa
+// memakai dvh + cadangan vh - lihat inovasi.css.
+function modalStyle(w) {
+  return { background: '#fff', borderRadius: 14, width: `min(${w}px, 94vw)`, display: 'flex', flexDirection: 'column', padding: 20 }
 }
 function ModalHead({ title, onClose }) {
   return (

@@ -343,23 +343,26 @@ export default function SplPage() {
                   </td>
                 </tr>
               )}
+              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
+                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
+                  di ponsel - di lebar itu <thead> disembunyikan. */}
               {pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="spl__col-status">
+                  <td className="spl__col-status" data-label="Status">
                     <span className={`spl__status${row.status === STATUS_DIBUAT ? '' : ' spl__status--done'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="spl__col-kode">{row.kodeSpl}</td>
-                  <td className="spl__col-ket">{row.keterangan}</td>
-                  <td className="spl__col-jam">{formatDateTime(row.jamMulai)}</td>
-                  <td className="spl__col-jam">{formatDateTime(row.jamSelesai)}</td>
-                  <td className="spl__col-jenis">
+                  <td className="spl__col-kode" data-label="Kode SPL">{row.kodeSpl}</td>
+                  <td className="spl__col-ket" data-label="Keterangan">{row.keterangan}</td>
+                  <td className="spl__col-jam" data-label="Jam Mulai">{formatDateTime(row.jamMulai)}</td>
+                  <td className="spl__col-jam" data-label="Jam Selesai">{formatDateTime(row.jamSelesai)}</td>
+                  <td className="spl__col-jenis" data-label="Jenis">
                     <div>{row.jenisSpl}</div>
                     <div className="spl__source">{row.source}</div>
                   </td>
                   {isDibuatTab && (
-                    <td className="spl__col-aksi">
+                    <td className="spl__col-aksi" data-label="Aksi">
                       <div className="spl__row-actions">
                         <button type="button" className="spl__row-btn spl__row-btn--edit" onClick={() => openEdit(row)} title="Ubah">
                           <Pencil size={15} />

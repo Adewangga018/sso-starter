@@ -248,6 +248,12 @@
   color: var(--gcs-text-muted);
 }
 
+/* Popup notifikasi & menu tidak boleh melewati tepi layar. Ditulis di luar
+   media query karena batas ini juga berlaku di layar sempit mana pun. */
+.topbar__popup {
+  max-width: calc(100vw - 24px);
+}
+
 @media (max-width: 900px) {
   .topbar__menu-btn {
     display: flex;
@@ -256,7 +262,9 @@
 
 @media (max-width: 640px) {
   .topbar {
-    padding: 14px 16px;
+    /* Safe area: di ponsel bernotch, orientasi mendatar memotong sisi kiri. */
+    padding: 12px calc(14px + var(--safe-r)) 12px calc(14px + var(--safe-l));
+    gap: 8px;
   }
 
   .topbar__user-text {
@@ -268,6 +276,43 @@
   }
 
   .topbar__actions {
-    gap: 10px;
+    gap: 8px;
+  }
+
+  /* Pranala Panel Juri / Panel Admin menyusut jadi pil ikon. */
+  .topbar__admin-link-text {
+    display: none;
+  }
+
+  .topbar__admin-link {
+    padding: 7px 9px;
+  }
+
+  .topbar__title {
+    font-size: 16px;
+  }
+
+  .topbar__title-logo {
+    height: 26px;
+    max-width: 130px;
+  }
+
+  .topbar__logo {
+    height: 30px;
+  }
+
+  .topbar__bell {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar__title {
+    font-size: 15px;
+  }
+
+  .topbar__title-logo {
+    max-width: 104px;
   }
 }

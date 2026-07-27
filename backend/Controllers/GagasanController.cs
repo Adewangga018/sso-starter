@@ -18,6 +18,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("inovasi/gagasan")]
+[ModuleGate("my-innovation")]
 public class GagasanController : ControllerBase
 {
     private const string RoleVerifikator = "Verifikator";        // Manager bagian

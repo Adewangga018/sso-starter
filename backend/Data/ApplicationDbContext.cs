@@ -20,6 +20,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
     public DbSet<Tugas> Tugas => Set<Tugas>();
     // My Office (schema office) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Surat> Surat => Set<Surat>();
@@ -82,6 +83,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Lat).HasPrecision(10, 7);
             e.Property(x => x.Lng).HasPrecision(11, 7);
             e.HasIndex(x => x.Aktif);
+        });
+
+        // Akses modul portal (lihat ModuleAccess.cs). Hanya berisi modul yang pernah diubah
+        // Admin IT; sisanya memakai bawaan ModuleCatalog. Dibaca ModuleAccessService.
+        builder.Entity<ModuleAccess>(e =>
+        {
+            e.ToTable("module_access");
+            e.HasKey(x => x.ModuleKey);
+            e.Property(x => x.ModuleKey).HasMaxLength(50);
+            e.Property(x => x.Access).HasMaxLength(20).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
         });
 
         // Tugas My Team (myteam.tugas). Tabel dikelola di luar EF (raw SQL, seperti skema

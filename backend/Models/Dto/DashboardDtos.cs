@@ -1,6 +1,9 @@
 namespace SsoBackend.Models.Dto;
 
-public record ModuleTileDto(string Key, string Label, string Subtitle, string Icon, bool Enabled);
+// Access = "semua" | "admin" (lihat ModuleAccessLevels). Kartu modul yang dibatasi ke Admin IT
+// hanya dikirim ke akun Admin - lihat ModuleAccessService.GetTilesForAsync - dan diberi badge
+// "Khusus Admin" di dashboard supaya jelas kenapa pengguna lain tidak melihatnya.
+public record ModuleTileDto(string Key, string Label, string Subtitle, string Icon, bool Enabled, string Access = "semua");
 
 // Jabatan dipakai sebagai baris kecil di bawah nama pada bilah atas (mis. "INTERN").
 // ProfileComplete = false berarti baris dbo.MST_PEGAWAI akun ini belum ada, ATAU sudah ada
