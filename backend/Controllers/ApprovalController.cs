@@ -34,6 +34,19 @@ public class ApprovalController : ControllerBase
         return Ok(await _approval.InboxAsync(nik));
     }
 
+    [HttpGet("{id:long}/detail")]
+    public async Task<ActionResult<ApprovalDetailDto>> Detail(long id)
+    {
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
+        var nik = pegawai?.ID_KARYAWAN ?? user?.Nik;
+        if (string.IsNullOrWhiteSpace(nik))
+        {
+            return Unauthorized();
+        }
+        var detail = await _approval.DetailAsync(id, nik);
+        return detail is null ? NotFound(new { message = "Detail tidak ditemukan atau bukan wewenang Anda." }) : Ok(detail);
+    }
+
     [HttpPost("{id:long}/putusan")]
     public async Task<IActionResult> Putusan(long id, [FromBody] PutusanApprovalRequest req)
     {

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
+  Download,
   Eye,
   FileUp,
   Link2,
@@ -22,6 +23,7 @@ import JadwalPdca from './JadwalPdca'
 import { jenisLabel, statusClass } from './statusClass'
 import { anggotaKeSlot, bagian, faktorLabel, judulBagianJudul, periodeSebelum, tahapanJadwal, LIMA_R_STEP } from './inovasiTemplate'
 import { renderRisalahHtml } from '../../lib/risalahDoc'
+import { unduhRisalahPdf } from '../../lib/risalahPdf'
 import './inovasi.css'
 
 const ASPEK = [
@@ -843,6 +845,17 @@ export default function InovasiForm() {
           </div>
           <div className="inv__form-row">
             <label className="inv__field"><span>Kompartemen</span><input value={data.namaKompartemen ?? '-'} disabled /></label>
+            {/* Departemen sasaran perbaikan, dibawa dari gagasan asal. Untuk GIO,
+                departemen inilah yang menentukan Direktur pengesah (Komersil /
+                Keuangan) pada Lembar Pengesahan PLAN & Akhir. */}
+            <label className="inv__field"><span>Departemen Tujuan</span>
+              <input
+                value={data.namaDepartemenTujuan ?? data.namaDepartemen ?? '-'}
+                disabled
+                title={data.jenis === 'GIO'
+                  ? 'Ditetapkan saat Sumbang Gagasan; menentukan Direktur pengesah GIO.'
+                  : 'Ditetapkan saat Sumbang Gagasan.'}
+              /></label>
           </div>
         </Section>
 
@@ -1459,6 +1472,15 @@ function periodeSekarang() {
 function RisalahDetailModal({ data, onClose }) {
   const adaFishbone = (data.fishbone ?? []).some((f) => f.penyebab || f.akarDominan)
   const { before, after } = renderRisalahHtml(data, { mode: 'full' })
+  // Diagram fishbone digambar React; SVG-nya disalin dari DOM ini agar ikut
+  // tercetak di PDF pada posisi yang sama.
+  const fishRef = useRef(null)
+
+  function unduhPdf() {
+    const ok = unduhRisalahPdf(data, fishRef.current?.innerHTML ?? '')
+    if (!ok) alert('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini lalu coba lagi.')
+  }
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.5)', display: 'grid', placeItems: 'center', zIndex: 70, padding: 16 }}>
       {/* Tinggi maksimum lewat kelas (inv__sheet--tall), bukan inline: butuh
@@ -1466,12 +1488,17 @@ function RisalahDetailModal({ data, onClose }) {
       <div className="inv__sheet--tall" onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(920px, 96vw)', display: 'flex', flexDirection: 'column', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 17 }}>Detail Risalah</h3>
-          <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" className="inv__btn inv__btn--soft" onClick={unduhPdf} title="Simpan seluruh isi risalah sebagai PDF">
+              <Download size={15} /> Unduh PDF
+            </button>
+            <button type="button" className="inv__icon-btn" onClick={onClose}><X size={16} /></button>
+          </div>
         </div>
         <div style={{ overflowY: 'auto' }}>
           <div dangerouslySetInnerHTML={{ __html: before }} />
           {adaFishbone && after && (
-            <div style={{ margin: '2px 0 12px' }}><FishboneDiagram fishbone={data.fishbone} masalah={data.masalahUtama || data.judul} /></div>
+            <div ref={fishRef} style={{ margin: '2px 0 12px' }}><FishboneDiagram fishbone={data.fishbone} masalah={data.masalahUtama || data.judul} /></div>
           )}
           {after && <div dangerouslySetInnerHTML={{ __html: after }} />}
         </div>

@@ -98,3 +98,41 @@
 .cuti__st--off { background: #f1f2f1; color: #8a8f8b; }
 .cuti__link-del { border: none; background: none; color: var(--gcs-text-muted); cursor: pointer; padding: 3px; border-radius: 6px; }
 .cuti__link-del:hover { color: #c0392b; background: rgba(192,57,43,0.08); }
+
+/* ===========================================================================
+   Responsif (pelengkap media query 620px di atas)
+   =========================================================================== */
+@media (max-width: 640px) {
+  .cuti { gap: 14px; }
+  .cuti__title { font-size: 1.2rem; }
+
+  /* Kartu saldo: ikon + angka + tombol tidak muat sebaris di 360px. */
+  .cuti__saldo { flex-wrap: wrap; padding: 16px; gap: 14px; }
+  .cuti__saldo-icon { width: 44px; height: 44px; }
+  .cuti__saldo-value { font-size: 1.75rem; }
+  .cuti__saldo .cuti__btn { width: 100%; justify-content: center; }
+
+  .cuti__card { padding: 12px; }
+
+  .cuti__table { min-width: 520px; }
+  .cuti__table th,
+  .cuti__table td { padding: 9px 10px; }
+
+  .cuti__bd b { font-size: 1.25rem; }
+
+  /* Baris kaki formulir: ringkasan hari lalu tombol selebar kartu. */
+  .cuti__form-foot { flex-direction: column; align-items: stretch; }
+  .cuti__form-actions { width: 100%; }
+  .cuti__form-actions .cuti__btn { flex: 1; justify-content: center; padding: 12px 15px; }
+
+  /* Daftar pengajuan: judul di atas, aksi di bawah selebar kartu. */
+  .cuti__item { align-items: stretch; }
+  .cuti__item-actions { width: 100%; }
+  .cuti__item-actions .cuti__btn { flex: 1; justify-content: center; }
+
+  .cuti__meta { gap: 10px 18px; }
+}
+
+@media (max-width: 420px) {
+  .cuti__breakdown { grid-template-columns: minmax(0, 1fr); }
+}

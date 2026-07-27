@@ -13,6 +13,9 @@
 /* --- Selector (pilih SS / GIO) --- */
 .invsel {
   min-height: 100vh;
+  /* dvh: tinggi layar yang benar-benar terlihat di browser ponsel (100vh
+     menghitung area di bawah bilah URL). */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #f4f7f4;
@@ -1002,8 +1005,8 @@
      jadi 40px. Tabel lalu melebihi layar dan menggulir di pembungkusnya
      (RepeatTable membungkus tabelnya dengan overflow-x: auto). Tabel
      berkolom sedikit tetap muat tanpa gulir. */
-  .inv__subtable td,
-  .inv__subtable th {
+  .inv__subtable:not(.inv__jadwal) td,
+  .inv__subtable:not(.inv__jadwal) th {
     min-width: 116px;
   }
 
@@ -1015,8 +1018,10 @@
     min-width: 0;
   }
 
-  /* Sel jadwal (P.3/P.4/C) sengaja sempit - satu sel = satu bulan. */
-  .inv__subtable td.inv__jadwal-cell {
+  /* Tabel jadwal (P.3/P.4/C) dikecualikan dari aturan di atas: lebar tiap
+     kolom bulan sudah diatur sendiri di JadwalPdca.jsx (satu sel = satu bulan,
+     ~42px), dan 116px per kolom akan membuatnya melebar berkali-kali lipat. */
+  .inv__jadwal-cell {
     min-width: 40px;
   }
 
@@ -1263,5 +1268,21 @@
 @media (max-width: 720px) {
   .inv__table-wrap--cards td.inv__cell--wide {
     max-width: none;
+  }
+}
+
+/* Halaman pemilih modul: tepi dirapatkan di ponsel (padding 48px/24px terlalu
+   boros saat lebar layar hanya 360px). */
+@media (max-width: 640px) {
+  .invsel__main {
+    padding: 24px 14px 40px;
+  }
+
+  .invsel__head {
+    margin-bottom: 22px;
+  }
+
+  .invsel__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

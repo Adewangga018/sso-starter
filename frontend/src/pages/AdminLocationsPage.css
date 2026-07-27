@@ -231,3 +231,60 @@
     gap: 6px;
   }
 }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-locations {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-locations__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .admin-locations__table-wrap. */
+  .admin-locations__table th,
+  .admin-locations__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Toolbar: pencarian di atas, tombol tambah selebar layar di bawahnya. */
+  .admin-locations__toolbar {
+    flex-wrap: wrap;
+  }
+
+  .admin-locations__add {
+    width: 100%;
+  }
+
+  /* Modal koordinat: hampir layar penuh, tinggi memakai dvh. */
+  .admin-locations__modal-backdrop {
+    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
+    align-items: flex-end;
+  }
+
+  .admin-locations__modal {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+
+  .admin-locations__modal-header {
+    padding: 14px 16px;
+  }
+
+  .admin-locations__modal-body {
+    padding: 16px;
+  }
+
+  .admin-locations__submit {
+    width: 100%;
+    padding: 13px 20px;
+  }
+}

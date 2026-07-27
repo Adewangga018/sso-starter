@@ -108,7 +108,12 @@ public record GugusDetailDto(
     IReadOnlyList<CheckBiayaDto> CheckBiaya,
     IReadOnlyList<CheckRisikoDto> CheckRisiko,
     IReadOnlyList<ActionStandarisasiDto> ActionStandarisasi,
-    IReadOnlyList<ActionTindakLanjutDto> ActionTindakLanjut);
+    IReadOnlyList<ActionTindakLanjutDto> ActionTindakLanjut,
+    // Departemen sasaran perbaikan, diambil dari gagasan asalnya (lihat
+    // InovasiController.DepartemenTujuanAsync). Tampil di A. Identitas Gugus dan
+    // menentukan Direktur pengesah pada GIO.
+    int? IdDepartemenTujuan = null,
+    string? NamaDepartemenTujuan = null);
 
 // --- Payload simpan tahap PLAN (identitas + P.1-P.8) ---
 public record SavePlanRequest(

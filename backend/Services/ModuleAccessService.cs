@@ -1,133 +1,60 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using SsoBackend.Data;
-using SsoBackend.Models;
-using SsoBackend.Models.Dto;
 
 namespace SsoBackend.Services;
 
-// Sumber kebenaran "modul mana boleh dibuka siapa".
+// Hak "Admin Modul" berbasis grading (BUKAN role Identity/Admin IT). Admin Modul SDM
+// = jajaran Departemen SDM level Kepala Bagian ke atas + GM yang membawahi SDM:
+//   - jabatan di subtree Departemen SDM dengan band urutan <= 3 (Kabag, Manager SDM)
+//   - GM Kompartemen "SDM, Kepatuhan dan Pengembangan" (SKP), band urutan <= 1
+// Departemen Kepatuhan & Pengembangan (sibling) TIDAK termasuk.
+// Mereka berhak konfigurasi lanjutan modul SDM (mis. tarif gaji JG x PG).
 //
-// Katalog modulnya statis (ModuleCatalog); yang tersimpan di dbo.module_access hanyalah
-// override per modul (aktif + tingkat akses). Dibaca pada SETIAP request modul lewat
-// ModuleGateAttribute, jadi hasilnya di-cache di memori dan hanya dibuang saat Admin IT
-// menyimpan perubahan. Aman karena backend berjalan sebagai satu instance IIS; TTL 5 menit
-// dipasang sebagai jaring pengaman kalau baris tabelnya pernah diubah langsung dari SQL.
+// Catatan: JANGAN dikacaukan dengan ModuleSettingsService - itu mengatur modul portal
+// mana yang aktif & boleh dibuka siapa (Panel Admin IT > Akses Modul).
 public class ModuleAccessService
 {
-    private const string CacheKey = "modules:overrides";
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-
     private readonly ApplicationDbContext _db;
-    private readonly IMemoryCache _cache;
 
-    public ModuleAccessService(ApplicationDbContext db, IMemoryCache cache)
+    public ModuleAccessService(ApplicationDbContext db) => _db = db;
+
+    public async Task<bool> IsSdmAdminAsync(string? nik)
     {
-        _db = db;
-        _cache = cache;
-    }
+        if (string.IsNullOrWhiteSpace(nik)) return false;
 
-    // State efektif satu modul. Found = false kalau kuncinya tidak ada di katalog.
-    public record ModuleState(bool Found, bool Enabled, string Access, string Label);
-
-    private async Task<IReadOnlyDictionary<string, ModuleAccess>> OverridesAsync()
-    {
-        if (_cache.TryGetValue(CacheKey, out IReadOnlyDictionary<string, ModuleAccess>? cached) && cached is not null)
+        var conn = _db.Database.GetDbConnection();
+        var mustClose = conn.State != ConnectionState.Open;
+        if (mustClose) await conn.OpenAsync();
+        try
         {
-            return cached;
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                ;WITH sdm AS (
+                    SELECT id_unit FROM grading.unit_organisasi WHERE nama = N'Departemen SDM'
+                    UNION ALL
+                    SELECT c.id_unit FROM grading.unit_organisasi c
+                    JOIN sdm ON c.id_unit_induk = sdm.id_unit
+                )
+                SELECT TOP 1 CASE WHEN (
+                        (b.urutan <= 3 AND j.id_unit IN (SELECT id_unit FROM sdm))
+                     OR (b.urutan <= 1 AND u.nama LIKE N'Kompartemen SDM%')
+                    ) THEN 1 ELSE 0 END
+                FROM grading.penempatan p
+                JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
+                JOIN grading.band    b ON b.id_band    = j.id_band
+                LEFT JOIN grading.unit_organisasi u ON u.id_unit = j.id_unit
+                WHERE p.id_karyawan = @nik AND p.status = 'Aktif'";
+            var pr = cmd.CreateParameter();
+            pr.ParameterName = "@nik";
+            pr.Value = nik;
+            cmd.Parameters.Add(pr);
+            var val = await cmd.ExecuteScalarAsync();
+            return val is not null && val is not DBNull && Convert.ToInt32(val) == 1;
         }
-
-        var rows = await _db.ModuleAccess.AsNoTracking().ToListAsync();
-        var map = rows.ToDictionary(r => r.ModuleKey, StringComparer.OrdinalIgnoreCase);
-        _cache.Set(CacheKey, (IReadOnlyDictionary<string, ModuleAccess>)map, CacheTtl);
-        return map;
-    }
-
-    private void Invalidate() => _cache.Remove(CacheKey);
-
-    public async Task<ModuleState> GetStateAsync(string moduleKey)
-    {
-        var def = ModuleCatalog.Find(moduleKey);
-        if (def is null)
+        finally
         {
-            return new ModuleState(false, false, ModuleAccessLevels.Semua, moduleKey);
+            if (mustClose) await conn.CloseAsync();
         }
-
-        var overrides = await OverridesAsync();
-        if (overrides.TryGetValue(def.Key, out var row))
-        {
-            return new ModuleState(true, row.Enabled, row.Access, def.Label);
-        }
-
-        return new ModuleState(true, def.DefaultEnabled, ModuleAccessLevels.Semua, def.Label);
-    }
-
-    // Boleh dibuka? Admin IT selalu boleh - termasuk saat modulnya dimatikan, supaya bisa
-    // menguji dulu sebelum dibuka untuk semua orang.
-    public async Task<bool> IsAllowedAsync(string moduleKey, bool isAdmin)
-    {
-        if (isAdmin)
-        {
-            return true;
-        }
-
-        var state = await GetStateAsync(moduleKey);
-        return state.Found && state.Enabled && state.Access == ModuleAccessLevels.Semua;
-    }
-
-    // Daftar lengkap untuk halaman Akses Modul (Admin IT).
-    public async Task<IReadOnlyList<ModuleSettingDto>> GetSettingsAsync()
-    {
-        var overrides = await OverridesAsync();
-        return ModuleCatalog.All.Select(def =>
-        {
-            overrides.TryGetValue(def.Key, out var row);
-            return new ModuleSettingDto(
-                def.Key,
-                def.Label,
-                def.Subtitle,
-                def.Icon,
-                row?.Enabled ?? def.DefaultEnabled,
-                row?.Access ?? ModuleAccessLevels.Semua,
-                row?.UpdatedAt,
-                row?.UpdatedBy);
-        }).ToList();
-    }
-
-    // Kartu modul untuk dashboard. Modul "khusus Admin" tidak dikirim sama sekali ke akun
-    // non-Admin - bukan sekadar disembunyikan CSS.
-    public async Task<IReadOnlyList<ModuleTileDto>> GetTilesForAsync(bool isAdmin)
-    {
-        var settings = await GetSettingsAsync();
-        return settings
-            .Where(s => isAdmin || s.Access == ModuleAccessLevels.Semua)
-            .Select(s => new ModuleTileDto(s.Key, s.Label, s.Subtitle, s.Icon, s.Enabled, s.Access))
-            .ToList();
-    }
-
-    public async Task<ModuleSettingDto?> SetAsync(string moduleKey, bool enabled, string access, string? by)
-    {
-        var def = ModuleCatalog.Find(moduleKey);
-        if (def is null)
-        {
-            return null;
-        }
-
-        var row = await _db.ModuleAccess.FirstOrDefaultAsync(m => m.ModuleKey == def.Key);
-        if (row is null)
-        {
-            row = new ModuleAccess { ModuleKey = def.Key };
-            _db.ModuleAccess.Add(row);
-        }
-
-        row.Enabled = enabled;
-        row.Access = access;
-        row.UpdatedAt = DateTime.UtcNow;
-        row.UpdatedBy = by;
-
-        await _db.SaveChangesAsync();
-        Invalidate();
-
-        return new ModuleSettingDto(def.Key, def.Label, def.Subtitle, def.Icon, row.Enabled, row.Access, row.UpdatedAt, row.UpdatedBy);
     }
 }

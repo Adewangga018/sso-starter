@@ -192,6 +192,10 @@
   font-size: 11.5px;
   color: var(--gcs-text-muted);
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .topbar__popup-item {
@@ -242,6 +246,27 @@
 .topbar__user-role {
   font-size: 11.5px;
   color: var(--gcs-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Tingkatan (level berbasis band) - chip kecil di samping jabatan. */
+.topbar__tingkatan {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(244, 174, 70, 0.18);
+  color: var(--gcs-gold-700);
+  white-space: nowrap;
+}
+
+.topbar--dark .topbar__tingkatan {
+  background: rgba(244, 174, 70, 0.22);
+  color: var(--gcs-gold-500);
 }
 
 .topbar__chevron {

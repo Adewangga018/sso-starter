@@ -10,6 +10,7 @@ public class ApprovalPengajuan
     public string IdKaryawan { get; set; } = string.Empty;
     public string? Nama { get; set; }
     public string? IdManager { get; set; }
+    public string? IdAtasan { get; set; }        // NIK atasan langsung (tinjauan, tanpa hak acc)
     public string? Ringkasan { get; set; }
     public string Status { get; set; } = "Menunggu";       // Menunggu|Disetujui|Ditolak|Batal
     public string? Komentar { get; set; }

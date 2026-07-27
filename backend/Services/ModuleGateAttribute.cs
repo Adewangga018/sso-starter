@@ -23,9 +23,9 @@ public sealed class ModuleGateFilter : IAsyncAuthorizationFilter
     private const string AdminRole = "Admin";
 
     private readonly string _moduleKey;
-    private readonly ModuleAccessService _modules;
+    private readonly ModuleSettingsService _modules;
 
-    public ModuleGateFilter(string moduleKey, ModuleAccessService modules)
+    public ModuleGateFilter(string moduleKey, ModuleSettingsService modules)
     {
         _moduleKey = moduleKey;
         _modules = modules;

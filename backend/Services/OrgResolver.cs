@@ -177,6 +177,50 @@ public class OrgResolver
         return kepala is null ? null : (kepala.IdKaryawan, kepala.Nama);
     }
 
+    // Direktorat yang menaungi sebuah unit, ditelusuri naik lewat id_unit_induk
+    // (Departemen -> Kompartemen -> Direktorat). null bila unitnya memang tidak
+    // bernaung di direktorat mana pun (mis. Departemen Audit Internal).
+    public async Task<UnitRingkas?> ResolveDirektoratAsync(int? idUnit)
+    {
+        if (idUnit is null) return null;
+        var units = await LoadUnitsAsync();
+
+        var cursor = units.GetValueOrDefault(idUnit.Value);
+        var guard = 0;
+        while (cursor is not null && guard++ < 10)
+        {
+            if (cursor.Tipe == "Direktorat") return new UnitRingkas(cursor.IdUnit, cursor.Nama, cursor.Tipe);
+            cursor = cursor.IdUnitInduk is { } indukId ? units.GetValueOrDefault(indukId) : null;
+        }
+        return null;
+    }
+
+    // Direktur yang membawahi sebuah unit - dipakai sebagai pengesah tambahan pada
+    // Lembar Pengesahan GIO, mengikuti Departemen Tujuan gugus.
+    //
+    // Jabatan Direktur di grading.jabatan TIDAK punya id_unit (kolomnya NULL), jadi
+    // tidak bisa dicari lewat ResolveKepalaUnitAsync. Pencocokannya lewat nama:
+    // "Direktorat Keuangan" -> jabatan "Direktur Keuangan". Perbandingan nama persis,
+    // supaya "Staf Khusus Direktur Keuangan" tidak ikut terambil.
+    public async Task<(string Peran, string? Nik, string? Nama)?> ResolveDirekturAsync(int? idUnit)
+    {
+        var direktorat = await ResolveDirektoratAsync(idUnit);
+        if (direktorat is null) return null;
+
+        var peran = direktorat.Nama.Replace("Direktorat", "Direktur", StringComparison.OrdinalIgnoreCase).Trim();
+
+        var orang = await (
+            from j in _db.Jabatan
+            join p in _db.Penempatan on j.IdJabatan equals p.IdJabatan
+            where j.NamaJabatan == peran && p.Status == "Aktif"
+            orderby j.IdJabatan
+            select new { p.IdKaryawan, p.Nama }).FirstOrDefaultAsync();
+
+        // Kursinya bisa saja sedang kosong; barisnya tetap dibuat supaya lembar
+        // pengesahan menunjukkan tahap yang wajib dilalui.
+        return (peran, orang?.IdKaryawan, orang?.Nama);
+    }
+
     // Daftar unit yang bisa dipilih sebagai Departemen Tujuan gagasan.
     public async Task<IReadOnlyList<UnitRingkas>> ListDepartemenAsync()
     {

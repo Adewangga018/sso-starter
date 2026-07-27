@@ -113,12 +113,21 @@ function paragraph(v) {
   return `<div class="para">${esc(v)}</div>`
 }
 
-// Blok tanda tangan pengesahan (Ketua, Fasilitator, Pembina Dep., Pembina Komp.)
-function signBlock(pengesahan, tahap) {
-  const rows = arr(pengesahan).filter((p) => (p.tahap ?? '').toUpperCase().includes(tahap))
-  const src = rows.length ? rows : [{ peran: 'Ketua Gugus' }, { peran: 'Fasilitator' }, { peran: 'Pembina Tk. Departemen' }, { peran: 'Pembina Tk. Kompartemen' }]
+// Blok tanda tangan pengesahan (Ketua, Fasilitator, Pembina Dep., Pembina Komp.,
+// dan untuk GIO ditambah Direktur yang membawahi Departemen Tujuan). Sebelum
+// risalah diajukan belum ada baris pengesahan, jadi dipakai daftar peran bawaan
+// sebagai kerangka - untuk GIO, nama direkturnya baru diketahui saat diajukan.
+function signBlock(pengesahan, tahap, jenis) {
+  // Backend menyimpan tahap "PLAN" & "FINAL"; label di dokumen memakai "Akhir".
+  // Keduanya diterima supaya blok tanda tangan akhir benar-benar terisi.
+  const cocok = tahap === 'PLAN' ? ['PLAN'] : ['FINAL', 'AKHIR']
+  const rows = arr(pengesahan).filter((p) => cocok.includes((p.tahap ?? '').toUpperCase()))
+  const bawaan = [{ peran: 'Ketua Gugus' }, { peran: 'Fasilitator' }, { peran: 'Pembina Tk. Departemen' }, { peran: 'Pembina Tk. Kompartemen' }]
+  if (jenis === 'GIO') bawaan.push({ peran: 'Direktur (sesuai Departemen Tujuan)' })
+  const src = rows.length ? rows : bawaan
+  const lebar = (100 / src.length).toFixed(2)
   const cells = src.map((p) => `
-    <td style="width:25%;vertical-align:top">
+    <td style="width:${lebar}%;vertical-align:top">
       <div style="font-weight:bold">${esc(p.peran)}</div>
       <div style="font-size:9pt;color:#555">Tgl: ${p.tgl ? esc(new Date(p.tgl).toLocaleDateString('id-ID')) : '-'}</div>
       <div style="font-size:9pt;color:#555">Status: ${esc(p.status ?? '-')}</div>
@@ -204,7 +213,7 @@ function buildBody5R(d) {
   if (txt(d.dampakPositifLainnya)) { parts.push(sectionTitle('Dampak Positif Lainnya')); parts.push(paragraph(d.dampakPositifLainnya)) }
 
   parts.push(sectionTitle('Lembar Pengesahan'))
-  parts.push(signBlock(d.pengesahan, 'PLAN'))
+  parts.push(signBlock(d.pengesahan, 'PLAN', d.jenis))
   return parts.join('\n')
 }
 
@@ -222,6 +231,9 @@ function buildBody(d, mode) {
       ['Nama Gugus', esc(d.namaGugus)],
       ['Metodologi', esc(jenisLabel(d.jenis))],
       ['Unit / Departemen', esc(d.namaDepartemen)],
+      // Departemen sasaran perbaikan (dari gagasan asal). Untuk GIO, departemen
+      // inilah yang menentukan Direktur pengesah di Lembar Pengesahan.
+      ['Departemen Tujuan', esc(d.namaDepartemenTujuan ?? d.namaDepartemen)],
       ['Bagian / Seksi', esc(d.bagianSeksi)],
       ['Kompartemen', esc(d.namaKompartemen)],
       ['Tema ke-', esc(d.temaKe)],
@@ -316,7 +328,7 @@ function buildBody(d, mode) {
   }
 
   parts.push(sectionTitle('Lembar Pengesahan Tahap PLAN'))
-  parts.push(signBlock(d.pengesahan, 'PLAN'))
+  parts.push(signBlock(d.pengesahan, 'PLAN', d.jenis))
 
   // ---- DO / CHECK / ACTION (hanya bila terisi) ----
   const adaDo = has(d.doPelaksanaan) || has(d.doKendala)
@@ -407,7 +419,7 @@ function buildBody(d, mode) {
 
   if (mode === 'full' && (adaDo || adaCheck || adaAction)) {
     parts.push(sectionTitle('Lembar Pengesahan Akhir (Tahap DO–CHECK–ACTION)'))
-    parts.push(signBlock(d.pengesahan, 'AKHIR'))
+    parts.push(signBlock(d.pengesahan, 'AKHIR', d.jenis))
   }
 
   return parts.join('\n')

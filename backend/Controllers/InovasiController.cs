@@ -191,6 +191,8 @@ public class InovasiController : ControllerBase
 
         var bisaEdit = g.CreatedByNik == nik && (g.Status is "Draft" or "Revisi");
 
+        var (idTujuan, namaTujuan) = await DepartemenTujuanAsync(g);
+
         var pengesahan = g.Pengesahan.OrderBy(p => p.Tahap).ThenBy(p => p.Urutan)
             .Select(p => new PengesahanDto(p.Id, p.Tahap, p.Peran, p.Nik, p.Nama, p.Urutan, p.Status, p.Komentar, p.Tgl,
                 BisaSaya: BisaTandaTangan(g, p, nik)))
@@ -222,7 +224,8 @@ public class InovasiController : ControllerBase
             g.CheckBiaya.OrderBy(x => x.Urutan).Select(x => new CheckBiayaDto(x.Id, x.Komponen, x.Perhitungan, x.Nilai, x.Urutan)).ToList(),
             g.CheckRisiko.OrderBy(x => x.Urutan).Select(x => new CheckRisikoDto(x.Id, x.DampakNegatif, x.Mitigasi, x.Urutan)).ToList(),
             g.ActionStandarisasi.OrderBy(x => x.Urutan).Select(x => new ActionStandarisasiDto(x.Id, x.StandarBaru, x.NoDokumen, x.TglBerlaku, x.Pic, x.Urutan)).ToList(),
-            g.ActionTindakLanjut.OrderBy(x => x.Urutan).Select(x => new ActionTindakLanjutDto(x.Id, x.Rencana, x.TargetWaktu, x.Pic, x.Status, x.Urutan)).ToList()));
+            g.ActionTindakLanjut.OrderBy(x => x.Urutan).Select(x => new ActionTindakLanjutDto(x.Id, x.Rencana, x.TargetWaktu, x.Pic, x.Status, x.Urutan)).ToList(),
+            idTujuan, namaTujuan));
     }
 
     // ------------------------------------------------------------- save PLAN
@@ -322,6 +325,7 @@ public class InovasiController : ControllerBase
         g.Pengesahan.Add(new Pengesahan { Tahap = "PLAN", Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Urutan = 1, Status = "Menunggu" });
         g.Pengesahan.Add(new Pengesahan { Tahap = "PLAN", Peran = "Pembina Tk. Departemen", Nik = pembinaDept?.Nik, Nama = pembinaDept?.Nama, Urutan = 2, Status = "Menunggu" });
         g.Pengesahan.Add(new Pengesahan { Tahap = "PLAN", Peran = "Pembina Tk. Kompartemen", Nik = pembinaKomp?.Nik, Nama = pembinaKomp?.Nama, Urutan = 3, Status = "Menunggu" });
+        await TambahDirekturGioAsync(g, "PLAN");
 
         g.Status = "Diajukan";
         g.PlanDisahkan = false;
@@ -368,11 +372,54 @@ public class InovasiController : ControllerBase
         g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Urutan = 1, Status = "Menunggu" });
         g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Pembina Tk. Departemen", Nik = pembinaDept?.Nik, Nama = pembinaDept?.Nama, Urutan = 2, Status = "Menunggu" });
         g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Pembina Tk. Kompartemen", Nik = pembinaKomp?.Nik, Nama = pembinaKomp?.Nama, Urutan = 3, Status = "Menunggu" });
+        await TambahDirekturGioAsync(g, "FINAL");
 
         g.Status = "Pengesahan Akhir";
         g.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
         return Ok(new { message = "Risalah diajukan ke Lembar Pengesahan Akhir." });
+    }
+
+    // Departemen Tujuan risalah: departemen yang menjadi sasaran perbaikan. Sumber
+    // resminya ada di gagasan asalnya (bisa berbeda dari departemen pengaju bila
+    // gagasannya lintas departemen); bila gagasan tidak menyebut tujuan, tujuannya
+    // adalah departemen asal. Risalah tanpa gagasan (data lama) memakai departemen
+    // gugus itu sendiri.
+    private async Task<(int? Id, string? Nama)> DepartemenTujuanAsync(Gugus g)
+    {
+        if (g.IdGagasan is int gid)
+        {
+            var t = await _db.Gagasan.AsNoTracking()
+                .Where(x => x.Id == gid)
+                .Select(x => new { x.IdDepartemenTujuan, x.NamaDepartemenTujuan, x.IdDepartemenAsal, x.NamaDepartemenAsal })
+                .FirstOrDefaultAsync();
+            if (t is not null)
+                return (t.IdDepartemenTujuan ?? t.IdDepartemenAsal, t.NamaDepartemenTujuan ?? t.NamaDepartemenAsal);
+        }
+        return (g.IdDepartemen, g.NamaDepartemen);
+    }
+
+    // GIO wajib disahkan pula oleh Direktur yang membawahi Departemen Tujuan
+    // (Direktur Komersil atau Direktur Keuangan, mengikuti direktorat induknya).
+    // SS & 5R berhenti di Pembina Tk. Kompartemen. Bila departemen tujuan tidak
+    // bernaung di direktorat mana pun, barisnya dilewati - alur tetap jalan.
+    private async Task TambahDirekturGioAsync(Gugus g, string tahap)
+    {
+        if (!string.Equals(g.Jenis, "GIO", StringComparison.OrdinalIgnoreCase)) return;
+
+        var (idTujuan, _) = await DepartemenTujuanAsync(g);
+        var direktur = await _org.ResolveDirekturAsync(idTujuan);
+        if (direktur is null) return;
+
+        g.Pengesahan.Add(new Pengesahan
+        {
+            Tahap = tahap,
+            Peran = direktur.Value.Peran,
+            Nik = direktur.Value.Nik,
+            Nama = direktur.Value.Nama,
+            Urutan = 4,
+            Status = "Menunggu",
+        });
     }
 
     // ------------------------------------------------------ pengesahan action

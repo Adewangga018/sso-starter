@@ -144,3 +144,31 @@
   transition: transform 0.15s;
 }
 .admin-modules__switch.is-on .admin-modules__switch-knob { transform: translateX(18px); }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-modules {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-modules__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .admin-modules__table-wrap. */
+  .admin-modules__table th,
+  .admin-modules__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Nama modul + ikon: ikon tetap, teksnya boleh membungkus. */
+  .admin-modules__mod {
+    gap: 9px;
+  }
+}

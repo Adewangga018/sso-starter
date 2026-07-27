@@ -99,10 +99,10 @@ export default function AdminModulesPage() {
 
       <div className="admin-modules__note">
         Atur modul mana yang aktif dan siapa yang boleh membukanya. <b>Semua Pengguna</b> = modul
-        tampil di dashboard setiap karyawan; <b>Admin IT Saja</b> = modul disembunyikan dari
-        karyawan dan API-nya menolak akses mereka. Modul yang dinonaktifkan tampil sebagai
-        &ldquo;Coming Soon&rdquo;. Admin IT selalu dapat membuka semua modul, termasuk yang
-        sedang nonaktif, untuk keperluan uji coba.
+        dapat dibuka setiap karyawan; <b>Admin IT Saja</b> = bagi karyawan kartunya tetap tampil
+        di dashboard tetapi terkunci &ldquo;Coming Soon&rdquo;, dan API-nya menolak akses mereka.
+        Modul yang dinonaktifkan juga tampil &ldquo;Coming Soon&rdquo;. Admin IT selalu dapat
+        membuka semua modul, termasuk yang sedang nonaktif, untuk keperluan uji coba.
       </div>
 
       {error && <div className="admin-modules__alert admin-modules__alert--err">{error}</div>}

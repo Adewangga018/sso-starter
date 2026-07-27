@@ -18,12 +18,21 @@ public class DashboardController : ControllerBase
 
     private readonly CurrentUserContext _currentUser;
     private readonly GcsDbContext _db;
-    private readonly ModuleAccessService _modules;
+    private readonly PosisiResolver _posisi;
+    private readonly ModuleAccessService _access;
+    private readonly ModuleSettingsService _modules;
 
-    public DashboardController(CurrentUserContext currentUser, GcsDbContext db, ModuleAccessService modules)
+    public DashboardController(
+        CurrentUserContext currentUser,
+        GcsDbContext db,
+        PosisiResolver posisi,
+        ModuleAccessService access,
+        ModuleSettingsService modules)
     {
         _currentUser = currentUser;
         _db = db;
+        _posisi = posisi;
+        _access = access;
         _modules = modules;
     }
 
@@ -36,24 +45,45 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
-        // Jabatan hanya pelengkap tampilan: kalau pegawainya belum tertaut, dashboard tetap
-        // tampil tanpa baris jabatan - bukan alasan untuk menggagalkan seluruh halaman.
-        string? jabatan = null;
+        // Jabatan & tingkatan hanya pelengkap tampilan: kalau pegawainya belum tertaut,
+        // dashboard tetap tampil tanpa baris jabatan - bukan alasan menggagalkan halaman.
+        //
+        // Sumber jabatan/level: SISTEM GRADING BERBASIS BAND (PosisiResolver), sesuai
+        // dokumen "Data 85 Pegawai Organik". Untuk pegawai yang ADA di grading, jabatan
+        // struktural & tingkatan diambil dari sana (bersih; tidak ada "Lakma"/"Pjs ...").
+        // Untuk yang di luar grading (mis. TKNO), pakai jabatan legacy SDM setelah
+        // dibersihkan dari awalan pejabat sementara / label tanpa makna.
+        string? jabatan = null, tingkatan = null;
+        int? band = null;
         if (pegawai is not null)
         {
-            jabatan = await _db.PegawaiSdm
-                .Where(p => p.Nik == pegawai.ID_KARYAWAN)
-                .Select(p => p.nm_jabatan)
-                .FirstOrDefaultAsync();
+            var posisi = await _posisi.ResolveAsync(pegawai.ID_KARYAWAN);
+            tingkatan = posisi.Tingkatan;
+            band = posisi.Band;
+
+            if (posisi.Jabatan is not null)
+            {
+                jabatan = posisi.Jabatan;
+            }
+            else
+            {
+                var legacy = await _db.PegawaiSdm
+                    .Where(p => p.Nik == pegawai.ID_KARYAWAN)
+                    .Select(p => p.nm_jabatan)
+                    .FirstOrDefaultAsync();
+                jabatan = PosisiResolver.BersihkanJabatanLegacy(legacy);
+            }
         }
 
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
+        var isAdminModulSdm = pegawai is not null && await _access.IsSdmAdminAsync(pegawai.ID_KARYAWAN);
 
-        // Kartu modul mengikuti Panel Admin IT > Akses Modul. Modul "khusus Admin" tidak
-        // dikirim sama sekali ke akun biasa.
+        // Kartu modul mengikuti Panel Admin IT > Akses Modul. Daftarnya selalu lengkap;
+        // modul yang dikunci ke Admin IT dikirim sebagai kartu terkunci ("Coming Soon"),
+        // bukan dihilangkan - lihat ModuleSettingsService.GetTilesForAsync.
         var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
         var modules = await _modules.GetTilesForAsync(isAdmin);
 
-        return Ok(new DashboardSummaryDto(user.Name, jabatan?.Trim(), modules, ProfileComplete: profileComplete));
+        return Ok(new DashboardSummaryDto(user.Name, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm));
     }
 }

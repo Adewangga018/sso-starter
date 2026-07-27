@@ -19,10 +19,10 @@ public class AdminModulesController : ControllerBase
 {
     private const string AdminRole = "Admin";
 
-    private readonly ModuleAccessService _modules;
+    private readonly ModuleSettingsService _modules;
     private readonly IAuditLogger _audit;
 
-    public AdminModulesController(ModuleAccessService modules, IAuditLogger audit)
+    public AdminModulesController(ModuleSettingsService modules, IAuditLogger audit)
     {
         _modules = modules;
         _audit = audit;

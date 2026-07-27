@@ -180,3 +180,32 @@
 .admin-users__unlock:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .admin-users__empty, .admin-users__forbidden { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-users {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-users__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .admin-users__table-wrap. */
+  .admin-users__table th,
+  .admin-users__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Petunjuk ini melayang di dalam kotak pencarian (position: absolute); di
+     layar sempit ia menumpuk dengan teks yang sedang diketik. */
+  .admin-users__hint {
+    display: none;
+  }
+}

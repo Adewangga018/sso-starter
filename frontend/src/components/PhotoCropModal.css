@@ -170,3 +170,28 @@
 @keyframes crop-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ===========================================================================
+   Responsif
+   Panggung pemotong berukuran tetap 300px (JSX: const VIEW = 300) karena
+   koordinat pointer dipetakan langsung ke ukuran itu - mengecilkannya lewat CSS
+   akan menggeser titik seret. Jadi yang dikurangi adalah tepi modal & backdrop
+   supaya 300px tetap muat.
+     360px: 360 - 16 (backdrop) - 24 (modal) = 320px  -> muat
+   =========================================================================== */
+@media (max-width: 420px) {
+  .crop__backdrop {
+    padding: 8px;
+  }
+
+  .crop__modal {
+    padding: 12px;
+    /* Jaring pengaman untuk layar < 336px: panggung dipotong di tepi modal,
+       tidak melebar keluar dan menggeser seluruh halaman. */
+    overflow: hidden;
+  }
+
+  .crop__head h3 {
+    font-size: 15px;
+  }
+}

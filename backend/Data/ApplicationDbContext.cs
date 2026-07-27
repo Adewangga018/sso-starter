@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
 using SsoBackend.Models.Approval;
 using SsoBackend.Models.Cuti;
+using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Office;
 
 namespace SsoBackend.Data;
@@ -33,6 +34,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
     // Persetujuan terpadu (schema approval).
     public DbSet<ApprovalPengajuan> ApprovalPengajuan => Set<ApprovalPengajuan>();
+    // Slip Gaji (schema gaji) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<GajiKomponen> GajiKomponen => Set<GajiKomponen>();
+    public DbSet<GajiTarif> GajiTarif => Set<GajiTarif>();
+    public DbSet<GajiPeriode> GajiPeriode => Set<GajiPeriode>();
+    public DbSet<GajiSlip> GajiSlip => Set<GajiSlip>();
+    public DbSet<GajiSlipDetail> GajiSlipDetail => Set<GajiSlipDetail>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -243,11 +250,80 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
             e.Property(x => x.Nama).HasColumnName("nama");
             e.Property(x => x.IdManager).HasColumnName("id_manager");
+            e.Property(x => x.IdAtasan).HasColumnName("id_atasan");
             e.Property(x => x.Ringkasan).HasColumnName("ringkasan");
             e.Property(x => x.Status).HasColumnName("status");
             e.Property(x => x.Komentar).HasColumnName("komentar");
             e.Property(x => x.TglPengajuan).HasColumnName("tgl_pengajuan");
             e.Property(x => x.TglKeputusan).HasColumnName("tgl_keputusan");
+        });
+
+        builder.Entity<GajiKomponen>(e =>
+        {
+            e.ToTable("komponen", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdKomponen);
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Tipe).HasColumnName("tipe");
+            e.Property(x => x.Kategori).HasColumnName("kategori");
+            e.Property(x => x.Basis).HasColumnName("basis");
+            e.Property(x => x.Opsional).HasColumnName("opsional");
+            e.Property(x => x.KenaPotonganTerlambat).HasColumnName("kena_potongan_terlambat");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+        });
+
+        builder.Entity<GajiTarif>(e =>
+        {
+            e.ToTable("tarif", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Jg).HasColumnName("jg");
+            e.Property(x => x.Pg).HasColumnName("pg");
+            e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
+            e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<GajiPeriode>(e =>
+        {
+            e.ToTable("periode", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdPeriode);
+            e.Property(x => x.IdPeriode).HasColumnName("id_periode");
+            e.Property(x => x.Tahun).HasColumnName("tahun");
+            e.Property(x => x.Bulan).HasColumnName("bulan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GajiSlip>(e =>
+        {
+            e.ToTable("slip", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdSlip);
+            e.Property(x => x.IdSlip).HasColumnName("id_slip");
+            e.Property(x => x.IdPeriode).HasColumnName("id_periode");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Jg).HasColumnName("jg");
+            e.Property(x => x.Pg).HasColumnName("pg");
+            e.Property(x => x.IdBand).HasColumnName("id_band");
+            e.Property(x => x.Tingkatan).HasColumnName("tingkatan");
+            e.Property(x => x.Jabatan).HasColumnName("jabatan");
+            e.Property(x => x.PotonganTerlambat).HasColumnName("potongan_terlambat").HasPrecision(18, 2);
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GajiSlipDetail>(e =>
+        {
+            e.ToTable("slip_detail", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSlip).HasColumnName("id_slip");
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

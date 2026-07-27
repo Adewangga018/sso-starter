@@ -1,9 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-// Penjaga rute modul, mengikuti Panel Admin IT > Akses Modul. Modul yang dibatasi ke
-// Admin IT tidak dikirim sama sekali oleh /dashboard/summary untuk akun biasa, jadi
-// "tidak ada di daftar" = tidak boleh dibuka.
+// Penjaga rute modul, mengikuti Panel Admin IT > Akses Modul. /dashboard/summary sudah
+// memaksa enabled = false untuk modul yang dinonaktifkan MAUPUN yang dikunci ke Admin IT,
+// jadi "tidak ada di daftar atau enabled = false" = tidak boleh dibuka.
 //
 // Ini hanya lapis kenyamanan (mencegah halaman kosong/penuh error saat rute diketik
 // manual); penegakan sebenarnya ada di server lewat ModuleGateAttribute.

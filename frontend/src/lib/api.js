@@ -172,11 +172,23 @@ export const api = {
     apiFetch(`/api/personal/anak/${idAnak}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteAnak: (idAnak) => apiFetch(`/api/personal/anak/${idAnak}`, { method: 'DELETE' }),
   getPersetujuan: () => apiFetch('/api/persetujuan'),
+  getPersetujuanDetail: (id) => apiFetch(`/api/persetujuan/${id}/detail`),
   putusanPersetujuan: (id, payload) => apiFetch(`/api/persetujuan/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
   getCuti: () => apiFetch('/api/personal/cuti'),
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  getSlipGaji: (tahun, bulan) => {
+    const qs = new URLSearchParams()
+    if (tahun) qs.set('tahun', tahun)
+    if (bulan) qs.set('bulan', bulan)
+    const q = qs.toString()
+    return apiFetch(`/api/personal/gaji${q ? `?${q}` : ''}`)
+  },
+  // Admin Modul SDM: konfigurasi tarif gaji (matriks JG x PG).
+  getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
+  getGajiTarif: (tahun, jg, pg) => apiFetch(`/api/personal/gaji/admin/tarif?tahun=${tahun}&jg=${jg}&pg=${pg}`),
+  simpanGajiTarif: (payload) => apiFetch('/api/personal/gaji/admin/tarif', { method: 'PUT', body: JSON.stringify(payload) }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>
