@@ -62,7 +62,7 @@ export default function PersetujuanPage() {
     <div className="apr">
       <div className="apr__intro">
         <h2 className="apr__title">Kotak Persetujuan</h2>
-        <p className="apr__sub">Pengajuan tim (Izin, Lembur, SPPD, UMDL, Tiket). <b>Manager</b> berhak menyetujui/menolak; <b>atasan langsung</b> dapat meninjau & melihat detail.</p>
+        <p className="apr__sub">Pengajuan tim (Cuti, Izin, Lembur, SPPD, UMDL, Tiket). <b>Manager</b> berhak menyetujui/menolak; <b>atasan langsung</b> dapat meninjau & melihat detail.</p>
       </div>
 
       {msg && <div className={`apr__msg apr__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
@@ -79,7 +79,7 @@ export default function PersetujuanPage() {
                   <div className="apr__item-top">
                     <span className="apr__jenis">{p.jenis}</span>
                     <span className="apr__pemohon">{p.nama || p.idKaryawan}</span>
-                    <span className={`apr__peran${p.bisaAksi ? ' apr__peran--mgr' : ''}`}>{p.peranSaya}</span>
+                    {p.jabatanPemohon && <span className="apr__peran">{p.jabatanPemohon}</span>}
                   </div>
                   <div className="apr__ringkasan">{p.ringkasan || '-'}</div>
                   <div className="apr__tgl">Diajukan {formatTgl(p.tglPengajuan)}</div>
@@ -104,13 +104,13 @@ export default function PersetujuanPage() {
           <div className="apr__card-head">Riwayat</div>
           <div className="apr__table-wrap">
             <table className="apr__table">
-              <thead><tr><th>Jenis</th><th>Pemohon</th><th>Peran</th><th>Status</th><th>Tanggal</th><th></th></tr></thead>
+              <thead><tr><th>Jenis</th><th>Pemohon</th><th>Jabatan</th><th>Status</th><th>Tanggal</th><th></th></tr></thead>
               <tbody>
                 {riwayat.map((p) => (
                   <tr key={p.id}>
                     <td>{p.jenis}</td>
                     <td>{p.nama || p.idKaryawan}</td>
-                    <td>{p.peranSaya}</td>
+                    <td>{p.jabatanPemohon || '-'}</td>
                     <td><StatusBadge status={p.status} /></td>
                     <td>{formatTgl(p.tglKeputusan)}</td>
                     <td><button type="button" className="apr__icon-btn" onClick={() => openDetail(p.id)} title="Detail"><Eye size={15} /></button></td>
@@ -136,7 +136,7 @@ export default function PersetujuanPage() {
               <div className="apr__modal-body">
                 <div className="apr__dgrid">
                   <div><span>Pemohon</span><b>{detail.nama || detail.idKaryawan}</b></div>
-                  <div><span>Peran Anda</span><b>{detail.peranSaya}</b></div>
+                  <div><span>Jabatan</span><b>{detail.jabatanPemohon || '-'}</b></div>
                   {detail.jenis === 'Izin' ? (
                     <>
                       <div><span>Jenis Izin</span><b>{detail.izinJenis || '-'}</b></div>

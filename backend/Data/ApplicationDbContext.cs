@@ -5,6 +5,7 @@ using SsoBackend.Models;
 using SsoBackend.Models.Approval;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Gaji;
+using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
 
 namespace SsoBackend.Data;
@@ -40,6 +41,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GajiPeriode> GajiPeriode => Set<GajiPeriode>();
     public DbSet<GajiSlip> GajiSlip => Set<GajiSlip>();
     public DbSet<GajiSlipDetail> GajiSlipDetail => Set<GajiSlipDetail>();
+    // My Progress (schema kpi) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<Kpi> Kpi => Set<Kpi>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -324,6 +327,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdSlip).HasColumnName("id_slip");
             e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
             e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<Kpi>(e =>
+        {
+            e.ToTable("kpi", "kpi", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Periode).HasColumnName("periode");
+            e.Property(x => x.Judul).HasColumnName("judul");
+            e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.Satuan).HasColumnName("satuan");
+            e.Property(x => x.Target).HasColumnName("target").HasPrecision(18, 2);
+            e.Property(x => x.Realisasi).HasColumnName("realisasi").HasPrecision(18, 2);
+            e.Property(x => x.Bobot).HasColumnName("bobot").HasPrecision(5, 2);
+            e.Property(x => x.Level).HasColumnName("level");
+            e.Property(x => x.IdPemilik).HasColumnName("id_pemilik");
+            e.Property(x => x.NamaPemilik).HasColumnName("nama_pemilik");
+            e.Property(x => x.IdParent).HasColumnName("id_parent");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.NamaPembuat).HasColumnName("nama_pembuat");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

@@ -178,6 +178,17 @@ export const api = {
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  // My Progress (KPI)
+  getKpiSaya: () => apiFetch('/api/progress'),
+  getKpiPerusahaan: () => apiFetch('/api/progress/perusahaan'),
+  buatKpiPerusahaan: (payload) => apiFetch('/api/progress/perusahaan', { method: 'POST', body: JSON.stringify(payload) }),
+  getKpiTim: () => apiFetch('/api/progress/tim'),
+  getKpiKaryawan: (nik) => apiFetch(`/api/progress/tim/${encodeURIComponent(nik)}`),
+  turunkanKpi: (nik, payload) => apiFetch(`/api/progress/tim/${encodeURIComponent(nik)}`, { method: 'POST', body: JSON.stringify(payload) }),
+  ubahKpi: (id, payload) => apiFetch(`/api/progress/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  nilaiKpi: (id, payload) => apiFetch(`/api/progress/${id}/nilai`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusKpi: (id) => apiFetch(`/api/progress/${id}`, { method: 'DELETE' }),
+
   getSlipGaji: (tahun, bulan) => {
     const qs = new URLSearchParams()
     if (tahun) qs.set('tahun', tahun)

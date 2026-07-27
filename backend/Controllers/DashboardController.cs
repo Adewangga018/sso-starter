@@ -36,6 +36,8 @@ public class DashboardController : ControllerBase
         _modules = modules;
     }
 
+    // Daftar modul tidak lagi statis di sini: katalognya di ModuleCatalog dan status
+    // aktif/aksesnya diatur Admin IT (Panel Admin > Akses Modul).
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
     {

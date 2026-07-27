@@ -18,7 +18,7 @@ public static class ModuleCatalog
         new("my-health", "My Health", "KESEHATAN", "activity", false),
         new("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
         new("my-asset", "My Asset", "ASET", "archive", false),
-        new("my-progress", "My Progress", "KPI", "trending-up", false),
+        new("my-progress", "My Progress", "KPI", "trending-up", true),
         new("my-team", "My Team", "KINERJA TIM", "users-round", true),
     ];
 

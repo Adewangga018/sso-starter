@@ -13,11 +13,13 @@ public class ApprovalService
 {
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
+    private readonly CutiService _cuti;
 
-    public ApprovalService(ApplicationDbContext db, GcsDbContext gcs)
+    public ApprovalService(ApplicationDbContext db, GcsDbContext gcs, CutiService cuti)
     {
         _db = db;
         _gcs = gcs;
+        _cuti = cuti;
     }
 
     public async Task CreateAsync(string jenis, string refId, string nik, string? nama, string? ringkasan)
@@ -50,8 +52,9 @@ public class ApprovalService
             .OrderByDescending(a => a.Id)
             .Take(150)
             .ToListAsync();
-        var menunggu = rows.Where(a => a.Status == "Menunggu").Select(a => Map(a, nik)).ToList();
-        var riwayat = rows.Where(a => a.Status != "Menunggu").Take(40).Select(a => Map(a, nik)).ToList();
+        var jabatan = await ResolveJabatanManyAsync(rows.Select(a => a.IdKaryawan).ToList());
+        var menunggu = rows.Where(a => a.Status == "Menunggu").Select(a => Map(a, nik, jabatan)).ToList();
+        var riwayat = rows.Where(a => a.Status != "Menunggu").Take(40).Select(a => Map(a, nik, jabatan)).ToList();
         return new PersetujuanInboxDto(menunggu, riwayat);
     }
 
@@ -81,9 +84,11 @@ public class ApprovalService
             }
         }
 
+        var jabatan = await ResolveJabatanManyAsync(new[] { a.IdKaryawan });
         return new ApprovalDetailDto(
             a.Id, a.Jenis, a.IdKaryawan, a.Nama, a.Ringkasan, a.Status, a.Komentar,
             PeranSaya(isManager, isAtasan), isManager,
+            jabatan.TryGetValue(a.IdKaryawan, out var jab) ? jab : null,
             ijJenis, ijKep, ijMulai, ijSelesai, ijKet, ijKode, ijStatus);
     }
 
@@ -94,6 +99,17 @@ public class ApprovalService
         if (a is null) return (false, "Pengajuan tidak ditemukan.");
         if (a.IdManager != nikManager) return (false, "Hanya manager terkait yang berhak menyetujui/menolak.");
         if (a.Status != "Menunggu") return (false, "Pengajuan sudah diproses.");
+
+        // Cuti dikelola penuh oleh MyGCS (saldo berkurang saat disetujui). Delegasikan ke
+        // CutiService supaya efek saldo + status cuti.pengajuan berjalan; CutiService juga
+        // menyinkronkan baris approval ini. (Jenis lain hanya membalik status di layer ini.)
+        if (a.Jenis == "Cuti")
+        {
+            return long.TryParse(a.RefId, out var cutiId)
+                ? await _cuti.PutusanAsync(cutiId, nikManager, setuju, komentar)
+                : (false, "Referensi cuti tidak valid.");
+        }
+
         a.Status = setuju ? "Disetujui" : "Ditolak";
         a.Komentar = string.IsNullOrWhiteSpace(komentar) ? null : komentar.Trim();
         a.TglKeputusan = DateTime.UtcNow;
@@ -104,13 +120,56 @@ public class ApprovalService
     private static string PeranSaya(bool isManager, bool isAtasan) =>
         isManager && isAtasan ? "Manager & Atasan" : isManager ? "Manager" : "Atasan";
 
-    private static PersetujuanDto Map(ApprovalPengajuan a, string nik)
+    private static PersetujuanDto Map(ApprovalPengajuan a, string nik, IReadOnlyDictionary<string, string> jabatan)
     {
         var isManager = a.IdManager == nik;
         var isAtasan = a.IdAtasan == nik;
         return new PersetujuanDto(
             a.Id, a.Jenis, a.RefId, a.IdKaryawan, a.Nama, a.Ringkasan, a.Status, a.Komentar,
-            PeranSaya(isManager, isAtasan), isManager, a.TglPengajuan, a.TglKeputusan);
+            PeranSaya(isManager, isAtasan), isManager,
+            jabatan.TryGetValue(a.IdKaryawan, out var jab) ? jab : null,
+            a.TglPengajuan, a.TglKeputusan);
+    }
+
+    // Jabatan struktural (grading) untuk sekumpulan NIK sekaligus (1 query).
+    private async Task<Dictionary<string, string>> ResolveJabatanManyAsync(IReadOnlyCollection<string> niks)
+    {
+        var result = new Dictionary<string, string>();
+        var distinct = niks.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+        if (distinct.Count == 0) return result;
+
+        var conn = _db.Database.GetDbConnection();
+        var mustClose = conn.State != ConnectionState.Open;
+        if (mustClose) await conn.OpenAsync();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            var names = new List<string>();
+            for (var i = 0; i < distinct.Count; i++)
+            {
+                var pn = "@n" + i;
+                names.Add(pn);
+                var pr = cmd.CreateParameter();
+                pr.ParameterName = pn;
+                pr.Value = distinct[i];
+                cmd.Parameters.Add(pr);
+            }
+            cmd.CommandText = $@"
+                SELECT p.id_karyawan, j.nama_jabatan
+                FROM grading.penempatan p
+                JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
+                WHERE p.status = 'Aktif' AND p.id_karyawan IN ({string.Join(",", names)})";
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                if (!r.IsDBNull(1)) result[r.GetString(0)] = r.GetString(1);
+            }
+            return result;
+        }
+        finally
+        {
+            if (mustClose) await conn.CloseAsync();
+        }
     }
 
     // (manager, atasanLangsung). Manager = ancestor terdekat band urutan <= 2 yang terisi;
