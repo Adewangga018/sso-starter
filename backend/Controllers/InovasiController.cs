@@ -499,6 +499,11 @@ public class InovasiController : ControllerBase
     }
 
     // ----------------------------------------------------------------- delete
+    // Risalah selalu lahir dari satu Sumbang Gagasan, jadi gagasan sumbernya ikut
+    // terhapus. Bila ditinggalkan, gagasan tetap berstatus "Terdaftar" sambil
+    // menunjuk risalah yang sudah tidak ada: tidak bisa dihapus (Delete gagasan
+    // menolak yang sudah terdaftar) maupun didaftarkan ulang - baris hantu di
+    // Sumbang Gagasan.
     [HttpDelete("gugus/{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -510,6 +515,12 @@ public class InovasiController : ControllerBase
         if (g.CreatedByNik != nik) return Forbid();
         if (g.Status is not ("Draft" or "Revisi"))
             return BadRequest(new { message = "Hanya risalah berstatus Draft/Revisi yang bisa dihapus." });
+
+        if (g.IdGagasan is int idGagasan)
+        {
+            var gagasan = await _db.Gagasan.FirstOrDefaultAsync(x => x.Id == idGagasan);
+            if (gagasan is not null) _db.Gagasan.Remove(gagasan);   // cascade: rantai approval
+        }
 
         _db.Gugus.Remove(g);   // cascade menghapus seluruh anak
         await _db.SaveChangesAsync();

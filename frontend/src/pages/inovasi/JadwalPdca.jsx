@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarRange, X } from 'lucide-react'
 import './inovasi.css'
 
-// P.3 Jadwal Kegiatan (PDCA). Kolom bulan mengikuti Periode: mis. 2026/2027 ->
-// Jan 2026 s/d Des 2027 (dua tahun). Pemilih "Dari-Sampai" membatasi kolom yang
-// tampil. Tiap sel dikunci year*100+bulan (ym) agar Jul 2026 != Jul 2027.
+// Jadwal Kegiatan (P.3 SS / P.4 GIO / C 5R). Kolom bulan mengikuti Periode: mis.
+// 2026/2027 -> Jan 2026 s/d Des 2027 (dua tahun). Saat mengisi, pemilih
+// "Dari-Sampai" membatasi kolom yang tampil; saat baca-saja (hasil & detail)
+// kolom otomatis menyempit ke bulan yang benar-benar terjadwal sehingga bulan
+// yang tidak terpakai tidak ikut tampil.
+// Tiap sel dikunci year*100+bulan (ym) agar Jul 2026 != Jul 2027.
 // SS/GIO: baris = tahapan x Rencana/Realisasi + kolom Jml. 5R (prop `fiveR`):
 // satu baris per tahapan, tanpa Rencana/Realisasi dan tanpa Jml.
 const MONTHS = [
@@ -34,6 +37,21 @@ function fmtRange(r) {
   return s === e ? `${s}` : `${s}–${e}`
 }
 
+// Rentang kolom yang benar-benar terjadwal (bulan pertama s/d terakhir yang
+// terisi). Dipakai pada mode baca-saja: hasil & detail hanya menampilkan bulan
+// sesuai jadwalnya, bukan seluruh 24 bulan Periode. null bila belum ada jadwal.
+function rentangTerpakai(cols, jadwal) {
+  const on = new Set()
+  for (const r of jadwal ?? []) {
+    for (const ym of Object.keys(r?.ranges ?? {})) on.add(Number(ym))
+    for (const ym of r?.bulanArr ?? []) on.add(Number(ym))
+  }
+  let lo = -1
+  let hi = -1
+  cols.forEach((c, i) => { if (on.has(c.ym)) { if (lo < 0) lo = i; hi = i } })
+  return lo < 0 ? null : { lo, hi }
+}
+
 export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode, fiveR = false }) {
   const cols = useMemo(() => buildCols(periode), [periode])
   const [winStart, setWinStart] = useState(0)
@@ -46,7 +64,11 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode, fiveR
     setWinEnd(cols.length - 1)
   }, [cols.length])
 
-  const shown = cols.slice(winStart, winEnd + 1)
+  // Baca-saja: kolom mengikuti jadwal yang terisi (tanpa pemilih Dari-Sampai).
+  // Mode edit: mengikuti pemilih agar bulan kosong tetap bisa diklik.
+  const terpakai = useMemo(() => rentangTerpakai(cols, jadwal), [cols, jadwal])
+  const win = readOnly ? (terpakai ?? { lo: 0, hi: cols.length - 1 }) : { lo: winStart, hi: winEnd }
+  const shown = cols.slice(win.lo, win.hi + 1)
 
   // 5R: satu baris per tahapan (pakai baris 'Rencana' sebagai kanonis).
   const rows = fiveR ? jadwal.filter((r) => r.jenis === 'Rencana') : jadwal
@@ -95,21 +117,23 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode, fiveR
 
   return (
     <>
-      <div className="inv__jadwal-toolbar">
-        <span className="inv__hint" style={{ margin: 0 }}>Tampilkan bulan</span>
-        <label className="inv__jadwal-win">Dari
-          <select value={winStart} disabled={readOnly}
-            onChange={(e) => { const v = Number(e.target.value); setWinStart(v); if (v > winEnd) setWinEnd(v) }}>
-            {cols.map((c, i) => <option key={i} value={i}>{c.label} {c.year}</option>)}
-          </select>
-        </label>
-        <label className="inv__jadwal-win">Sampai
-          <select value={winEnd} disabled={readOnly}
-            onChange={(e) => { const v = Number(e.target.value); setWinEnd(v); if (v < winStart) setWinStart(v) }}>
-            {cols.map((c, i) => <option key={i} value={i} disabled={i < winStart}>{c.label} {c.year}</option>)}
-          </select>
-        </label>
-      </div>
+      {!readOnly && (
+        <div className="inv__jadwal-toolbar">
+          <span className="inv__hint" style={{ margin: 0 }}>Tampilkan bulan</span>
+          <label className="inv__jadwal-win">Dari
+            <select value={winStart}
+              onChange={(e) => { const v = Number(e.target.value); setWinStart(v); if (v > winEnd) setWinEnd(v) }}>
+              {cols.map((c, i) => <option key={i} value={i}>{c.label} {c.year}</option>)}
+            </select>
+          </label>
+          <label className="inv__jadwal-win">Sampai
+            <select value={winEnd}
+              onChange={(e) => { const v = Number(e.target.value); setWinEnd(v); if (v < winStart) setWinStart(v) }}>
+              {cols.map((c, i) => <option key={i} value={i} disabled={i < winStart}>{c.label} {c.year}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
 
       <div style={{ overflowX: 'auto' }}>
         <table className="inv__subtable inv__jadwal">
@@ -151,7 +175,9 @@ export default function JadwalPdca({ jadwal, setJadwal, readOnly, periode, fiveR
         </table>
       </div>
       <p className="inv__hint">
-        Klik sel bulan untuk memilih <b>rentang tanggal</b> (kalender).
+        {readOnly
+          ? (terpakai ? 'Kolom bulan mengikuti jadwal yang terisi.' : 'Belum ada bulan terjadwal.')
+          : <>Klik sel bulan untuk memilih <b>rentang tanggal</b> (kalender).</>}
         {fiveR ? ' Sel hijau menandai bulan pelaksanaan tahapan.' : ' Hijau tua = Rencana, hijau muda = Realisasi. Jml. = total pertemuan per tahapan.'}
       </p>
 

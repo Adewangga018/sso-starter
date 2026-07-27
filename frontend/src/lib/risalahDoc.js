@@ -40,7 +40,9 @@ function table(headers, rows) {
 
 // Jadwal Kegiatan sebagai grid: baris = tahapan (PDCA untuk SS/5R, 8 Langkah DELTA
 // untuk GIO). Kolom bulan mengikuti Periode (dua tahun, mis. 2026/2027 -> Jan 2026
-// s/d Des 2027), sel dikunci year*100+bulan. SS/GIO: tiap tahapan x Rencana/
+// s/d Des 2027), sel dikunci year*100+bulan, lalu dipangkas ke bulan pertama s/d
+// terakhir yang terjadwal - bulan yang tidak terpakai tidak ikut tampil (sama
+// seperti komponen JadwalPdca saat baca-saja). SS/GIO: tiap tahapan x Rencana/
 // Realisasi + kolom Jml. 5R: satu baris per tahapan, tanpa Rencana/Realisasi & Jml.
 function jadwalGrid(d) {
   const MONTHS = [[1, 'Jan'], [2, 'Feb'], [3, 'Mar'], [4, 'Apr'], [5, 'Mei'], [6, 'Jun'], [7, 'Jul'], [8, 'Agu'], [9, 'Sep'], [10, 'Okt'], [11, 'Nov'], [12, 'Des']]
@@ -48,16 +50,28 @@ function jadwalGrid(d) {
   const partsY = String(d.periode || '').split('/').map((s) => Number(s.trim())).filter(Boolean)
   const y1 = partsY[0] || new Date().getFullYear()
   const years = partsY.length >= 2 ? [partsY[0], partsY[1]] : [y1, y1 + 1]
-  const cols = []
-  for (const year of years) for (const [m, l] of MONTHS) cols.push({ ym: year * 100 + m, m, l, year })
-  const yg = []
-  cols.forEach((c) => { const last = yg[yg.length - 1]; if (last && last.year === c.year) last.span += 1; else yg.push({ year: c.year, span: 1 }) })
+  const semuaCols = []
+  for (const year of years) for (const [m, l] of MONTHS) semuaCols.push({ ym: year * 100 + m, m, l, year })
 
   // Kunci sel diturunkan dari tanggal ISO -> tetap benar untuk data lama (kunci bulan 1-12).
   const parseR = (s) => { if (!s) return {}; try { const o = JSON.parse(s); const r = {}; for (const v of Object.values(o)) if (Array.isArray(v) && v[0]) { const ym = Number(v[0].slice(0, 4)) * 100 + Number(v[0].slice(5, 7)); r[ym] = { start: v[0], end: v[1] || v[0] } } return r } catch { return {} } }
   const dayRange = (rg) => { if (!rg?.start) return ''; const s = Number(rg.start.slice(8, 10)); const e = rg.end ? Number(rg.end.slice(8, 10)) : s; return s === e ? `${s}` : `${s}-${e}` }
   const getRow = (t, j) => arr(d.jadwal).find((x) => x.tahapan === t && x.jenis === j)
   const bulanYm = (row) => (row?.bulan ? String(row.bulan).split(',').map(Number).filter(Boolean).map((n) => (n < 100 ? y1 * 100 + n : n)) : [])
+
+  // Pangkas kolom ke rentang bulan yang terjadwal. Bila belum ada jadwal sama
+  // sekali, tampilkan seluruh Periode agar tabel tidak kehilangan kolom.
+  const terjadwal = new Set()
+  for (const row of arr(d.jadwal)) {
+    for (const ym of bulanYm(row)) terjadwal.add(ym)
+    for (const ym of Object.keys(parseR(row?.rentang))) terjadwal.add(Number(ym))
+  }
+  const dipakai = semuaCols.map((c, i) => (terjadwal.has(c.ym) ? i : -1)).filter((i) => i >= 0)
+  const cols = dipakai.length ? semuaCols.slice(dipakai[0], dipakai[dipakai.length - 1] + 1) : semuaCols
+
+  const yg = []
+  cols.forEach((c) => { const last = yg[yg.length - 1]; if (last && last.year === c.year) last.span += 1; else yg.push({ year: c.year, span: 1 }) })
+
   const cellsFor = (row, dark) => cols.map((c) => {
     const on = bulanYm(row).includes(c.ym) || parseR(row?.rentang)[c.ym]
     const fill = on ? (dark ? '#1f4f2c' : '#a7d3b0') : ''

@@ -43,8 +43,15 @@ export default function InovasiList() {
         .some((v) => (v ?? '').toString().toLowerCase().includes(term))))
   }, [rows, search, status])
 
+  // Menghapus risalah sekaligus menghapus Sumbang Gagasan sumbernya (lihat
+  // InovasiController.Delete) - disebutkan di konfirmasi agar tidak mengejutkan.
   async function handleDelete(row) {
-    if (!(await dialog.confirm({ title: 'Hapus Risalah', message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"?`, danger: true, confirmText: 'Hapus' }))) return
+    if (!(await dialog.confirm({
+      title: 'Hapus Risalah',
+      message: `Hapus risalah "${row.namaGugus || row.noRegistrasi || row.id}"? Sumbang Gagasan sumbernya${row.gagasanJudul ? ` ("${row.gagasanJudul}")` : ''} beserta riwayat persetujuannya ikut terhapus.`,
+      danger: true,
+      confirmText: 'Hapus',
+    }))) return
     try { await api.deleteInovasi(row.id); await load() } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menghapus.') }
   }
 

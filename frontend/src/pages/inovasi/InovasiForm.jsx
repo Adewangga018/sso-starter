@@ -665,7 +665,8 @@ export default function InovasiForm() {
 
   // ================= Validasi kelengkapan =================
   // Semua isian wajib harus terisi sebelum pengajuan. Yang memang opsional tidak
-  // dicek: P.5 QCDSE, NIK anggota manual, lampiran/tautan P.2, foto evidence D.1.
+  // dicek: Dampak QCDSE + M (P.5 SS / P.6 GIO), NIK anggota manual,
+  // lampiran/tautan P.2, foto evidence D.1.
   function validasiPlan() {
     const m = []
 
@@ -703,15 +704,8 @@ export default function InovasiForm() {
       ['sasaran', 'Sasaran'], ['kondisiSebelum', 'Kondisi Sebelum'], ['target', 'Target'], ['indikator', 'Indikator Keberhasilan'],
     ]))
 
-    // QCDSE opsional untuk SS/5R; GIO wajib mengisi seluruh sel ("-" bila tak relevan).
-    if (isGio) {
-      qcdse.forEach((q) => {
-        const hilang = []
-        if (kosong(q.dampakKualitatif)) hilang.push('Dampak Kualitatif')
-        if (kosong(q.dampakKuantitatif)) hilang.push('Dampak Kuantitatif')
-        if (hilang.length) m.push(`${B.qcdse} Dampak QCDSE + M — aspek ${q.aspek}: ${hilang.join(', ')} (tulis "-" bila tidak relevan)`)
-      })
-    }
+    // Dampak QCDSE + M (P.5 SS / P.6 GIO) opsional untuk seluruh metodologi -
+    // sengaja tidak divalidasi.
 
     if (kosong(ident.masalahUtama)) m.push(`${B.fishbone} Fishbone — Masalah Utama`)
     if (!fishbone.some((f) => (f.penyebabItems || []).some((s) => !kosong(s)))) {
@@ -938,11 +932,9 @@ export default function InovasiForm() {
           />
         </Section>
 
-        {/* Dampak QCDSE + M. GIO wajib mengisi seluruh sel ("-" bila tak relevan). */}
-        <Section tag={B.qcdse} title={`Dampak Masalah terhadap QCDSE + M${isGio ? '' : ' (opsional)'}`}>
-          <p className="inv__hint">{isGio
-            ? 'Isi seluruh sel; tulis "-" pada aspek yang tidak relevan (bukan dikosongkan).'
-            : 'Bagian ini opsional - boleh dikosongkan.'}</p>
+        {/* Dampak QCDSE + M - opsional untuk seluruh metodologi (SS/GIO/5R). */}
+        <Section tag={B.qcdse} title="Dampak Masalah terhadap QCDSE + M (opsional)">
+          <p className="inv__hint">Bagian ini opsional - boleh dikosongkan seluruhnya atau diisi pada aspek yang relevan saja.</p>
           <div style={{ overflowX: 'auto' }}>
             <table className="inv__subtable">
               <thead><tr><th style={{ width: 130 }}>Aspek</th><th>Dampak Kualitatif</th><th>Dampak Kuantitatif (didukung data)</th></tr></thead>
