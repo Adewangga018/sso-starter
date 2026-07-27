@@ -30,6 +30,10 @@ import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
 import GajiPage from './pages/GajiPage'
 import AdminGajiTarifPage from './pages/AdminGajiTarifPage'
+import MyProgressLayout from './layouts/MyProgressLayout'
+import KpiSaya from './pages/progress/KpiSaya'
+import KpiTim from './pages/progress/KpiTim'
+import KpiPerusahaan from './pages/progress/KpiPerusahaan'
 import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
@@ -88,6 +92,12 @@ export default function App() {
             <Route path="/team" element={<MyTeamLayout />}>
               <Route index element={<MyTeamPage />} />
               <Route path="rekap" element={<RekapTimPage />} />
+            </Route>
+
+            <Route path="/my-progress" element={<MyProgressLayout />}>
+              <Route index element={<KpiSaya />} />
+              <Route path="tim" element={<KpiTim />} />
+              <Route path="perusahaan" element={<KpiPerusahaan />} />
             </Route>
 
             <Route path="/my-office" element={<MyOfficeLayout />}>

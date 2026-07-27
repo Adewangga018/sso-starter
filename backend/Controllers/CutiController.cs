@@ -14,11 +14,13 @@ public class CutiController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
     private readonly CutiService _cuti;
+    private readonly ApprovalService _approval;
 
-    public CutiController(CurrentUserContext currentUser, CutiService cuti)
+    public CutiController(CurrentUserContext currentUser, CutiService cuti, ApprovalService approval)
     {
         _currentUser = currentUser;
         _cuti = cuti;
+        _approval = approval;
     }
 
     [HttpGet]
@@ -43,8 +45,18 @@ public class CutiController : ControllerBase
             return Unauthorized();
         }
         var nama = pegawai?.NAMA_LENGKAP ?? user?.Name;
-        var (ok, error) = await _cuti.AjukanAsync(nik, nama, req);
-        return ok ? NoContent() : BadRequest(new { message = error });
+        var (ok, error, created) = await _cuti.AjukanAsync(nik, nama, req);
+        if (!ok) return BadRequest(new { message = error });
+
+        // Tampilkan juga di Kotak Persetujuan terpadu (manager acc, atasan tinjau).
+        if (created is not null)
+        {
+            var ringkasan = $"Cuti tahunan {created.JumlahHari} hari " +
+                            $"({created.TglMulai:dd MMM yyyy} – {created.TglSelesai:dd MMM yyyy})" +
+                            (string.IsNullOrWhiteSpace(created.Keterangan) ? "" : $": {created.Keterangan}");
+            await _approval.CreateAsync("Cuti", created.Id.ToString(), nik, nama, ringkasan);
+        }
+        return NoContent();
     }
 
     [HttpPost("{id:long}/batal")]

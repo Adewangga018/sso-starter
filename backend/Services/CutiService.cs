@@ -51,21 +51,21 @@ public class CutiService
             Riwayat: riwayat);
     }
 
-    public async Task<(bool Ok, string? Error)> AjukanAsync(string nik, string? nama, AjukanCutiRequest req)
+    public async Task<(bool Ok, string? Error, CutiPengajuan? Created)> AjukanAsync(string nik, string? nama, AjukanCutiRequest req)
     {
         if (req.TglSelesai < req.TglMulai)
         {
-            return (false, "Tanggal selesai tidak boleh sebelum tanggal mulai.");
+            return (false, "Tanggal selesai tidak boleh sebelum tanggal mulai.", null);
         }
         var jumlah = HitungHariKerja(req.TglMulai, req.TglSelesai);
         if (jumlah <= 0)
         {
-            return (false, "Rentang tanggal tidak mengandung hari kerja (Senin–Jumat).");
+            return (false, "Rentang tanggal tidak mengandung hari kerja (Senin–Jumat).", null);
         }
         var saldo = await _db.CutiSaldo.FirstOrDefaultAsync(s => s.IdKaryawan == nik);
         if (saldo is null)
         {
-            return (false, "Saldo cuti belum tersedia untuk akun Anda.");
+            return (false, "Saldo cuti belum tersedia untuk akun Anda.", null);
         }
         var pendingTotal = await _db.CutiPengajuan
             .Where(p => p.IdKaryawan == nik && p.Status == "Menunggu")
@@ -73,11 +73,11 @@ public class CutiService
         var tersedia = saldo.Saldo - pendingTotal;
         if (jumlah > tersedia)
         {
-            return (false, $"Jumlah hari ({jumlah}) melebihi sisa cuti tersedia ({tersedia}).");
+            return (false, $"Jumlah hari ({jumlah}) melebihi sisa cuti tersedia ({tersedia}).", null);
         }
 
         var atasan = await ResolveAtasanAsync(nik);
-        _db.CutiPengajuan.Add(new CutiPengajuan
+        var pengajuan = new CutiPengajuan
         {
             IdKaryawan = nik,
             Nama = nama,
@@ -88,9 +88,10 @@ public class CutiService
             Keterangan = string.IsNullOrWhiteSpace(req.Keterangan) ? null : req.Keterangan.Trim(),
             Status = "Menunggu",
             TglPengajuan = DateTime.UtcNow,
-        });
+        };
+        _db.CutiPengajuan.Add(pengajuan);
         await _db.SaveChangesAsync();
-        return (true, null);
+        return (true, null, pengajuan);
     }
 
     public async Task<(bool Ok, string? Error)> BatalAsync(long id, string nik)
@@ -129,6 +130,19 @@ public class CutiService
         }
         p.Komentar = string.IsNullOrWhiteSpace(komentar) ? null : komentar.Trim();
         p.TglKeputusan = now;
+
+        // Sinkronkan baris di Kotak Persetujuan terpadu (approval.pengajuan) supaya
+        // status konsisten baik keputusan dibuat dari halaman Cuti maupun dari
+        // Kotak Persetujuan. Satu transaksi bersama cuti.pengajuan + saldo.
+        var appr = await _db.ApprovalPengajuan
+            .FirstOrDefaultAsync(x => x.Jenis == "Cuti" && x.RefId == id.ToString());
+        if (appr is not null && appr.Status == "Menunggu")
+        {
+            appr.Status = p.Status;
+            appr.Komentar = p.Komentar;
+            appr.TglKeputusan = now;
+        }
+
         await _db.SaveChangesAsync();
         return (true, null);
     }
