@@ -47,11 +47,15 @@ export default function GagasanList() {
   // Opsi status diturunkan dari data yang ada (bukan daftar statis) agar selalu relevan.
   const statusOptions = useMemo(() => [...new Set(scoped.map((r) => r.status).filter(Boolean))].sort(), [scoped])
 
+  // Pengaju (nama & NIK) ikut jadi kunci pencarian: kolomnya tampil bagi
+  // approver, dan seluruh kolom lain memang bisa dicari - approver umumnya
+  // mencari "gagasan dari siapa", bukan hanya judulnya.
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return scoped.filter((r) =>
       (!status || r.status === status) &&
-      (!term || [r.noRegistrasi, r.judul, r.status, r.namaDepartemenAsal, r.namaDepartemenTujuan, r.metodologi]
+      (!term || [r.noRegistrasi, r.judul, r.status, r.namaDepartemenAsal, r.namaDepartemenTujuan, r.metodologi,
+        r.createdByNama, r.createdByNik]
         .some((v) => (v ?? '').toString().toLowerCase().includes(term))))
   }, [scoped, search, status])
 
@@ -59,6 +63,10 @@ export default function GagasanList() {
     if (!(await dialog.confirm({ title: 'Hapus Gagasan', message: `Hapus gagasan "${row.judul}"?`, danger: true, confirmText: 'Hapus' }))) return
     try { await api.deleteGagasan(row.id); await load() } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal menghapus.') }
   }
+
+  // Kolom "Pengaju" hanya ditampilkan ke approver, jadi colSpan baris kosong
+  // ikut menyesuaikan - kalau tidak, sel "Belum ada gagasan" kurang satu kolom.
+  const jumlahKolom = isApprover ? 9 : 8
 
   const judul = peran === 'Manager' ? 'Verifikasi Gagasan' : peran === 'GM' ? 'Persetujuan Gagasan' : 'Sumbang Gagasan'
   const subtitle = peran === 'Manager'
@@ -80,7 +88,8 @@ export default function GagasanList() {
         <div className="inv__filters">
           <div className="inv__search">
             <span className="inv__search-icon"><Search size={16} /></span>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari no. registrasi, judul, status..." />
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder={isApprover ? 'Cari no. registrasi, judul, pengaju, status...' : 'Cari no. registrasi, judul, status...'} />
           </div>
           {isApprover && (
             <select className="inv__select" value={status} onChange={(e) => setStatus(e.target.value)} title="Filter status">
@@ -104,17 +113,23 @@ export default function GagasanList() {
           <thead>
             <tr>
               <th>Status</th><th>No. Registrasi</th><th>Judul</th><th>Metodologi</th>
+              {/* Pengaju hanya berguna bagi approver: pada tampilan karyawan
+                  seluruh barisnya memang gagasan miliknya sendiri. */}
+              {isApprover && <th>Pengaju</th>}
               <th>Dep. Asal</th><th>Dep. Tujuan</th><th>Peran</th><th style={{ textAlign: 'right' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && <tr><td className="inv__no-data" colSpan={8}>Belum ada gagasan.</td></tr>}
+            {filtered.length === 0 && <tr><td className="inv__no-data" colSpan={jumlahKolom}>Belum ada gagasan.</td></tr>}
             {filtered.map((r) => (
               <tr key={r.id}>
                 <td data-label="Status"><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
                 <td data-label="No. Registrasi">{r.noRegistrasi ?? '-'}</td>
                 <td data-label="Judul" className="inv__cell--wide">{r.judul}</td>
                 <td data-label="Metodologi" style={{ textAlign: 'center' }}>{r.metodologi ?? '-'}</td>
+                {isApprover && (
+                  <td data-label="Pengaju">{namaPengaju(r)}</td>
+                )}
                 <td data-label="Dep. Asal">{r.namaDepartemenAsal ?? '-'}</td>
                 <td data-label="Dep. Tujuan">{r.namaDepartemenTujuan ?? <span style={{ color: '#9aa79d' }}>(sama)</span>}</td>
                 <td data-label="Peran">{r.peranSaya}</td>
@@ -285,6 +300,9 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
               {g.metodologi && <span>Metodologi: <b>{g.metodologi}</b></span>}
             </div>
             <div className="inv__meta">
+              {/* Pengaju: approver memutuskan dari modal ini, jadi identitas
+                  pengusulnya harus ikut terlihat - bukan hanya departemennya. */}
+              <span>Pengaju: <b>{namaPengaju(g)}</b></span>
               <span>Dep. Asal: <b>{g.namaDepartemenAsal ?? '-'}</b></span>
               <span>Dep. Tujuan: <b>{g.namaDepartemenTujuan ?? '(sama)'}</b></span>
             </div>
@@ -370,6 +388,15 @@ function Field({ label, value }) {
 }
 
 // ---------- small helpers ----------
+// Nama pengaju gagasan. createdByNama boleh null di DTO (mis. akun lama yang
+// belum tertaut data pegawai), sedangkan NIK selalu terisi - jadi NIK dipakai
+// sebagai cadangan supaya approver tetap tahu gagasan ini dari siapa.
+function namaPengaju(r) {
+  if (r.createdByNama?.trim()) return r.createdByNama
+  if (r.createdByNik?.trim()) return r.createdByNik
+  return <span style={{ color: '#9aa79d' }}>-</span>
+}
+
 function Backdrop({ children, onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,22,0.45)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>

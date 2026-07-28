@@ -845,17 +845,6 @@ export default function InovasiForm() {
           </div>
           <div className="inv__form-row">
             <label className="inv__field"><span>Kompartemen</span><input value={data.namaKompartemen ?? '-'} disabled /></label>
-            {/* Departemen sasaran perbaikan, dibawa dari gagasan asal. Untuk GIO,
-                departemen inilah yang menentukan Direktur pengesah (Komersil /
-                Keuangan) pada Lembar Pengesahan PLAN & Akhir. */}
-            <label className="inv__field"><span>Departemen Tujuan</span>
-              <input
-                value={data.namaDepartemenTujuan ?? data.namaDepartemen ?? '-'}
-                disabled
-                title={data.jenis === 'GIO'
-                  ? 'Ditetapkan saat Sumbang Gagasan; menentukan Direktur pengesah GIO.'
-                  : 'Ditetapkan saat Sumbang Gagasan.'}
-              /></label>
           </div>
         </Section>
 
@@ -1094,7 +1083,9 @@ export default function InovasiForm() {
           {rows.map((p) => (
             <div className="inv__sign" key={p.id}>
               <div className="inv__sign-role">{p.peran}</div>
-              <div className="inv__sign-name">{p.nama ?? '(belum ditetapkan)'}</div>
+              {/* Nama penanda tangan KAPITAL SEMUA, sama seperti pada dokumen &
+                  unduhan PDF (lihat namaKapital di lib/risalahDoc.js). */}
+              <div className="inv__sign-name">{p.nama ? p.nama.toUpperCase() : '(belum ditetapkan)'}</div>
               <span className={`inv__status ${statusClass(p.status === 'Disetujui' ? 'Divalidasi' : p.status === 'Menunggu' ? 'Diajukan' : p.status)}`}>{p.status}</span>
               {p.komentar && <div className="inv__hint" style={{ marginTop: 6 }}>&ldquo;{p.komentar}&rdquo;</div>}
               {p.bisaSaya && (

@@ -12,9 +12,14 @@ export default function InovasiKonvensi() {
   const base = ctx.base ?? '/my-innovation'
   const navigate = useNavigate()
   const [rows, setRows] = useState(null)
+  const [nilai, setNilai] = useState({})   // { [idGugus]: RekapNilaiDto }
 
   useEffect(() => {
     api.listInovasi().then((d) => setRows(d.items)).catch((e) => { if (isEmptyDataError(e)) setRows([]) })
+    // Nilai juri bersifat pelengkap: bila gagal/belum ada, tabel tetap tampil.
+    api.getRekapNilai()
+      .then((d) => setNilai(Object.fromEntries((d ?? []).map((x) => [x.idGugus, x]))))
+      .catch(() => setNilai({}))
   }, [])
 
   const eligible = useMemo(() => (rows ?? []).filter((r) => r.status === 'Selesai'), [rows])
@@ -35,12 +40,16 @@ export default function InovasiKonvensi() {
               <th style={{ width: '26%' }}>Nama Gugus</th>
               <th>Judul</th>
               <th style={{ width: 180 }}>Ketua</th>
+              <th style={{ width: 120, textAlign: 'center' }}>Total Nilai Juri</th>
               <th style={{ width: 150, textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {eligible.length === 0 && <tr><td className="inv__no-data" colSpan={6}>Belum ada risalah yang Selesai untuk konvensi.</td></tr>}
-            {eligible.map((r) => (
+            {eligible.length === 0 && <tr><td className="inv__no-data" colSpan={7}>Belum ada risalah yang Selesai untuk konvensi.</td></tr>}
+            {eligible.map((r) => {
+              const n = nilai[r.id]
+              const dinilai = Boolean(n?.penilaiLengkap)
+              return (
               <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`${base}/daftar/${r.id}`)}>
                 <td>{r.noRegistrasi ?? '-'}</td>
                 <td style={{ textAlign: 'center' }}>{jenisLabel(r.jenis)}</td>
@@ -48,10 +57,19 @@ export default function InovasiKonvensi() {
                 <td>{r.judul ?? '-'}</td>
                 <td>{r.ketuaNama ?? '-'}</td>
                 <td style={{ textAlign: 'center' }}>
+                  {dinilai ? (
+                    <>
+                      <span style={{ fontWeight: 700 }}>{n.nilaiAkhir}</span>
+                      <div className="inv__hint" style={{ margin: 0 }}>{n.penilaiLengkap}/{n.penilaiTotal} juri</div>
+                    </>
+                  ) : <span style={{ color: '#9aa79d' }}>Belum dinilai</span>}
+                </td>
+                <td style={{ textAlign: 'center' }}>
                   <span className={`inv__status ${statusClass(r.status)}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trophy size={12} /> {r.status}</span>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>

@@ -22,6 +22,10 @@ function esc(v) {
     .replace(/\n/g, '<br/>')
 }
 
+// Nama penanda tangan ditulis KAPITAL SEMUA, mengikuti lazimnya lembar pengesahan
+// resmi. Mengembalikan null bila kosong, supaya pemanggil bisa memasang placeholder.
+const namaKapital = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).toUpperCase())
+
 const arr = (v) => (Array.isArray(v) ? v : [])
 const has = (v) => arr(v).length > 0
 const txt = (v) => (v !== null && v !== undefined && String(v).trim() !== '')
@@ -126,16 +130,26 @@ function signBlock(pengesahan, tahap, jenis) {
   if (jenis === 'GIO') bawaan.push({ peran: 'Direktur (sesuai Departemen Tujuan)' })
   const src = rows.length ? rows : bawaan
   const lebar = (100 / src.length).toFixed(2)
-  const cells = src.map((p) => `
-    <td style="width:${lebar}%;vertical-align:top">
+
+  // Dipecah menjadi DUA baris tabel - baris keterangan lalu baris garis+nama.
+  // Alasannya ada di .rd-sign pada SCOPED_CSS: hanya dengan begitu garis tanda
+  // tangan bisa dijamin rata di semua kolom.
+  const selKeterangan = (p) => `
+    <td style="width:${lebar}%">
       <div style="font-weight:bold">${esc(p.peran)}</div>
       <div style="font-size:9pt;color:#555">Tgl: ${p.tgl ? esc(new Date(p.tgl).toLocaleDateString('id-ID')) : '-'}</div>
       <div style="font-size:9pt;color:#555">Status: ${esc(p.status ?? '-')}</div>
       ${txt(p.komentar) ? `<div style="font-size:9pt">Komentar: ${esc(p.komentar)}</div>` : ''}
-      <div style="height:36pt"></div>
-      <div style="border-top:1px solid #000;text-align:center;padding-top:2pt">( ${esc(p.nama ?? '................')} )</div>
-    </td>`).join('')
-  return `<table><tbody><tr>${cells}</tr></tbody></table>`
+    </td>`
+  const selNama = (p) => `
+    <td style="width:${lebar}%">
+      <div class="rd-sign__line">( ${esc(namaKapital(p.nama) ?? '................')} )</div>
+    </td>`
+
+  return '<table class="rd-sign"><tbody>'
+    + `<tr class="rd-sign__ket">${src.map(selKeterangan).join('')}</tr>`
+    + `<tr class="rd-sign__nama">${src.map(selNama).join('')}</tr>`
+    + '</tbody></table>'
 }
 
 // Risalah 5R (Form F-5R-02) - struktur berbeda dari SS/GIO; sub-bagian C/D/F
@@ -231,9 +245,6 @@ function buildBody(d, mode) {
       ['Nama Gugus', esc(d.namaGugus)],
       ['Metodologi', esc(jenisLabel(d.jenis))],
       ['Unit / Departemen', esc(d.namaDepartemen)],
-      // Departemen sasaran perbaikan (dari gagasan asal). Untuk GIO, departemen
-      // inilah yang menentukan Direktur pengesah di Lembar Pengesahan.
-      ['Departemen Tujuan', esc(d.namaDepartemenTujuan ?? d.namaDepartemen)],
       ['Bagian / Seksi', esc(d.bagianSeksi)],
       ['Kompartemen', esc(d.namaKompartemen)],
       ['Tema ke-', esc(d.temaKe)],
@@ -437,6 +448,31 @@ const SCOPED_CSS = `
 .rd table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
 .rd th, .rd td { border: 1px solid #c4cec6; padding: 4px 6px; vertical-align: top; font-size: 12px; text-align: left; }
 .rd th { background: #e9efe6; font-weight: 700; }
+
+/* --- Lembar Pengesahan (tahap PLAN & Akhir) --------------------------------
+   Garis tanda tangan (yang di atas nama) harus rata di semua kolom.
+
+   Sebelumnya seluruh isi satu penandatangan berada dalam SATU sel, dengan
+   pengatur jarak setinggi tetap sebelum garisnya. Akibatnya ketinggian garis
+   mengikuti tinggi isi di atasnya, dan tinggi itu berbeda antar kolom:
+     - teks peran bisa membungkus dua baris ("Pembina Tk. Departemen"),
+     - "Komentar" hanya ada di sebagian kolom,
+     - nama penandatangan pun bisa memakan dua baris.
+   Karena itu garisnya naik-turun seperti pada hasil cetak yang dilaporkan.
+
+   Perbaikannya: blok dipecah menjadi dua BARIS tabel - baris keterangan, lalu
+   baris garis+nama. Sel-sel dalam satu baris tabel selalu dimulai pada
+   ketinggian yang sama (ketinggian itu ditentukan kolom dengan keterangan
+   tertinggi), sehingga garisnya pasti sejajar tanpa bergantung pada panjang
+   keterangan maupun jumlah baris nama.
+
+   Garis pembatas antar kedua baris dihilangkan supaya tiap penandatangan tetap
+   terlihat sebagai satu kotak seperti sebelumnya, dan padding-bawah pada baris
+   keterangan menjadi ruang untuk tanda tangan basah (48px = 36pt, sama dengan
+   pengatur jarak yang digantikannya). */
+.rd table.rd-sign tr.rd-sign__ket td { padding-bottom: 48px; border-bottom: none; }
+.rd table.rd-sign tr.rd-sign__nama td { border-top: none; }
+.rd .rd-sign__line { border-top: 1px solid #000; text-align: center; padding-top: 3px; }
 `
 
 /**

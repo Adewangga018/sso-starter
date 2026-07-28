@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { Eye, MessageSquarePlus, RotateCw, Search, Trash2 } from 'lucide-react'
+import { Eye, RotateCw, Search, Trash2 } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
 import { useDialog } from '../../components/DialogProvider'
 import { statusClass } from './statusClass'
@@ -79,9 +79,6 @@ export default function InovasiList() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="inv__btn inv__btn--ghost" onClick={load} title="Muat ulang"><RotateCw size={15} /></button>
-          <button type="button" className="inv__btn inv__btn--primary" onClick={() => navigate(`${base}/gagasan`)}>
-            <MessageSquarePlus size={16} /> Sumbang Gagasan
-          </button>
         </div>
       </div>
 
@@ -102,8 +99,10 @@ export default function InovasiList() {
             {filtered.map((r) => (
               <tr key={r.id}>
                 <td data-label="Status">
-                  <span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span>
-                  {r.sudahDinilai && <span className="inv__status inv__status--dinilai" style={{ marginLeft: 6 }}>Sudah Dinilai</span>}
+                  <div className="inv__status-stack">
+                    <span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span>
+                    {r.sudahDinilai && <span className="inv__status inv__status--dinilai">Sudah Dinilai</span>}
+                  </div>
                 </td>
                 <td data-label="No. Registrasi">{r.noRegistrasi ?? <span style={{ color: '#9aa79d' }}>-</span>}</td>
                 <td data-label="Metodologi" style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>

@@ -322,13 +322,25 @@
 }
 
 /* --- Status badge --- */
+/* Border transparan (bukan tanpa border) supaya badge dengan border nyata -
+   mis. --dinilai - tetap setinggi & sesejajar badge lain saat berdampingan. */
 .inv__status {
   display: inline-block;
   padding: 3px 10px;
+  border: 1px solid transparent;
   border-radius: 999px;
   font-size: 11.5px;
   font-weight: 700;
+  line-height: 1.45;
   white-space: nowrap;
+}
+/* Kolom status bisa memuat lebih dari satu badge (status + "Sudah Dinilai");
+   dibungkus flex agar rapi saat turun baris di kolom sempit. */
+.inv__status-stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
 }
 .inv__status--draft { background: #eef0f2; color: #5a6672; }
 .inv__status--diajukan { background: #fff4de; color: #a9761b; }
@@ -1238,6 +1250,11 @@
 
   .inv__table-wrap--cards td > * {
     min-width: 0;
+  }
+
+  /* Isi sel rata kanan di mode kartu - badge status ikut menyusul ke kanan. */
+  .inv__table-wrap--cards .inv__status-stack {
+    justify-content: flex-end;
   }
 
   .inv__table-wrap--cards td:last-child {

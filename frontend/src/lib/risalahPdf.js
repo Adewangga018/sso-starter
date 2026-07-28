@@ -36,7 +36,38 @@ const PRINT_CSS = `
   body .rd tr { break-inside: avoid; page-break-inside: avoid; }
   body .rd th, body .rd td { font-size: 8.5pt; padding: 3px 5px; }
   body .rd div.para { break-inside: avoid; page-break-inside: avoid; }
-  body .rd svg { max-width: 100%; height: auto; }
+
+  /* Lembar pengesahan: baris keterangan dan baris garis+nama harus tetap satu
+     halaman - kalau terbelah, garis tanda tangannya pindah ke halaman
+     berikutnya terlepas dari nama penandatangannya. (Aturan "tr" di atas hanya
+     menjaga tiap baris tidak terpotong di tengah, bukan menjaga kedua baris
+     ini tetap berdampingan.) Ruang tanda tangan disamakan dengan 36pt. */
+  body .rd table.rd-sign { break-inside: avoid; page-break-inside: avoid; }
+  body .rd table.rd-sign tr.rd-sign__ket td { padding-bottom: 36pt; }
+
+  /* --- Diagram fishbone -----------------------------------------------------
+     SVG-nya disalin apa adanya dari DOM modal Detail, jadi inline style-nya
+     ikut terbawa: pembungkusnya overflow-x: auto dan SVG-nya min-width: 820px
+     / max-width: 1240px. Di layar itu benar (diagram lebar bisa digulir), tapi
+     di kertas A4 potret lebar isi hanya 186mm (~700px): min-width memaksa SVG
+     melampaui halaman, dan karena di kertas tidak ada gulir, pembungkusnya
+     MEMOTONG sisi kanan diagram - inilah penyebab fishbone terpotong pada
+     unduhan PDF SS & GIO.
+     Perbaikannya: matikan min-width dan biarkan SVG menyusut mengikuti lebar
+     halaman (viewBox membuatnya menskala utuh), lalu pembungkusnya tidak boleh
+     memotong lagi. !important diperlukan karena yang dilawan inline style. */
+  body .rd svg {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto;
+  }
+  body .rd .inv__fishwrap {
+    overflow: visible !important;
+    /* Sekaligus jaga agar diagram tidak terbelah dua halaman. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 `
 
 // Nama berkas yang disodorkan dialog cetak: peramban memakai <title> dokumen
