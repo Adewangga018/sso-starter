@@ -77,6 +77,10 @@ public class DashboardController : ControllerBase
             }
         }
 
+        // Nama tampilan: utamakan NAMA_LENGKAP dari data pegawai (mis. "Diah Puspitasari"),
+        // bukan nama akun/token yang bisa berupa username singkat ("diah").
+        var nama = !string.IsNullOrWhiteSpace(pegawai?.NAMA_LENGKAP) ? pegawai!.NAMA_LENGKAP.Trim() : user.Name;
+
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
         var isAdminModulSdm = pegawai is not null && await _access.IsSdmAdminAsync(pegawai.ID_KARYAWAN);
 
@@ -86,6 +90,6 @@ public class DashboardController : ControllerBase
         var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
         var modules = await _modules.GetTilesForAsync(isAdmin);
 
-        return Ok(new DashboardSummaryDto(user.Name, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm));
+        return Ok(new DashboardSummaryDto(nama, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm));
     }
 }

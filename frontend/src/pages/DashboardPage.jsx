@@ -33,6 +33,7 @@ const MODULE_ROUTES = {
   'my-team': '/team',
   'my-office': '/my-office',
   'my-progress': '/my-progress',
+  'my-asset': '/my-asset',
 }
 
 // Logo tiap modul (di /public). Bila ada, tampil menggantikan ikon lucide pada tile.

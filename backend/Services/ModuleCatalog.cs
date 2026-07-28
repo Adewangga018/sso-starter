@@ -17,7 +17,7 @@ public static class ModuleCatalog
         new("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", false),
         new("my-health", "My Health", "KESEHATAN", "activity", false),
         new("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
-        new("my-asset", "My Asset", "ASET", "archive", false),
+        new("my-asset", "My Asset", "ASET", "archive", true),
         new("my-progress", "My Progress", "KPI", "trending-up", true),
         new("my-team", "My Team", "KINERJA TIM", "users-round", true),
     ];
