@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { BarChart3, LayoutGrid, Users2 } from 'lucide-react'
+import { BarChart3, LayoutGrid, Users2, MessagesSquare } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +18,7 @@ function buildSections() {
       label: 'My Team',
       items: [
         { key: 'tim', label: 'Tim & Tugas', icon: Users2, to: '/team', end: true },
+        { key: 'coaching', label: 'Coaching', icon: MessagesSquare, to: '/team/coaching' },
         { key: 'rekap', label: 'Rekap Tim', icon: BarChart3, to: '/team/rekap' },
       ],
     },

@@ -178,6 +178,18 @@ export const api = {
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  // Coaching (My Team)
+  getCoachingInbox: () => apiFetch('/api/coaching'),
+  getCoachingLawanBicara: () => apiFetch('/api/coaching/lawan-bicara'),
+  buatCoachingSesi: (payload) => apiFetch('/api/coaching/sesi', { method: 'POST', body: JSON.stringify(payload) }),
+  getCoachingSesi: (id) => apiFetch(`/api/coaching/sesi/${id}`),
+  kirimPesanSesi: (id, isi) => apiFetch(`/api/coaching/sesi/${id}/pesan`, { method: 'POST', body: JSON.stringify({ isi }) }),
+  statusSesi: (id, status) => apiFetch(`/api/coaching/sesi/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  tambahTindakLanjut: (id, isi) => apiFetch(`/api/coaching/sesi/${id}/tindak-lanjut`, { method: 'POST', body: JSON.stringify({ isi }) }),
+  statusTindakLanjut: (tlId, status) => apiFetch(`/api/coaching/tindak-lanjut/${tlId}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  getCoachingRuang: (ownerNik) => apiFetch(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}`),
+  kirimPesanRuang: (ownerNik, isi) => apiFetch(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}/pesan`, { method: 'POST', body: JSON.stringify({ isi }) }),
+
   // My Asset
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getAsetDetail: (id) => apiFetch(`/api/aset/${id}`),

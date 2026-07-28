@@ -19,6 +19,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import MyTeamPage from './pages/MyTeamPage'
 import RekapTimPage from './pages/RekapTimPage'
+import CoachingPage from './pages/CoachingPage'
 import MyTeamLayout from './layouts/MyTeamLayout'
 import MyOfficeLayout from './layouts/MyOfficeLayout'
 import MyOfficeBeranda from './pages/office/MyOfficeBeranda'
@@ -101,6 +102,7 @@ export default function App() {
             <Route element={<RequireModule moduleKey="my-team" />}>
               <Route path="/team" element={<MyTeamLayout />}>
                 <Route index element={<MyTeamPage />} />
+                <Route path="coaching" element={<CoachingPage />} />
                 <Route path="rekap" element={<RekapTimPage />} />
               </Route>
             </Route>

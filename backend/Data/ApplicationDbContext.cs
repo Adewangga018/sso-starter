@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
 using SsoBackend.Models.Approval;
 using SsoBackend.Models.Aset;
+using SsoBackend.Models.Coaching;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Kpi;
@@ -47,6 +48,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Aset> Aset => Set<Aset>();
     public DbSet<AsetMaintenance> AsetMaintenance => Set<AsetMaintenance>();
+    // Coaching My Team (schema coaching) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<CoachingSesi> CoachingSesi => Set<CoachingSesi>();
+    public DbSet<CoachingPesan> CoachingPesan => Set<CoachingPesan>();
+    public DbSet<CoachingTindakLanjut> CoachingTindakLanjut => Set<CoachingTindakLanjut>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -395,6 +400,48 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Catatan).HasColumnName("catatan");
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+        });
+
+        builder.Entity<CoachingSesi>(e =>
+        {
+            e.ToTable("sesi", "coaching", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdAtasan).HasColumnName("id_atasan");
+            e.Property(x => x.NamaAtasan).HasColumnName("nama_atasan");
+            e.Property(x => x.IdBawahan).HasColumnName("id_bawahan");
+            e.Property(x => x.NamaBawahan).HasColumnName("nama_bawahan");
+            e.Property(x => x.Topik).HasColumnName("topik");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.TglTerakhir).HasColumnName("tgl_terakhir");
+        });
+
+        builder.Entity<CoachingPesan>(e =>
+        {
+            e.ToTable("pesan", "coaching", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSesi).HasColumnName("id_sesi");
+            e.Property(x => x.RuangNik).HasColumnName("ruang_nik");
+            e.Property(x => x.IdPengirim).HasColumnName("id_pengirim");
+            e.Property(x => x.NamaPengirim).HasColumnName("nama_pengirim");
+            e.Property(x => x.Isi).HasColumnName("isi");
+            e.Property(x => x.TglKirim).HasColumnName("tgl_kirim");
+        });
+
+        builder.Entity<CoachingTindakLanjut>(e =>
+        {
+            e.ToTable("tindak_lanjut", "coaching", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSesi).HasColumnName("id_sesi");
+            e.Property(x => x.Isi).HasColumnName("isi");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.
