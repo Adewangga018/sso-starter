@@ -790,7 +790,7 @@ export default function InovasiForm() {
                   <tr key={s.label}>
                     <td style={{ textAlign: 'center' }}>{idx + 1}</td>
                     <td style={{ fontWeight: 700 }}>{s.label}</td>
-                    <td>{s.nama || <span style={{ color: '#c0392b' }}>(belum diisi)</span>}</td>
+                    <td className="u-nama">{s.nama || <span style={{ color: '#c0392b' }}>(belum diisi)</span>}</td>
                     <td>{s.nik || '-'}</td>
                     <td>{s.jabatan || '-'}</td>
                     <td>{s.depBagian || '-'}</td>

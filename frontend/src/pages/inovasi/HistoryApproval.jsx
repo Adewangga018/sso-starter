@@ -135,7 +135,7 @@ export default function HistoryApproval({ kind = 'gagasan' }) {
                   <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.metodologi ?? '-'}</td>
                   {isInovasi && <td style={{ textAlign: 'center' }}>{r.tahap ?? '-'}</td>}
                   <td>{r.peran}</td>
-                  <td>{r.nama ?? '-'}{r.saya && <span className="inv__chip-saya">saya</span>}</td>
+                  <td className="u-nama">{r.nama ?? '-'}{r.saya && <span className="inv__chip-saya">saya</span>}</td>
                   <td style={{ textAlign: 'center' }}><span className={`inv__status ${statusClass(r.statusLangkah)}`}>{r.statusLangkah}</span></td>
                   <td>
                     {isInovasi && (
@@ -158,7 +158,7 @@ export default function HistoryApproval({ kind = 'gagasan' }) {
                                 {s.statusLangkah === 'Menunggu' ? 'Menunggu' : s.statusLangkah}
                                 {isInovasi && s.tahap ? <> pada tahap <b>{s.tahap}</b></> : null} oleh <b>{s.peran}</b>
                               </div>
-                              <div className="inv__timeline-who">{s.nik ? `${s.nik} - ` : ''}{s.nama ?? '(belum ditetapkan)'}{s.komentar ? ` - "${s.komentar}"` : ''}</div>
+                              <div className="inv__timeline-who">{s.nik ? `${s.nik} - ` : ''}<span className="u-nama">{s.nama ?? '(belum ditetapkan)'}</span>{s.komentar ? ` - "${s.komentar}"` : ''}</div>
                             </div>
                             <div className="inv__timeline-when">{s.tgl ? waktuId(s.tgl) : 'belum diproses'}</div>
                           </div>

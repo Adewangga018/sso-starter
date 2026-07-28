@@ -475,7 +475,7 @@ export default function ProfilPage() {
           <input ref={photoInputRef} type="file" accept={PHOTO_ACCEPT} hidden onChange={onPickPhoto} />
         </div>
         <div className="profil__header-text">
-          <h2>{profile.namaLengkap}</h2>
+          <h2 className="u-nama">{profile.namaLengkap}</h2>
           <span className={`profil__status-pill${profile.isActive ? '' : ' profil__status-pill--inactive'}`}>
             {profile.isActive ? 'Karyawan Aktif' : 'Karyawan Nonaktif'}
           </span>

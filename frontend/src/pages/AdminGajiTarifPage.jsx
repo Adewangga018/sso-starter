@@ -90,7 +90,7 @@ export default function AdminGajiTarifPage() {
     <div className="agt">
       <div className="agt__top">
         <Link to="/my-personal/gaji" className="agt__back"><ArrowLeft size={16} /> Slip Gaji</Link>
-        <span className="agt__role">Admin Modul SDM{summary?.nama ? ` · ${summary.nama}` : ''}</span>
+        <span className="agt__role">Admin Modul SDM{summary?.nama ? <> · <span className="u-nama">{summary.nama}</span></> : ''}</span>
       </div>
 
       <div className="agt__head">

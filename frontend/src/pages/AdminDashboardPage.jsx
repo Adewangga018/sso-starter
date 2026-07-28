@@ -18,7 +18,7 @@ const TILES = [
     to: '/juri',
     icon: Gavel,
     title: 'Juri & Penilaian Inovasi',
-    desc: 'Susun stream juri (Ketua/Anggota/Sekretaris) & tugaskan menilai inovasi.',
+    desc: 'Susun stream juri (1 Ketua & 3 Anggota) & tugaskan menilai inovasi.',
   },
   {
     to: '/admin/audit',

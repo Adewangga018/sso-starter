@@ -12,11 +12,14 @@ using SsoBackend.Services;
 
 namespace SsoBackend.Controllers;
 
-// Penilaian Juri untuk My Innovation. Admin menyusun STREAM (panel 5 orang:
-// 1 Ketua, 3 Anggota, 1 Sekretaris) & menugaskannya ke sebuah gugus. Ketua &
-// Anggota memberi skor 1-10 per kriteria (rubrik GIO/SS atau 5R sesuai jenis
-// gugus); Sekretaris hanya melihat. Otorisasi in-code (tidak pakai
-// [Authorize(Roles=...)]), konsisten dengan controller lain.
+// Penilaian Juri untuk My Innovation. Admin menyusun STREAM (panel 4 orang:
+// 1 Ketua & 3 Anggota) lalu menugaskannya ke sebuah gugus. Seluruh anggota
+// panel memberi skor 1-10 per kriteria (rubrik GIO/SS atau 5R sesuai jenis
+// gugus). Peran Sekretaris (dahulu ada, hanya melihat tanpa menilai) sudah
+// dihapus - perhitungan hasil memang selalu merata-ratakan Ketua + 3 Anggota,
+// jadi penghapusannya tidak mengubah angka apa pun.
+// Otorisasi in-code (tidak pakai [Authorize(Roles=...)]), konsisten dengan
+// controller lain.
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("inovasi/penilaian")]
@@ -205,19 +208,22 @@ public class PenilaianController : ControllerBase
     private static StreamDto ToStreamDto(PenilaianStream s) => new(
         s.Id, s.Nama, s.Keterangan, s.Aktif,
         s.Anggota
-            .OrderBy(a => a.Peran == "Ketua" ? 0 : a.Peran == "Anggota" ? 1 : 2)
+            .OrderBy(a => a.Peran == "Ketua" ? 0 : 1)
             .Select(a => new StreamAnggotaDto(a.Id, a.UserId, a.Nik, a.Nama, a.Peran))
             .ToList());
 
-    // Komposisi wajib: 1 Ketua, 3 Anggota, 1 Sekretaris; semua user ada & ber-role Juri.
+    // Komposisi wajib: 1 Ketua + 3 Anggota; semua user ada & ber-role Juri.
     private async Task<string?> ValidateAnggotaAsync(IReadOnlyList<StreamAnggotaInput>? anggota)
     {
         if (anggota is null || anggota.Count == 0) return "Anggota stream wajib diisi.";
         var ketua = anggota.Count(a => a.Peran == "Ketua");
         var ang = anggota.Count(a => a.Peran == "Anggota");
-        var sek = anggota.Count(a => a.Peran == "Sekretaris");
-        if (ketua != 1 || ang != 3 || sek != 1)
-            return "Komposisi stream harus tepat: 1 Ketua, 3 Anggota, dan 1 Sekretaris.";
+        // Peran selain Ketua/Anggota ditolak - termasuk "Sekretaris" yang sudah
+        // dihapus, supaya klien versi lama tidak menyelipkannya kembali.
+        var lain = anggota.Where(a => a.Peran != "Ketua" && a.Peran != "Anggota").Select(a => a.Peran).FirstOrDefault();
+        if (lain is not null) return $"Peran \"{lain}\" tidak dikenal. Stream hanya berisi Ketua dan Anggota.";
+        if (ketua != 1 || ang != 3)
+            return "Komposisi stream harus tepat: 1 Ketua dan 3 Anggota.";
         var ids = anggota.Select(a => a.UserId).ToList();
         if (ids.Any(string.IsNullOrWhiteSpace)) return "Ada anggota tanpa pengguna terpilih.";
         if (ids.Distinct().Count() != ids.Count) return "Seorang pengguna terpilih lebih dari satu peran.";
@@ -353,7 +359,7 @@ public class PenilaianController : ControllerBase
 
         var dto = rows.Select(x => new TugasPenilaianDto(
             x.Id, x.GugusId, x.Jenis, FormFor(x.Jenis), x.NoRegistrasi, x.NamaGugus, x.Judul, x.Periode,
-            x.Peran, x.Peran != "Sekretaris", x.Status)).ToList();
+            x.Peran, true, x.Status)).ToList();   // seluruh anggota panel menilai
         return Ok(dto);
     }
 
@@ -385,7 +391,7 @@ public class PenilaianController : ControllerBase
 
         var hasil = await BuildHasilAsync(p, form);
         var peran = me?.Peran ?? "Admin";
-        var bisaNilai = me is not null && me.Peran != "Sekretaris" && p.Status == "Berjalan";
+        var bisaNilai = me is not null && p.Status == "Berjalan";
         var header = new GugusHeaderDto(g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.Judul, g.Periode,
             g.NamaDepartemen, g.NamaKompartemen, g.Status);
 
@@ -404,7 +410,6 @@ public class PenilaianController : ControllerBase
         var me = await _db.PenilaianStreamAnggota.AsNoTracking()
             .FirstOrDefaultAsync(a => a.IdStream == p.IdStream && a.UserId == uid);
         if (me is null) return Forbid();
-        if (me.Peran == "Sekretaris") return Forbid();
 
         var g = await _db.Gugus.AsNoTracking().FirstOrDefaultAsync(x => x.Id == p.IdGugus);
         if (g is null) return NotFound();
@@ -485,7 +490,7 @@ public class PenilaianController : ControllerBase
         var jumlahKriteria = kriteria.GroupBy(k => k.JenisForm).ToDictionary(grp => grp.Key, grp => grp.Count());
 
         var anggota = await _db.PenilaianStreamAnggota.AsNoTracking()
-            .Where(a => idStream.Contains(a.IdStream) && a.Peran != "Sekretaris")
+            .Where(a => idStream.Contains(a.IdStream))
             .Select(a => new { a.IdStream, a.UserId }).ToListAsync();
         var anggotaPerStream = anggota.GroupBy(a => a.IdStream)
             .ToDictionary(grp => grp.Key, grp => grp.Select(a => a.UserId).ToList());
@@ -532,7 +537,7 @@ public class PenilaianController : ControllerBase
         var bobot = kriteria.ToDictionary(k => k.Id, k => k.BobotPersen);
 
         var penilaiAnggota = await _db.PenilaianStreamAnggota.AsNoTracking()
-            .Where(a => a.IdStream == p.IdStream && a.Peran != "Sekretaris").ToListAsync();
+            .Where(a => a.IdStream == p.IdStream).ToListAsync();
         var skor = await _db.PenilaianSkor.AsNoTracking().Where(x => x.IdPenugasan == p.Id).ToListAsync();
 
         var penilai = new List<PenilaiHasilDto>();

@@ -217,7 +217,7 @@ export default function InovasiPenilaianForm() {
               <tbody>
                 {detail.hasil.penilai.map((p) => (
                   <tr key={p.userId}>
-                    <td>{p.nama ?? '-'}</td>
+                    <td className="u-nama">{p.nama ?? '-'}</td>
                     <td>{p.peran}</td>
                     <td style={{ textAlign: 'center' }}>{Number(p.nilai).toFixed(2)}</td>
                     <td>{p.kategori}</td>
