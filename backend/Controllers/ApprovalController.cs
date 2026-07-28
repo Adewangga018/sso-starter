@@ -10,6 +10,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("persetujuan")]
+[ModuleGate("my-personal")]
 public class ApprovalController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

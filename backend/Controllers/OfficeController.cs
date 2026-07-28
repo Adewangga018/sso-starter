@@ -10,6 +10,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("office")]
+[ModuleGate("my-office")]
 public class OfficeController : ControllerBase
 {
     private static readonly string[] AllowedExt =

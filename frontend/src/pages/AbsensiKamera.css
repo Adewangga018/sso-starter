@@ -290,14 +290,77 @@
   display: none;
 }
 
+/* ===========================================================================
+   Responsif
+   Halaman ini justru paling sering dipakai dari ponsel (kamera + lokasi), jadi
+   tata letak ponsel diperlakukan sebagai bentuk utamanya.
+   =========================================================================== */
 @media (max-width: 720px) {
   .kamera__body {
     grid-template-columns: 1fr;
+    gap: 18px;
   }
 }
 
 @media (max-width: 640px) {
   .kamera__card {
-    padding: 18px 16px;
+    padding: 14px 12px;
+    margin-bottom: 14px;
+  }
+
+  .kamera__section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  /* Kamera ponsel bersifat tegak; 4/3 mendatar menyisakan banyak ruang kosong
+     dan wajah jadi kecil. 3/4 memakai lebar layar sepenuhnya. */
+  .kamera__viewport {
+    aspect-ratio: 3 / 4;
+  }
+
+  /* Tombol ganti kamera di dalam viewport - perbesar agar mudah disentuh. */
+  .kamera__switch {
+    top: 8px;
+    right: 8px;
+    padding: 8px 12px;
+  }
+
+  /* Tombol Ambil Foto / Ulangi menumpuk selebar layar, bukan berdampingan
+     dengan lebar seadanya. */
+  .kamera__actions {
+    flex-direction: column;
+  }
+
+  .kamera__actions .kamera__btn {
+    width: 100%;
+  }
+
+  .kamera__btn {
+    padding: 12px 18px;
+  }
+
+  .kamera__controls .kamera__btn {
+    width: 100%;
+  }
+
+  /* Tombol "Coba lagi" pada peringatan izin kamera turun ke baris sendiri -
+     berdampingan dengan teks peringatan membuat keduanya terpotong. */
+  .kamera__alert {
+    flex-wrap: wrap;
+  }
+
+  .kamera__retry {
+    margin-left: 0;
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .kamera__info {
+    gap: 11px;
+  }
+
+  .kamera__info-value {
+    font-size: 13.5px;
   }
 }

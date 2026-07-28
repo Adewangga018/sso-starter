@@ -1,6 +1,9 @@
 .app-shell {
   display: flex;
   height: 100vh;
+  /* dvh: di browser ponsel 100vh menghitung area yang tertutup bilah URL,
+     akibatnya baris terakhir konten selalu terpotong. */
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -17,11 +20,29 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Boleh menggulir tegak, tidak mendatar - tabel lebar menggulir di dalam
+     pembungkusnya sendiri (.*__table-wrap), bukan menggeser seluruh halaman. */
+  overflow-x: hidden;
   padding: 28px 32px 40px;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 900px) {
+  .app-shell__content {
+    padding: 22px 20px 32px;
+  }
 }
 
 @media (max-width: 640px) {
   .app-shell__content {
-    padding: 18px 16px 28px;
+    /* Sisi kiri/kanan mengikuti safe area supaya konten tidak tertutup sudut
+       melengkung / notch saat ponsel dipakai mendatar. */
+    padding: 16px calc(14px + var(--safe-r)) calc(24px + var(--safe-b)) calc(14px + var(--safe-l));
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell__content {
+    padding: 14px calc(11px + var(--safe-r)) calc(20px + var(--safe-b)) calc(11px + var(--safe-l));
   }
 }

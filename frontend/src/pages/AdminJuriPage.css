@@ -55,3 +55,58 @@
 .admin-juri__empty { color: var(--gcs-text-muted); font-size: 0.88rem; padding: 16px 4px; text-align: center; }
 .admin-juri__forbidden { color: #c0392b; text-align: center; padding: 40px 0; }
 .admin-juri__muted { color: var(--gcs-text-muted); }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-juri {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-juri__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .admin-juri__table-wrap. */
+  .admin-juri__table th,
+  .admin-juri__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Kepala bagian: judul lalu tombol tambah selebar layar. */
+  .admin-juri__section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-juri__section-head > button,
+  .admin-juri__card-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-juri__card-actions {
+    flex-direction: column;
+  }
+
+  /* Slot anggota panel: satu kolom (minmax 220px masih memaksa 1 kolom di
+     360px, tapi gap-nya dirapatkan). */
+  .admin-juri__slots {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .admin-juri__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Nama + peran anggota: turun ke dua baris bila nama panjang. */
+  .admin-juri__member {
+    flex-wrap: wrap;
+  }
+}

@@ -243,11 +243,22 @@
     top: 0;
     left: 0;
     bottom: 0;
-    width: 260px;
+    /* 82vw: di ponsel kecil (320-360px) drawer 260px penuh menutupi hampir
+       seluruh layar sehingga backdrop tidak lagi terlihat bisa ditutup. */
+    width: min(260px, 82vw);
+    padding-left: var(--safe-l);
+    padding-bottom: var(--safe-b);
     z-index: 200;
     transform: translateX(-100%);
     transition: transform 0.22s ease;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Drawer selalu bisa digulir - daftar menu modul bisa lebih tinggi dari
+     layar ponsel, dan .sidebar induknya overflow:hidden. */
+  .sidebar__nav {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar--mobile-open {

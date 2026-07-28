@@ -11,6 +11,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("aset")]
+[ModuleGate("my-asset")]
 public class AsetController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

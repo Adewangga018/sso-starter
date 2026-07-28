@@ -16,6 +16,7 @@ namespace SsoBackend.Controllers;
 // employee would always fail even for a perfectly valid caller.
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/izin")]
+[ModuleGate("my-personal")]
 public class IzinController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

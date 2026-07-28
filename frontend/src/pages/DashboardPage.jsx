@@ -13,6 +13,7 @@ import {
   Users,
   Users2,
 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import './DashboardPage.css'
 
 const ICONS = {
@@ -49,6 +50,7 @@ const MODULE_LOGOS = {
 
 export default function DashboardPage() {
   const { summary } = useOutletContext()
+  const { isAdmin } = useAuth()
   const navigate = useNavigate()
 
   const modules = summary?.modules ?? []
@@ -99,7 +101,13 @@ export default function DashboardPage() {
                   </div>
                 )}
                 <div className="module-tile__body">
-                  <div className="module-tile__label">{mod.label}</div>
+                  <div className="module-tile__label">
+                    {mod.label}
+                    {/* Badge hanya untuk Admin IT. Bagi karyawan, modul yang dikunci ke
+                        Admin tampil sebagai "Coming Soon" biasa - tidak perlu diberitahu
+                        bahwa modulnya ada tapi tidak untuk mereka. */}
+                    {isAdmin && mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                  </div>
                   <div className="module-tile__subtitle">{mod.subtitle}</div>
                 </div>
                 <div className="module-tile__action module-tile__action--locked">
@@ -125,7 +133,12 @@ export default function DashboardPage() {
                 </div>
               )}
               <div className="module-tile__body">
-                <div className="module-tile__label">{mod.label}</div>
+                <div className="module-tile__label">
+                  {mod.label}
+                  {/* Kartu terbuka + badge = hanya terlihat oleh Admin IT; karyawan lain
+                      mendapat kartu terkunci "Coming Soon" untuk modul yang sama. */}
+                  {isAdmin && mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                </div>
                 <div className="module-tile__subtitle">{mod.subtitle}</div>
               </div>
               <div className="module-tile__action">

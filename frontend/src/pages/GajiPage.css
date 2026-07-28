@@ -58,3 +58,31 @@
 .gaji__bersih b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 
 .gaji__catatan { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--gcs-text-muted); margin: 0; }
+
+/* ===========================================================================
+   Responsif (pelengkap media query 720px di atas)
+   =========================================================================== */
+@media (max-width: 640px) {
+  .gaji { gap: 12px; }
+  .gaji__title { font-size: 1.2rem; }
+  .gaji__card { padding: 12px; }
+
+  /* Pemilih periode + pranala konfigurasi: selebar layar di bawah judul. */
+  .gaji__periode { width: 100%; }
+  .gaji__periode select { flex: 1; min-width: 0; }
+
+  /* Identitas: nama di atas, Grade/Level di bawahnya. */
+  .gaji__ident { align-items: flex-start; gap: 12px; }
+  .gaji__ident-grade { gap: 16px; }
+
+  /* Baris komponen gaji: nama dan nominal tetap sebaris (nominal rata kanan),
+     hanya tepinya dirapatkan supaya angka tidak terpotong. */
+  .gaji__row,
+  .gaji__grup-head,
+  .gaji__col-total,
+  .gaji__col-title { padding-left: 12px; padding-right: 12px; }
+
+  .gaji__row { font-size: 0.83rem; gap: 8px; }
+
+  .gaji__bersih b { font-size: 1.1rem; }
+}

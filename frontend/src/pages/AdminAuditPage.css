@@ -82,3 +82,52 @@
 
 .audit__empty, .audit__forbidden { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
 .audit__error { background: rgba(192, 57, 43, 0.1); color: #c0392b; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .audit {
+    padding: 16px 14px 40px;
+  }
+
+  .audit__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .audit__table-wrap. */
+  .audit__table th,
+  .audit__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Baris filter: tiap kolom isian selebar layar, tidak berdesakan sebaris. */
+  .audit__filters {
+    align-items: stretch;
+  }
+
+  .audit__filters label {
+    flex: 1 1 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .audit__filters input,
+  .audit__filters select {
+    width: 100%;
+  }
+
+  .audit__btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .audit__summary {
+    gap: 8px;
+  }
+}

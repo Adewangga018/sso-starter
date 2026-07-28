@@ -92,3 +92,38 @@
     transform: rotate(360deg);
   }
 }
+
+/* Di ponsel dokumen butuh seluruh layar: tepi overlay dipersempit dan tinggi
+   memakai dvh supaya bilah URL tidak memotong bagian bawah pembaca PDF. */
+@media (max-width: 640px) {
+  .pdf-modal__overlay {
+    padding: 10px calc(8px + var(--safe-r)) calc(10px + var(--safe-b)) calc(8px + var(--safe-l));
+  }
+
+  .pdf-modal {
+    height: 100dvh;
+    max-height: calc(100dvh - 20px - var(--safe-b));
+    border-radius: 12px;
+  }
+
+  .pdf-modal__header {
+    padding: 12px 14px;
+  }
+
+  .pdf-modal__header h2 {
+    font-size: 14px;
+    /* Nama berkas panjang tidak boleh mendorong tombol tutup keluar layar. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pdf-modal__footer {
+    max-height: 45%;
+    padding: 12px 14px 14px;
+  }
+
+  .pdf-modal__state {
+    padding: 24px 16px;
+  }
+}

@@ -232,3 +232,44 @@
     overflow: hidden;
   }
 }
+
+/* ===========================================================================
+   Responsif (pratinjau di layar; blok @media print di atas tidak tersentuh)
+   Lembar surat sengaja tetap 210mm supaya hasil cetaknya tepat A4. Di ponsel
+   lembar itu lebih lebar dari layar, jadi WADAHNYA yang digulir mendatar -
+   bukan seluruh halaman (body memakai overflow-x: hidden). Lembar tidak
+   diperkecil dengan transform/zoom karena teks 12pt pada skala ~0,45 tidak
+   terbaca; menggulir pada ukuran asli lebih berguna.
+   =========================================================================== */
+@media (max-width: 840px) {
+  .cetak {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 10px 32px;
+  }
+
+  /* Toolbar ikut selebar isi wadah (210mm) kalau dibiarkan, sehingga tombol
+     Cetak hanyut ke kanan di luar layar. sticky + left: 0 memakukannya di tepi
+     kiri viewport sementara lembarnya tetap bisa digulir. */
+  .cetak__toolbar {
+    position: sticky;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    justify-content: stretch;
+  }
+
+  .cetak__toolbar button {
+    width: 100%;
+    padding: 13px 20px;
+  }
+
+  .cetak__sheet {
+    /* Bayangan tebal menambah lebar gulir tanpa guna di layar kecil. */
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  }
+
+  .cetak__state {
+    padding: 32px 16px;
+  }
+}

@@ -185,3 +185,43 @@
 .mo-lamp__size { font-size: 0.74rem; color: var(--gcs-text-muted); flex: none; }
 .mo-lamp__del { border: none; background: none; color: var(--gcs-text-muted); cursor: pointer; display: inline-flex; padding: 2px; border-radius: 6px; flex: none; }
 .mo-lamp__del:hover { color: #c0392b; background: rgba(192,57,43,0.08); }
+
+/* ===========================================================================
+   Responsif (pelengkap media query 820/720/680/520px di atas)
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Kepala halaman: tombol aksi turun ke bawah, selebar layar. */
+  .mo__head-row { gap: 10px; }
+  .mo__head-row > .mo-btn,
+  .mo-actions { width: 100%; }
+  .mo-actions { justify-content: stretch; }
+  .mo-actions .mo-btn { flex: 1; justify-content: center; padding: 12px 15px; }
+
+  /* Chip filter digulir mendatar, tidak menumpuk beberapa baris. */
+  .mo-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .mo-filters::-webkit-scrollbar { display: none; }
+  .mo-filter { flex: 0 0 auto; padding: 8px 14px; }
+
+  .mo-table { min-width: 560px; }
+  .mo-table th,
+  .mo-table td { padding: 9px 10px; }
+
+  /* Sasaran sentuh tombol ikon di tabel & lampiran. */
+  .mo-icon-btn { width: 36px; height: 36px; }
+
+  /* Rincian surat: dua kolom (dari 680px) jadi satu kolom di ponsel. */
+  .mo-detail-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* Kartu roadmap beranda. */
+  .mo-roadmap__item { padding: 10px 12px; gap: 10px; }
+  .mo-roadmap__icon { width: 34px; height: 34px; }
+
+  /* Hasil pencarian pegawai tidak boleh lebih tinggi dari ruang yang ada. */
+  .mo-picker__results { max-height: 200px; }
+}

@@ -48,3 +48,38 @@
 .agt__denied svg { color: var(--gcs-gold-700); }
 .agt__denied h2 { color: var(--gcs-green-900); margin: 10px 0 6px; font-size: 1.2rem; }
 .agt__denied p { font-size: 0.88rem; margin: 0 0 16px; }
+
+/* ===========================================================================
+   Responsif (pelengkap media query 720px di atas)
+   =========================================================================== */
+@media (max-width: 640px) {
+  .agt { padding: 16px 14px 40px; gap: 12px; }
+  .agt__title { font-size: 1.2rem; }
+
+  .agt__sel { gap: 10px; padding: 12px; }
+  .agt__sel label { flex: 1 1 140px; }
+  .agt__sel select { min-width: 0; width: 100%; }
+
+  /* Nama komponen + kolom nominal: 150px untuk kolom nominal menyisakan ruang
+     terlalu sempit bagi nama di layar 360px, jadi nominal turun ke bawah nama. */
+  .agt__field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    padding: 8px 12px;
+  }
+
+  .agt__preview {
+    grid-column: 1;
+  }
+
+  /* Tombol simpan melekat di dasar layar - formulir tarif ini panjang. */
+  .agt__foot {
+    bottom: calc(10px + var(--safe-b));
+  }
+
+  .agt__save {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 18px;
+  }
+}

@@ -16,6 +16,16 @@
   --font-heading: 'Montserrat', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
 
+  /* Breakpoint (dipakai sebagai acuan, media query tetap literal karena
+     @media belum bisa membaca custom property):
+       900px = tablet / sidebar berubah jadi drawer
+       640px = ponsel
+       420px = ponsel kecil (mis. iPhone SE, 375px)
+     Sisi aman notch/home-indicator untuk elemen yang menempel tepi layar. */
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+
   color-scheme: light;
   color: var(--gcs-ink);
   background: var(--gcs-bg);
@@ -33,10 +43,19 @@ body {
   min-height: 100vh;
   background: var(--gcs-bg);
   color: var(--gcs-ink);
+  /* Tidak ada satu pun layout yang sengaja menggulir mendatar di tingkat
+     halaman - kalau terjadi berarti ada elemen kelebar, dan di ponsel itu
+     bikin seluruh halaman bisa digeser. Tabel lebar tetap boleh menggulir,
+     tapi di dalam pembungkusnya sendiri (.*__table-wrap). */
+  overflow-x: hidden;
 }
 
+/* Tinggi viewport dinamis: di browser ponsel 100vh termasuk area bilah URL,
+   sehingga bagian bawah layar terpotong. dvh mengikuti tinggi yang benar-benar
+   terlihat; 100vh tetap ditulis lebih dulu sebagai cadangan browser lama. */
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 h1,
@@ -73,12 +92,53 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
-
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* ===========================================================================
+   Fondasi responsif
+   Aturan di sini berlaku untuk seluruh halaman, sehingga tiap file CSS halaman
+   hanya perlu menangani tata letaknya sendiri.
+   =========================================================================== */
+
+/* Media tidak boleh melebihi induknya - penyebab paling umum halaman bisa
+   digeser ke samping di ponsel. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  /* Safari iOS otomatis men-zoom halaman saat kolom isian yang fontnya < 16px
+     disentuh, dan tidak pernah mengembalikan zoom-nya - layout jadi terlihat
+     rusak padahal CSS-nya benar. 16px mematikan perilaku itu; ukuran visual
+     tiap kolom tetap diatur lewat padding di CSS halaman masing-masing. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Teks tanpa spasi (email, no. registrasi, nama berkas) tidak boleh
+     memaksa lebar induknya. */
+  body {
+    overflow-wrap: break-word;
+  }
+}
+
+/* Sasaran sentuh: pointer kasar (jari) butuh ~40px, bukan 32px seperti mouse.
+   Dipasang berbasis kemampuan perangkat, bukan lebar layar, supaya tablet
+   layar besar dengan sentuh juga ikut. */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  [role='button'],
+  a.btn {
+    touch-action: manipulation;
+  }
 }

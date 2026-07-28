@@ -260,3 +260,72 @@
 .mt-rekap__empty { text-align: center; color: var(--gcs-text-muted); padding: 20px !important; }
 .mt-rekap__hint { color: var(--gcs-text-muted); font-size: 0.78rem; margin: -4px 0 12px; }
 .mt-rekap__den { color: var(--gcs-text-muted); }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+
+/* Tombol hapus tugas disembunyikan (opacity: 0) dan hanya muncul saat hover.
+   Di perangkat sentuh hover tidak pernah terjadi, jadi tombolnya tidak pernah
+   terlihat - di sana tombol dibuat selalu tampak. */
+@media (hover: none) and (pointer: coarse) {
+  .mt-task__del {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .mt__stats { gap: 10px; }
+  .mt-stat { padding: 12px 13px; gap: 10px; }
+  .mt-stat__icon { width: 36px; height: 36px; }
+  .mt-stat__value { font-size: 1.3rem; }
+
+  /* Papan tugas & panel: tepi lebih rapat supaya lebar isi tidak terbuang. */
+  .mt__board { padding: 10px; }
+  .mt-rekap__card { padding: 12px; }
+
+  /* Kepala papan: tab dan tombol turun ke baris masing-masing, lalu tab
+     digulir mendatar bila jumlahnya banyak. */
+  .mt-board__head { gap: 10px; }
+  .mt-tabs {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .mt-tabs::-webkit-scrollbar { display: none; }
+  .mt-tabs button { flex: 0 0 auto; }
+  .mt-board__actions { width: 100%; }
+  .mt-board__actions .mt-btn { flex: 1; justify-content: center; }
+
+  /* Kolom kanban dipersempit agar dua kolom terlihat sekaligus - petunjuk
+     bahwa papan ini bisa digeser. */
+  .mt-kanban > .mt-col { flex: 0 0 68vw; min-width: 68vw; }
+
+  /* Modal Beri Tugas: hampir layar penuh + tinggi dvh. */
+  .mt-modal__overlay {
+    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
+    align-items: flex-end;
+  }
+  .mt-modal {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+  .mt-modal__head { padding: 13px 16px; }
+  .mt-modal__form { padding: 14px 16px; }
+  .mt-modal__actions { flex-direction: column-reverse; }
+  .mt-modal__actions .mt-btn { width: 100%; justify-content: center; padding: 12px 14px; }
+
+  /* Panel daftar orang tidak perlu dibatasi 460px saat sudah menumpuk. */
+  .mt-panel__body { max-height: 320px; }
+
+  .mt-rekap__table { min-width: 520px; }
+  .mt-rekap__table th,
+  .mt-rekap__table td { padding: 9px 10px; }
+}
+
+@media (max-width: 420px) {
+  .mt__stats { grid-template-columns: minmax(0, 1fr); }
+  .mt-kanban > .mt-col { flex: 0 0 80vw; min-width: 80vw; }
+}

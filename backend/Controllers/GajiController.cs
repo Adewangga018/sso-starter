@@ -12,6 +12,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/gaji")]
+[ModuleGate("my-personal")]
 public class GajiController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

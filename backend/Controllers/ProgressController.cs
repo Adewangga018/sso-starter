@@ -11,6 +11,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("progress")]
+[ModuleGate("my-progress")]
 public class ProgressController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

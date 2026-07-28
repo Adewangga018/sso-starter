@@ -1,0 +1,174 @@
+.admin-modules {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-modules__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gcs-green-600);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.admin-modules__back:hover { color: var(--gcs-green-900); }
+
+.admin-modules__head h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.5rem;
+  margin-top: 8px;
+  color: var(--gcs-ink);
+}
+.admin-modules__head h1 svg { color: var(--gcs-green-600); }
+
+.admin-modules__note {
+  background: rgba(47, 108, 63, 0.08);
+  border: 1px solid rgba(47, 108, 63, 0.2);
+  color: var(--gcs-green-900);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.admin-modules__alert {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+}
+.admin-modules__alert--err { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
+.admin-modules__hint { font-size: 0.8rem; color: var(--gcs-text-muted); }
+
+.admin-modules__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  background: var(--gcs-white);
+}
+.admin-modules__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.admin-modules__table th,
+.admin-modules__table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--gcs-border);
+  white-space: nowrap;
+}
+.admin-modules__table th {
+  background: var(--gcs-bg);
+  color: var(--gcs-text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.admin-modules__table tr:last-child td { border-bottom: none; }
+.admin-modules__table tr.is-busy { opacity: 0.55; }
+.admin-modules__col-center { text-align: center; }
+
+.admin-modules__mod { display: flex; align-items: center; gap: 11px; }
+.admin-modules__mod-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+}
+.admin-modules__mod-label { font-weight: 600; color: var(--gcs-ink); }
+.admin-modules__mod-sub {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-muted);
+}
+
+.admin-modules__select {
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+  outline: none;
+  cursor: pointer;
+}
+.admin-modules__select:focus {
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+.admin-modules__select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.admin-modules__updated { color: var(--gcs-text-muted); font-size: 0.82rem; }
+.admin-modules__updated-by { font-size: 0.75rem; opacity: 0.8; }
+
+.admin-modules__empty,
+.admin-modules__forbidden { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
+
+/* toggle switch (mirrors AdminLocationsPage) */
+.admin-modules__switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 38, 31, 0.18);
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  vertical-align: middle;
+}
+.admin-modules__switch.is-on { background: var(--gcs-green-600); }
+.admin-modules__switch:disabled { opacity: 0.45; cursor: not-allowed; }
+.admin-modules__switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.admin-modules__switch.is-on .admin-modules__switch-knob { transform: translateX(18px); }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-modules {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-modules__head h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Sel dirapatkan supaya bagian tabel yang terlihat sebelum digulir lebih
+     banyak - tabel di sini memang menggulir mendatar di .admin-modules__table-wrap. */
+  .admin-modules__table th,
+  .admin-modules__table td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Nama modul + ikon: ikon tetap, teksnya boleh membungkus. */
+  .admin-modules__mod {
+    gap: 9px;
+  }
+}

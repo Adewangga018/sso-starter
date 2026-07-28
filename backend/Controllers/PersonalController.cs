@@ -14,6 +14,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal")]
+[ModuleGate("my-personal")]
 public class PersonalController : ControllerBase
 {
     private static readonly string[] AllowedDocExt = [".pdf", ".png", ".jpg", ".jpeg"];

@@ -10,6 +10,9 @@ namespace SsoBackend.Services;
 // membawahi ketiga departemen. Departemen sibling lain TIDAK termasuk.
 //   - Admin Modul SDM  -> Departemen SDM (mis. tarif gaji JG x PG).
 //   - Admin Aset       -> Departemen Kepatuhan (kelola inventaris & maintenance aset).
+//
+// Catatan: JANGAN dikacaukan dengan ModuleSettingsService - itu mengatur modul portal
+// mana yang aktif & boleh dibuka siapa (Panel Admin IT > Akses Modul).
 public class ModuleAccessService
 {
     private readonly ApplicationDbContext _db;

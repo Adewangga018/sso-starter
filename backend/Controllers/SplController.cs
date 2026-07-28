@@ -13,6 +13,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/spl")]
+[ModuleGate("my-personal")]
 public class SplController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

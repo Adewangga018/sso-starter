@@ -1,6 +1,9 @@
 .login {
   position: relative;
   min-height: 100vh;
+  /* dvh: dengan 100vh saja, kartu login tergeser ke bawah bilah URL browser
+     ponsel sehingga tombol Masuk berada di luar layar saat papan ketik muncul. */
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -347,5 +350,19 @@
 @media (max-height: 700px) {
   .login__brand {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Kolom isian login: 16px agar Safari iOS tidak men-zoom halaman saat
+     disentuh (fondasi di index.css hanya berlaku sampai 640px untuk
+     input/select/textarea umum; di sini ditegaskan karena .login__field input
+     punya font-size sendiri). */
+  .login__field input {
+    font-size: 16px;
+  }
+
+  .login__submit {
+    padding: 14px 20px;
   }
 }

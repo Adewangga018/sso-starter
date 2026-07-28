@@ -45,9 +45,14 @@ builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<CutiService>();
 builder.Services.AddScoped<ApprovalService>();
 builder.Services.AddScoped<GajiService>();
+// Hak "Admin Modul SDM" (berbasis grading).
 builder.Services.AddScoped<ModuleAccessService>();
 builder.Services.AddScoped<KpiService>();
 builder.Services.AddScoped<AsetService>();
+// Akses modul portal (Panel Admin IT > Akses Modul). Di-cache di memori karena dibaca
+// pada setiap request modul lewat ModuleGateAttribute.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ModuleSettingsService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

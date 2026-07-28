@@ -83,7 +83,10 @@ export default function FishboneDiagram({ fishbone = [], masalah }) {
   const H = midY * 2
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid var(--inv-line, #dbe3dc)', borderRadius: 10, padding: 8, background: '#fbfdfb' }}>
+    // Kelas inv__fishwrap dipakai risalahPdf.js: SVG ini disalin apa adanya
+    // (beserta inline style-nya) ke jendela cetak, dan di kertas A4 pembungkus
+    // overflow-x + minWidth 820 justru MEMOTONG diagram - lihat PRINT_CSS.
+    <div className="inv__fishwrap" style={{ overflowX: 'auto', border: '1px solid var(--inv-line, #dbe3dc)', borderRadius: 10, padding: 8, background: '#fbfdfb' }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 820, maxWidth: 1240, display: 'block' }} role="img" aria-label="Diagram tulang ikan (fishbone)">
         {/* Tulang punggung + panah ke kepala */}
         <line x1={spineX0} y1={midY} x2={headX} y2={midY} stroke="#1f4f2c" strokeWidth={3} />

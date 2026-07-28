@@ -143,3 +143,36 @@
 
 .admin-docs__forbidden { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
 .admin-docs__error { background: rgba(192, 57, 43, 0.1); color: #c0392b; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-docs {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-docs__head h1 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-docs__emp-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+  }
+
+  /* Nama berkas panjang tidak boleh mendorong ikon status keluar kartu. */
+  .admin-docs__item {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .admin-docs__item-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

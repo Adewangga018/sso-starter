@@ -381,6 +381,12 @@ export const api = {
     apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),
 
+  // admin: akses modul portal (Admin IT, Bearer). payload = { enabled, access }
+  // dengan access 'semua' | 'admin'.
+  getAdminModules: () => apiFetch('/api/admin/modules'),
+  updateAdminModule: (key, payload) =>
+    apiFetch(`/api/admin/modules/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+
   // admin: lokasi geofence absensi (Admin IT, Bearer)
   getAdminLocations: () => apiFetch('/api/admin/locations'),
   createLocation: (payload) => apiFetch('/api/admin/locations', { method: 'POST', body: JSON.stringify(payload) }),

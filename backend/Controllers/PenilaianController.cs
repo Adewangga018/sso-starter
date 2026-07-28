@@ -8,6 +8,7 @@ using SsoBackend.Data;
 using SsoBackend.Models;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Inovasi;
+using SsoBackend.Services;
 
 namespace SsoBackend.Controllers;
 
@@ -19,6 +20,7 @@ namespace SsoBackend.Controllers;
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("inovasi/penilaian")]
+[ModuleGate("my-innovation")]
 public class PenilaianController : ControllerBase
 {
     private const string AdminRole = "Admin";

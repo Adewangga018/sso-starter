@@ -164,3 +164,17 @@
 .admin-dash__tile-desc { font-size: 0.85rem; color: var(--gcs-text-muted); margin-top: 4px; }
 
 .admin-dash__forbidden { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  /* Halaman admin memikul padding-nya sendiri (bukan dari .app-shell__content). */
+  .admin-dash {
+    padding: 16px 14px 40px;
+  }
+
+  .admin-dash__head h1 {
+    font-size: 1.2rem;
+  }
+}

@@ -63,3 +63,42 @@
 .apr__note:focus { outline: none; border-color: var(--gcs-gold-500); }
 .apr__modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .apr__hint { margin-top: 16px; border-top: 1px solid var(--gcs-border); padding-top: 12px; font-size: 0.82rem; color: var(--gcs-text-muted); }
+
+/* ===========================================================================
+   Responsif
+   =========================================================================== */
+@media (max-width: 640px) {
+  .apr { gap: 14px; }
+  .apr__title { font-size: 1.2rem; }
+  .apr__card { padding: 12px; }
+
+  /* Kartu pengajuan: isi di atas, tombol Setujui/Tolak selebar kartu di bawah -
+     dua tombol sempit di samping teks panjang sulit disentuh tepat. */
+  .apr__item { align-items: stretch; padding: 12px; }
+  .apr__actions { width: 100%; }
+  .apr__actions .apr__btn { flex: 1; justify-content: center; padding: 11px 14px; }
+  .apr__item-top { flex-wrap: wrap; }
+
+  .apr__icon-btn { width: 36px; height: 36px; }
+
+  .apr__table { min-width: 520px; }
+  .apr__table th,
+  .apr__table td { padding: 9px 10px; }
+
+  /* Modal rincian: hampir layar penuh, tinggi memakai dvh, rincian satu kolom. */
+  .apr__overlay {
+    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
+    align-items: flex-end;
+  }
+  .apr__modal {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+  .apr__modal-head { padding: 13px 15px; }
+  .apr__modal-body { padding: 14px 15px; }
+  .apr__dgrid { grid-template-columns: minmax(0, 1fr); }
+  .apr__modal-actions { flex-direction: column-reverse; }
+  .apr__modal-actions .apr__btn { width: 100%; justify-content: center; padding: 12px 14px; }
+}

@@ -439,20 +439,23 @@ export default function SppdPage() {
                   </td>
                 </tr>
               )}
+              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
+                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
+                  di ponsel - di lebar itu <thead> disembunyikan. */}
               {pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="sppd__col-status">
+                  <td className="sppd__col-status" data-label="Status">
                     <span className={`sppd__status${row.status === STATUS_DIBUAT ? '' : ' sppd__status--done'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="sppd__col-tgl">{formatTanggal(row.tglInput)}</td>
-                  <td className="sppd__col-kode">
+                  <td className="sppd__col-tgl" data-label="Tgl Input">{formatTanggal(row.tglInput)}</td>
+                  <td className="sppd__col-kode" data-label="Kode SPPD">
                     <div>{row.kodeSppd}</div>
                     <div className="sppd__source">{row.jenis}</div>
                   </td>
-                  <td className="sppd__col-tujuan">{row.tujuan}</td>
-                  <td className="sppd__col-nama">
+                  <td className="sppd__col-tujuan" data-label="Tujuan">{row.tujuan}</td>
+                  <td className="sppd__col-nama" data-label="Nama Karyawan">
                     {row.namaKaryawan?.length ? (
                       <ol className="sppd__list">
                         {row.namaKaryawan.map((n) => (
@@ -463,7 +466,7 @@ export default function SppdPage() {
                       '-'
                     )}
                   </td>
-                  <td className="sppd__col-tugas">
+                  <td className="sppd__col-tugas" data-label="Tugas yang dilaksanakan">
                     {row.tugas?.length ? (
                       <ol className="sppd__list">
                         {row.tugas.map((t) => (
@@ -474,10 +477,10 @@ export default function SppdPage() {
                       '-'
                     )}
                   </td>
-                  <td className="sppd__col-tgl">{formatTanggal(row.tglBerangkat)}</td>
-                  <td className="sppd__col-tgl">{formatTanggal(row.tglPulang)}</td>
-                  <td className="sppd__col-kendaraan">{row.kendaraan}</td>
-                  <td className="sppd__col-aksi">
+                  <td className="sppd__col-tgl" data-label="Tgl Berangkat">{formatTanggal(row.tglBerangkat)}</td>
+                  <td className="sppd__col-tgl" data-label="Tgl Pulang">{formatTanggal(row.tglPulang)}</td>
+                  <td className="sppd__col-kendaraan" data-label="Transportasi">{row.kendaraan}</td>
+                  <td className="sppd__col-aksi" data-label="Aksi">
                     <div className="sppd__row-actions">
                       <button
                         type="button"
