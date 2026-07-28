@@ -327,7 +327,8 @@ public class PenilaianStream
     public List<PenilaianStreamAnggota> Anggota { get; set; } = new();
 }
 
-// Anggota stream: 1 Ketua, 3 Anggota, 1 Sekretaris (komposisi divalidasi di app).
+// Anggota stream: 1 Ketua + 3 Anggota (komposisi divalidasi di app). Seluruhnya
+// menilai; peran Sekretaris yang dahulu hanya melihat sudah dihapus.
 public class PenilaianStreamAnggota
 {
     public int Id { get; set; }
@@ -335,7 +336,7 @@ public class PenilaianStreamAnggota
     public string UserId { get; set; } = string.Empty; // Users.Id
     public string? Nik { get; set; }
     public string? Nama { get; set; }
-    public string Peran { get; set; } = "Anggota";     // Ketua | Anggota | Sekretaris
+    public string Peran { get; set; } = "Anggota";     // Ketua | Anggota
 }
 
 // Menautkan satu stream ke satu gugus (inovasi) untuk dinilai.

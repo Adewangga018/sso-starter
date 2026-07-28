@@ -163,16 +163,28 @@ public class OrgResolver
     }
 
     // Kepala (pangkat tertinggi = id_band terkecil, lalu id_jabatan terkecil) yang
-    // jabatannya berada tepat di unit tsb - dipakai sebagai Manager (Fasilitator /
+    // jabatannya berada di unit tsb - dipakai sebagai Manager (Fasilitator /
     // Reviewer) untuk Departemen, atau GM (Verifikator / VP) untuk Kompartemen.
+    //
+    // Cakupannya termasuk unit ANAK (Bagian di bawah Departemen). Sebelum struktur
+    // Bagian ada, seluruh Kepala Bagian menempel langsung di Departemen sehingga
+    // pencarian satu tingkat sudah cukup; setelah Bagian dipisah, Departemen yang
+    // tidak punya Manager terisi (mis. Departemen SDM & Region Lampung) menjadi
+    // TIDAK punya kepala sama sekali - akibatnya Verifikator/GM pada rantai
+    // pengesahan gagasan kosong dan gagasannya mandek karena tak seorang pun
+    // berhak menandatangani.
+    //
+    // Urutan band didahulukan (sesuai keterangan di atas): tanpa itu urutan hanya
+    // mengikuti id_jabatan, sehingga staf ber-id kecil bisa mengalahkan Manager.
     public async Task<(string? Nik, string? Nama)?> ResolveKepalaUnitAsync(int? idUnit)
     {
         if (idUnit is null) return null;
         var kepala = await (
             from p in _db.Penempatan
             join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
-            where j.IdUnit == idUnit && p.Status == "Aktif"
-            orderby j.IdJabatan
+            join u in _db.UnitOrganisasi on j.IdUnit equals u.IdUnit
+            where p.Status == "Aktif" && (u.IdUnit == idUnit || u.IdUnitInduk == idUnit)
+            orderby j.IdBand, j.IdJabatan
             select new { p.IdKaryawan, p.Nama }).FirstOrDefaultAsync();
         return kepala is null ? null : (kepala.IdKaryawan, kepala.Nama);
     }

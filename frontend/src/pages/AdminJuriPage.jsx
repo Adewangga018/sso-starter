@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useDialog } from '../components/DialogProvider'
 import './AdminJuriPage.css'
 
-const EMPTY_FORM = { id: null, nama: '', keterangan: '', ketua: '', anggota1: '', anggota2: '', anggota3: '', sekretaris: '' }
+const EMPTY_FORM = { id: null, nama: '', keterangan: '', ketua: '', anggota1: '', anggota2: '', anggota3: '' }
 
 function gugusLabel(g) {
   const jenis = g.jenis === '5R' ? '5R' : g.jenis
@@ -72,16 +72,15 @@ export default function AdminJuriPage() {
       anggota1: ang[0]?.userId ?? '',
       anggota2: ang[1]?.userId ?? '',
       anggota3: ang[2]?.userId ?? '',
-      sekretaris: s.anggota.find((a) => a.peran === 'Sekretaris')?.userId ?? '',
     })
     setMsg(null)
   }
 
   async function saveStream() {
-    const picks = [form.ketua, form.anggota1, form.anggota2, form.anggota3, form.sekretaris]
+    const picks = [form.ketua, form.anggota1, form.anggota2, form.anggota3]
     if (!form.nama.trim()) return setMsg({ type: 'err', text: 'Nama stream wajib diisi.' })
-    if (picks.some((p) => !p)) return setMsg({ type: 'err', text: 'Lengkapi 5 anggota: 1 Ketua, 3 Anggota, 1 Sekretaris.' })
-    if (new Set(picks).size !== 5) return setMsg({ type: 'err', text: 'Setiap orang hanya boleh satu peran.' })
+    if (picks.some((p) => !p)) return setMsg({ type: 'err', text: 'Lengkapi 4 anggota: 1 Ketua dan 3 Anggota.' })
+    if (new Set(picks).size !== 4) return setMsg({ type: 'err', text: 'Setiap orang hanya boleh satu peran.' })
 
     const build = (userId, peran) => {
       const u = juriUsers.find((x) => x.id === userId)
@@ -96,7 +95,6 @@ export default function AdminJuriPage() {
         build(form.anggota1, 'Anggota'),
         build(form.anggota2, 'Anggota'),
         build(form.anggota3, 'Anggota'),
-        build(form.sekretaris, 'Sekretaris'),
       ],
     }
     setBusy(true)
@@ -177,8 +175,8 @@ export default function AdminJuriPage() {
         <Info size={15} />
         <span>
           Pengguna ber-role <b>Juri</b>, atau <b>Manager/GM</b>, dapat menjadi penilai{isAdmin ? <> (atur di <Link to="/admin/users">Manajemen Pengguna</Link>)</> : <> (diatur Admin IT)</>}.
-          Satu <b>stream</b> berisi 5 orang: <b>1 Ketua, 3 Anggota, 1 Sekretaris</b>. Ketua &amp; Anggota memberi nilai;
-          Sekretaris hanya melihat. Tugaskan stream ke sebuah inovasi agar mulai dinilai.
+          Satu <b>stream</b> berisi 4 orang: <b>1 Ketua dan 3 Anggota</b>, dan seluruhnya memberi nilai.
+          Tugaskan stream ke sebuah inovasi agar mulai dinilai.
         </span>
       </div>
 
@@ -210,11 +208,10 @@ export default function AdminJuriPage() {
             )}
             <div className="admin-juri__slots">
               {[
-                ['ketua', 'Ketua', [form.anggota1, form.anggota2, form.anggota3, form.sekretaris]],
-                ['anggota1', 'Anggota 1', [form.ketua, form.anggota2, form.anggota3, form.sekretaris]],
-                ['anggota2', 'Anggota 2', [form.ketua, form.anggota1, form.anggota3, form.sekretaris]],
-                ['anggota3', 'Anggota 3', [form.ketua, form.anggota1, form.anggota2, form.sekretaris]],
-                ['sekretaris', 'Sekretaris', [form.ketua, form.anggota1, form.anggota2, form.anggota3]],
+                ['ketua', 'Ketua', [form.anggota1, form.anggota2, form.anggota3]],
+                ['anggota1', 'Anggota 1', [form.ketua, form.anggota2, form.anggota3]],
+                ['anggota2', 'Anggota 2', [form.ketua, form.anggota1, form.anggota3]],
+                ['anggota3', 'Anggota 3', [form.ketua, form.anggota1, form.anggota2]],
               ].map(([key, label, others]) => (
                 <div className="admin-juri__field" key={key}>
                   <label>{label}</label>
@@ -245,7 +242,7 @@ export default function AdminJuriPage() {
               <ul className="admin-juri__members">
                 {s.anggota.map((a) => (
                   <li className="admin-juri__member" key={a.id}>
-                    <span>{a.nama ?? nameOf(a.userId)}</span>
+                    <span className="u-nama">{a.nama ?? nameOf(a.userId)}</span>
                     <span className={`admin-juri__role admin-juri__role--${a.peran.toLowerCase()}`}>{a.peran}</span>
                   </li>
                 ))}

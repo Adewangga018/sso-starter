@@ -112,7 +112,7 @@ export default function RekapMetodologi() {
                 <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.jenis}</td>
                 <td>{r.namaGugus ?? '-'}</td>
                 <td>{r.judul ?? '-'}</td>
-                <td>{r.ketuaNama ?? '-'}</td>
+                <td className="u-nama">{r.ketuaNama ?? '-'}</td>
                 <td style={{ textAlign: 'center' }}>{r.periode}</td>
                 <td style={{ textAlign: 'center' }}><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
                 <td style={{ textAlign: 'center' }}><Tanda ya={r.planDisahkan} judul="Pengesahan PLAN" /></td>

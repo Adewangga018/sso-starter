@@ -62,7 +62,7 @@ function PegawaiPicker({ label, hint, selected, onChange }) {
         <div className="mo-chips">
           {selected.map((p) => (
             <span className="mo-chip2" key={p.nik}>
-              {p.nama}
+              <span className="u-nama">{p.nama}</span>
               <button type="button" onClick={() => remove(p.nik)} aria-label="Hapus"><X size={12} /></button>
             </span>
           ))}

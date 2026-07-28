@@ -65,7 +65,7 @@ export default function PegawaiPicker({ open, onClose, onPick, gugusId, existing
                   <tr key={p.nik} style={sudah ? { opacity: 0.55 } : undefined}>
                     <td style={{ width: 110 }}>{p.nik}</td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{p.nama}</div>
+                      <div className="u-nama" style={{ fontWeight: 600 }}>{p.nama}</div>
                       <div style={{ fontSize: 11.5, color: '#7a877d' }}>{p.jabatan ?? '-'}{p.unit ? ` - ${p.unit}` : ''}</div>
                     </td>
                     <td style={{ width: 90, textAlign: 'right' }}>

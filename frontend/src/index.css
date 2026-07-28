@@ -100,6 +100,37 @@ code {
    hanya perlu menangani tata letaknya sendiri.
    =========================================================================== */
 
+/* ---------------------------------------------------------------------------
+   Nama orang ditampilkan HURUF BESAR di seluruh aplikasi.
+   Dilakukan lewat CSS, bukan mengubah data: nilai di database tetap seperti
+   aslinya (mis. "Erly Nurlianti") sehingga ekspor, pencarian, dan pencocokan
+   NIK tidak terpengaruh - yang berubah hanya tampilannya.
+   Hanya dipasang pada nama ORANG. Nama berkas (lampiran/evidence/denah), nama
+   unit organisasi, nama gugus, nama stream juri, dan teks kriteria penilaian
+   TIDAK memakainya karena huruf besar seluruhnya justru menyulitkan dibaca.
+   --------------------------------------------------------------------------- */
+.u-nama,
+/* Nama orang yang sudah punya kelas sendiri - dikumpulkan di sini (bukan
+   disebar ke tiap file CSS halaman) supaya daftarnya mudah diaudit & ditambah.
+   text-transform tidak diset oleh kelas-kelas itu, jadi tidak ada bentrokan
+   urutan impor. */
+.topbar__user-name,
+.topbar__popup-name,
+.dashboard__name,
+.profil__header-text h2,
+.admin-users__name,
+.admin-docs__emp-name,
+.gaji__ident-nama,
+.apr__pemohon,
+.mt-person__name,
+.mt-task__whoname,
+.mt-rekap__nama,
+.mo-picker__name,
+.mo-person2__name,
+.inv__sign-name {
+  text-transform: uppercase;
+}
+
 /* Media tidak boleh melebihi induknya - penyebab paling umum halaman bisa
    digeser ke samping di ponsel. */
 img,

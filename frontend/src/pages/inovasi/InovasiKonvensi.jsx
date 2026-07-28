@@ -55,7 +55,7 @@ export default function InovasiKonvensi() {
                 <td style={{ textAlign: 'center' }}>{jenisLabel(r.jenis)}</td>
                 <td>{r.namaGugus ?? '-'}</td>
                 <td>{r.judul ?? '-'}</td>
-                <td>{r.ketuaNama ?? '-'}</td>
+                <td className="u-nama">{r.ketuaNama ?? '-'}</td>
                 <td style={{ textAlign: 'center' }}>
                   {dinilai ? (
                     <>

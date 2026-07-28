@@ -245,7 +245,7 @@ public record JuriUserDto(string Id, string? Nama, string? Nik, string? Email);
 // --- Kelola stream (Admin) ---
 public record StreamAnggotaDto(int Id, string UserId, string? Nik, string? Nama, string Peran);
 public record StreamDto(int Id, string Nama, string? Keterangan, bool Aktif, IReadOnlyList<StreamAnggotaDto> Anggota);
-public record StreamAnggotaInput(string UserId, string? Nik, string? Nama, string Peran); // Peran: Ketua|Anggota|Sekretaris
+public record StreamAnggotaInput(string UserId, string? Nik, string? Nama, string Peran); // Peran: Ketua|Anggota
 public record SaveStreamRequest(string Nama, string? Keterangan, bool Aktif, IReadOnlyList<StreamAnggotaInput> Anggota);
 
 // --- Penugasan stream -> gugus (Admin) ---

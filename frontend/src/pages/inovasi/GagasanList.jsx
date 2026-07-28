@@ -128,7 +128,7 @@ export default function GagasanList() {
                 <td data-label="Judul" className="inv__cell--wide">{r.judul}</td>
                 <td data-label="Metodologi" style={{ textAlign: 'center' }}>{r.metodologi ?? '-'}</td>
                 {isApprover && (
-                  <td data-label="Pengaju">{namaPengaju(r)}</td>
+                  <td data-label="Pengaju" className="u-nama">{namaPengaju(r)}</td>
                 )}
                 <td data-label="Dep. Asal">{r.namaDepartemenAsal ?? '-'}</td>
                 <td data-label="Dep. Tujuan">{r.namaDepartemenTujuan ?? <span style={{ color: '#9aa79d' }}>(sama)</span>}</td>
@@ -302,7 +302,7 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
             <div className="inv__meta">
               {/* Pengaju: approver memutuskan dari modal ini, jadi identitas
                   pengusulnya harus ikut terlihat - bukan hanya departemennya. */}
-              <span>Pengaju: <b>{namaPengaju(g)}</b></span>
+              <span>Pengaju: <b className="u-nama">{namaPengaju(g)}</b></span>
               <span>Dep. Asal: <b>{g.namaDepartemenAsal ?? '-'}</b></span>
               <span>Dep. Tujuan: <b>{g.namaDepartemenTujuan ?? '(sama)'}</b></span>
             </div>

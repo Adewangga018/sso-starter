@@ -173,7 +173,7 @@ export default function InovasiRoadmap() {
               return (
                 <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`${base}/daftar/${r.id}`)}>
                   <td style={{ textAlign: 'center' }}>{(halaman - 1) * perPage + i + 1}</td>
-                  <td style={{ fontWeight: 600 }}>{r.ketuaNama ?? '-'}</td>
+                  <td className="u-nama" style={{ fontWeight: 600 }}>{r.ketuaNama ?? '-'}</td>
                   <td>{r.namaDepartemen ?? r.namaKompartemen ?? '-'}</td>
                   <td>{r.gagasanJudul ?? '-'}</td>
                   <td>
@@ -225,7 +225,7 @@ export default function InovasiRoadmap() {
                   </div>
                   <div className="inv__road-sub">
                     <span>No. Reg: {r.noRegistrasi ?? '-'}</span>
-                    <span>Ketua: {r.ketuaNama ?? '-'}</span>
+                    <span>Ketua: <span className="u-nama">{r.ketuaNama ?? '-'}</span></span>
                     <span>{r.namaDepartemen ?? r.namaKompartemen ?? '-'}</span>
                   </div>
                 </div>
