@@ -34,6 +34,9 @@ import MyProgressLayout from './layouts/MyProgressLayout'
 import KpiSaya from './pages/progress/KpiSaya'
 import KpiTim from './pages/progress/KpiTim'
 import KpiPerusahaan from './pages/progress/KpiPerusahaan'
+import MyAssetLayout from './layouts/MyAssetLayout'
+import Inventaris from './pages/aset/Inventaris'
+import Maintenance from './pages/aset/Maintenance'
 import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
@@ -98,6 +101,11 @@ export default function App() {
               <Route index element={<KpiSaya />} />
               <Route path="tim" element={<KpiTim />} />
               <Route path="perusahaan" element={<KpiPerusahaan />} />
+            </Route>
+
+            <Route path="/my-asset" element={<MyAssetLayout />}>
+              <Route index element={<Inventaris />} />
+              <Route path="maintenance" element={<Maintenance />} />
             </Route>
 
             <Route path="/my-office" element={<MyOfficeLayout />}>

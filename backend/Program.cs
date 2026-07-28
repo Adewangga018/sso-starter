@@ -47,6 +47,7 @@ builder.Services.AddScoped<ApprovalService>();
 builder.Services.AddScoped<GajiService>();
 builder.Services.AddScoped<ModuleAccessService>();
 builder.Services.AddScoped<KpiService>();
+builder.Services.AddScoped<AsetService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

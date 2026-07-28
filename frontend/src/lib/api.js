@@ -178,6 +178,17 @@ export const api = {
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  // My Asset
+  getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getAsetDetail: (id) => apiFetch(`/api/aset/${id}`),
+  buatAset: (payload) => apiFetch('/api/aset', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahAset: (id, payload) => apiFetch(`/api/aset/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusAset: (id) => apiFetch(`/api/aset/${id}`, { method: 'DELETE' }),
+  getMaintenanceList: () => apiFetch('/api/aset/maintenance'),
+  tambahMaintenance: (idAset, payload) => apiFetch(`/api/aset/${idAset}/maintenance`, { method: 'POST', body: JSON.stringify(payload) }),
+  ubahMaintenance: (mid, payload) => apiFetch(`/api/aset/maintenance/${mid}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusMaintenance: (mid) => apiFetch(`/api/aset/maintenance/${mid}`, { method: 'DELETE' }),
+
   // My Progress (KPI)
   getKpiSaya: () => apiFetch('/api/progress'),
   getKpiPerusahaan: () => apiFetch('/api/progress/perusahaan'),

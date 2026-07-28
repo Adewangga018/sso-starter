@@ -33,7 +33,7 @@ public class DashboardController : ControllerBase
         new ModuleTileDto("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", false),
         new ModuleTileDto("my-health", "My Health", "KESEHATAN", "activity", false),
         new ModuleTileDto("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
-        new ModuleTileDto("my-asset", "My Asset", "ASET", "archive", false),
+        new ModuleTileDto("my-asset", "My Asset", "ASET", "archive", true),
         new ModuleTileDto("my-progress", "My Progress", "KPI", "trending-up", true),
         new ModuleTileDto("my-team", "My Team", "KINERJA TIM", "users-round", true),
     };
@@ -77,8 +77,12 @@ public class DashboardController : ControllerBase
             }
         }
 
+        // Nama tampilan: utamakan NAMA_LENGKAP dari data pegawai (mis. "Diah Puspitasari"),
+        // bukan nama akun/token yang bisa berupa username singkat ("diah").
+        var nama = !string.IsNullOrWhiteSpace(pegawai?.NAMA_LENGKAP) ? pegawai!.NAMA_LENGKAP.Trim() : user.Name;
+
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
         var isAdminModulSdm = pegawai is not null && await _access.IsSdmAdminAsync(pegawai.ID_KARYAWAN);
-        return Ok(new DashboardSummaryDto(user.Name, jabatan, Modules, profileComplete, tingkatan, band, isAdminModulSdm));
+        return Ok(new DashboardSummaryDto(nama, jabatan, Modules, profileComplete, tingkatan, band, isAdminModulSdm));
     }
 }
