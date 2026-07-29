@@ -37,6 +37,8 @@ import AdminGajiTarifPage from './pages/AdminGajiTarifPage'
 import MyPayrollLayout from './layouts/MyPayrollLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
+import MyHealthLayout from './layouts/MyHealthLayout'
+import HealthPage from './pages/health/HealthPage'
 import MyProgressLayout from './layouts/MyProgressLayout'
 import KpiSaya from './pages/progress/KpiSaya'
 import KpiTim from './pages/progress/KpiTim'
@@ -137,6 +139,12 @@ export default function App() {
             <Route element={<RequireModule moduleKey="my-prosedur" />}>
               <Route path="/my-prosedur" element={<MyProsedurLayout />}>
                 <Route index element={<ProsedurPage />} />
+              </Route>
+            </Route>
+
+            <Route element={<RequireModule moduleKey="my-health" />}>
+              <Route path="/my-health" element={<MyHealthLayout />}>
+                <Route index element={<HealthPage />} />
               </Route>
             </Route>
 

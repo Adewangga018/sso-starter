@@ -51,6 +51,7 @@ builder.Services.AddScoped<KpiService>();
 builder.Services.AddScoped<AsetService>();
 builder.Services.AddScoped<CoachingService>();
 builder.Services.AddScoped<ProsedurService>();
+builder.Services.AddScoped<HealthService>();
 // Akses modul portal (Panel Admin IT > Akses Modul). Di-cache di memori karena dibaca
 // pada setiap request modul lewat ModuleGateAttribute.
 builder.Services.AddMemoryCache();

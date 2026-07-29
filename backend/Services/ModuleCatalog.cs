@@ -15,7 +15,7 @@ public static class ModuleCatalog
         new("my-personal", "My Personal", "HR MANAGEMENT", "users", true),
         new("my-office", "My Office", "SURAT-MENYURAT", "mail", true),
         new("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", true),
-        new("my-health", "My Health", "KESEHATAN", "activity", false),
+        new("my-health", "My Health", "KESEHATAN", "activity", true),
         new("my-innovation", "My Innovation", "INOVASI", "lightbulb", true),
         new("my-asset", "My Asset", "ASET", "archive", true),
         new("my-progress", "My Progress", "KPI", "trending-up", true),

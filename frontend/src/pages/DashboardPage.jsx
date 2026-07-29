@@ -35,6 +35,7 @@ const MODULE_ROUTES = {
   'my-team': '/team',
   'my-office': '/my-office',
   'my-prosedur': '/my-prosedur',
+  'my-health': '/my-health',
   'my-progress': '/my-progress',
   'my-asset': '/my-asset',
   payroll: '/payroll',

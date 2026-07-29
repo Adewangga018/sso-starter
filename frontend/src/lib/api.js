@@ -197,6 +197,19 @@ export const api = {
   statusVersiProsedur: (versiId, status) => apiFetch(`/api/prosedur/versi/${versiId}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   hapusProsedur: (id) => apiFetch(`/api/prosedur/${id}`, { method: 'DELETE' }),
 
+  // My Health (MCU / Kesehatan)
+  getHealthRiwayat: () => apiFetch('/api/health/riwayat'),
+  getHealthHasil: (id) => apiFetch(`/api/health/hasil/${id}`),
+  getHealthFile: (id) => apiBlob(`/api/health/hasil/${id}/file`),
+  getHealthPeriodeList: () => apiFetch('/api/health/periode'),
+  getHealthPeriodeDetail: (id) => apiFetch(`/api/health/periode/${id}`),
+  buatHealthPeriode: (payload) => apiFetch('/api/health/periode', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahHealthPeriode: (id, payload) => apiFetch(`/api/health/periode/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusHealthPeriode: (id) => apiFetch(`/api/health/periode/${id}`, { method: 'DELETE' }),
+  buatHealthHasil: (idPeriode, formData) => apiFetch(`/api/health/periode/${idPeriode}/hasil`, { method: 'POST', body: formData }),
+  ubahHealthHasil: (id, formData) => apiFetch(`/api/health/hasil/${id}`, { method: 'PUT', body: formData }),
+  hapusHealthHasil: (id) => apiFetch(`/api/health/hasil/${id}`, { method: 'DELETE' }),
+
   // Coaching (My Team)
   getCoachingInbox: () => apiFetch('/api/coaching'),
   getCoachingLawanBicara: () => apiFetch('/api/coaching/lawan-bicara'),

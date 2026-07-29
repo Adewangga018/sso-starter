@@ -10,6 +10,7 @@ using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
 using SsoBackend.Models.Prosedur;
+using SsoBackend.Models.Health;
 
 namespace SsoBackend.Data;
 
@@ -59,6 +60,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProsedurDokumen> ProsedurDokumen => Set<ProsedurDokumen>();
     public DbSet<ProsedurVersi> ProsedurVersi => Set<ProsedurVersi>();
     public DbSet<ProsedurAcknowledgement> ProsedurAcknowledgement => Set<ProsedurAcknowledgement>();
+
+    // My Health (schema health) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<HealthPeriode> HealthPeriode => Set<HealthPeriode>();
+    public DbSet<HealthHasil> HealthHasil => Set<HealthHasil>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -515,6 +520,49 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Nik).HasColumnName("nik");
             e.Property(x => x.Nama).HasColumnName("nama");
             e.Property(x => x.Tgl).HasColumnName("tgl");
+        });
+
+        builder.Entity<HealthPeriode>(e =>
+        {
+            e.ToTable("periode", "health", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Judul).HasColumnName("judul");
+            e.Property(x => x.Tahun).HasColumnName("tahun");
+            e.Property(x => x.Penyelenggara).HasColumnName("penyelenggara");
+            e.Property(x => x.Lokasi).HasColumnName("lokasi");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<HealthHasil>(e =>
+        {
+            e.ToTable("hasil", "health", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdPeriode).HasColumnName("id_periode");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.TglPemeriksaan).HasColumnName("tgl_pemeriksaan");
+            e.Property(x => x.Tinggi).HasColumnName("tinggi");
+            e.Property(x => x.Berat).HasColumnName("berat");
+            e.Property(x => x.TekananDarah).HasColumnName("tekanan_darah");
+            e.Property(x => x.StatusUmum).HasColumnName("status_umum");
+            e.Property(x => x.Ringkasan).HasColumnName("ringkasan");
+            e.Property(x => x.Rekomendasi).HasColumnName("rekomendasi");
+            e.Property(x => x.StatusTindakLanjut).HasColumnName("status_tindak_lanjut");
+            e.Property(x => x.NamaFile).HasColumnName("nama_file");
+            e.Property(x => x.TipeFile).HasColumnName("tipe_file");
+            e.Property(x => x.Konten).HasColumnName("konten");
+            e.Property(x => x.IdPencatat).HasColumnName("id_pencatat");
+            e.Property(x => x.NamaPencatat).HasColumnName("nama_pencatat");
+            e.Property(x => x.TglDicatat).HasColumnName("tgl_dicatat");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.
