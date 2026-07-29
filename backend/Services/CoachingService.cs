@@ -27,6 +27,15 @@ public class CoachingService
 
         var ids = sesiRows.Select(s => s.Id).ToList();
         var lastBySesi = await LastPesanBySesiAsync(ids);
+        var baca = await _db.CoachingBaca.AsNoTracking()
+            .Where(b => b.Nik == nik)
+            .ToDictionaryAsync(b => b.Kanal, b => b.TglBaca);
+
+        // Belum dibaca: ada pesan terbaru dari LAWAN (bukan saya) yang lebih baru dari
+        // waktu terakhir saya membuka kanal itu.
+        bool Unread(string kanal, CoachingPesan? last) =>
+            last is not null && last.IdPengirim != nik &&
+            (!baca.TryGetValue(kanal, out var t) || last.TglKirim > t);
 
         var sesi = sesiRows.Select(s =>
         {
@@ -36,7 +45,7 @@ public class CoachingService
             var peranLawan = akuAtasan ? "Bawahan" : "Atasan";
             lastBySesi.TryGetValue(s.Id, out var last);
             return new CoachingSesiRingkasDto(s.Id, lawanNik, lawanNama, peranLawan, s.Topik, s.Status,
-                last?.Isi, last?.TglKirim ?? s.TglTerakhir);
+                last?.Isi, last?.TglKirim ?? s.TglTerakhir, Unread($"sesi:{s.Id}", last));
         }).ToList();
 
         // Ruang tim: milik atasan efektif (anggota) + milik sendiri (pemilik) bila punya bawahan.
@@ -46,13 +55,15 @@ public class CoachingService
         {
             var anggota = await EffectiveBawahanAsync(atasan.Value.Nik);
             var last = await LastPesanRuangAsync(atasan.Value.Nik);
-            ruang.Add(new CoachingRuangRingkasDto(atasan.Value.Nik, atasan.Value.Nama, "Anggota", anggota.Count + 1, last?.Isi, last?.TglKirim));
+            ruang.Add(new CoachingRuangRingkasDto(atasan.Value.Nik, atasan.Value.Nama, "Anggota", anggota.Count + 1,
+                last?.Isi, last?.TglKirim, Unread($"ruang:{atasan.Value.Nik}", last)));
         }
         var bawahanSaya = await EffectiveBawahanAsync(nik);
         if (bawahanSaya.Count > 0)
         {
             var last = await LastPesanRuangAsync(nik);
-            ruang.Add(new CoachingRuangRingkasDto(nik, null, "Pemilik", bawahanSaya.Count + 1, last?.Isi, last?.TglKirim));
+            ruang.Add(new CoachingRuangRingkasDto(nik, null, "Pemilik", bawahanSaya.Count + 1,
+                last?.Isi, last?.TglKirim, Unread($"ruang:{nik}", last)));
         }
 
         return new CoachingInboxDto(sesi, ruang);
@@ -116,6 +127,8 @@ public class CoachingService
     {
         var s = await _db.CoachingSesi.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         if (s is null || (s.IdAtasan != nik && s.IdBawahan != nik)) return null;
+
+        await TandaiBacaAsync(nik, $"sesi:{id}");
 
         var pesan = await _db.CoachingPesan.AsNoTracking()
             .Where(p => p.IdSesi == id).OrderBy(p => p.Id)
@@ -184,6 +197,8 @@ public class CoachingService
     {
         var peran = await PeranRuangAsync(nik, ownerNik);
         if (peran is null) return null;
+
+        await TandaiBacaAsync(nik, $"ruang:{ownerNik}");
 
         var anggotaRows = await EffectiveBawahanAsync(ownerNik);
         var ownerNama = await NamaPenempatanAsync(ownerNik);
@@ -302,6 +317,21 @@ public class CoachingService
     private async Task<CoachingPesan?> LastPesanRuangAsync(string ownerNik) =>
         await _db.CoachingPesan.AsNoTracking()
             .Where(p => p.RuangNik == ownerNik).OrderByDescending(p => p.Id).FirstOrDefaultAsync();
+
+    // Catat/segarkan waktu baca sebuah kanal untuk pengguna.
+    private async Task TandaiBacaAsync(string nik, string kanal)
+    {
+        var row = await _db.CoachingBaca.FirstOrDefaultAsync(b => b.Nik == nik && b.Kanal == kanal);
+        if (row is null)
+        {
+            _db.CoachingBaca.Add(new CoachingBaca { Nik = nik, Kanal = kanal, TglBaca = DateTime.UtcNow });
+        }
+        else
+        {
+            row.TglBaca = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+    }
 
     private static CoachingPesanDto MapPesan(CoachingPesan p, string nik) =>
         new(p.Id, p.IdPengirim, p.NamaPengirim, p.Isi, p.TglKirim, p.IdPengirim == nik);

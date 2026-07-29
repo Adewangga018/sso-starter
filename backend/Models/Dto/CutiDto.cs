@@ -29,9 +29,16 @@ public record CutiDto(
     bool AdaData,
     string? Periode,
     DateOnly? Tmt,
-    int Hak,
+    int Hak,                                        // hak (net) = hak dasar - cuti bersama
     int Diambil,
+    int CutiBersama,                                // jumlah cuti bersama yang mengurangi hak
+    int HakDasar,                                   // hak dasar sebelum dikurangi (mis. 24)
     bool BisaApprove,
+    bool IsAdminSdm,                                // panel konfigurasi cuti bersama utk SDM
     IReadOnlyList<CutiPengajuanDto> Pengajuan,      // pengajuan saya
     IReadOnlyList<CutiPengajuanDto> Persetujuan,    // menunggu persetujuan saya (sbg atasan)
     IReadOnlyList<CutiRiwayatDto> Riwayat);         // riwayat lama dari SDM
+
+// Setelan cuti bersama (khusus Admin SDM).
+public record CutiSetelanDto(int HakDasar, int CutiBersama);
+public record SimpanCutiBersamaRequest(int CutiBersama);

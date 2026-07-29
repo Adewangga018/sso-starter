@@ -85,4 +85,17 @@ public class CutiController : ControllerBase
         var (ok, error) = await _cuti.PutusanAsync(id, nik, req.Setuju, req.Komentar);
         return ok ? NoContent() : BadRequest(new { message = error });
     }
+
+    // Set jumlah cuti bersama 2 tahun terakhir (Admin Modul SDM). Hak awal = 24 - N
+    // untuk semua karyawan (dihitung ulang di service).
+    [HttpPut("cuti-bersama")]
+    public async Task<IActionResult> SetCutiBersama([FromBody] SimpanCutiBersamaRequest req)
+    {
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
+        var nik = pegawai?.ID_KARYAWAN ?? user?.Nik;
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var nama = pegawai?.NAMA_LENGKAP ?? user?.Name;
+        var (ok, error) = await _cuti.SimpanCutiBersamaAsync(nik, nama, req.CutiBersama);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
 }

@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ChatProvider } from './context/ChatContext'
 import { DialogProvider } from './components/DialogProvider'
 import RequireAuth from './components/RequireAuth'
 import RequireModule from './components/RequireModule'
@@ -33,6 +34,9 @@ import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
 import GajiPage from './pages/GajiPage'
 import AdminGajiTarifPage from './pages/AdminGajiTarifPage'
+import MyPayrollLayout from './layouts/MyPayrollLayout'
+import MyProsedurLayout from './layouts/MyProsedurLayout'
+import ProsedurPage from './pages/prosedur/ProsedurPage'
 import MyProgressLayout from './layouts/MyProgressLayout'
 import KpiSaya from './pages/progress/KpiSaya'
 import KpiTim from './pages/progress/KpiTim'
@@ -71,6 +75,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ChatProvider>
         <DialogProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -89,8 +94,15 @@ export default function App() {
             {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
                 belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
             <Route path="/juri" element={<AdminJuriPage />} />
-            {/* Admin Modul SDM: konfigurasi tarif gaji (gate di dalam halaman via isAdminModulSdm). */}
-            <Route path="/modul-sdm/gaji-tarif" element={<AdminGajiTarifPage />} />
+            {/* Modul Payroll — khusus Admin Modul SDM (kartu "payroll" hanya muncul untuk
+                mereka, sehingga RequireModule ini hanya lolos bagi Admin SDM). Rute lama
+                /modul-sdm/gaji-tarif diarahkan ke sini. */}
+            <Route element={<RequireModule moduleKey="payroll" />}>
+              <Route path="/payroll" element={<MyPayrollLayout />}>
+                <Route index element={<AdminGajiTarifPage />} />
+              </Route>
+            </Route>
+            <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />
             <Route path="/admin/juri" element={<Navigate to="/juri" replace />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />
@@ -119,6 +131,12 @@ export default function App() {
               <Route path="/my-asset" element={<MyAssetLayout />}>
                 <Route index element={<Inventaris />} />
                 <Route path="maintenance" element={<Maintenance />} />
+              </Route>
+            </Route>
+
+            <Route element={<RequireModule moduleKey="my-prosedur" />}>
+              <Route path="/my-prosedur" element={<MyProsedurLayout />}>
+                <Route index element={<ProsedurPage />} />
               </Route>
             </Route>
 
@@ -191,6 +209,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         </DialogProvider>
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   )

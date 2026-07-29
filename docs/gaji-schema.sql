@@ -9,12 +9,13 @@
    Komponen mengikuti "komponen_gaji.xlsx":
      Pendapatan : Gaji Pokok; Tunjangan Tetap (Jabatan, Perumahan);
                   Tunjangan Tidak Tetap (Angkutan, Pangan);
-                  Tunjangan Lain (Premi Asuransi, Pajak, Shift, Luar Daerah) *opsional
+                  Tunjangan Lain (BPJS Kesehatan, BPJS Ketenagakerjaan, Pajak, Shift,
+                                  Luar Daerah) *opsional
      Potongan Tetap      : BPJS Kes, BPJS TK, Premi Asuransi, Pajak, Iuran IKGCS,
                            Simpanan Wajib K3PG, Simpanan Wajib KKCS, DPLK, PIKGCS
-     Potongan Tidak Tetap: K3PG, KKCS, BMT, Angsuran, KSPPS K3PG
-   Aturan khusus: potongan keterlambatan presensi langsung mengurangi Tunjangan
-   Pangan & Tunjangan Angkutan (ditandai kena_potongan_terlambat = 1).
+     Potongan Tidak Tetap: Potongan Presensi, K3PG, KKCS, BMT, Angsuran, KSPPS K3PG
+   Potongan Presensi kini komponen BERDIRI SENDIRI (bukan lagi memotong Tunjangan
+   Pangan/Angkutan). Kolom kena_potongan_terlambat tidak lagi dipakai (semua 0).
 
    SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS / AT TIME
    ZONE. NON-DESTRUKTIF (pola IF OBJECT_ID ... IS NULL CREATE) supaya tarif/slip
@@ -170,12 +171,13 @@ BEGIN
     ('GAPOK',        N'Gaji Pokok',                'Pendapatan', N'Gaji Pokok',            'JG_PG',            0, 0, 10, N'Sesuai JG & PG'),
     ('TJ_JABATAN',   N'Tunjangan Jabatan',         'Pendapatan', N'Tunjangan Tetap',      'JG_PG',            0, 0, 20, N'Sesuai jabatan (JG & PG)'),
     ('TJ_PERUMAHAN', N'Tunjangan Perumahan',       'Pendapatan', N'Tunjangan Tetap',      'JG_PG',            0, 0, 21, N'Sesuai jabatan (JG & PG)'),
-    ('TJ_ANGKUTAN',  N'Tunjangan Angkutan',        'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 1, 30, N'Dipotong keterlambatan presensi'),
-    ('TJ_PANGAN',    N'Tunjangan Pangan',          'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 1, 31, N'Dipotong keterlambatan presensi'),
-    ('TJ_PREMI',     N'Tunjangan Premi Asuransi',  'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 40, N'Hanya sebagian karyawan'),
-    ('TJ_PAJAK',     N'Tunjangan Pajak',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 41, N'Hanya sebagian karyawan'),
-    ('TJ_SHIFT',     N'Tunjangan Shift',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 42, N'Hanya security'),
-    ('TJ_LUAR',      N'Tunjangan Luar Daerah',     'Pendapatan', N'Tunjangan Lain',       'Karyawan_Periode', 1, 0, 43, N'Sesuai karyawan & perjanjian'),
+    ('TJ_ANGKUTAN',  N'Tunjangan Angkutan',        'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 30, N'Tunjangan tidak tetap'),
+    ('TJ_PANGAN',    N'Tunjangan Pangan',          'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 31, N'Tunjangan tidak tetap'),
+    ('TJ_BPJS_KES',  N'Tunjangan BPJS Kesehatan',       'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 40, N'Hanya sebagian karyawan'),
+    ('TJ_BPJS_TK',   N'Tunjangan BPJS Ketenagakerjaan', 'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 41, N'Hanya sebagian karyawan'),
+    ('TJ_PAJAK',     N'Tunjangan Pajak',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 42, N'Hanya sebagian karyawan'),
+    ('TJ_SHIFT',     N'Tunjangan Shift',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 43, N'Hanya security'),
+    ('TJ_LUAR',      N'Tunjangan Luar Daerah',     'Pendapatan', N'Tunjangan Lain',       'Karyawan_Periode', 1, 0, 44, N'Sesuai karyawan & perjanjian'),
     -- Potongan Tetap
     ('POT_BPJS_KES', N'BPJS Kesehatan',            'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 50, N'Sesuai jabatan'),
     ('POT_BPJS_TK',  N'BPJS Ketenagakerjaan',      'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 51, N'Sesuai jabatan'),
@@ -187,12 +189,13 @@ BEGIN
     ('POT_DPLK',     N'DPLK',                      'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 57, N'Sesuai jabatan'),
     ('POT_PIKGCS',   N'PIKGCS',                    'Potongan',   N'Potongan Tetap',       'Karyawan_Periode', 0, 0, 58, N'Sesuai karyawan & periode'),
     -- Potongan Tidak Tetap
+    ('POT_PRESENSI', N'Potongan Presensi',         'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 59, N'Potongan keterlambatan/kehadiran presensi (berdiri sendiri)'),
     ('POT_K3PG',     N'K3PG',                      'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 60, N'Sesuai karyawan & periode'),
     ('POT_KKCS',     N'KKCS',                      'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 61, N'Sesuai karyawan & periode'),
     ('POT_BMT',      N'BMT',                       'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 62, N'Sesuai karyawan & periode'),
     ('POT_ANGSURAN', N'Angsuran',                  'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 63, N'Sesuai karyawan & periode'),
     ('POT_KSPPS',    N'KSPPS K3PG',                'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 64, N'Sesuai karyawan & periode');
-    PRINT 'gaji.komponen: 23 baris diseed.';
+    PRINT 'gaji.komponen: 25 baris diseed.';
 END
 ELSE PRINT 'LEWATI: gaji.komponen sudah terisi.';
 GO

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Users,
   Users2,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './DashboardPage.css'
@@ -25,6 +26,7 @@ const ICONS = {
   archive: Archive,
   'trending-up': TrendingUp,
   'users-round': Users2,
+  wallet: Wallet,
 }
 
 const MODULE_ROUTES = {
@@ -32,8 +34,10 @@ const MODULE_ROUTES = {
   'my-innovation': '/my-innovation',
   'my-team': '/team',
   'my-office': '/my-office',
+  'my-prosedur': '/my-prosedur',
   'my-progress': '/my-progress',
   'my-asset': '/my-asset',
+  payroll: '/payroll',
 }
 
 // Logo tiap modul (di /public). Bila ada, tampil menggantikan ikon lucide pada tile.

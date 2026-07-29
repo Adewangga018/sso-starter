@@ -31,8 +31,12 @@ CREATE TABLE cuti.saldo (
 );
 GO
 
--- Catatan (aturan disederhanakan): cuti bersama DIABAIKAN, saldo = hak - diambil.
--- Setelah seed: UPDATE cuti.saldo SET saldo = hak - diambil;
+-- Aturan (revisi 2026-07-29): hak (net) = hak_dasar(24) - cuti_bersama; saldo = hak - diambil.
+-- cuti_bersama = jumlah cuti bersama 2 tahun terakhir, DIINPUT SDM di cuti.setelan
+-- (lihat bawah), lalu seluruh cuti.saldo dihitung ulang oleh CutiService.
+-- PERIODE BERJALAN: periode = "{tahun}-{tahun+1}" (WIB), berganti tiap 1 Januari.
+-- CutiService.ResetJikaPeriodeBaruAsync me-reset saldo (hak kembali penuh, diambil=0)
+-- saat karyawan membuka/mengajukan cuti di periode baru — "reset tiap tahun" otomatis.
 
 -- Pengajuan cuti tahunan: disetujui atasan -> memotong cuti.saldo.
 IF OBJECT_ID('cuti.pengajuan', 'U') IS NOT NULL DROP TABLE cuti.pengajuan;
@@ -52,4 +56,20 @@ CREATE TABLE cuti.pengajuan (
     tgl_keputusan DATETIME2     NULL,
     CONSTRAINT ck_peng_status CHECK (status IN ('Menunggu','Disetujui','Ditolak','Batal'))
 );
+GO
+
+-- Setelan global cuti (satu baris, id=1). hak_dasar - cuti_bersama = hak awal semua
+-- karyawan. NON-DESTRUKTIF (jangan di-drop): menyimpan angka cuti bersama dari SDM.
+IF OBJECT_ID('cuti.setelan', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.setelan (
+        id              TINYINT NOT NULL CONSTRAINT pk_cuti_setelan PRIMARY KEY,
+        hak_dasar       INT NOT NULL CONSTRAINT df_cuti_setelan_hak DEFAULT (24),
+        cuti_bersama    INT NOT NULL CONSTRAINT df_cuti_setelan_cb  DEFAULT (0),
+        diperbarui_pada DATETIME2 NULL,
+        diperbarui_oleh NVARCHAR(150) NULL,
+        CONSTRAINT ck_cuti_setelan_single CHECK (id = 1)
+    );
+    INSERT INTO cuti.setelan (id, hak_dasar, cuti_bersama) VALUES (1, 24, 0);
+END
 GO

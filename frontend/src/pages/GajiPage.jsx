@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Wallet, Loader2, Info, TrendingUp, TrendingDown, SlidersHorizontal } from 'lucide-react'
+import { Wallet, Loader2, Info, TrendingUp, TrendingDown } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
-import { useAuth } from '../context/AuthContext'
 import './GajiPage.css'
 
 const BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
@@ -33,7 +31,6 @@ function Grup({ grup }) {
 }
 
 export default function GajiPage() {
-  const { isAdminModulSdm } = useAuth()
   const now = new Date()
   const [tahun, setTahun] = useState(now.getFullYear())
   const [bulan, setBulan] = useState(now.getMonth() + 1)
@@ -66,9 +63,6 @@ export default function GajiPage() {
           <p className="gaji__sub">Rincian komponen gaji berdasarkan Job Grade (JG) & Person Grade (PG).</p>
         </div>
         <div className="gaji__periode">
-          {isAdminModulSdm && (
-            <Link to="/modul-sdm/gaji-tarif" className="gaji__konfig"><SlidersHorizontal size={15} /> Konfigurasi Tarif</Link>
-          )}
           <select value={bulan} onChange={(e) => setBulan(Number(e.target.value))} aria-label="Bulan">
             {BULAN.slice(1).map((b, i) => <option key={i + 1} value={i + 1}>{b}</option>)}
           </select>
@@ -122,14 +116,8 @@ export default function GajiPage() {
             <section className="gaji__card gaji__col">
               <h3 className="gaji__col-title gaji__col-title--out"><TrendingDown size={16} /> Potongan</h3>
               {data.potongan.map((g) => <Grup key={g.kategori} grup={g} />)}
-              {data.potonganTerlambat > 0 && (
-                <div className="gaji__row gaji__row--terlambat">
-                  <div className="gaji__row-label"><span className="gaji__row-nama">Potongan Keterlambatan Presensi</span></div>
-                  <div className="gaji__row-nominal">{rupiah(data.potonganTerlambat)}</div>
-                </div>
-              )}
               <div className="gaji__col-total">
-                <span>Total Potongan</span><span>{rupiah(data.totalPotongan + data.potonganTerlambat)}</span>
+                <span>Total Potongan</span><span>{rupiah(data.totalPotongan)}</span>
               </div>
             </section>
           </div>

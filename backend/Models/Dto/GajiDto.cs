@@ -33,7 +33,6 @@ public record GajiSlipDto(
     IReadOnlyList<GajiGrupDto> Potongan,
     decimal TotalPendapatan,
     decimal TotalPotongan,
-    decimal PotonganTerlambat,
     decimal GajiBersih,
     bool TarifBelumDiisi,
     string? Catatan);

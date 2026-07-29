@@ -47,9 +47,9 @@ public class GajiService
                 .ToDictionaryAsync(t => t.IdKomponen, t => t.Nominal);
         }
 
-        // Slip tersimpan (kalau sudah digenerate) -> nominal manual + potongan terlambat.
+        // Slip tersimpan (kalau sudah digenerate) -> nominal manual (Karyawan_Periode),
+        // termasuk Potongan Presensi yang kini komponen tersendiri.
         var manual = new Dictionary<int, decimal>();
-        decimal potonganTerlambat = 0;
         var periode = await _db.GajiPeriode.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Tahun == (short)tahun && p.Bulan == (byte)bulan);
         if (periode is not null)
@@ -58,7 +58,6 @@ public class GajiService
                 .FirstOrDefaultAsync(s => s.IdPeriode == periode.IdPeriode && s.IdKaryawan == nik);
             if (slip is not null)
             {
-                potonganTerlambat = slip.PotonganTerlambat;
                 manual = await _db.GajiSlipDetail.AsNoTracking()
                     .Where(d => d.IdSlip == slip.IdSlip)
                     .ToDictionaryAsync(d => d.IdKomponen, d => d.Nominal);
@@ -75,15 +74,13 @@ public class GajiService
 
         var totalPendapatan = pendapatan.Sum(g => g.Subtotal);
         var totalPotongan = potongan.Sum(g => g.Subtotal);
-        var gajiBersih = totalPendapatan - potonganTerlambat - totalPotongan;
-        var belumDiisi = totalPendapatan == 0 && totalPotongan == 0 && potonganTerlambat == 0;
-
-        var catatan = "Potongan keterlambatan presensi langsung mengurangi Tunjangan Pangan & Tunjangan Angkutan.";
+        var gajiBersih = totalPendapatan - totalPotongan;
+        var belumDiisi = totalPendapatan == 0 && totalPotongan == 0;
 
         return new GajiSlipDto(
             tahun, bulan, BulanId[bulan], nama, jabatan, tingkatan, band, jg, pg,
-            pendapatan, potongan, totalPendapatan, totalPotongan, potonganTerlambat, gajiBersih,
-            belumDiisi, catatan);
+            pendapatan, potongan, totalPendapatan, totalPotongan, gajiBersih,
+            belumDiisi, null);
     }
 
     private static List<GajiGrupDto> BuildGrup(
@@ -173,11 +170,15 @@ public class GajiService
 
     // ===================== Admin Modul SDM: konfigurasi tarif =====================
 
-    // Pilihan JG (dari grading.job_grade) & PG (dari grading.person_grade yang ada).
+    // Pilihan JG (dari grading.job_grade) & PG. PG dibuat kontinu dari nilai terendah
+    // yang ada s/d minimal 21 (skala PG sampai 21, sejajar JG) agar tiap sel dapat diisi.
     public async Task<GajiGradeOpsiDto> GetGradeOpsiAsync()
     {
         var jg = await ReadIntsAsync("SELECT jg FROM grading.job_grade ORDER BY jg");
-        var pg = await ReadIntsAsync("SELECT DISTINCT pg FROM grading.person_grade ORDER BY pg");
+        var pgAda = await ReadIntsAsync("SELECT DISTINCT pg FROM grading.person_grade ORDER BY pg");
+        var pgMin = pgAda.Count > 0 ? pgAda.Min() : 7;
+        var pgMax = Math.Max(21, pgAda.Count > 0 ? pgAda.Max() : 21);
+        var pg = Enumerable.Range(pgMin, pgMax - pgMin + 1).ToList();
         return new GajiGradeOpsiDto(jg, pg);
     }
 

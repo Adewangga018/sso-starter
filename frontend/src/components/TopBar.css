@@ -122,6 +122,25 @@
   background: rgba(15, 38, 31, 0.05);
 }
 
+/* Ikon chat coaching global + badge belum-dibaca. */
+.topbar__chat { position: relative; }
+.topbar__badge {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e0403f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.topbar--dark .topbar__badge { box-shadow: 0 0 0 2px var(--gcs-green-900); }
+
 /* Kini benar-benar sebuah tombol: sebelumnya <div> dengan cursor:default, sehingga panah
    di sampingnya terlihat bisa diklik padahal tidak. */
 .topbar__user {

@@ -90,6 +90,14 @@ public class DashboardController : ControllerBase
         var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
         var modules = await _modules.GetTilesForAsync(isAdmin);
 
+        // Modul "Payroll" khusus Admin Modul SDM (konfigurasi tarif gaji). Tidak ada di
+        // katalog modul umum; kartunya hanya ditambahkan untuk yang berhak. Ini juga jadi
+        // penjaga rute /payroll (RequireModule "payroll" hanya lolos bila kartu ini ada).
+        if (isAdminModulSdm)
+        {
+            modules = modules.Append(new ModuleTileDto("payroll", "Payroll", "GAJI & TARIF", "wallet", true)).ToList();
+        }
+
         return Ok(new DashboardSummaryDto(nama, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm));
     }
 }

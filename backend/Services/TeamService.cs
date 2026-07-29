@@ -46,10 +46,11 @@ public class TeamService
             int? idAtasanJab;
             string? jabatanSaya, bandSaya;
             int? jgSaya;
+            string? kelFungsiSaya;   // 'Khusus' = staf khusus (standalone: tanpa rekan setim)
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-                    SELECT TOP 1 j.id_jabatan, j.nama_jabatan, b.kode, j.jg, j.id_atasan
+                    SELECT TOP 1 j.id_jabatan, j.nama_jabatan, b.kode, j.jg, j.id_atasan, j.kelompok_fungsi
                     FROM grading.penempatan p
                     JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
                     JOIN grading.band    b ON b.id_band    = j.id_band
@@ -67,7 +68,9 @@ public class TeamService
                 bandSaya = r.IsDBNull(2) ? null : r.GetString(2);
                 jgSaya = r.IsDBNull(3) ? null : Convert.ToInt32(r.GetValue(3));
                 idAtasanJab = r.IsDBNull(4) ? null : Convert.ToInt32(r.GetValue(4));
+                kelFungsiSaya = r.IsDBNull(5) ? null : r.GetString(5);
             }
+            var sayaStafKhusus = string.Equals(kelFungsiSaya, "Khusus", StringComparison.OrdinalIgnoreCase);
 
             // 2) Atasan langsung.
             AtasanDto? atasan = null;
@@ -114,8 +117,10 @@ public class TeamService
             }
 
             // 4) Rekan setim (peers): sesama bawahan langsung dari atasan yang sama, kecuali saya.
+            //    Staf khusus (kelompok_fungsi='Khusus') dikecualikan: mereka standalone —
+            //    tidak melihat rekan setim, dan tidak muncul sebagai rekan setim orang lain.
             List<MemberRow> peerRows = [];
-            if (idAtasanJab is not null)
+            if (idAtasanJab is not null && !sayaStafKhusus)
             {
                 await using var cmd = conn.CreateCommand();
                 cmd.CommandText = @"
@@ -126,6 +131,7 @@ public class TeamService
                     LEFT JOIN grading.unit_organisasi u ON u.id_unit = j.id_unit
                     LEFT JOIN grading.penempatan p ON p.id_jabatan = j.id_jabatan AND p.status = 'Aktif'
                     WHERE j.id_atasan = @atasan AND j.id_jabatan <> @me AND j.aktif = 1
+                          AND ISNULL(j.kelompok_fungsi, '') <> 'Khusus'
                     ORDER BY j.nama_jabatan";
                 AddParam(cmd, "@atasan", idAtasanJab.Value);
                 AddParam(cmd, "@me", myJabatan);

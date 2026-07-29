@@ -9,6 +9,7 @@ using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
+using SsoBackend.Models.Prosedur;
 
 namespace SsoBackend.Data;
 
@@ -35,6 +36,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Cuti (schema cuti) — sistem cuti MyGCS baru, dikelola manual (raw SQL).
     public DbSet<CutiSaldo> CutiSaldo => Set<CutiSaldo>();
     public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
+    public DbSet<CutiSetelan> CutiSetelan => Set<CutiSetelan>();
     // Persetujuan terpadu (schema approval).
     public DbSet<ApprovalPengajuan> ApprovalPengajuan => Set<ApprovalPengajuan>();
     // Slip Gaji (schema gaji) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -52,6 +54,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CoachingSesi> CoachingSesi => Set<CoachingSesi>();
     public DbSet<CoachingPesan> CoachingPesan => Set<CoachingPesan>();
     public DbSet<CoachingTindakLanjut> CoachingTindakLanjut => Set<CoachingTindakLanjut>();
+    public DbSet<CoachingBaca> CoachingBaca => Set<CoachingBaca>();
+    // My Prosedur (schema prosedur) — dikelola manual (raw SQL), EF baca/tulis saja.
+    public DbSet<ProsedurDokumen> ProsedurDokumen => Set<ProsedurDokumen>();
+    public DbSet<ProsedurVersi> ProsedurVersi => Set<ProsedurVersi>();
+    public DbSet<ProsedurAcknowledgement> ProsedurAcknowledgement => Set<ProsedurAcknowledgement>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -232,6 +239,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.TglCutoff).HasColumnName("tgl_cutoff");
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
             e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+        });
+
+        builder.Entity<CutiSetelan>(e =>
+        {
+            e.ToTable("setelan", "cuti", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.HakDasar).HasColumnName("hak_dasar");
+            e.Property(x => x.CutiBersama).HasColumnName("cuti_bersama");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+            e.Property(x => x.DiperbaruiOleh).HasColumnName("diperbarui_oleh");
         });
 
         builder.Entity<CutiPengajuan>(e =>
@@ -442,6 +460,61 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
             e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+        });
+
+        builder.Entity<CoachingBaca>(e =>
+        {
+            e.ToTable("baca", "coaching", t => t.ExcludeFromMigrations());
+            e.HasKey(x => new { x.Nik, x.Kanal });
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Kanal).HasColumnName("kanal");
+            e.Property(x => x.TglBaca).HasColumnName("tgl_baca");
+        });
+
+        builder.Entity<ProsedurDokumen>(e =>
+        {
+            e.ToTable("dokumen", "prosedur", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Judul).HasColumnName("judul");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.Unit).HasColumnName("unit");
+            e.Property(x => x.Kategori).HasColumnName("kategori");
+            e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<ProsedurVersi>(e =>
+        {
+            e.ToTable("versi", "prosedur", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdDokumen).HasColumnName("id_dokumen");
+            e.Property(x => x.Versi).HasColumnName("versi");
+            e.Property(x => x.Ringkasan).HasColumnName("ringkasan");
+            e.Property(x => x.NamaFile).HasColumnName("nama_file");
+            e.Property(x => x.TipeFile).HasColumnName("tipe_file");
+            e.Property(x => x.Konten).HasColumnName("konten");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.TglBerlaku).HasColumnName("tgl_berlaku");
+            e.Property(x => x.IdPenerbit).HasColumnName("id_penerbit");
+            e.Property(x => x.NamaPenerbit).HasColumnName("nama_penerbit");
+            e.Property(x => x.TglUnggah).HasColumnName("tgl_unggah");
+        });
+
+        builder.Entity<ProsedurAcknowledgement>(e =>
+        {
+            e.ToTable("acknowledgement", "prosedur", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdVersi).HasColumnName("id_versi");
+            e.Property(x => x.IdDokumen).HasColumnName("id_dokumen");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Tgl).HasColumnName("tgl");
         });
 
         // Use generic table names for the Identity tables instead of the AspNet* prefix.

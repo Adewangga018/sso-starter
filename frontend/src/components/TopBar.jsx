@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, ChevronDown, Gavel, LogOut, Menu, ShieldCheck } from 'lucide-react'
+import { Bell, ChevronDown, Gavel, LogOut, Menu, MessagesSquare, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useChat } from '../context/ChatContext'
 import './TopBar.css'
 
 /**
@@ -19,6 +20,9 @@ import './TopBar.css'
 export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const { isAdmin, isPengelolaJuri, summary } = useAuth()
+  const { unread, toggle: toggleChat } = useChat()
+  // Chat = bagian dari coaching My Team; sembunyikan ikon bila modul my-team nonaktif.
+  const chatOn = (summary?.modules ?? []).some((m) => m.key === 'my-team' && m.enabled)
   // Tingkatan (level berbasis band) ditampilkan sebagai chip di samping jabatan.
   // Disembunyikan bila sama persis dengan subtitle agar tidak dobel.
   const tingkatan = summary?.tingkatan
@@ -88,6 +92,19 @@ export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark
           <Link to="/admin" className="topbar__admin-link" title="Panel Admin IT">
             <ShieldCheck size={16} /> <span className="topbar__admin-link-text">Panel Admin</span>
           </Link>
+        )}
+
+        {chatOn && (
+          <button
+            type="button"
+            className="topbar__bell topbar__chat"
+            aria-label="Coaching"
+            title="Coaching / Pesan"
+            onClick={toggleChat}
+          >
+            <MessagesSquare size={18} />
+            {unread > 0 && <span className="topbar__badge">{unread > 9 ? '9+' : unread}</span>}
+          </button>
         )}
 
         <div className="topbar__popup-anchor">

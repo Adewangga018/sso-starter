@@ -7,12 +7,14 @@ public record CoachingTindakLanjutDto(long Id, string Isi, string Status, DateTi
 // Ringkas sesi 1-on-1 untuk daftar. PeranLawan = posisi lawan bicara relatif ke saya.
 public record CoachingSesiRingkasDto(
     long Id, string LawanNik, string? LawanNama, string PeranLawan,
-    string Topik, string Status, string? PesanTerakhir, DateTime? TglTerakhir);
+    string Topik, string Status, string? PesanTerakhir, DateTime? TglTerakhir,
+    bool BelumDibaca);
 
 // Ringkas ruang tim. Peran = "Pemilik" (tim saya) | "Anggota" (tim atasan).
 public record CoachingRuangRingkasDto(
     string OwnerNik, string? OwnerNama, string Peran, int JumlahAnggota,
-    string? PesanTerakhir, DateTime? TglTerakhir);
+    string? PesanTerakhir, DateTime? TglTerakhir,
+    bool BelumDibaca);
 
 public record CoachingInboxDto(
     IReadOnlyList<CoachingSesiRingkasDto> Sesi,

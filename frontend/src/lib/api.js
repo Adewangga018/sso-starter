@@ -178,6 +178,25 @@ export const api = {
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  simpanCutiBersama: (cutiBersama) => apiFetch('/api/personal/cuti/cuti-bersama', { method: 'PUT', body: JSON.stringify({ cutiBersama }) }),
+  // My Prosedur (SOP & Kebijakan)
+  getProsedurList: (q, jenis) => {
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (jenis) p.set('jenis', jenis)
+    const s = p.toString()
+    return apiFetch(`/api/prosedur${s ? `?${s}` : ''}`)
+  },
+  getProsedurDetail: (id) => apiFetch(`/api/prosedur/${id}`),
+  getProsedurFile: (versiId) => apiBlob(`/api/prosedur/versi/${versiId}/file`),
+  ackProsedur: (id) => apiFetch(`/api/prosedur/${id}/ack`, { method: 'POST' }),
+  getProsedurAck: (id) => apiFetch(`/api/prosedur/${id}/acknowledgement`),
+  buatProsedur: (formData) => apiFetch('/api/prosedur', { method: 'POST', body: formData }),
+  tambahVersiProsedur: (id, formData) => apiFetch(`/api/prosedur/${id}/versi`, { method: 'POST', body: formData }),
+  ubahProsedur: (id, payload) => apiFetch(`/api/prosedur/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  statusVersiProsedur: (versiId, status) => apiFetch(`/api/prosedur/versi/${versiId}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  hapusProsedur: (id) => apiFetch(`/api/prosedur/${id}`, { method: 'DELETE' }),
+
   // Coaching (My Team)
   getCoachingInbox: () => apiFetch('/api/coaching'),
   getCoachingLawanBicara: () => apiFetch('/api/coaching/lawan-bicara'),

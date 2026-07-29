@@ -27,6 +27,14 @@ public class CoachingPesan
     public DateTime TglKirim { get; set; }
 }
 
+// Status "sudah dibaca" per pengguna per kanal (badge belum-dibaca).
+public class CoachingBaca
+{
+    public string Nik { get; set; } = string.Empty;
+    public string Kanal { get; set; } = string.Empty;   // "sesi:{id}" | "ruang:{nik}"
+    public DateTime TglBaca { get; set; }
+}
+
 // Action item hasil sesi coaching.
 public class CoachingTindakLanjut
 {

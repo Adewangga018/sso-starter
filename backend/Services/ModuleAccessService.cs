@@ -23,6 +23,9 @@ public class ModuleAccessService
 
     public Task<bool> IsAsetAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");
 
+    // Admin My Prosedur (SOP/Kebijakan) = fungsi Tata Kelola di Departemen Kepatuhan.
+    public Task<bool> IsProsedurAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");
+
     // True bila jabatan aktif berada di subtree departemen `deptName` dengan band
     // urutan <= 3, ATAU GM Kompartemen SKP (band urutan <= 1).
     private async Task<bool> IsDeptAdminAsync(string? nik, string deptName)

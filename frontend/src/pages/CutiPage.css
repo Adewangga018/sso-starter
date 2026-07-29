@@ -136,3 +136,15 @@
 @media (max-width: 420px) {
   .cuti__breakdown { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Rincian hak & konfigurasi cuti bersama (Admin SDM) */
+.cuti__saldo-break { font-size: 0.78rem; color: rgba(255, 255, 255, 0.8); margin-top: 4px; }
+.cuti__saldo-break b { color: #fff; }
+.cuti__admin { border-color: var(--gcs-gold-500); background: rgba(244,174,70,0.05); }
+.cuti__admin-note { font-size: 0.85rem; color: var(--gcs-text-muted); margin: 0 0 10px; }
+.cuti__admin-row { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.cuti__admin-row label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
+.cuti__admin-row input { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 0.95rem; width: 130px; }
+.cuti__admin-row input:focus { outline: none; border-color: var(--gcs-gold-500); }
+.cuti__admin-calc { font-size: 0.9rem; color: var(--gcs-ink); padding-bottom: 9px; }
+.cuti__admin-calc b { color: var(--gcs-green-900); font-size: 1.05rem; }

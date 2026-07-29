@@ -106,5 +106,24 @@ END
 ELSE PRINT 'LEWATI: coaching.tindak_lanjut sudah ada.';
 GO
 
+/* ---------------------------------------------------------------------------
+   baca - status "sudah dibaca" per pengguna per kanal (utk badge belum-dibaca).
+   kanal = 'sesi:{id}' atau 'ruang:{nik pemilik}'. Diperbarui otomatis saat
+   pengguna membuka percakapan.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.baca', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.baca
+    (
+        nik      NVARCHAR(20) NOT NULL,
+        kanal    NVARCHAR(40) NOT NULL,
+        tgl_baca DATETIME2 NOT NULL CONSTRAINT df_coaching_baca DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT pk_coaching_baca PRIMARY KEY (nik, kanal)
+    );
+    PRINT 'Tabel coaching.baca dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.baca sudah ada.';
+GO
+
 SET NOEXEC OFF;
 GO

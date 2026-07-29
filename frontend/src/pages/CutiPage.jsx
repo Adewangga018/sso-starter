@@ -36,11 +36,12 @@ export default function CutiPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ tglMulai: '', tglSelesai: '', keterangan: '' })
   const [busy, setBusy] = useState(false)
+  const [cbInput, setCbInput] = useState('')
 
   const load = useCallback(async () => {
     try {
       const d = await api.getCuti()
-      setData(d); setLoading(false)
+      setData(d); setCbInput(String(d.cutiBersama ?? 0)); setLoading(false)
     } catch (err) {
       if (isEmptyDataError(err)) { setData({ sisa: 0, adaData: false, pengajuan: [], persetujuan: [], riwayat: [] }) }
       else setError(err instanceof ApiError ? err.message : 'Gagal memuat data cuti.')
@@ -71,6 +72,19 @@ export default function CutiPage() {
     catch (err) { setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Aksi gagal.' }) }
   }
 
+  async function simpanCb(e) {
+    e.preventDefault()
+    const n = Number(cbInput || 0)
+    setBusy(true); setMsg(null)
+    try {
+      await api.simpanCutiBersama(n)
+      setMsg({ type: 'ok', text: `Cuti bersama diset ${n} hari. Hak awal semua karyawan = ${data.hakDasar - n} hari.` })
+      await load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menyimpan cuti bersama.' })
+    } finally { setBusy(false) }
+  }
+
   if (loading) return <div className="cuti"><div className="cuti__loading"><Loader2 className="cuti__spin" size={22} /> Memuat…</div></div>
   if (error) return <div className="cuti"><div className="cuti__alert">{error}</div></div>
   if (!data) return null
@@ -91,6 +105,11 @@ export default function CutiPage() {
         <div className="cuti__saldo-main">
           <div className="cuti__saldo-value">{data.sisa} <span>hari</span></div>
           <div className="cuti__saldo-label">Sisa Cuti Tahunan{data.periode ? ` · periode ${data.periode}` : ''}</div>
+          {data.adaData && (
+            <div className="cuti__saldo-break">
+              Hak {data.hakDasar}{data.cutiBersama > 0 ? ` − cuti bersama ${data.cutiBersama}` : ''} = <b>{data.hak} hari</b> · terpakai {data.diambil}
+            </div>
+          )}
         </div>
         {data.adaData && (
           <button type="button" className="cuti__btn" onClick={() => setFormOpen((v) => !v)}>
@@ -104,6 +123,29 @@ export default function CutiPage() {
           <Info size={15} />
           <span>Belum ada data saldo cuti untuk NIK Anda. Hubungi SDM bila seharusnya ada.</span>
         </div>
+      )}
+
+      {/* Konfigurasi cuti bersama — khusus Admin Modul SDM */}
+      {data.isAdminSdm && (
+        <form className="cuti__card cuti__admin" onSubmit={simpanCb}>
+          <div className="cuti__card-head">Konfigurasi Cuti Bersama · Admin SDM</div>
+          <p className="cuti__admin-note">
+            Masukkan jumlah <b>cuti bersama 2 tahun terakhir</b>. Hak cuti awal semua karyawan menjadi
+            hak dasar ({data.hakDasar}) − cuti bersama.
+          </p>
+          <div className="cuti__admin-row">
+            <label>Cuti bersama (hari)
+              <input type="number" min="0" max={data.hakDasar} value={cbInput}
+                onChange={(e) => setCbInput(e.target.value)} />
+            </label>
+            <div className="cuti__admin-calc">
+              Hak awal = {data.hakDasar} − {Number(cbInput || 0)} = <b>{data.hakDasar - Number(cbInput || 0)} hari</b>
+            </div>
+            <button type="submit" className="cuti__btn" disabled={busy}>
+              {busy ? <Loader2 size={16} className="cuti__spin" /> : <CheckCircle2 size={16} />} Terapkan ke semua
+            </button>
+          </div>
+        </form>
       )}
 
       {/* Form ajukan */}
