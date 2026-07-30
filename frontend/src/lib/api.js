@@ -180,15 +180,18 @@ export const api = {
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
   simpanCutiBersama: (cutiBersama) => apiFetch('/api/personal/cuti/cuti-bersama', { method: 'PUT', body: JSON.stringify({ cutiBersama }) }),
   // My Prosedur (SOP & Kebijakan)
-  getProsedurList: (q, jenis) => {
+  getProsedurList: (q, jenis, kompartemen) => {
     const p = new URLSearchParams()
     if (q) p.set('q', q)
     if (jenis) p.set('jenis', jenis)
+    if (kompartemen) p.set('kompartemen', kompartemen)
     const s = p.toString()
     return apiFetch(`/api/prosedur${s ? `?${s}` : ''}`)
   },
+  getProsedurOpsi: () => apiFetch('/api/prosedur/opsi'),
   getProsedurDetail: (id) => apiFetch(`/api/prosedur/${id}`),
   getProsedurFile: (versiId) => apiBlob(`/api/prosedur/versi/${versiId}/file`),
+  unduhProsedurFile: (versiId, filename) => apiDownload(`/api/prosedur/versi/${versiId}/file`, filename || 'dokumen'),
   ackProsedur: (id) => apiFetch(`/api/prosedur/${id}/ack`, { method: 'POST' }),
   getProsedurAck: (id) => apiFetch(`/api/prosedur/${id}/acknowledgement`),
   buatProsedur: (formData) => apiFetch('/api/prosedur', { method: 'POST', body: formData }),

@@ -37,11 +37,20 @@ public class ProsedurController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ProsedurListDto>> List([FromQuery] string? q, [FromQuery] string? jenis)
+    public async Task<ActionResult<ProsedurListDto>> List([FromQuery] string? q, [FromQuery] string? jenis, [FromQuery] string? kompartemen)
     {
         var (nik, _) = await MeAsync();
         if (string.IsNullOrWhiteSpace(nik)) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
-        return Ok(await _prosedur.GetListAsync(nik, q, jenis));
+        return Ok(await _prosedur.GetListAsync(nik, q, jenis, kompartemen));
+    }
+
+    // Opsi dropdown form (Departemen & Kompartemen dari grading).
+    [HttpGet("opsi")]
+    public async Task<ActionResult<ProsedurOpsiDto>> Opsi()
+    {
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        return Ok(await _prosedur.GetOpsiAsync());
     }
 
     [HttpGet("{id:long}")]
@@ -85,12 +94,13 @@ public class ProsedurController : ControllerBase
     public async Task<IActionResult> Buat(
         [FromForm] string kode, [FromForm] string judul, [FromForm] string jenis,
         [FromForm] string? unit, [FromForm] string? kategori, [FromForm] string? deskripsi,
+        [FromForm] bool semuaKompartemen, [FromForm] List<string>? kompartemen,
         [FromForm] string? ringkasan, [FromForm] string? tglBerlaku, IFormFile? file)
     {
         var (nik, nama) = await MeAsync();
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
         if (file is null) return BadRequest(new { message = "Berkas dokumen wajib diunggah." });
-        var meta = new UbahDokumenRequest(kode, judul, jenis, unit, kategori, deskripsi);
+        var meta = new UbahDokumenRequest(kode, judul, jenis, unit, kategori, deskripsi, semuaKompartemen, kompartemen);
         var (ok, error, id) = await _prosedur.CreateAsync(nik, nama, meta, ParseTgl(tglBerlaku), ringkasan,
             await ReadBytesAsync(file), file.FileName, file.ContentType);
         return ok ? Ok(new { id }) : BadRequest(new { message = error });

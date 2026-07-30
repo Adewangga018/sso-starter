@@ -28,5 +28,9 @@ public static class ModuleAccessLevels
     // Hanya pemegang role Admin IT.
     public const string Admin = "admin";
 
-    public static bool IsValid(string? value) => value is Semua or Admin;
+    // Admin IT ATAU Admin Modul terkait (berbasis grading: mis. Admin SDM untuk KPI,
+    // Admin Kepatuhan untuk Prosedur/Health/Aset). Lihat ModuleAccessService.IsModuleAdminAsync.
+    public const string AdminModul = "admin_modul";
+
+    public static bool IsValid(string? value) => value is Semua or Admin or AdminModul;
 }

@@ -100,16 +100,31 @@ public class ModuleSettingsService
     // Admin IT TIDAK dihilangkan dari daftar, melainkan dikirim sebagai kartu terkunci
     // (Enabled = false) supaya tampil "Coming Soon" seperti modul yang memang belum jadi.
     // Menghilangkannya membuat dashboard karyawan bolong-bolong tanpa penjelasan.
-    public async Task<IReadOnlyList<ModuleTileDto>> GetTilesForAsync(bool isAdmin)
+    // isModuleAdmin: callback opsional yang menjawab apakah pengguna saat ini adalah Admin
+    // Modul untuk kunci modul tertentu (dipakai untuk tingkat akses "admin_modul"). Bila
+    // null, tingkat "admin_modul" diperlakukan seperti "admin" (terkunci untuk non-Admin IT).
+    public async Task<IReadOnlyList<ModuleTileDto>> GetTilesForAsync(bool isAdmin, Func<string, Task<bool>>? isModuleAdmin = null)
     {
         var settings = await GetSettingsAsync();
-        return settings
-            .Select(s =>
+        var tiles = new List<ModuleTileDto>(settings.Count);
+        foreach (var s in settings)
+        {
+            bool terkunci;
+            if (isAdmin || s.Access == ModuleAccessLevels.Semua)
             {
-                var terkunci = !isAdmin && s.Access == ModuleAccessLevels.Admin;
-                return new ModuleTileDto(s.Key, s.Label, s.Subtitle, s.Icon, s.Enabled && !terkunci, s.Access);
-            })
-            .ToList();
+                terkunci = false;
+            }
+            else if (s.Access == ModuleAccessLevels.AdminModul)
+            {
+                terkunci = isModuleAdmin is null || !await isModuleAdmin(s.Key);
+            }
+            else // "admin" (Admin IT saja)
+            {
+                terkunci = true;
+            }
+            tiles.Add(new ModuleTileDto(s.Key, s.Label, s.Subtitle, s.Icon, s.Enabled && !terkunci, s.Access));
+        }
+        return tiles;
     }
 
     public async Task<ModuleSettingDto?> SetAsync(string moduleKey, bool enabled, string access, string? by)

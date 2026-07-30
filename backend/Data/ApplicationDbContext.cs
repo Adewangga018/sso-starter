@@ -60,6 +60,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProsedurDokumen> ProsedurDokumen => Set<ProsedurDokumen>();
     public DbSet<ProsedurVersi> ProsedurVersi => Set<ProsedurVersi>();
     public DbSet<ProsedurAcknowledgement> ProsedurAcknowledgement => Set<ProsedurAcknowledgement>();
+    public DbSet<ProsedurDokumenKompartemen> ProsedurDokumenKompartemen => Set<ProsedurDokumenKompartemen>();
 
     // My Health (schema health) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<HealthPeriode> HealthPeriode => Set<HealthPeriode>();
@@ -487,9 +488,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Unit).HasColumnName("unit");
             e.Property(x => x.Kategori).HasColumnName("kategori");
             e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.SemuaKompartemen).HasColumnName("semua_kompartemen");
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
             e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<ProsedurDokumenKompartemen>(e =>
+        {
+            e.ToTable("dokumen_kompartemen", "prosedur", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdDokumen).HasColumnName("id_dokumen");
+            e.Property(x => x.Kompartemen).HasColumnName("kompartemen");
         });
 
         builder.Entity<ProsedurVersi>(e =>

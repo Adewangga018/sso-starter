@@ -24,11 +24,16 @@ public sealed class ModuleGateFilter : IAsyncAuthorizationFilter
 
     private readonly string _moduleKey;
     private readonly ModuleSettingsService _modules;
+    private readonly ModuleAccessService _access;
+    private readonly CurrentUserContext _currentUser;
 
-    public ModuleGateFilter(string moduleKey, ModuleSettingsService modules)
+    public ModuleGateFilter(string moduleKey, ModuleSettingsService modules,
+        ModuleAccessService access, CurrentUserContext currentUser)
     {
         _moduleKey = moduleKey;
         _modules = modules;
+        _access = access;
+        _currentUser = currentUser;
     }
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
@@ -41,6 +46,7 @@ public sealed class ModuleGateFilter : IAsyncAuthorizationFilter
             return;
         }
 
+        // Admin IT selalu boleh (termasuk untuk menguji modul yang belum dibuka umum).
         var isAdmin = user.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
         if (isAdmin)
         {
@@ -48,18 +54,36 @@ public sealed class ModuleGateFilter : IAsyncAuthorizationFilter
         }
 
         var state = await _modules.GetStateAsync(_moduleKey);
-        if (state.Found && state.Enabled && state.Access == Models.ModuleAccessLevels.Semua)
+
+        // Modul nonaktif: hanya Admin IT (sudah lolos di atas) yang boleh.
+        if (!state.Found || !state.Enabled)
+        {
+            context.Result = Forbid($"Modul {state.Label} sedang dinonaktifkan oleh Admin IT.");
+            return;
+        }
+
+        if (state.Access == Models.ModuleAccessLevels.Semua)
         {
             return;
         }
 
-        var message = !state.Enabled
-            ? $"Modul {state.Label} sedang dinonaktifkan oleh Admin IT."
-            : $"Modul {state.Label} hanya dapat diakses oleh Admin IT.";
-
-        context.Result = new ObjectResult(new { message })
+        // Tingkat "Admin Modul": Admin Modul terkait (mis. Admin SDM / Kepatuhan) juga boleh.
+        if (state.Access == Models.ModuleAccessLevels.AdminModul)
         {
-            StatusCode = StatusCodes.Status403Forbidden,
-        };
+            var (resolved, pegawai) = await _currentUser.ResolveAsync(user);
+            var nik = pegawai?.ID_KARYAWAN ?? resolved?.Nik;
+            if (await _access.IsModuleAdminAsync(_moduleKey, nik))
+            {
+                return;
+            }
+            context.Result = Forbid($"Modul {state.Label} hanya dapat diakses oleh Admin IT atau Admin Modul terkait.");
+            return;
+        }
+
+        // Sisa: "admin" (Admin IT saja).
+        context.Result = Forbid($"Modul {state.Label} hanya dapat diakses oleh Admin IT.");
     }
+
+    private static ObjectResult Forbid(string message) =>
+        new(new { message }) { StatusCode = StatusCodes.Status403Forbidden };
 }

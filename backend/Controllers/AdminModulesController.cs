@@ -50,7 +50,7 @@ public class AdminModulesController : ControllerBase
         var access = (request.Access ?? string.Empty).Trim().ToLowerInvariant();
         if (!ModuleAccessLevels.IsValid(access))
         {
-            return BadRequest(new { message = "Tingkat akses harus 'semua' atau 'admin'." });
+            return BadRequest(new { message = "Tingkat akses harus 'semua', 'admin_modul', atau 'admin'." });
         }
 
         var saved = await _modules.SetAsync(key, request.Enabled, access, User.FindFirstValue("email"));
@@ -60,7 +60,12 @@ public class AdminModulesController : ControllerBase
         }
 
         var status = saved.Enabled ? "aktif" : "nonaktif";
-        var siapa = saved.Access == ModuleAccessLevels.Admin ? "Admin IT saja" : "semua pengguna";
+        var siapa = saved.Access switch
+        {
+            ModuleAccessLevels.Admin => "Admin IT saja",
+            ModuleAccessLevels.AdminModul => "Admin IT & Admin Modul terkait",
+            _ => "semua pengguna",
+        };
         await _audit.LogAsync(
             "module.access_changed",
             User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier),

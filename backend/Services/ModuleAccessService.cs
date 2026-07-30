@@ -29,6 +29,21 @@ public class ModuleAccessService
     // Admin My Health (MCU/Kesehatan) = dikelola Departemen Kepatuhan.
     public Task<bool> IsHealthAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");
 
+    // "Admin Modul" untuk penjaga akses portal (tingkat akses "admin_modul"): apakah `nik`
+    // berhak sebagai admin pengelola modul `moduleKey`. Modul dengan pengelola jelas dipetakan
+    // ke departemennya; sisanya lolos bila termasuk salah satu kelompok Admin Modul (SDM atau
+    // Kepatuhan). BUKAN role Admin IT - itu ditangani terpisah di ModuleGateFilter.
+    public async Task<bool> IsModuleAdminAsync(string? moduleKey, string? nik)
+    {
+        if (string.IsNullOrWhiteSpace(nik)) return false;
+        return (moduleKey ?? string.Empty).ToLowerInvariant() switch
+        {
+            "my-progress" or "my-personal" or "payroll" => await IsSdmAdminAsync(nik),
+            "my-prosedur" or "my-health" or "my-asset" => await IsDeptAdminAsync(nik, "Departemen Kepatuhan"),
+            _ => await IsSdmAdminAsync(nik) || await IsDeptAdminAsync(nik, "Departemen Kepatuhan"),
+        };
+    }
+
     // True bila jabatan aktif berada di subtree departemen `deptName` dengan band
     // urutan <= 3, ATAU GM Kompartemen SKP (band urutan <= 1).
     private async Task<bool> IsDeptAdminAsync(string? nik, string deptName)

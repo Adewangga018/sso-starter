@@ -19,7 +19,7 @@ public class ProsedurService
         _access = access;
     }
 
-    public async Task<ProsedurListDto> GetListAsync(string nik, string? q, string? jenis)
+    public async Task<ProsedurListDto> GetListAsync(string nik, string? q, string? jenis, string? kompartemen)
     {
         var query = _db.ProsedurDokumen.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(jenis)) query = query.Where(d => d.Jenis == jenis);
@@ -47,19 +47,43 @@ public class ProsedurService
             .Where(a => a.Nik == nik && berlakuVersiIds.Contains(a.IdVersi))
             .Select(a => a.IdVersi).ToListAsync()).ToHashSet();
 
+        var kompPerDok = await KompartemenPerDokAsync(ids);
+
         var items = docs.Select(d =>
         {
             berlakuPerDok.TryGetValue(d.Id, out var v);
             var sudahAck = v is not null && ackSet.Contains(v.Id);
+            var komp = kompPerDok.TryGetValue(d.Id, out var list) ? list : new List<string>();
             return new ProsedurDokumenDto(
                 d.Id, d.Kode, d.Judul, d.Jenis, d.Unit, d.Kategori, d.Deskripsi,
+                d.SemuaKompartemen, komp,
                 v?.Versi, v is not null ? "Berlaku" : "Tidak Aktif", v?.TglBerlaku, v?.Id, v?.NamaFile,
                 sudahAck, v?.TglUnggah);
         }).ToList();
 
+        // Filter cakupan kompartemen: dokumen cocok bila berlaku semua kompartemen
+        // atau memuat kompartemen yang dipilih.
+        if (!string.IsNullOrWhiteSpace(kompartemen))
+        {
+            var k = kompartemen.Trim();
+            items = items.Where(i => i.SemuaKompartemen || i.Kompartemen.Contains(k)).ToList();
+        }
+
         var belumAck = items.Count(i => i.IdVersiBerlaku is not null && !i.SudahAck);
         var isAdmin = await _access.IsProsedurAdminAsync(nik);
         return new ProsedurListDto(items, isAdmin, belumAck);
+    }
+
+    // Peta id_dokumen -> daftar kompartemen tertentu (tidak termasuk yang "semua kompartemen").
+    private async Task<Dictionary<long, List<string>>> KompartemenPerDokAsync(IReadOnlyCollection<long> ids)
+    {
+        if (ids.Count == 0) return new();
+        var rows = await _db.ProsedurDokumenKompartemen.AsNoTracking()
+            .Where(k => ids.Contains(k.IdDokumen))
+            .Select(k => new { k.IdDokumen, k.Kompartemen })
+            .ToListAsync();
+        return rows.GroupBy(r => r.IdDokumen)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Kompartemen).OrderBy(x => x).ToList());
     }
 
     public async Task<ProsedurDetailDto?> GetDetailAsync(string nik, long id)
@@ -87,9 +111,13 @@ public class ProsedurService
             v.Id, v.Versi, v.Ringkasan, v.NamaFile, v.TipeFile, v.Status, v.TglBerlaku, v.NamaPenerbit, v.TglUnggah,
             ackCounts.TryGetValue(v.Id, out var n) ? n : 0)).ToList();
 
+        var kompPerDok = await KompartemenPerDokAsync(new[] { id });
+        var komp = kompPerDok.TryGetValue(id, out var list) ? list : new List<string>();
+
         var isAdmin = await _access.IsProsedurAdminAsync(nik);
         return new ProsedurDetailDto(
-            d.Id, d.Kode, d.Judul, d.Jenis, d.Unit, d.Kategori, d.Deskripsi, versiDto,
+            d.Id, d.Kode, d.Judul, d.Jenis, d.Unit, d.Kategori, d.Deskripsi,
+            d.SemuaKompartemen, komp, versiDto,
             berlaku?.Id, berlaku?.Versi, sudahAckBerlaku, isAdmin,
             berlaku is not null && ackCounts.TryGetValue(berlaku.Id, out var nb) ? nb : 0);
     }
@@ -148,10 +176,13 @@ public class ProsedurService
         {
             Kode = kode, Judul = meta.Judul.Trim(), Jenis = meta.Jenis,
             Unit = Clean(meta.Unit), Kategori = Clean(meta.Kategori), Deskripsi = Clean(meta.Deskripsi),
+            SemuaKompartemen = meta.SemuaKompartemen,
             IdPembuat = nik, TglDibuat = DateTime.UtcNow,
         };
         _db.ProsedurDokumen.Add(dok);
         await _db.SaveChangesAsync();
+
+        await SimpanKompartemenAsync(dok.Id, meta.SemuaKompartemen, meta.Kompartemen);
 
         _db.ProsedurVersi.Add(new ProsedurVersi
         {
@@ -198,9 +229,33 @@ public class ProsedurService
         if (await _db.ProsedurDokumen.AnyAsync(d => d.Kode == kode && d.Id != id)) return (false, $"Kode dokumen '{kode}' sudah dipakai.");
         dok.Kode = kode; dok.Judul = meta.Judul.Trim(); dok.Jenis = meta.Jenis;
         dok.Unit = Clean(meta.Unit); dok.Kategori = Clean(meta.Kategori); dok.Deskripsi = Clean(meta.Deskripsi);
+        dok.SemuaKompartemen = meta.SemuaKompartemen;
         dok.TglDiubah = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        await SimpanKompartemenAsync(dok.Id, meta.SemuaKompartemen, meta.Kompartemen);
         return (true, null);
+    }
+
+    // Ganti seluruh daftar kompartemen tertentu untuk dokumen. Bila "semua kompartemen"
+    // aktif, daftar khusus dikosongkan (tidak relevan).
+    private async Task SimpanKompartemenAsync(long idDokumen, bool semua, IReadOnlyList<string>? kompartemen)
+    {
+        var lama = await _db.ProsedurDokumenKompartemen.Where(k => k.IdDokumen == idDokumen).ToListAsync();
+        if (lama.Count > 0) _db.ProsedurDokumenKompartemen.RemoveRange(lama);
+
+        if (!semua && kompartemen is not null)
+        {
+            var bersih = kompartemen
+                .Select(k => k?.Trim())
+                .Where(k => !string.IsNullOrWhiteSpace(k))
+                .Select(k => k!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (var k in bersih)
+                _db.ProsedurDokumenKompartemen.Add(new ProsedurDokumenKompartemen { IdDokumen = idDokumen, Kompartemen = k });
+        }
+        await _db.SaveChangesAsync();
     }
 
     // Tarik/aktifkan sebuah versi. Mengaktifkan (Berlaku) menonaktifkan versi berlaku lain.
@@ -227,11 +282,43 @@ public class ProsedurService
         if (dok is null) return (false, "Dokumen tidak ditemukan.");
         var acks = await _db.ProsedurAcknowledgement.Where(a => a.IdDokumen == id).ToListAsync();
         _db.ProsedurAcknowledgement.RemoveRange(acks);
+        var komp = await _db.ProsedurDokumenKompartemen.Where(k => k.IdDokumen == id).ToListAsync();
+        _db.ProsedurDokumenKompartemen.RemoveRange(komp);
         var versi = await _db.ProsedurVersi.Where(v => v.IdDokumen == id).ToListAsync();
         _db.ProsedurVersi.RemoveRange(versi);
         _db.ProsedurDokumen.Remove(dok);
         await _db.SaveChangesAsync();
         return (true, null);
+    }
+
+    // Opsi dropdown form: seluruh Departemen (untuk kolom Unit) & Kompartemen dari grading.
+    public async Task<ProsedurOpsiDto> GetOpsiAsync()
+    {
+        var dep = await NamaUnitAsync("Departemen");
+        var komp = await NamaUnitAsync("Kompartemen");
+        return new ProsedurOpsiDto(dep, komp);
+    }
+
+    private async Task<List<string>> NamaUnitAsync(string tipe)
+    {
+        var hasil = new List<string>();
+        var conn = _db.Database.GetDbConnection();
+        var mustClose = conn.State != System.Data.ConnectionState.Open;
+        if (mustClose) await conn.OpenAsync();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT nama FROM grading.unit_organisasi WHERE tipe = @tipe ORDER BY nama";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "@tipe";
+            p.Value = tipe;
+            cmd.Parameters.Add(p);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+                if (r[0] is string s && !string.IsNullOrWhiteSpace(s)) hasil.Add(s.Trim());
+        }
+        finally { if (mustClose) await conn.CloseAsync(); }
+        return hasil;
     }
 
     private const string ForbidMsg = "Hanya Admin Kepatuhan yang dapat mengelola dokumen prosedur.";
