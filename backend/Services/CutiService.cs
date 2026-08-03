@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SsoBackend.Data;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Dto;
@@ -13,12 +14,14 @@ public class CutiService
     private readonly ApplicationDbContext _db;   // cuti.* + grading.* (db_mygcs)
     private readonly GcsDbContext _gcs;           // riwayat SDM lama
     private readonly ModuleAccessService _access; // hak Admin Modul SDM
+    private readonly ILogger<CutiService> _log;
 
-    public CutiService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access)
+    public CutiService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access, ILogger<CutiService> log)
     {
         _db = db;
         _gcs = gcs;
         _access = access;
+        _log = log;
     }
 
     public async Task<CutiDto> GetAsync(string nik)
@@ -32,15 +35,28 @@ public class CutiService
         var persetujuanRows = await _db.CutiPengajuan.AsNoTracking()
             .Where(p => p.IdAtasan == nik && p.Status == "Menunggu").OrderBy(p => p.Id).ToListAsync();
 
-        // Riwayat cuti tahunan dari SDM lama.
-        var riwRows = await _gcs.WebSdmCutiView
-            .Where(c => c.IdUser == nik && c.ListJenis == "Tahunan")
-            .OrderByDescending(c => c.TglInput).Take(50).ToListAsync();
-        var riwayat = riwRows.Select(c => new CutiRiwayatDto(
-            c.KodeCuti,
-            c.TglInput.HasValue ? DateOnly.FromDateTime(c.TglInput.Value) : (DateOnly?)null,
-            c.Keterangan, c.Status ?? "-",
-            c.TglApprove.HasValue ? DateOnly.FromDateTime(c.TglApprove.Value) : (DateOnly?)null)).ToList();
+        // Riwayat cuti tahunan dari SDM lama. Bersifat PELENGKAP: view intranet.vw_web_sdm_cuti
+        // memanggil fungsi legacy GCSSDM.dbo.getPerJabatan yang butuh izin EXECUTE tersendiri
+        // bagi login aplikasi (di dev pakai 'sa' → jalan; di prod 'svc_mygcs' bisa belum diberi
+        // izin). Kalau gagal, JANGAN jatuhkan seluruh halaman Cuti — tampilkan tanpa riwayat.
+        var riwayat = new List<CutiRiwayatDto>();
+        try
+        {
+            var riwRows = await _gcs.WebSdmCutiView
+                .Where(c => c.IdUser == nik && c.ListJenis == "Tahunan")
+                .OrderByDescending(c => c.TglInput).Take(50).ToListAsync();
+            riwayat = riwRows.Select(c => new CutiRiwayatDto(
+                c.KodeCuti,
+                c.TglInput.HasValue ? DateOnly.FromDateTime(c.TglInput.Value) : (DateOnly?)null,
+                c.Keterangan, c.Status ?? "-",
+                c.TglApprove.HasValue ? DateOnly.FromDateTime(c.TglApprove.Value) : (DateOnly?)null)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex,
+                "Gagal memuat riwayat cuti SDM untuk {Nik}; menampilkan halaman Cuti tanpa riwayat. " +
+                "Jika ini permission (EXECUTE getPerJabatan), beri izin ke login aplikasi di server.", nik);
+        }
 
         var setelan = await GetOrInitSetelanAsync();
         var isAdminSdm = await _access.IsSdmAdminAsync(nik);

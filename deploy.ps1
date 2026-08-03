@@ -8,11 +8,18 @@
     web.config di server SELALU dipertahankan (berisi env var/rahasia: connection string,
     thumbprint sertifikat, issuer).
 
+    Sebelum backend di-deploy, skema DB produksi dimigrasi otomatis dengan menjalankan
+    docs\prod-migrasi.sql (NON-DESTRUKTIF & idempoten). Connection string dibaca langsung
+    dari web.config di server (env var ConnectionStrings__DefaultConnection) — tidak ada
+    kredensial yang disimpan di skrip/repo. Migrasi berjalan SEBELUM app dioffline-kan;
+    bila gagal, deploy dibatalkan tanpa downtime (situs tetap versi lama).
+
 .EXAMPLE
     .\deploy.ps1 -DryRun          # lihat apa yang akan dilakukan, tanpa mengubah apa pun
-    .\deploy.ps1                  # build + deploy backend & frontend
-    .\deploy.ps1 -BackendOnly     # hanya backend
+    .\deploy.ps1                  # migrasi DB + build + deploy backend & frontend
+    .\deploy.ps1 -BackendOnly     # hanya backend (+ migrasi DB)
     .\deploy.ps1 -SkipBuild       # deploy artifact yang sudah ada (tanpa build ulang)
+    .\deploy.ps1 -SkipMigrate     # deploy tanpa menjalankan migrasi DB
 #>
 [CmdletBinding()]
 param(
@@ -24,6 +31,7 @@ param(
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
     [switch]$SkipBuild,
+    [switch]$SkipMigrate,
     [switch]$DryRun
 )
 
@@ -34,10 +42,55 @@ $frontendSrc  = Join-Path $root 'frontend'
 $publishDir   = Join-Path $backendSrc 'publish'
 $distDir      = Join-Path $frontendSrc 'dist'
 $appOffline   = Join-Path $root 'app_offline.htm'
+$migrationSql = Join-Path $root 'docs\prod-migrasi.sql'
 
 function Info($msg) { Write-Host "[deploy] $msg" -ForegroundColor Cyan }
 function Ok($msg)   { Write-Host "[  ok  ] $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "[ warn ] $msg" -ForegroundColor Yellow }
+
+# Migrasi skema DB produksi (non-destruktif). Connection string dibaca dari web.config
+# server yang sudah ada — TIDAK ada kredensial di skrip/repo. Dipanggil sebelum app
+# di-offline-kan agar kegagalan tidak menyebabkan downtime.
+function Invoke-DbMigration {
+    param([string]$WebConfigPath, [string]$SqlFile, [switch]$DryRun)
+
+    if (-not (Test-Path $SqlFile))       { throw "Berkas migrasi tidak ditemukan: $SqlFile" }
+    if (-not (Test-Path $WebConfigPath)) { throw "web.config server tidak ditemukan: $WebConfigPath" }
+
+    Info 'Membaca connection string db_mygcs dari web.config server...'
+    [xml]$cfg = Get-Content -LiteralPath $WebConfigPath -Raw
+    $node = $cfg.SelectSingleNode("//environmentVariable[@name='ConnectionStrings__DefaultConnection']")
+    if (-not $node -or [string]::IsNullOrWhiteSpace($node.value)) {
+        throw "ConnectionStrings__DefaultConnection tidak ada di web.config server."
+    }
+    $cs = $node.value
+    if ($cs -notmatch 'Connect Timeout') { $cs = $cs.TrimEnd(';') + ';Connect Timeout=60' }
+
+    $dbName = ([regex]::Match($cs, 'Database=([^;]+)')).Groups[1].Value
+    Info "  migrasi -> database: $dbName (non-destruktif, idempoten)"
+    if ($DryRun) { Warn '  (DryRun) migrasi tidak dijalankan.'; return }
+
+    $batches = (Get-Content -LiteralPath $SqlFile -Raw) -split "(?m)^\s*GO\s*$"
+    $conn = New-Object System.Data.SqlClient.SqlConnection $cs
+    $conn.add_InfoMessage([System.Data.SqlClient.SqlInfoMessageEventHandler] {
+        param($s, $e) Write-Host "        $($e.Message)" -ForegroundColor DarkGray
+    })
+    $conn.Open()
+    $i = 0
+    try {
+        foreach ($b in $batches) {
+            if ($b.Trim().Length -eq 0) { continue }
+            $i++
+            $cmd = $conn.CreateCommand(); $cmd.CommandText = $b; $cmd.CommandTimeout = 180
+            $cmd.ExecuteNonQuery() | Out-Null
+        }
+    } catch {
+        throw "Migrasi DB GAGAL pada batch #${i}: $($_.Exception.Message)"
+    } finally {
+        $conn.Close()
+    }
+    Ok "Migrasi DB selesai ($i batch)."
+}
 
 if ($DryRun) { Warn 'DRY RUN - tidak ada file yang benar-benar diubah.' }
 
@@ -82,6 +135,15 @@ if (-not $SkipBuild) {
 # ---------------------------------------------------------------- backend deploy
 if ($doBackend) {
     if (-not (Test-Path $publishDir)) { throw "Folder publish tidak ada: $publishDir (jangan pakai -SkipBuild)" }
+
+    # Migrasi DB DULU, selagi app masih online. Non-destruktif; bila gagal, deploy batal
+    # tanpa downtime (situs tetap versi lama). Skema baru bersifat aditif, jadi aman
+    # diterapkan sebelum kode baru masuk.
+    if (-not $SkipMigrate) {
+        Invoke-DbMigration -WebConfigPath (Join-Path $BackendShare 'web.config') -SqlFile $migrationSql -DryRun:$DryRun
+    } else {
+        Warn 'Migrasi DB dilewati (-SkipMigrate).'
+    }
 
     # File yang TIDAK boleh disentuh di server (rahasia & penanda offline)
     $keep = @('web.config', 'app_offline.htm')

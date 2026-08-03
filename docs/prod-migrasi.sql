@@ -1,0 +1,1046 @@
+/* ============================================================================
+   PROD-MIGRASI.SQL  -  Bundel migrasi PRODUKSI db_mygcs (satu berkas, aman).
+   ----------------------------------------------------------------------------
+   Menerapkan seluruh objek skema modul yang ditambahkan di sesi ini. AMAN:
+   setiap blok NON-DESTRUKTIF & idempoten (IF ... IS NULL CREATE / ALTER ADD),
+   dijaga agar hanya jalan di db_mygcs, dan TIDAK men-drop tabel apa pun.
+   Boleh dijalankan berulang. Versi cuti & approval di sini adalah versi AMAN
+   (bukan *-schema.sql asli yang memakai DROP TABLE).
+
+   Urutan blok:
+     1. cuti (setelan + tambal kolom saldo)   6. coaching
+     2. approval (persetujuan terpadu)         7. prosedur (dokumen + versi + ack)
+     3. gaji (komponen/slip/tarif)             8. prosedur v2 (kompartemen)
+     3b. gaji komponen tambahan (Lembur/       9. health (MCU)
+         Uang Makan Dinas/RIT)
+     4. kpi (My Progress)
+     5. aset (My Asset)
+
+   CARA PAKAI (di server DB PRODUKSI):
+     sqlcmd -S <server-prod> -U sa -P <password> -d db_mygcs -C -i docs\prod-migrasi.sql
+   JANGAN jalankan docs\cuti-schema.sql atau docs\approval-schema.sql di produksi
+   (keduanya DROP TABLE -> menghapus data). Cukup berkas ini.
+   ============================================================================ */
+GO
+
+PRINT '################ [1/9] CUTI ################';
+GO
+/* ============================================================================
+   PATCH PRODUKSI - Cuti My Personal (error 500 "Terjadi kesalahan").
+   Penyebab: DB produksi belum punya objek/kolom cuti terbaru (dibuat di dev).
+
+   AMAN & NON-DESTRUKTIF: TIDAK men-drop cuti.saldo / cuti.pengajuan, jadi data
+   saldo & pengajuan yang sudah ada TIDAK hilang. Hanya membuat yang belum ada
+   dan menambah kolom yang belum ada. Idempoten (boleh dijalankan berulang).
+
+   JANGAN memakai docs\cuti-schema.sql di produksi: skrip itu DROP TABLE saldo &
+   pengajuan (menghapus data). Pakai skrip ini.
+
+   CARA PAKAI (di server DB PRODUKSI):
+     sqlcmd -S <server-prod> -U sa -P <password> -d db_mygcs -C -i docs\prod-fix-cuti.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: jalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('cuti') IS NULL EXEC('CREATE SCHEMA cuti');
+GO
+
+/* 1) cuti.saldo -------------------------------------------------------------
+   Bila belum ada, buat lengkap. Bila sudah ada (versi lama), tambah kolom yang
+   belum ada saja - data lama tetap. */
+IF OBJECT_ID('cuti.saldo', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.saldo (
+        id              INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_cuti_saldo PRIMARY KEY,
+        id_karyawan     NVARCHAR(50)  NOT NULL,
+        nama            NVARCHAR(200) NULL,
+        tmt             DATE          NULL,
+        periode         NVARCHAR(20)  NOT NULL CONSTRAINT df_saldo_periode DEFAULT '2024-2025',
+        hak             INT           NOT NULL CONSTRAINT df_saldo_hak   DEFAULT 0,
+        cuti_bersama    INT           NOT NULL CONSTRAINT df_saldo_cb    DEFAULT 0,
+        diambil         INT           NOT NULL CONSTRAINT df_saldo_amb   DEFAULT 0,
+        saldo           INT           NOT NULL CONSTRAINT df_saldo_sisa  DEFAULT 0,
+        tgl_cutoff      DATE          NULL,
+        dibuat_pada     DATETIME2     NOT NULL CONSTRAINT df_saldo_dibuat DEFAULT SYSUTCDATETIME(),
+        diperbarui_pada DATETIME2     NOT NULL CONSTRAINT df_saldo_ubah   DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT uq_cuti_saldo_karyawan UNIQUE (id_karyawan)
+    );
+    PRINT 'cuti.saldo dibuat.';
+END
+ELSE
+BEGIN
+    IF COL_LENGTH('cuti.saldo','periode')      IS NULL ALTER TABLE cuti.saldo ADD periode      NVARCHAR(20) NOT NULL CONSTRAINT df_saldo_periode DEFAULT '2024-2025';
+    IF COL_LENGTH('cuti.saldo','hak')          IS NULL ALTER TABLE cuti.saldo ADD hak          INT NOT NULL CONSTRAINT df_saldo_hak  DEFAULT 0;
+    IF COL_LENGTH('cuti.saldo','cuti_bersama') IS NULL ALTER TABLE cuti.saldo ADD cuti_bersama INT NOT NULL CONSTRAINT df_saldo_cb   DEFAULT 0;
+    IF COL_LENGTH('cuti.saldo','diambil')      IS NULL ALTER TABLE cuti.saldo ADD diambil      INT NOT NULL CONSTRAINT df_saldo_amb  DEFAULT 0;
+    IF COL_LENGTH('cuti.saldo','saldo')        IS NULL ALTER TABLE cuti.saldo ADD saldo        INT NOT NULL CONSTRAINT df_saldo_sisa DEFAULT 0;
+    IF COL_LENGTH('cuti.saldo','tmt')          IS NULL ALTER TABLE cuti.saldo ADD tmt          DATE NULL;
+    IF COL_LENGTH('cuti.saldo','nama')         IS NULL ALTER TABLE cuti.saldo ADD nama         NVARCHAR(200) NULL;
+    IF COL_LENGTH('cuti.saldo','tgl_cutoff')   IS NULL ALTER TABLE cuti.saldo ADD tgl_cutoff   DATE NULL;
+    IF COL_LENGTH('cuti.saldo','dibuat_pada')  IS NULL ALTER TABLE cuti.saldo ADD dibuat_pada  DATETIME2 NOT NULL CONSTRAINT df_saldo_dibuat DEFAULT SYSUTCDATETIME();
+    IF COL_LENGTH('cuti.saldo','diperbarui_pada') IS NULL ALTER TABLE cuti.saldo ADD diperbarui_pada DATETIME2 NOT NULL CONSTRAINT df_saldo_ubah DEFAULT SYSUTCDATETIME();
+    PRINT 'cuti.saldo diperiksa/ditambal (kolom yang belum ada ditambahkan).';
+END
+GO
+
+/* 2) cuti.pengajuan --------------------------------------------------------- */
+IF OBJECT_ID('cuti.pengajuan', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.pengajuan (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_cuti_peng PRIMARY KEY,
+        id_karyawan   NVARCHAR(50)  NOT NULL,
+        nama          NVARCHAR(200) NULL,
+        id_atasan     NVARCHAR(50)  NULL,
+        tgl_mulai     DATE          NOT NULL,
+        tgl_selesai   DATE          NOT NULL,
+        jumlah_hari   INT           NOT NULL,
+        keterangan    NVARCHAR(500) NULL,
+        status        NVARCHAR(20)  NOT NULL CONSTRAINT df_peng_status DEFAULT 'Menunggu',
+        komentar      NVARCHAR(500) NULL,
+        tgl_pengajuan DATETIME2     NOT NULL CONSTRAINT df_peng_tgl DEFAULT SYSUTCDATETIME(),
+        tgl_keputusan DATETIME2     NULL,
+        CONSTRAINT ck_peng_status CHECK (status IN ('Menunggu','Disetujui','Ditolak','Batal'))
+    );
+    PRINT 'cuti.pengajuan dibuat.';
+END
+ELSE PRINT 'cuti.pengajuan sudah ada (dilewati).';
+GO
+
+/* 3) cuti.setelan (penyebab paling mungkin dari 500) ------------------------ */
+IF OBJECT_ID('cuti.setelan', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.setelan (
+        id              TINYINT NOT NULL CONSTRAINT pk_cuti_setelan PRIMARY KEY,
+        hak_dasar       INT NOT NULL CONSTRAINT df_cuti_setelan_hak DEFAULT (24),
+        cuti_bersama    INT NOT NULL CONSTRAINT df_cuti_setelan_cb  DEFAULT (0),
+        diperbarui_pada DATETIME2 NULL,
+        diperbarui_oleh NVARCHAR(150) NULL,
+        CONSTRAINT ck_cuti_setelan_single CHECK (id = 1)
+    );
+    INSERT INTO cuti.setelan (id, hak_dasar, cuti_bersama) VALUES (1, 24, 0);
+    PRINT 'cuti.setelan dibuat + baris id=1 diisi.';
+END
+ELSE
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM cuti.setelan WHERE id = 1)
+        INSERT INTO cuti.setelan (id, hak_dasar, cuti_bersama) VALUES (1, 24, 0);
+    PRINT 'cuti.setelan sudah ada (baris id=1 dipastikan ada).';
+END
+GO
+
+PRINT '=== SELESAI. Muat ulang halaman Cuti. ===';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [2/9] APPROVAL ################';
+GO
+/* ============================================================================
+   PATCH PRODUKSI - Layer persetujuan terpadu (schema approval).
+   Versi AMAN dari approval-schema.sql: TIDAK men-drop approval.pengajuan, jadi
+   data persetujuan yang sudah ada TIDAK hilang. Idempoten.
+   (approval-schema.sql asli memakai DROP TABLE - JANGAN dipakai di produksi.)
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: jalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('approval') IS NULL EXEC('CREATE SCHEMA approval');
+GO
+
+IF OBJECT_ID('approval.pengajuan', 'U') IS NULL
+BEGIN
+    CREATE TABLE approval.pengajuan (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_appr PRIMARY KEY,
+        jenis         NVARCHAR(20)  NOT NULL,
+        ref_id        NVARCHAR(50)  NOT NULL,
+        id_karyawan   NVARCHAR(50)  NOT NULL,
+        nama          NVARCHAR(200) NULL,
+        id_manager    NVARCHAR(50)  NULL,
+        ringkasan     NVARCHAR(500) NULL,
+        status        NVARCHAR(20)  NOT NULL CONSTRAINT df_appr_status DEFAULT 'Menunggu',
+        komentar      NVARCHAR(500) NULL,
+        tgl_pengajuan DATETIME2     NOT NULL CONSTRAINT df_appr_tgl DEFAULT SYSUTCDATETIME(),
+        tgl_keputusan DATETIME2     NULL,
+        CONSTRAINT ck_appr_status CHECK (status IN ('Menunggu','Disetujui','Ditolak','Batal')),
+        CONSTRAINT uq_appr_ref UNIQUE (jenis, ref_id)
+    );
+    CREATE INDEX ix_appr_manager ON approval.pengajuan (id_manager, status);
+    PRINT 'approval.pengajuan dibuat.';
+END
+ELSE PRINT 'LEWATI: approval.pengajuan sudah ada (data dipertahankan).';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3/9] GAJI ################';
+GO
+/* ============================================================================
+   gaji - skema Slip Gaji MyGCS (di db_mygcs). Layer PARALEL: tidak menyentuh
+   tabel/status SDM sama sekali. Nominal ditentukan oleh JG (Job Grade) & PG
+   (Person Grade) dari schema grading; PG naik per periode (tahunan) dan JG naik
+   mengikuti jabatan -> keduanya menaikkan gaji. Tarif per (komponen, JG, PG,
+   tahun) disimpan di gaji.tarif dan SENGAJA dibiarkan kosong dulu (dikonfigurasi
+   admin modul SDM belakangan).
+
+   Komponen mengikuti "komponen_gaji.xlsx":
+     Pendapatan : Gaji Pokok; Tunjangan Tetap (Jabatan, Perumahan);
+                  Tunjangan Tidak Tetap (Angkutan, Pangan, Lembur, Uang Makan
+                                         Dinas, RIT);
+                  Tunjangan Lain (BPJS Kesehatan, BPJS Ketenagakerjaan, Pajak, Shift,
+                                  Luar Daerah) *opsional
+     Potongan Tetap      : BPJS Kes, BPJS TK, Premi Asuransi, Pajak, Iuran IKGCS,
+                           Simpanan Wajib K3PG, Simpanan Wajib KKCS, DPLK, PIKGCS
+     Potongan Tidak Tetap: Potongan Presensi, K3PG, KKCS, BMT, Angsuran, KSPPS K3PG
+   Potongan Presensi kini komponen BERDIRI SENDIRI (bukan lagi memotong Tunjangan
+   Pangan/Angkutan). Kolom kena_potongan_terlambat tidak lagi dipakai (semua 0).
+
+   SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS / AT TIME
+   ZONE. NON-DESTRUKTIF (pola IF OBJECT_ID ... IS NULL CREATE) supaya tarif/slip
+   yang sudah terisi tidak terhapus saat skrip dijalankan ulang. Idempoten.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\gaji-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('gaji') IS NULL
+    EXEC('CREATE SCHEMA gaji AUTHORIZATION dbo');
+GO
+
+/* ---------------------------------------------------------------------------
+   komponen - master komponen gaji & potongan
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('gaji.komponen', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.komponen
+    (
+        id_komponen             INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_komponen PRIMARY KEY,
+        kode                    NVARCHAR(30)  NOT NULL,
+        nama                    NVARCHAR(100) NOT NULL,
+        tipe                    NVARCHAR(15)  NOT NULL,   -- Pendapatan | Potongan
+        kategori                NVARCHAR(40)  NOT NULL,   -- Gaji Pokok / Tunjangan Tetap / Tunjangan Tidak Tetap / Tunjangan Lain / Potongan Tetap / Potongan Tidak Tetap
+        basis                   NVARCHAR(20)  NOT NULL,   -- JG_PG (tarif dari matriks JG/PG) | Karyawan_Periode (input manual per orang/periode)
+        opsional                BIT NOT NULL CONSTRAINT df_gaji_komponen_opsional DEFAULT (0),  -- 1 = tidak semua pegawai menerima
+        kena_potongan_terlambat BIT NOT NULL CONSTRAINT df_gaji_komponen_terlambat DEFAULT (0), -- 1 = dipotong keterlambatan presensi
+        urutan                  INT NOT NULL CONSTRAINT df_gaji_komponen_urutan DEFAULT (0),
+        aktif                   BIT NOT NULL CONSTRAINT df_gaji_komponen_aktif DEFAULT (1),
+        keterangan              NVARCHAR(200) NULL,
+        CONSTRAINT uq_gaji_komponen_kode UNIQUE (kode),
+        CONSTRAINT ck_gaji_komponen_tipe  CHECK (tipe  IN ('Pendapatan','Potongan')),
+        CONSTRAINT ck_gaji_komponen_basis CHECK (basis IN ('JG_PG','Karyawan_Periode'))
+    );
+    PRINT 'Tabel gaji.komponen dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.komponen sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   tarif - nominal komponen basis JG_PG, per (JG, PG, tahun). KOSONG dulu.
+   PG naik tahunan & JG naik dgn jabatan -> naik ke sel tarif yang lebih tinggi.
+   tahun_berlaku memungkinkan skala tarif direvisi tiap tahun.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('gaji.tarif', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.tarif
+    (
+        id            INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_tarif PRIMARY KEY,
+        id_komponen   INT      NOT NULL,
+        jg            TINYINT  NOT NULL,
+        pg            TINYINT  NOT NULL,
+        tahun_berlaku SMALLINT NOT NULL,
+        nominal       DECIMAL(18,2) NOT NULL CONSTRAINT df_gaji_tarif_nominal DEFAULT (0),
+        CONSTRAINT fk_gaji_tarif_komponen FOREIGN KEY (id_komponen) REFERENCES gaji.komponen (id_komponen),
+        CONSTRAINT uq_gaji_tarif UNIQUE (id_komponen, jg, pg, tahun_berlaku)
+    );
+    PRINT 'Tabel gaji.tarif dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.tarif sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   periode - bulan gaji
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('gaji.periode', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.periode
+    (
+        id_periode   INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_periode PRIMARY KEY,
+        tahun        SMALLINT NOT NULL,
+        bulan        TINYINT  NOT NULL,
+        status       NVARCHAR(15) NOT NULL CONSTRAINT df_gaji_periode_status DEFAULT ('Draft'),
+        dibuat_pada  DATETIME2 NOT NULL CONSTRAINT df_gaji_periode_dibuat DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT uq_gaji_periode UNIQUE (tahun, bulan),
+        CONSTRAINT ck_gaji_periode_bulan  CHECK (bulan BETWEEN 1 AND 12),
+        CONSTRAINT ck_gaji_periode_status CHECK (status IN ('Draft','Final'))
+    );
+    PRINT 'Tabel gaji.periode dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.periode sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   slip - header slip gaji per pegawai per periode. JG/PG/band/jabatan disnapshot
+   supaya slip historis tetap konsisten meski grading berubah.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('gaji.slip', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.slip
+    (
+        id_slip             BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_slip PRIMARY KEY,
+        id_periode          INT NOT NULL,
+        id_karyawan         NVARCHAR(20)  NOT NULL,   -- = GCS.dbo.MST_PEGAWAI.ID_KARYAWAN (lintas-DB, tanpa FK)
+        nama                NVARCHAR(150) NOT NULL,
+        jg                  TINYINT NULL,
+        pg                  TINYINT NULL,
+        id_band             TINYINT NULL,
+        tingkatan           NVARCHAR(50)  NULL,
+        jabatan             NVARCHAR(150) NULL,
+        potongan_terlambat  DECIMAL(18,2) NOT NULL CONSTRAINT df_gaji_slip_terlambat DEFAULT (0),
+        status              NVARCHAR(15)  NOT NULL CONSTRAINT df_gaji_slip_status DEFAULT ('Draft'),
+        dibuat_pada         DATETIME2 NOT NULL CONSTRAINT df_gaji_slip_dibuat DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT fk_gaji_slip_periode FOREIGN KEY (id_periode) REFERENCES gaji.periode (id_periode),
+        CONSTRAINT uq_gaji_slip UNIQUE (id_periode, id_karyawan),
+        CONSTRAINT ck_gaji_slip_status CHECK (status IN ('Draft','Final'))
+    );
+    CREATE INDEX ix_gaji_slip_karyawan ON gaji.slip (id_karyawan);
+    PRINT 'Tabel gaji.slip dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.slip sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   slip_detail - baris nominal per komponen pada sebuah slip
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('gaji.slip_detail', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.slip_detail
+    (
+        id           BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_slip_detail PRIMARY KEY,
+        id_slip      BIGINT NOT NULL,
+        id_komponen  INT NOT NULL,
+        nominal      DECIMAL(18,2) NOT NULL CONSTRAINT df_gaji_slip_detail_nominal DEFAULT (0),
+        CONSTRAINT fk_gaji_slip_detail_slip     FOREIGN KEY (id_slip)     REFERENCES gaji.slip (id_slip),
+        CONSTRAINT fk_gaji_slip_detail_komponen FOREIGN KEY (id_komponen) REFERENCES gaji.komponen (id_komponen),
+        CONSTRAINT uq_gaji_slip_detail UNIQUE (id_slip, id_komponen)
+    );
+    PRINT 'Tabel gaji.slip_detail dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.slip_detail sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   SEED komponen (idempoten). Nominal tidak diseed - itu urusan gaji.tarif.
+   --------------------------------------------------------------------------- */
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen)
+BEGIN
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan) VALUES
+    -- Pendapatan
+    ('GAPOK',        N'Gaji Pokok',                'Pendapatan', N'Gaji Pokok',            'JG_PG',            0, 0, 10, N'Sesuai JG & PG'),
+    ('TJ_JABATAN',   N'Tunjangan Jabatan',         'Pendapatan', N'Tunjangan Tetap',      'JG_PG',            0, 0, 20, N'Sesuai jabatan (JG & PG)'),
+    ('TJ_PERUMAHAN', N'Tunjangan Perumahan',       'Pendapatan', N'Tunjangan Tetap',      'JG_PG',            0, 0, 21, N'Sesuai jabatan (JG & PG)'),
+    ('TJ_ANGKUTAN',  N'Tunjangan Angkutan',        'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 30, N'Tunjangan tidak tetap'),
+    ('TJ_PANGAN',    N'Tunjangan Pangan',          'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 31, N'Tunjangan tidak tetap'),
+    ('LEMBUR',       N'Lembur',                    'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 32, N'Upah lembur; sesuai jam lembur per periode'),
+    ('MAKAN_DINAS',  N'Uang Makan Dinas',          'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 33, N'Uang makan saat dinas; per karyawan & periode'),
+    ('RIT',          N'RIT',                       'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 34, N'Uang rit/ritase; per karyawan & periode'),
+    ('TJ_BPJS_KES',  N'Tunjangan BPJS Kesehatan',       'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 40, N'Hanya sebagian karyawan'),
+    ('TJ_BPJS_TK',   N'Tunjangan BPJS Ketenagakerjaan', 'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 41, N'Hanya sebagian karyawan'),
+    ('TJ_PAJAK',     N'Tunjangan Pajak',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 42, N'Hanya sebagian karyawan'),
+    ('TJ_SHIFT',     N'Tunjangan Shift',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 43, N'Hanya security'),
+    ('TJ_LUAR',      N'Tunjangan Luar Daerah',     'Pendapatan', N'Tunjangan Lain',       'Karyawan_Periode', 1, 0, 44, N'Sesuai karyawan & perjanjian'),
+    -- Potongan Tetap
+    ('POT_BPJS_KES', N'BPJS Kesehatan',            'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 50, N'Sesuai jabatan'),
+    ('POT_BPJS_TK',  N'BPJS Ketenagakerjaan',      'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 51, N'Sesuai jabatan'),
+    ('POT_PREMI',    N'Premi Asuransi',            'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 52, N'Sesuai jabatan'),
+    ('POT_PAJAK',    N'Pajak',                     'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 53, N'Sesuai jabatan'),
+    ('POT_IKGCS',    N'Iuran IKGCS',               'Potongan',   N'Potongan Tetap',       'Karyawan_Periode', 0, 0, 54, N'Sesuai karyawan & periode'),
+    ('POT_SW_K3PG',  N'Simpanan Wajib K3PG',       'Potongan',   N'Potongan Tetap',       'Karyawan_Periode', 0, 0, 55, N'Sesuai karyawan & periode'),
+    ('POT_SW_KKCS',  N'Simpanan Wajib KKCS',       'Potongan',   N'Potongan Tetap',       'Karyawan_Periode', 0, 0, 56, N'Sesuai karyawan & periode'),
+    ('POT_DPLK',     N'DPLK',                      'Potongan',   N'Potongan Tetap',       'JG_PG',            0, 0, 57, N'Sesuai jabatan'),
+    ('POT_PIKGCS',   N'PIKGCS',                    'Potongan',   N'Potongan Tetap',       'Karyawan_Periode', 0, 0, 58, N'Sesuai karyawan & periode'),
+    -- Potongan Tidak Tetap
+    ('POT_PRESENSI', N'Potongan Presensi',         'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 59, N'Potongan keterlambatan/kehadiran presensi (berdiri sendiri)'),
+    ('POT_K3PG',     N'K3PG',                      'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 60, N'Sesuai karyawan & periode'),
+    ('POT_KKCS',     N'KKCS',                      'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 61, N'Sesuai karyawan & periode'),
+    ('POT_BMT',      N'BMT',                       'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 62, N'Sesuai karyawan & periode'),
+    ('POT_ANGSURAN', N'Angsuran',                  'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 63, N'Sesuai karyawan & periode'),
+    ('POT_KSPPS',    N'KSPPS K3PG',                'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 64, N'Sesuai karyawan & periode');
+    PRINT 'gaji.komponen: 28 baris diseed.';
+END
+ELSE PRINT 'LEWATI: gaji.komponen sudah terisi.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3b/9] GAJI KOMPONEN TAMBAHAN (Lembur/Uang Makan Dinas/RIT) ################';
+GO
+/* ============================================================================
+   Tambahan komponen gaji - Tunjangan Tidak Tetap: Lembur, Uang Makan Dinas, RIT.
+   Komponen basis Karyawan_Periode (nominal diinput per orang/periode via slip),
+   tipe Pendapatan. NON-DESTRUKTIF & idempoten: hanya menambah bila kode belum ada.
+   Aman dijalankan berulang. Tidak menyentuh tarif/slip yang sudah terisi.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\gaji-komponen-tambahan.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: jalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF OBJECT_ID('gaji.komponen', 'U') IS NULL
+BEGIN
+    RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql lebih dulu.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+/* Kolom: kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan */
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'LEMBUR')
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
+    VALUES ('LEMBUR', N'Lembur', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 32, N'Upah lembur; sesuai jam lembur per periode');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'MAKAN_DINAS')
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
+    VALUES ('MAKAN_DINAS', N'Uang Makan Dinas', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 33, N'Uang makan saat dinas; per karyawan & periode');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'RIT')
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
+    VALUES ('RIT', N'RIT', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 34, N'Uang rit/ritase; per karyawan & periode');
+GO
+
+PRINT 'Komponen Lembur / Uang Makan Dinas / RIT dipastikan ada di Tunjangan Tidak Tetap.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [4/9] KPI (My Progress) ################';
+GO
+/* ============================================================================
+   kpi - skema My Progress (KPI) MyGCS, di db_mygcs. Layer paralel; tidak
+   menyentuh tabel/status SDM. Hirarki atasan-bawahan dibaca dari schema grading
+   (grading.jabatan_hirarki) tanpa FK lintas-skema.
+
+   Model:
+   - KPI level 'Perusahaan' (top-level): id_pemilik NULL, dikelola Admin Modul SDM.
+   - KPI level 'Individu'   : id_pemilik = NIK karyawan, diberikan/diturunkan oleh
+                              atasan (jenjang mana pun di atasnya). Realisasi
+                              dinilai oleh atasan; bawahan hanya melihat.
+   - id_parent (opsional): kaitan cascade ke KPI induk (perusahaan/atasan).
+
+   SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS / AT TIME
+   ZONE. NON-DESTRUKTIF (IF OBJECT_ID ... IS NULL CREATE) agar data tidak hilang
+   saat dijalankan ulang. Idempoten.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\kpi-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('kpi') IS NULL
+    EXEC('CREATE SCHEMA kpi AUTHORIZATION dbo');
+GO
+
+IF OBJECT_ID('kpi.kpi', 'U') IS NULL
+BEGIN
+    CREATE TABLE kpi.kpi
+    (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_kpi PRIMARY KEY,
+        periode       NVARCHAR(20)  NOT NULL,                 -- mis. "2026" / "2026-Q3"
+        judul         NVARCHAR(200) NOT NULL,
+        deskripsi     NVARCHAR(500) NULL,
+        satuan        NVARCHAR(30)  NULL,                     -- %, Rp, unit, hari, dsb
+        target        DECIMAL(18,2) NOT NULL CONSTRAINT df_kpi_target DEFAULT (0),
+        realisasi     DECIMAL(18,2) NOT NULL CONSTRAINT df_kpi_realisasi DEFAULT (0),
+        bobot         DECIMAL(5,2)  NULL,                     -- bobot % (opsional)
+        level         NVARCHAR(20)  NOT NULL,                 -- Perusahaan | Individu
+        id_pemilik    NVARCHAR(20)  NULL,                     -- NIK (NULL utk Perusahaan)
+        nama_pemilik  NVARCHAR(150) NULL,
+        id_parent     BIGINT        NULL,                     -- cascade ke KPI induk (opsional)
+        id_pembuat    NVARCHAR(20)  NOT NULL,                 -- NIK pembuat
+        nama_pembuat  NVARCHAR(150) NULL,
+        status        NVARCHAR(20)  NOT NULL CONSTRAINT df_kpi_status DEFAULT ('Berjalan'),
+        catatan       NVARCHAR(500) NULL,                     -- catatan penilaian
+        tgl_dibuat    DATETIME2     NOT NULL CONSTRAINT df_kpi_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_diubah    DATETIME2     NULL,
+        CONSTRAINT ck_kpi_level  CHECK (level  IN ('Perusahaan','Individu')),
+        CONSTRAINT ck_kpi_status CHECK (status IN ('Berjalan','Tercapai','Tidak Tercapai','Dibatalkan')),
+        CONSTRAINT ck_kpi_pemilik CHECK ((level = 'Perusahaan' AND id_pemilik IS NULL) OR (level = 'Individu' AND id_pemilik IS NOT NULL)),
+        CONSTRAINT fk_kpi_parent FOREIGN KEY (id_parent) REFERENCES kpi.kpi (id)
+    );
+    CREATE INDEX ix_kpi_pemilik ON kpi.kpi (id_pemilik);
+    CREATE INDEX ix_kpi_level   ON kpi.kpi (level);
+    CREATE INDEX ix_kpi_periode ON kpi.kpi (periode);
+    PRINT 'Tabel kpi.kpi dibuat.';
+END
+ELSE PRINT 'LEWATI: kpi.kpi sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [5/9] ASET (My Asset) ################';
+GO
+/* ============================================================================
+   aset - skema My Asset MyGCS, di db_mygcs. Layer paralel; tidak menyentuh SDM.
+   Tahap inisiasi: Inventaris aset (inti) + Jadwal maintenance. Peminjaman & QR
+   menyusul. Pengelola = "Admin Aset" (jajaran Departemen Kepatuhan Kabag ke atas
+   s/d GM SKP) - lihat ModuleAccessService.IsAsetAdminAsync.
+
+   SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS.
+   NON-DESTRUKTIF (IF OBJECT_ID ... IS NULL CREATE). Idempoten.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\aset-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('aset') IS NULL
+    EXEC('CREATE SCHEMA aset AUTHORIZATION dbo');
+GO
+
+/* ---------------------------------------------------------------------------
+   aset - master inventaris aset
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('aset.aset', 'U') IS NULL
+BEGIN
+    CREATE TABLE aset.aset
+    (
+        id             BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_aset PRIMARY KEY,
+        kode           NVARCHAR(40)  NOT NULL,                 -- tag/kode aset (utk QR nanti)
+        nama           NVARCHAR(200) NOT NULL,
+        kategori       NVARCHAR(60)  NULL,                     -- Elektronik/Kendaraan/Furnitur/...
+        merk           NVARCHAR(100) NULL,
+        nomor_seri     NVARCHAR(100) NULL,
+        lokasi         NVARCHAR(150) NULL,
+        id_pic         NVARCHAR(20)  NULL,                     -- penanggung jawab (NIK), lintas-DB tanpa FK
+        nama_pic       NVARCHAR(150) NULL,
+        kondisi        NVARCHAR(20)  NOT NULL CONSTRAINT df_aset_kondisi DEFAULT ('Baik'),
+        status         NVARCHAR(20)  NOT NULL CONSTRAINT df_aset_status DEFAULT ('Aktif'),
+        nilai          DECIMAL(18,2) NULL,                     -- nilai/harga perolehan
+        tgl_perolehan  DATE NULL,
+        catatan        NVARCHAR(500) NULL,
+        id_pembuat     NVARCHAR(20)  NOT NULL,
+        tgl_dibuat     DATETIME2 NOT NULL CONSTRAINT df_aset_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_diubah     DATETIME2 NULL,
+        CONSTRAINT uq_aset_kode UNIQUE (kode),
+        CONSTRAINT ck_aset_kondisi CHECK (kondisi IN ('Baik','Rusak Ringan','Rusak Berat','Hilang')),
+        CONSTRAINT ck_aset_status  CHECK (status  IN ('Aktif','Dipinjam','Perbaikan','Dihapus'))
+    );
+    CREATE INDEX ix_aset_kategori ON aset.aset (kategori);
+    CREATE INDEX ix_aset_pic ON aset.aset (id_pic);
+    PRINT 'Tabel aset.aset dibuat.';
+END
+ELSE PRINT 'LEWATI: aset.aset sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   maintenance - jadwal & riwayat pemeliharaan aset
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('aset.maintenance', 'U') IS NULL
+BEGIN
+    CREATE TABLE aset.maintenance
+    (
+        id          BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_aset_maintenance PRIMARY KEY,
+        id_aset     BIGINT NOT NULL,
+        jenis       NVARCHAR(30)  NOT NULL CONSTRAINT df_maint_jenis DEFAULT ('Rutin'),   -- Rutin/Perbaikan/Inspeksi
+        tgl_jadwal  DATE NOT NULL,
+        tgl_selesai DATE NULL,
+        status      NVARCHAR(20)  NOT NULL CONSTRAINT df_maint_status DEFAULT ('Terjadwal'),
+        pelaksana   NVARCHAR(150) NULL,                        -- teknisi/vendor
+        biaya       DECIMAL(18,2) NULL,
+        catatan     NVARCHAR(500) NULL,
+        id_pembuat  NVARCHAR(20)  NOT NULL,
+        tgl_dibuat  DATETIME2 NOT NULL CONSTRAINT df_maint_dibuat DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT fk_maint_aset FOREIGN KEY (id_aset) REFERENCES aset.aset (id),
+        CONSTRAINT ck_maint_jenis  CHECK (jenis  IN ('Rutin','Perbaikan','Inspeksi')),
+        CONSTRAINT ck_maint_status CHECK (status IN ('Terjadwal','Selesai','Batal'))
+    );
+    CREATE INDEX ix_maint_aset ON aset.maintenance (id_aset);
+    CREATE INDEX ix_maint_jadwal ON aset.maintenance (tgl_jadwal);
+    PRINT 'Tabel aset.maintenance dibuat.';
+END
+ELSE PRINT 'LEWATI: aset.maintenance sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [6/9] COACHING ################';
+GO
+/* ============================================================================
+   coaching - fitur Coaching & Diskusi Tim (My Team), di db_mygcs. Layer paralel;
+   tidak menyentuh SDM. Hirarki atasan-bawahan dibaca dari grading. Percakapan
+   ASINKRON berbasis thread (bukan real-time).
+
+   Dua bentuk percakapan:
+   - SESI 1-on-1 (privat 2 orang di garis vertikal atasan<->bawahan): punya topik,
+     thread pesan, dan tindak lanjut (action item).
+   - RUANG TIM (grup): pesan diberi ruang_nik = NIK atasan pemilik ruang; anggota =
+     atasan itu + bawahan langsung efektifnya.
+
+   SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS.
+   NON-DESTRUKTIF (IF OBJECT_ID ... IS NULL CREATE). Idempoten.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\coaching-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('coaching') IS NULL
+    EXEC('CREATE SCHEMA coaching AUTHORIZATION dbo');
+GO
+
+/* ---------------------------------------------------------------------------
+   sesi - sesi coaching 1-on-1 (privat: id_atasan + id_bawahan)
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.sesi', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.sesi
+    (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_coaching_sesi PRIMARY KEY,
+        id_atasan     NVARCHAR(20)  NOT NULL,          -- peserta yang lebih tinggi (ancestor)
+        nama_atasan   NVARCHAR(150) NULL,
+        id_bawahan    NVARCHAR(20)  NOT NULL,          -- peserta yang lebih rendah (descendant)
+        nama_bawahan  NVARCHAR(150) NULL,
+        topik         NVARCHAR(200) NOT NULL,
+        status        NVARCHAR(20)  NOT NULL CONSTRAINT df_coaching_sesi_status DEFAULT ('Berjalan'),
+        id_pembuat    NVARCHAR(20)  NOT NULL,
+        tgl_dibuat    DATETIME2 NOT NULL CONSTRAINT df_coaching_sesi_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_terakhir  DATETIME2 NULL,                  -- aktivitas terakhir (utk urutan)
+        CONSTRAINT ck_coaching_sesi_status CHECK (status IN ('Berjalan','Selesai'))
+    );
+    CREATE INDEX ix_coaching_sesi_atasan ON coaching.sesi (id_atasan);
+    CREATE INDEX ix_coaching_sesi_bawahan ON coaching.sesi (id_bawahan);
+    PRINT 'Tabel coaching.sesi dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.sesi sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   pesan - pesan untuk SESI (id_sesi) ATAU RUANG TIM (ruang_nik). Tepat satu terisi.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.pesan', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.pesan
+    (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_coaching_pesan PRIMARY KEY,
+        id_sesi       BIGINT       NULL,               -- FK ke coaching.sesi (percakapan 1-on-1)
+        ruang_nik     NVARCHAR(20) NULL,               -- NIK atasan pemilik ruang tim
+        id_pengirim   NVARCHAR(20)  NOT NULL,
+        nama_pengirim NVARCHAR(150) NULL,
+        isi           NVARCHAR(2000) NOT NULL,
+        tgl_kirim     DATETIME2 NOT NULL CONSTRAINT df_coaching_pesan_kirim DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT fk_coaching_pesan_sesi FOREIGN KEY (id_sesi) REFERENCES coaching.sesi (id),
+        CONSTRAINT ck_coaching_pesan_kanal CHECK (
+            (id_sesi IS NOT NULL AND ruang_nik IS NULL) OR
+            (id_sesi IS NULL AND ruang_nik IS NOT NULL))
+    );
+    CREATE INDEX ix_coaching_pesan_sesi ON coaching.pesan (id_sesi);
+    CREATE INDEX ix_coaching_pesan_ruang ON coaching.pesan (ruang_nik);
+    PRINT 'Tabel coaching.pesan dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.pesan sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   tindak_lanjut - action item hasil sesi coaching
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.tindak_lanjut', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.tindak_lanjut
+    (
+        id          BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_coaching_tl PRIMARY KEY,
+        id_sesi     BIGINT NOT NULL,
+        isi         NVARCHAR(500) NOT NULL,
+        status      NVARCHAR(20)  NOT NULL CONSTRAINT df_coaching_tl_status DEFAULT ('Terbuka'),
+        id_pembuat  NVARCHAR(20)  NOT NULL,
+        tgl_dibuat  DATETIME2 NOT NULL CONSTRAINT df_coaching_tl_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_selesai DATETIME2 NULL,
+        CONSTRAINT fk_coaching_tl_sesi FOREIGN KEY (id_sesi) REFERENCES coaching.sesi (id),
+        CONSTRAINT ck_coaching_tl_status CHECK (status IN ('Terbuka','Selesai'))
+    );
+    CREATE INDEX ix_coaching_tl_sesi ON coaching.tindak_lanjut (id_sesi);
+    PRINT 'Tabel coaching.tindak_lanjut dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.tindak_lanjut sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   baca - status "sudah dibaca" per pengguna per kanal (utk badge belum-dibaca).
+   kanal = 'sesi:{id}' atau 'ruang:{nik pemilik}'. Diperbarui otomatis saat
+   pengguna membuka percakapan.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.baca', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.baca
+    (
+        nik      NVARCHAR(20) NOT NULL,
+        kanal    NVARCHAR(40) NOT NULL,
+        tgl_baca DATETIME2 NOT NULL CONSTRAINT df_coaching_baca DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT pk_coaching_baca PRIMARY KEY (nik, kanal)
+    );
+    PRINT 'Tabel coaching.baca dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.baca sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [7/9] PROSEDUR ################';
+GO
+/* ============================================================================
+   prosedur - modul My Prosedur (SOP & Kebijakan) MyGCS, di db_mygcs. Layer paralel.
+   Repository dokumen terpusat + kontrol versi + pencarian + acknowledgement.
+   Pengelola = "Admin Kepatuhan" (Departemen Kepatuhan / fungsi Tata Kelola) -
+   lihat ModuleAccessService.IsProsedurAdminAsync. Semua karyawan dapat membaca
+   dokumen berlaku & menyatakan sudah baca (acknowledgement, dipantau).
+
+   Kontrol versi: satu dokumen (prosedur.dokumen) punya banyak versi
+   (prosedur.versi). Hanya SATU versi berstatus 'Berlaku'; versi lama jadi 'Usang'.
+   Acknowledgement terikat ke VERSI (versi baru → perlu baca ulang).
+
+   SQL Server 2014 (compat 120). NON-DESTRUKTIF (IF OBJECT_ID ... IS NULL CREATE).
+   Idempoten. File dokumen disimpan sebagai VARBINARY(MAX) di prosedur.versi.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\prosedur-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('prosedur') IS NULL
+    EXEC('CREATE SCHEMA prosedur AUTHORIZATION dbo');
+GO
+
+/* ---------------------------------------------------------------------------
+   dokumen - identitas dokumen (lintas versi)
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('prosedur.dokumen', 'U') IS NULL
+BEGIN
+    CREATE TABLE prosedur.dokumen
+    (
+        id          BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_prosedur_dokumen PRIMARY KEY,
+        kode        NVARCHAR(50)  NOT NULL,                 -- nomor dokumen (mis. SOP-SDM-001)
+        judul       NVARCHAR(250) NOT NULL,
+        jenis       NVARCHAR(30)  NOT NULL,                 -- SOP | Kebijakan | Instruksi Kerja | Formulir
+        unit        NVARCHAR(150) NULL,                     -- unit/departemen pemilik
+        kategori    NVARCHAR(100) NULL,                     -- tag utk pencarian
+        deskripsi   NVARCHAR(1000) NULL,
+        id_pembuat  NVARCHAR(20)  NOT NULL,
+        tgl_dibuat  DATETIME2 NOT NULL CONSTRAINT df_prosedur_dok_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_diubah  DATETIME2 NULL,
+        CONSTRAINT uq_prosedur_dokumen_kode UNIQUE (kode),
+        CONSTRAINT ck_prosedur_dokumen_jenis CHECK (jenis IN ('SOP','Kebijakan','Instruksi Kerja','Formulir'))
+    );
+    CREATE INDEX ix_prosedur_dokumen_jenis ON prosedur.dokumen (jenis);
+    PRINT 'Tabel prosedur.dokumen dibuat.';
+END
+ELSE PRINT 'LEWATI: prosedur.dokumen sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   versi - tiap versi dokumen + berkasnya. Berlaku = versi aktif (maks 1/dokumen).
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('prosedur.versi', 'U') IS NULL
+BEGIN
+    CREATE TABLE prosedur.versi
+    (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_prosedur_versi PRIMARY KEY,
+        id_dokumen    BIGINT NOT NULL,
+        versi         INT NOT NULL,                         -- 1,2,3,...
+        ringkasan     NVARCHAR(500) NULL,                   -- ringkasan perubahan
+        nama_file     NVARCHAR(255) NOT NULL,
+        tipe_file     NVARCHAR(120) NULL,
+        konten        VARBINARY(MAX) NOT NULL,
+        status        NVARCHAR(20) NOT NULL CONSTRAINT df_prosedur_versi_status DEFAULT ('Berlaku'),
+        tgl_berlaku   DATE NULL,
+        id_penerbit   NVARCHAR(20)  NOT NULL,
+        nama_penerbit NVARCHAR(150) NULL,
+        tgl_unggah    DATETIME2 NOT NULL CONSTRAINT df_prosedur_versi_unggah DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT fk_prosedur_versi_dokumen FOREIGN KEY (id_dokumen) REFERENCES prosedur.dokumen (id),
+        CONSTRAINT uq_prosedur_versi UNIQUE (id_dokumen, versi),
+        CONSTRAINT ck_prosedur_versi_status CHECK (status IN ('Berlaku','Usang','Ditarik'))
+    );
+    CREATE INDEX ix_prosedur_versi_dokumen ON prosedur.versi (id_dokumen);
+    CREATE INDEX ix_prosedur_versi_status ON prosedur.versi (status);
+    PRINT 'Tabel prosedur.versi dibuat.';
+END
+ELSE PRINT 'LEWATI: prosedur.versi sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   acknowledgement - pernyataan "sudah baca & paham" per (versi, karyawan)
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('prosedur.acknowledgement', 'U') IS NULL
+BEGIN
+    CREATE TABLE prosedur.acknowledgement
+    (
+        id         BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_prosedur_ack PRIMARY KEY,
+        id_versi   BIGINT NOT NULL,
+        id_dokumen BIGINT NOT NULL,
+        nik        NVARCHAR(20)  NOT NULL,
+        nama       NVARCHAR(150) NULL,
+        tgl        DATETIME2 NOT NULL CONSTRAINT df_prosedur_ack_tgl DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT fk_prosedur_ack_versi FOREIGN KEY (id_versi) REFERENCES prosedur.versi (id),
+        CONSTRAINT uq_prosedur_ack UNIQUE (id_versi, nik)
+    );
+    CREATE INDEX ix_prosedur_ack_nik ON prosedur.acknowledgement (nik);
+    CREATE INDEX ix_prosedur_ack_dokumen ON prosedur.acknowledgement (id_dokumen);
+    PRINT 'Tabel prosedur.acknowledgement dibuat.';
+END
+ELSE PRINT 'LEWATI: prosedur.acknowledgement sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [8/9] PROSEDUR v2 (Kompartemen) ################';
+GO
+/* ============================================================================
+   prosedur v2 - tambahan cakupan Kompartemen untuk modul My Prosedur.
+   - prosedur.dokumen.semua_kompartemen : dokumen berlaku untuk SEMUA kompartemen.
+   - prosedur.dokumen_kompartemen        : bila tidak semua, daftar kompartemen
+                                           tertentu yang berlaku (multi).
+   Nama kompartemen & departemen (kolom unit) mengacu grading.unit_organisasi
+   (tipe='Kompartemen' / 'Departemen'); disimpan sebagai teks nama.
+
+   SQL Server 2014 (compat 120). NON-DESTRUKTIF & idempoten.
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\prosedur-schema-v2.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+/* Kolom penanda "berlaku untuk semua kompartemen" -------------------------- */
+IF COL_LENGTH('prosedur.dokumen', 'semua_kompartemen') IS NULL
+BEGIN
+    ALTER TABLE prosedur.dokumen
+        ADD semua_kompartemen BIT NOT NULL
+        CONSTRAINT df_prosedur_dok_semuakomp DEFAULT (0);
+    -- Dokumen lama (sebelum fitur ini) dianggap berlaku untuk semua kompartemen
+    -- supaya tetap tampil. EXEC agar kolom baru sudah "terlihat" saat UPDATE.
+    EXEC('UPDATE prosedur.dokumen SET semua_kompartemen = 1');
+    PRINT 'Kolom prosedur.dokumen.semua_kompartemen ditambahkan.';
+END
+ELSE PRINT 'LEWATI: kolom semua_kompartemen sudah ada.';
+GO
+
+/* Daftar kompartemen tertentu per dokumen ---------------------------------- */
+IF OBJECT_ID('prosedur.dokumen_kompartemen', 'U') IS NULL
+BEGIN
+    CREATE TABLE prosedur.dokumen_kompartemen
+    (
+        id          BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_prosedur_dokkomp PRIMARY KEY,
+        id_dokumen  BIGINT NOT NULL,
+        kompartemen NVARCHAR(150) NOT NULL,
+        CONSTRAINT fk_prosedur_dokkomp_dok FOREIGN KEY (id_dokumen) REFERENCES prosedur.dokumen (id),
+        CONSTRAINT uq_prosedur_dokkomp UNIQUE (id_dokumen, kompartemen)
+    );
+    CREATE INDEX ix_prosedur_dokkomp_dok ON prosedur.dokumen_kompartemen (id_dokumen);
+    CREATE INDEX ix_prosedur_dokkomp_komp ON prosedur.dokumen_kompartemen (kompartemen);
+    PRINT 'Tabel prosedur.dokumen_kompartemen dibuat.';
+END
+ELSE PRINT 'LEWATI: prosedur.dokumen_kompartemen sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [9/9] HEALTH (MCU) ################';
+GO
+/* ============================================================================
+   health - modul My Health (Kesehatan) MyGCS, di db_mygcs. Layer paralel.
+   Inisiasi awal: Medical Check-Up (MCU). Arsip terpusat jadwal & hasil MCU
+   karyawan + status tindak lanjut. TIDAK menyentuh tabel SDM (GCS).
+
+   Pengelola = "Admin Kepatuhan" (Departemen Kepatuhan / Tata Kelola) - lihat
+   ModuleAccessService.IsHealthAdminAsync. Data hasil MCU bersifat sensitif:
+   karyawan hanya melihat hasil DIRINYA sendiri; admin melihat semua.
+
+   Model: satu periode MCU (health.periode) punya banyak hasil per karyawan
+   (health.hasil, maks 1 per (periode, nik)).
+
+   SQL Server 2014 (compat 120). NON-DESTRUKTIF (IF OBJECT_ID ... IS NULL CREATE).
+   Idempoten. Lampiran laporan MCU disimpan VARBINARY(MAX) di health.hasil.
+
+   CARA PAKAI
+     sqlcmd -S 192.168.100.2,49291 -U sa -P <password> -d db_mygcs -C ^
+            -i docs\health-schema.sql
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: skrip ini harus dijalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('health') IS NULL
+    EXEC('CREATE SCHEMA health AUTHORIZATION dbo');
+GO
+
+/* ---------------------------------------------------------------------------
+   periode - kampanye/batch MCU (mis. "MCU Tahunan 2026")
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('health.periode', 'U') IS NULL
+BEGIN
+    CREATE TABLE health.periode
+    (
+        id            BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_health_periode PRIMARY KEY,
+        judul         NVARCHAR(200) NOT NULL,
+        tahun         INT NOT NULL,
+        penyelenggara NVARCHAR(200) NULL,                    -- vendor/klinik/RS pelaksana
+        lokasi        NVARCHAR(200) NULL,
+        tgl_mulai     DATE NULL,
+        tgl_selesai   DATE NULL,
+        catatan       NVARCHAR(1000) NULL,
+        status        NVARCHAR(20) NOT NULL CONSTRAINT df_health_periode_status DEFAULT ('Direncanakan'),
+        id_pembuat    NVARCHAR(20)  NOT NULL,
+        tgl_dibuat    DATETIME2 NOT NULL CONSTRAINT df_health_periode_dibuat DEFAULT (SYSUTCDATETIME()),
+        tgl_diubah    DATETIME2 NULL,
+        CONSTRAINT ck_health_periode_status CHECK (status IN ('Direncanakan','Berlangsung','Selesai'))
+    );
+    CREATE INDEX ix_health_periode_tahun ON health.periode (tahun);
+    PRINT 'Tabel health.periode dibuat.';
+END
+ELSE PRINT 'LEWATI: health.periode sudah ada.';
+GO
+
+/* ---------------------------------------------------------------------------
+   hasil - hasil MCU per karyawan dalam satu periode (maks 1 per periode+nik)
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('health.hasil', 'U') IS NULL
+BEGIN
+    CREATE TABLE health.hasil
+    (
+        id                   BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_health_hasil PRIMARY KEY,
+        id_periode           BIGINT NOT NULL,
+        nik                  NVARCHAR(20)  NOT NULL,
+        nama                 NVARCHAR(150) NULL,
+        tgl_pemeriksaan      DATE NULL,
+        tinggi               DECIMAL(5,1) NULL,               -- cm
+        berat                DECIMAL(5,1) NULL,               -- kg
+        tekanan_darah        NVARCHAR(20) NULL,               -- mis. "120/80"
+        status_umum          NVARCHAR(30) NOT NULL CONSTRAINT df_health_hasil_status DEFAULT ('Sehat'),
+        ringkasan            NVARCHAR(2000) NULL,             -- kesimpulan pemeriksaan
+        rekomendasi          NVARCHAR(2000) NULL,
+        status_tindak_lanjut NVARCHAR(20) NOT NULL CONSTRAINT df_health_hasil_tl DEFAULT ('Tidak Perlu'),
+        nama_file            NVARCHAR(255) NULL,              -- lampiran laporan MCU (opsional)
+        tipe_file            NVARCHAR(120) NULL,
+        konten               VARBINARY(MAX) NULL,
+        id_pencatat          NVARCHAR(20)  NOT NULL,
+        nama_pencatat        NVARCHAR(150) NULL,
+        tgl_dicatat          DATETIME2 NOT NULL CONSTRAINT df_health_hasil_dicatat DEFAULT (SYSUTCDATETIME()),
+        tgl_diubah           DATETIME2 NULL,
+        CONSTRAINT fk_health_hasil_periode FOREIGN KEY (id_periode) REFERENCES health.periode (id),
+        CONSTRAINT uq_health_hasil UNIQUE (id_periode, nik),
+        CONSTRAINT ck_health_hasil_status CHECK (status_umum IN ('Sehat','Perlu Perhatian','Tindak Lanjut')),
+        CONSTRAINT ck_health_hasil_tl CHECK (status_tindak_lanjut IN ('Tidak Perlu','Belum','Dijadwalkan','Selesai'))
+    );
+    CREATE INDEX ix_health_hasil_periode ON health.hasil (id_periode);
+    CREATE INDEX ix_health_hasil_nik ON health.hasil (nik);
+    PRINT 'Tabel health.hasil dibuat.';
+END
+ELSE PRINT 'LEWATI: health.hasil sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '=== BUNDEL MIGRASI SELESAI ==='
+GO

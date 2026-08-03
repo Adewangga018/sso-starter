@@ -8,7 +8,8 @@
 
    Komponen mengikuti "komponen_gaji.xlsx":
      Pendapatan : Gaji Pokok; Tunjangan Tetap (Jabatan, Perumahan);
-                  Tunjangan Tidak Tetap (Angkutan, Pangan);
+                  Tunjangan Tidak Tetap (Angkutan, Pangan, Lembur, Uang Makan
+                                         Dinas, RIT);
                   Tunjangan Lain (BPJS Kesehatan, BPJS Ketenagakerjaan, Pajak, Shift,
                                   Luar Daerah) *opsional
      Potongan Tetap      : BPJS Kes, BPJS TK, Premi Asuransi, Pajak, Iuran IKGCS,
@@ -173,6 +174,9 @@ BEGIN
     ('TJ_PERUMAHAN', N'Tunjangan Perumahan',       'Pendapatan', N'Tunjangan Tetap',      'JG_PG',            0, 0, 21, N'Sesuai jabatan (JG & PG)'),
     ('TJ_ANGKUTAN',  N'Tunjangan Angkutan',        'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 30, N'Tunjangan tidak tetap'),
     ('TJ_PANGAN',    N'Tunjangan Pangan',          'Pendapatan', N'Tunjangan Tidak Tetap','JG_PG',            0, 0, 31, N'Tunjangan tidak tetap'),
+    ('LEMBUR',       N'Lembur',                    'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 32, N'Upah lembur; sesuai jam lembur per periode'),
+    ('MAKAN_DINAS',  N'Uang Makan Dinas',          'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 33, N'Uang makan saat dinas; per karyawan & periode'),
+    ('RIT',          N'RIT',                       'Pendapatan', N'Tunjangan Tidak Tetap','Karyawan_Periode', 1, 0, 34, N'Uang rit/ritase; per karyawan & periode'),
     ('TJ_BPJS_KES',  N'Tunjangan BPJS Kesehatan',       'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 40, N'Hanya sebagian karyawan'),
     ('TJ_BPJS_TK',   N'Tunjangan BPJS Ketenagakerjaan', 'Pendapatan', N'Tunjangan Lain',  'JG_PG',            1, 0, 41, N'Hanya sebagian karyawan'),
     ('TJ_PAJAK',     N'Tunjangan Pajak',           'Pendapatan', N'Tunjangan Lain',       'JG_PG',            1, 0, 42, N'Hanya sebagian karyawan'),
@@ -195,7 +199,7 @@ BEGIN
     ('POT_BMT',      N'BMT',                       'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 62, N'Sesuai karyawan & periode'),
     ('POT_ANGSURAN', N'Angsuran',                  'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 63, N'Sesuai karyawan & periode'),
     ('POT_KSPPS',    N'KSPPS K3PG',                'Potongan',   N'Potongan Tidak Tetap', 'Karyawan_Periode', 0, 0, 64, N'Sesuai karyawan & periode');
-    PRINT 'gaji.komponen: 25 baris diseed.';
+    PRINT 'gaji.komponen: 28 baris diseed.';
 END
 ELSE PRINT 'LEWATI: gaji.komponen sudah terisi.';
 GO
