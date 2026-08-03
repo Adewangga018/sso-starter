@@ -86,16 +86,65 @@ public class CutiController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
-    // Set jumlah cuti bersama 2 tahun terakhir (Admin Modul SDM). Hak awal = 24 - N
-    // untuk semua karyawan (dihitung ulang di service).
-    [HttpPut("cuti-bersama")]
-    public async Task<IActionResult> SetCutiBersama([FromBody] SimpanCutiBersamaRequest req)
+    // ---- Cuti Bersama (CRUD, Admin Modul SDM) ----
+    [HttpPost("cuti-bersama")]
+    public async Task<IActionResult> BuatCutiBersama([FromBody] SimpanCutiBersamaRequest req)
+    {
+        var (nik, nama) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error, id) = await _cuti.CreateCutiBersamaAsync(nik, nama, req);
+        return ok ? Ok(new { id }) : BadRequest(new { message = error });
+    }
+
+    [HttpPut("cuti-bersama/{id:long}")]
+    public async Task<IActionResult> UbahCutiBersama(long id, [FromBody] SimpanCutiBersamaRequest req)
+    {
+        var (nik, _) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error) = await _cuti.UpdateCutiBersamaAsync(nik, id, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    [HttpDelete("cuti-bersama/{id:long}")]
+    public async Task<IActionResult> HapusCutiBersama(long id)
+    {
+        var (nik, _) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error) = await _cuti.DeleteCutiBersamaAsync(nik, id);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // ---- Cuti Nasional (CRUD, Admin Modul SDM) ----
+    [HttpPost("cuti-nasional")]
+    public async Task<IActionResult> BuatCutiNasional([FromBody] SimpanCutiNasionalRequest req)
+    {
+        var (nik, nama) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error, id) = await _cuti.CreateCutiNasionalAsync(nik, nama, req);
+        return ok ? Ok(new { id }) : BadRequest(new { message = error });
+    }
+
+    [HttpPut("cuti-nasional/{id:long}")]
+    public async Task<IActionResult> UbahCutiNasional(long id, [FromBody] SimpanCutiNasionalRequest req)
+    {
+        var (nik, _) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error) = await _cuti.UpdateCutiNasionalAsync(nik, id, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    [HttpDelete("cuti-nasional/{id:long}")]
+    public async Task<IActionResult> HapusCutiNasional(long id)
+    {
+        var (nik, _) = await MeAsync();
+        if (nik is null) return Unauthorized();
+        var (ok, error) = await _cuti.DeleteCutiNasionalAsync(nik, id);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    private async Task<(string? Nik, string? Nama)> MeAsync()
     {
         var (user, pegawai) = await _currentUser.ResolveAsync(User);
-        var nik = pegawai?.ID_KARYAWAN ?? user?.Nik;
-        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
-        var nama = pegawai?.NAMA_LENGKAP ?? user?.Name;
-        var (ok, error) = await _cuti.SimpanCutiBersamaAsync(nik, nama, req.CutiBersama);
-        return ok ? NoContent() : BadRequest(new { message = error });
+        return (pegawai?.ID_KARYAWAN ?? user?.Nik, pegawai?.NAMA_LENGKAP ?? user?.Name);
     }
 }

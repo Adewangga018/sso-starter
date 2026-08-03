@@ -178,13 +178,21 @@ export const api = {
   ajukanCuti: (payload) => apiFetch('/api/personal/cuti/ajukan', { method: 'POST', body: JSON.stringify(payload) }),
   batalCuti: (id) => apiFetch(`/api/personal/cuti/${id}/batal`, { method: 'POST' }),
   putusanCuti: (id, payload) => apiFetch(`/api/personal/cuti/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
-  simpanCutiBersama: (cutiBersama) => apiFetch('/api/personal/cuti/cuti-bersama', { method: 'PUT', body: JSON.stringify({ cutiBersama }) }),
+  // Cuti Bersama (CRUD, Admin SDM)
+  buatCutiBersama: (payload) => apiFetch('/api/personal/cuti/cuti-bersama', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahCutiBersama: (id, payload) => apiFetch(`/api/personal/cuti/cuti-bersama/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusCutiBersama: (id) => apiFetch(`/api/personal/cuti/cuti-bersama/${id}`, { method: 'DELETE' }),
+  // Cuti Nasional (CRUD, Admin SDM)
+  buatCutiNasional: (payload) => apiFetch('/api/personal/cuti/cuti-nasional', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahCutiNasional: (id, payload) => apiFetch(`/api/personal/cuti/cuti-nasional/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusCutiNasional: (id) => apiFetch(`/api/personal/cuti/cuti-nasional/${id}`, { method: 'DELETE' }),
   // My Prosedur (SOP & Kebijakan)
-  getProsedurList: (q, jenis, kompartemen) => {
+  getProsedurList: (q, jenis, kompartemen, lingkup) => {
     const p = new URLSearchParams()
     if (q) p.set('q', q)
     if (jenis) p.set('jenis', jenis)
     if (kompartemen) p.set('kompartemen', kompartemen)
+    if (lingkup) p.set('lingkup', lingkup)
     const s = p.toString()
     return apiFetch(`/api/prosedur${s ? `?${s}` : ''}`)
   },

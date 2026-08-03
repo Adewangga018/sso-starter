@@ -9,8 +9,9 @@ public class CutiSaldo
     public string? Nama { get; set; }
     public DateOnly? Tmt { get; set; }
     public string Periode { get; set; } = "2024-2025";
-    public int Hak { get; set; }
-    public int CutiBersama { get; set; }
+    public int Akrual { get; set; }                 // basis (min(batas, sisa+hak/thn)) sebelum cuti bersama
+    public int Hak { get; set; }                     // net = akrual - cuti_bersama pengurang
+    public int CutiBersama { get; set; }             // total hari cuti bersama yang mengurangi hak
     public int Diambil { get; set; }
     public int Saldo { get; set; }
     public DateOnly? TglCutoff { get; set; }

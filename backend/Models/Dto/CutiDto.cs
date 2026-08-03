@@ -25,20 +25,33 @@ public record AjukanCutiRequest(DateOnly TglMulai, DateOnly TglSelesai, string? 
 public record PutusanCutiRequest(bool Setuju, string? Komentar);
 
 public record CutiDto(
-    int Sisa,
+    int Sisa,                                       // saldo tersisa = hak - diambil
     bool AdaData,
     string? Periode,
     DateOnly? Tmt,
-    int Hak,                                        // hak (net) = hak dasar - cuti bersama
+    int Akrual,                                     // basis periode (min(batas, sisa lalu + 12))
+    int Hak,                                        // net = akrual - cuti bersama pengurang
     int Diambil,
-    int CutiBersama,                                // jumlah cuti bersama yang mengurangi hak
-    int HakDasar,                                   // hak dasar sebelum dikurangi (mis. 24)
+    int CutiBersama,                                // total hari cuti bersama yang mengurangi hak
+    int HakPerTahun,                                // akrual per tahun (mis. 12)
+    int BatasAkumulasi,                             // saldo maksimum (mis. 24)
     bool BisaApprove,
-    bool IsAdminSdm,                                // panel konfigurasi cuti bersama utk SDM
+    bool IsAdminSdm,                                // kelola cuti bersama & nasional (SDM)
     IReadOnlyList<CutiPengajuanDto> Pengajuan,      // pengajuan saya
     IReadOnlyList<CutiPengajuanDto> Persetujuan,    // menunggu persetujuan saya (sbg atasan)
-    IReadOnlyList<CutiRiwayatDto> Riwayat);         // riwayat lama dari SDM
+    IReadOnlyList<CutiRiwayatDto> Riwayat,          // riwayat lama dari SDM
+    IReadOnlyList<CutiBersamaDto> CutiBersamaList,  // daftar cuti bersama (info + kelola SDM)
+    IReadOnlyList<CutiNasionalDto> CutiNasionalList);// daftar cuti nasional
 
-// Setelan cuti bersama (khusus Admin SDM).
-public record CutiSetelanDto(int HakDasar, int CutiBersama);
-public record SimpanCutiBersamaRequest(int CutiBersama);
+// Entri cuti bersama & nasional (CRUD Admin SDM; ditampilkan ke semua sbg info).
+public record CutiBersamaDto(
+    long Id, DateOnly TglMulai, DateOnly TglSelesai, int JumlahHari,
+    string Keterangan, bool MengurangiHak, int Tahun);
+public record CutiNasionalDto(
+    long Id, DateOnly TglMulai, DateOnly TglSelesai, int JumlahHari, string Keterangan, int Tahun);
+
+// Request CRUD (JSON).
+public record SimpanCutiBersamaRequest(
+    DateOnly TglMulai, DateOnly TglSelesai, string Keterangan, bool MengurangiHak);
+public record SimpanCutiNasionalRequest(
+    DateOnly TglMulai, DateOnly TglSelesai, string Keterangan);

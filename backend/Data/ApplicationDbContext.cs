@@ -38,6 +38,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CutiSaldo> CutiSaldo => Set<CutiSaldo>();
     public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
     public DbSet<CutiSetelan> CutiSetelan => Set<CutiSetelan>();
+    public DbSet<CutiBersama> CutiBersama => Set<CutiBersama>();
+    public DbSet<CutiNasional> CutiNasional => Set<CutiNasional>();
     // Persetujuan terpadu (schema approval).
     public DbSet<ApprovalPengajuan> ApprovalPengajuan => Set<ApprovalPengajuan>();
     // Slip Gaji (schema gaji) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -238,6 +240,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Nama).HasColumnName("nama");
             e.Property(x => x.Tmt).HasColumnName("tmt");
             e.Property(x => x.Periode).HasColumnName("periode");
+            e.Property(x => x.Akrual).HasColumnName("akrual");
             e.Property(x => x.Hak).HasColumnName("hak");
             e.Property(x => x.CutiBersama).HasColumnName("cuti_bersama");
             e.Property(x => x.Diambil).HasColumnName("diambil");
@@ -254,8 +257,43 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Id).HasColumnName("id");
             e.Property(x => x.HakDasar).HasColumnName("hak_dasar");
             e.Property(x => x.CutiBersama).HasColumnName("cuti_bersama");
+            e.Property(x => x.HakPerTahun).HasColumnName("hak_per_tahun");
+            e.Property(x => x.BatasAkumulasi).HasColumnName("batas_akumulasi");
             e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
             e.Property(x => x.DiperbaruiOleh).HasColumnName("diperbarui_oleh");
+        });
+
+        builder.Entity<CutiBersama>(e =>
+        {
+            e.ToTable("cuti_bersama", "cuti", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.JumlahHari).HasColumnName("jumlah_hari");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.MengurangiHak).HasColumnName("mengurangi_hak");
+            e.Property(x => x.Tahun).HasColumnName("tahun");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.NamaPembuat).HasColumnName("nama_pembuat");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiubahPada).HasColumnName("diubah_pada");
+        });
+
+        builder.Entity<CutiNasional>(e =>
+        {
+            e.ToTable("cuti_nasional", "cuti", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.JumlahHari).HasColumnName("jumlah_hari");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Tahun).HasColumnName("tahun");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.NamaPembuat).HasColumnName("nama_pembuat");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiubahPada).HasColumnName("diubah_pada");
         });
 
         builder.Entity<CutiPengajuan>(e =>
@@ -489,6 +527,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Kategori).HasColumnName("kategori");
             e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
             e.Property(x => x.SemuaKompartemen).HasColumnName("semua_kompartemen");
+            e.Property(x => x.Lingkup).HasColumnName("lingkup");
+            e.Property(x => x.IdUnitPemilik).HasColumnName("id_unit_pemilik");
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
             e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");

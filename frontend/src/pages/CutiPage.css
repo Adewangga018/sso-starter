@@ -32,7 +32,39 @@
 
 /* Cards & tables */
 .cuti__card { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 16px; padding: 16px; }
-.cuti__card-head { font-weight: 700; color: var(--gcs-green-900); font-size: 0.92rem; margin-bottom: 12px; }
+.cuti__card-head { font-weight: 700; color: var(--gcs-green-900); font-size: 0.92rem; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cuti__card-head > span { display: inline-flex; align-items: center; gap: 7px; }
+.cuti__card-head svg { color: var(--gcs-green-600); }
+
+/* daftar cuti bersama / nasional */
+.cuti__empty--pad { padding: 18px !important; background: var(--gcs-bg); border-radius: 10px; }
+.cuti__kal { display: flex; flex-direction: column; gap: 8px; }
+.cuti__kal-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--gcs-border); border-radius: 10px; background: var(--gcs-bg); }
+.cuti__kal-date { font-weight: 700; color: var(--gcs-green-700); font-size: 0.82rem; white-space: nowrap; min-width: 92px; }
+.cuti__kal-main { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cuti__kal-ket { color: var(--gcs-ink); font-size: 0.88rem; }
+.cuti__kal-days { font-size: 0.76rem; color: var(--gcs-text-muted); }
+.cuti__kal-act { display: flex; gap: 6px; }
+.cuti__tag { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.cuti__tag--red { background: #fbeaea; color: #b03636; }
+.cuti__tag--grey { background: #eef0ee; color: #7b857f; }
+.cuti__ibtn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-green-600); cursor: pointer; }
+.cuti__ibtn:hover { border-color: var(--gcs-green-500); }
+.cuti__ibtn--danger { color: #b03636; }
+.cuti__btn--sm { padding: 6px 11px; font-size: 0.78rem; }
+
+/* modal cuti bersama / nasional */
+.cuti__overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,38,31,0.5); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.cuti__modal { background: var(--gcs-white); border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px -18px rgba(15,38,31,0.45); }
+.cuti__modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--gcs-border); }
+.cuti__modal-head h3 { margin: 0; font-size: 1rem; color: var(--gcs-green-900); }
+.cuti__x { border: none; background: none; cursor: pointer; color: var(--gcs-text-muted); padding: 4px; border-radius: 8px; display: inline-flex; }
+.cuti__x:hover { background: var(--gcs-bg); }
+.cuti__modal-body { padding: 16px 18px; overflow-y: auto; }
+.cuti__modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--gcs-border); }
+.cuti__check { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 0.86rem; color: var(--gcs-ink); }
+.cuti__check input { width: 16px; height: 16px; flex: none; }
+.cuti__preview--pad { margin-top: 12px; color: var(--gcs-text-muted); font-size: 0.82rem; }
 .cuti__table-wrap { overflow-x: auto; }
 .cuti__table { width: 100%; border-collapse: collapse; font-size: 0.84rem; min-width: 560px; }
 .cuti__table th {

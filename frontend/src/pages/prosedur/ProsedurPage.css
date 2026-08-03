@@ -114,6 +114,11 @@
 .pr__chip svg { flex: none; }
 .pr__chip--all { background: rgba(47,122,69,0.1); color: #2f7a45; border-color: rgba(47,122,69,0.25); }
 .pr__chip--unit { background: rgba(30,42,90,0.07); color: #1e2a5a; border-color: rgba(30,42,90,0.18); }
+.pr__chip--umum { background: rgba(47,122,69,0.1); color: #2f7a45; border-color: rgba(47,122,69,0.25); }
+.pr__chip--priv { background: rgba(176,54,54,0.09); color: #b03636; border-color: rgba(176,54,54,0.25); }
+
+.pr__privnote { display: flex; align-items: center; gap: 7px; flex-direction: row; text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 0.82rem; color: var(--gcs-ink); background: rgba(176,54,54,0.06); border: 1px solid rgba(176,54,54,0.2); border-radius: 10px; padding: 9px 12px; }
+.pr__privnote svg { color: #b03636; flex: none; }
 
 /* ---- form: pilih kompartemen ---- */
 .pr__check { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.86rem; font-weight: 500; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }

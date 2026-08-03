@@ -7,14 +7,8 @@
    Boleh dijalankan berulang. Versi cuti & approval di sini adalah versi AMAN
    (bukan *-schema.sql asli yang memakai DROP TABLE).
 
-   Urutan blok:
-     1. cuti (setelan + tambal kolom saldo)   6. coaching
-     2. approval (persetujuan terpadu)         7. prosedur (dokumen + versi + ack)
-     3. gaji (komponen/slip/tarif)             8. prosedur v2 (kompartemen)
-     3b. gaji komponen tambahan (Lembur/       9. health (MCU)
-         Uang Makan Dinas/RIT)
-     4. kpi (My Progress)
-     5. aset (My Asset)
+   CATATAN: reset saldo cuti v2 (cuti-v2-reset-saldo.sql) TIDAK termasuk di sini
+   karena bersifat sekali-jalan (mengubah data). Jalankan terpisah bila perlu.
 
    CARA PAKAI (di server DB PRODUKSI):
      sqlcmd -S <server-prod> -U sa -P <password> -d db_mygcs -C -i docs\prod-migrasi.sql
@@ -23,7 +17,7 @@
    ============================================================================ */
 GO
 
-PRINT '################ [1/9] CUTI ################';
+PRINT '################ [1] CUTI (tabel dasar) ################';
 GO
 /* ============================================================================
    PATCH PRODUKSI - Cuti My Personal (error 500 "Terjadi kesalahan").
@@ -143,7 +137,106 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [2/9] APPROVAL ################';
+PRINT '################ [1b] CUTI v2 (akrual + cuti bersama/nasional) ################';
+GO
+/* ============================================================================
+   cuti v2 - aturan akrual & cuti bersama/nasional (schema cuti, db_mygcs).
+   Perubahan aturan (permintaan atasan SDM):
+   - Akrual 12 hari/tahun DI MUKA; saldo awal tahun = min(batas_akumulasi, sisa + 12).
+   - batas_akumulasi = 24 (maks 2 tahun).
+   - Cuti Bersama = CRUD (rentang tanggal + keterangan + flag mengurangi_hak).
+     Yang 'mengurangi hak' memotong saldo SEMUA karyawan sebanyak jumlah harinya.
+   - Cuti Nasional = CRUD (rentang tanggal + keterangan), TIDAK pernah memotong hak.
+
+   SQL Server 2014. NON-DESTRUKTIF & idempoten (reset saldo dilakukan terpisah
+   di cuti-v2-reset-saldo.sql, sekali jalan). Tidak menyentuh SDM.
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: jalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF SCHEMA_ID('cuti') IS NULL EXEC('CREATE SCHEMA cuti');
+GO
+
+/* setelan: parameter akrual & batas ---------------------------------------- */
+IF COL_LENGTH('cuti.setelan', 'hak_per_tahun') IS NULL
+    ALTER TABLE cuti.setelan ADD hak_per_tahun INT NOT NULL CONSTRAINT df_cuti_setelan_hpt DEFAULT (12);
+GO
+IF COL_LENGTH('cuti.setelan', 'batas_akumulasi') IS NULL
+    ALTER TABLE cuti.setelan ADD batas_akumulasi INT NOT NULL CONSTRAINT df_cuti_setelan_batas DEFAULT (24);
+GO
+-- pastikan baris id=1 ada & nilai default terisi
+IF EXISTS (SELECT 1 FROM cuti.setelan WHERE id = 1)
+    UPDATE cuti.setelan SET hak_per_tahun = ISNULL(NULLIF(hak_per_tahun,0),12),
+                            batas_akumulasi = ISNULL(NULLIF(batas_akumulasi,0),24)
+    WHERE id = 1;
+ELSE
+    INSERT INTO cuti.setelan (id, hak_dasar, cuti_bersama, hak_per_tahun, batas_akumulasi)
+    VALUES (1, 24, 0, 12, 24);
+GO
+
+/* saldo: kolom akrual (basis sebelum dikurangi cuti bersama) ---------------- */
+IF COL_LENGTH('cuti.saldo', 'akrual') IS NULL
+    ALTER TABLE cuti.saldo ADD akrual INT NOT NULL CONSTRAINT df_cuti_saldo_akrual DEFAULT (0);
+GO
+
+/* cuti_bersama - CRUD Admin SDM. mengurangi_hak=1 memotong saldo semua ------ */
+IF OBJECT_ID('cuti.cuti_bersama', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.cuti_bersama
+    (
+        id             BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_cuti_bersama PRIMARY KEY,
+        tgl_mulai      DATE NOT NULL,
+        tgl_selesai    DATE NOT NULL,
+        jumlah_hari    INT NOT NULL,                 -- hari kerja (Sen-Jum) dalam rentang
+        keterangan     NVARCHAR(200) NOT NULL,
+        mengurangi_hak BIT NOT NULL CONSTRAINT df_cutiber_kurang DEFAULT (0),
+        tahun          INT NOT NULL,                 -- tahun (dari tgl_mulai) utk periode
+        id_pembuat     NVARCHAR(50)  NULL,
+        nama_pembuat   NVARCHAR(150) NULL,
+        dibuat_pada    DATETIME2 NOT NULL CONSTRAINT df_cutiber_dibuat DEFAULT (SYSUTCDATETIME()),
+        diubah_pada    DATETIME2 NULL
+    );
+    CREATE INDEX ix_cuti_bersama_tahun ON cuti.cuti_bersama (tahun);
+    PRINT 'Tabel cuti.cuti_bersama dibuat.';
+END
+ELSE PRINT 'LEWATI: cuti.cuti_bersama sudah ada.';
+GO
+
+/* cuti_nasional - CRUD Admin SDM. TIDAK pernah memotong hak ----------------- */
+IF OBJECT_ID('cuti.cuti_nasional', 'U') IS NULL
+BEGIN
+    CREATE TABLE cuti.cuti_nasional
+    (
+        id           BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_cuti_nasional PRIMARY KEY,
+        tgl_mulai    DATE NOT NULL,
+        tgl_selesai  DATE NOT NULL,
+        jumlah_hari  INT NOT NULL,
+        keterangan   NVARCHAR(200) NOT NULL,
+        tahun        INT NOT NULL,
+        id_pembuat   NVARCHAR(50)  NULL,
+        nama_pembuat NVARCHAR(150) NULL,
+        dibuat_pada  DATETIME2 NOT NULL CONSTRAINT df_cutinas_dibuat DEFAULT (SYSUTCDATETIME()),
+        diubah_pada  DATETIME2 NULL
+    );
+    CREATE INDEX ix_cuti_nasional_tahun ON cuti.cuti_nasional (tahun);
+    PRINT 'Tabel cuti.cuti_nasional dibuat.';
+END
+ELSE PRINT 'LEWATI: cuti.cuti_nasional sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [2] APPROVAL ################';
 GO
 /* ============================================================================
    PATCH PRODUKSI - Layer persetujuan terpadu (schema approval).
@@ -192,7 +285,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [3/9] GAJI ################';
+PRINT '################ [3] GAJI ################';
 GO
 /* ============================================================================
    gaji - skema Slip Gaji MyGCS (di db_mygcs). Layer PARALEL: tidak menyentuh
@@ -403,7 +496,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [3b/9] GAJI KOMPONEN TAMBAHAN (Lembur/Uang Makan Dinas/RIT) ################';
+PRINT '################ [3b] GAJI KOMPONEN TAMBAHAN (Lembur/Uang Makan Dinas/RIT) ################';
 GO
 /* ============================================================================
    Tambahan komponen gaji - Tunjangan Tidak Tetap: Lembur, Uang Makan Dinas, RIT.
@@ -456,7 +549,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [4/9] KPI (My Progress) ################';
+PRINT '################ [4] KPI (My Progress) ################';
 GO
 /* ============================================================================
    kpi - skema My Progress (KPI) MyGCS, di db_mygcs. Layer paralel; tidak
@@ -531,7 +624,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [5/9] ASET (My Asset) ################';
+PRINT '################ [5] ASET (My Asset) ################';
 GO
 /* ============================================================================
    aset - skema My Asset MyGCS, di db_mygcs. Layer paralel; tidak menyentuh SDM.
@@ -628,7 +721,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [6/9] COACHING ################';
+PRINT '################ [6] COACHING ################';
 GO
 /* ============================================================================
    coaching - fitur Coaching & Diskusi Tim (My Team), di db_mygcs. Layer paralel;
@@ -760,7 +853,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [7/9] PROSEDUR ################';
+PRINT '################ [7] PROSEDUR ################';
 GO
 /* ============================================================================
    prosedur - modul My Prosedur (SOP & Kebijakan) MyGCS, di db_mygcs. Layer paralel.
@@ -877,7 +970,7 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [8/9] PROSEDUR v2 (Kompartemen) ################';
+PRINT '################ [7b] PROSEDUR v2 (Kompartemen) ################';
 GO
 /* ============================================================================
    prosedur v2 - tambahan cakupan Kompartemen untuk modul My Prosedur.
@@ -938,7 +1031,60 @@ GO
 SET NOEXEC OFF;
 GO
 
-PRINT '################ [9/9] HEALTH (MCU) ################';
+PRINT '################ [7c] PROSEDUR v3 (Umum/Unit privasi) ################';
+GO
+/* ============================================================================
+   prosedur v3 - dokumen terpusat (Umum) + dokumen privasi unit (Unit).
+   - lingkup 'Umum'  : dikelola Admin Kepatuhan, dibaca semua karyawan (default).
+   - lingkup 'Unit'  : privasi satu Departemen. Dibaca anggota departemen +
+                       Admin Kepatuhan; diunggah/dikelola PIMPINAN unit
+                       (Kepala Bagian ke atas, band urutan <= 3) di departemen itu.
+   id_unit_pemilik = id_unit Departemen pemilik (grading.unit_organisasi), utk
+   dokumen lingkup 'Unit'. Dokumen lama -> 'Umum'.
+
+   SQL Server 2014. NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+
+IF DB_NAME() <> 'db_mygcs'
+BEGIN
+    RAISERROR('BATAL: jalankan di database db_mygcs.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+IF COL_LENGTH('prosedur.dokumen', 'lingkup') IS NULL
+BEGIN
+    ALTER TABLE prosedur.dokumen ADD lingkup NVARCHAR(10) NOT NULL
+        CONSTRAINT df_prosedur_dok_lingkup DEFAULT ('Umum');
+    -- dokumen lama = terpusat/umum
+    EXEC('UPDATE prosedur.dokumen SET lingkup = ''Umum''');
+    PRINT 'Kolom prosedur.dokumen.lingkup ditambahkan.';
+END
+ELSE PRINT 'LEWATI: kolom lingkup sudah ada.';
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'ck_prosedur_dok_lingkup')
+    ALTER TABLE prosedur.dokumen ADD CONSTRAINT ck_prosedur_dok_lingkup
+        CHECK (lingkup IN ('Umum','Unit'));
+GO
+
+IF COL_LENGTH('prosedur.dokumen', 'id_unit_pemilik') IS NULL
+BEGIN
+    ALTER TABLE prosedur.dokumen ADD id_unit_pemilik INT NULL;
+    CREATE INDEX ix_prosedur_dok_unit ON prosedur.dokumen (id_unit_pemilik);
+    PRINT 'Kolom prosedur.dokumen.id_unit_pemilik ditambahkan.';
+END
+ELSE PRINT 'LEWATI: kolom id_unit_pemilik sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [8] HEALTH (MCU) ################';
 GO
 /* ============================================================================
    health - modul My Health (Kesehatan) MyGCS, di db_mygcs. Layer paralel.

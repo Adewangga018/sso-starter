@@ -9,10 +9,17 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Retry kegagalan transient ke SQL (mis. Error 10054 "existing connection forcibly closed",
+// 10053, timeout) — server 192.168.100.2 kadang memutus koneksi saat handshake, membuat
+// startup/seed OpenIddict gagal. Aman diaktifkan: TIDAK ada transaksi eksplisit di kode
+// (EnableRetryOnFailure hanya bentrok dgn user-initiated transaction).
+int[] transientSqlErrors = { 10054, 10053, 10060, 121, 64, 233, 20, 0 };
+
 // --- SSO Hub database (Identity + OpenIddict tables) ---
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), transientSqlErrors));
 
     // Registers the OpenIddict entity sets with EF Core.
     options.UseOpenIddict();
@@ -25,7 +32,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //     db_mygcs, so this context connects to GCS. ---
 builder.Services.AddDbContext<GcsDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("GcsConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("GcsConnection"),
+        sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), transientSqlErrors));
 });
 
 // --- My Innovation (Sistem Saran / GIO): lives in db_mygcs (schema "inovasi")
@@ -33,7 +41,8 @@ builder.Services.AddDbContext<GcsDbContext>(options =>
 //     script (backend/Database/inovasi/01-schema-ddl.sql), NOT EF migrations. ---
 builder.Services.AddDbContext<InovasiDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), transientSqlErrors));
 });
 
 builder.Services.AddScoped<CurrentUserContext>();
