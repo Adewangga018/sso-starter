@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SsoBackend.Data;
@@ -29,8 +30,19 @@ public class ModuleSettingsService
         _cache = cache;
     }
 
-    // State efektif satu modul. Found = false kalau kuncinya tidak ada di katalog.
+    // State efektif satu modul. Found = false kalau kuncinya tidak ada di katalog maupun
+    // sebagai modul custom yang pernah dibuat lewat CreateModuleAsync.
     public record ModuleState(bool Found, bool Enabled, string Access, string Label);
+
+    public enum CreateModuleError { None, InvalidKey, DuplicateKey }
+
+    public record CreateModuleResult(CreateModuleError Error, ModuleSettingDto? Module);
+
+    // Format key modul custom: slug huruf kecil/angka dipisah tanda hubung, mis. "my-library".
+    private static readonly Regex KeyFormat = new(@"^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled);
+
+    private static string? LogoUrlFor(string key, ModuleAccess? row) =>
+        row?.LogoPath is null ? null : $"/admin/modules/{key}/logo";
 
     private async Task<IReadOnlyDictionary<string, ModuleAccess>> OverridesAsync()
     {
@@ -50,12 +62,18 @@ public class ModuleSettingsService
     public async Task<ModuleState> GetStateAsync(string moduleKey)
     {
         var def = ModuleCatalog.Find(moduleKey);
+        var overrides = await OverridesAsync();
+
         if (def is null)
         {
+            var lookupKey = moduleKey.Trim().ToLowerInvariant();
+            if (overrides.TryGetValue(lookupKey, out var customRow) && customRow.IsCustom)
+            {
+                return new ModuleState(true, customRow.Enabled, customRow.Access, customRow.Label ?? customRow.ModuleKey);
+            }
             return new ModuleState(false, false, ModuleAccessLevels.Semua, moduleKey);
         }
 
-        var overrides = await OverridesAsync();
         if (overrides.TryGetValue(def.Key, out var row))
         {
             return new ModuleState(true, row.Enabled, row.Access, def.Label);
@@ -77,11 +95,14 @@ public class ModuleSettingsService
         return state.Found && state.Enabled && state.Access == ModuleAccessLevels.Semua;
     }
 
-    // Daftar lengkap untuk halaman Akses Modul (Admin IT).
+    // Daftar lengkap untuk halaman Akses Modul (Admin IT): modul katalog (statis) digabung
+    // dengan modul custom yang dibuat Admin IT (baris dbo.module_access dengan IsCustom=true
+    // yang key-nya tidak ada di ModuleCatalog sama sekali).
     public async Task<IReadOnlyList<ModuleSettingDto>> GetSettingsAsync()
     {
         var overrides = await OverridesAsync();
-        return ModuleCatalog.All.Select(def =>
+
+        var katalog = ModuleCatalog.All.Select(def =>
         {
             overrides.TryGetValue(def.Key, out var row);
             return new ModuleSettingDto(
@@ -92,8 +113,24 @@ public class ModuleSettingsService
                 row?.Enabled ?? def.DefaultEnabled,
                 row?.Access ?? ModuleAccessLevels.Semua,
                 row?.UpdatedAt,
-                row?.UpdatedBy);
-        }).ToList();
+                row?.UpdatedBy,
+                LogoUrlFor(def.Key, row));
+        });
+
+        var custom = overrides.Values
+            .Where(row => row.IsCustom && ModuleCatalog.Find(row.ModuleKey) is null)
+            .Select(row => new ModuleSettingDto(
+                row.ModuleKey,
+                row.Label ?? row.ModuleKey,
+                row.Subtitle ?? string.Empty,
+                row.Icon ?? string.Empty,
+                row.Enabled,
+                row.Access,
+                row.UpdatedAt,
+                row.UpdatedBy,
+                LogoUrlFor(row.ModuleKey, row)));
+
+        return katalog.Concat(custom).ToList();
     }
 
     // Kartu modul untuk dashboard. Grid modul harus selalu utuh: modul yang dikunci ke
@@ -107,23 +144,27 @@ public class ModuleSettingsService
             .Select(s =>
             {
                 var terkunci = !isAdmin && s.Access == ModuleAccessLevels.Admin;
-                return new ModuleTileDto(s.Key, s.Label, s.Subtitle, s.Icon, s.Enabled && !terkunci, s.Access);
+                return new ModuleTileDto(s.Key, s.Label, s.Subtitle, s.Icon, s.Enabled && !terkunci, s.Access, s.LogoUrl);
             })
             .ToList();
     }
 
+    // Berlaku untuk modul katalog maupun modul custom (key harus sudah terdaftar salah satu
+    // caranya - dipakai lewat CreateModuleAsync untuk modul custom).
     public async Task<ModuleSettingDto?> SetAsync(string moduleKey, bool enabled, string access, string? by)
     {
         var def = ModuleCatalog.Find(moduleKey);
-        if (def is null)
+        var lookupKey = def?.Key ?? moduleKey.Trim().ToLowerInvariant();
+        var row = await _db.ModuleAccess.FirstOrDefaultAsync(m => m.ModuleKey == lookupKey);
+
+        if (def is null && (row is null || !row.IsCustom))
         {
             return null;
         }
 
-        var row = await _db.ModuleAccess.FirstOrDefaultAsync(m => m.ModuleKey == def.Key);
         if (row is null)
         {
-            row = new ModuleAccess { ModuleKey = def.Key };
+            row = new ModuleAccess { ModuleKey = lookupKey };
             _db.ModuleAccess.Add(row);
         }
 
@@ -135,6 +176,121 @@ public class ModuleSettingsService
         await _db.SaveChangesAsync();
         Invalidate();
 
-        return new ModuleSettingDto(def.Key, def.Label, def.Subtitle, def.Icon, row.Enabled, row.Access, row.UpdatedAt, row.UpdatedBy);
+        return new ModuleSettingDto(
+            row.ModuleKey,
+            def?.Label ?? row.Label ?? row.ModuleKey,
+            def?.Subtitle ?? row.Subtitle ?? string.Empty,
+            def?.Icon ?? row.Icon ?? string.Empty,
+            row.Enabled,
+            row.Access,
+            row.UpdatedAt,
+            row.UpdatedBy,
+            LogoUrlFor(row.ModuleKey, row));
+    }
+
+    // Mendaftarkan modul baru (mis. "My Library") yang belum ada di ModuleCatalog. Ditolak
+    // kalau key sudah dipakai modul katalog maupun modul custom lain.
+    public async Task<CreateModuleResult> CreateModuleAsync(string key, string label, string subtitle, string icon, bool enabled, string access, string? by)
+    {
+        var normalizedKey = (key ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalizedKey.Length is < 3 or > 50 || !KeyFormat.IsMatch(normalizedKey))
+        {
+            return new CreateModuleResult(CreateModuleError.InvalidKey, null);
+        }
+
+        if (ModuleCatalog.Find(normalizedKey) is not null)
+        {
+            return new CreateModuleResult(CreateModuleError.DuplicateKey, null);
+        }
+
+        var overrides = await OverridesAsync();
+        if (overrides.ContainsKey(normalizedKey))
+        {
+            return new CreateModuleResult(CreateModuleError.DuplicateKey, null);
+        }
+
+        var now = DateTime.UtcNow;
+        var row = new ModuleAccess
+        {
+            ModuleKey = normalizedKey,
+            Enabled = enabled,
+            Access = access,
+            IsCustom = true,
+            Label = label.Trim(),
+            Subtitle = (subtitle ?? string.Empty).Trim(),
+            Icon = (icon ?? string.Empty).Trim(),
+            CreatedAt = now,
+            CreatedBy = by,
+            UpdatedAt = now,
+            UpdatedBy = by,
+        };
+        _db.ModuleAccess.Add(row);
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return new CreateModuleResult(CreateModuleError.DuplicateKey, null);
+        }
+
+        Invalidate();
+
+        var dto = new ModuleSettingDto(
+            row.ModuleKey, row.Label!, row.Subtitle!, row.Icon!, row.Enabled, row.Access, row.UpdatedAt, row.UpdatedBy, LogoUrlFor(row.ModuleKey, row));
+        return new CreateModuleResult(CreateModuleError.None, dto);
+    }
+
+    // Menyimpan path logo (relatif terhadap folder uploads/modules) untuk modul katalog
+    // maupun custom. Mengembalikan LogoPath lama supaya controller bisa hapus file lama
+    // SETELAH commit DB berhasil - menghindari file yatim kalau SaveChangesAsync gagal.
+    public async Task<(ModuleSettingDto? Module, string? OldLogoPath)> SetLogoAsync(string moduleKey, string logoPath, string? by)
+    {
+        var def = ModuleCatalog.Find(moduleKey);
+        var lookupKey = def?.Key ?? moduleKey.Trim().ToLowerInvariant();
+        var row = await _db.ModuleAccess.FirstOrDefaultAsync(m => m.ModuleKey == lookupKey);
+
+        if (def is null && (row is null || !row.IsCustom))
+        {
+            return (null, null);
+        }
+
+        var oldLogoPath = row?.LogoPath;
+        if (row is null)
+        {
+            row = new ModuleAccess { ModuleKey = lookupKey, Enabled = def!.DefaultEnabled, Access = ModuleAccessLevels.Semua };
+            _db.ModuleAccess.Add(row);
+        }
+
+        row.LogoPath = logoPath;
+        row.UpdatedAt = DateTime.UtcNow;
+        row.UpdatedBy = by;
+
+        await _db.SaveChangesAsync();
+        Invalidate();
+
+        var dto = new ModuleSettingDto(
+            row.ModuleKey,
+            def?.Label ?? row.Label ?? row.ModuleKey,
+            def?.Subtitle ?? row.Subtitle ?? string.Empty,
+            def?.Icon ?? row.Icon ?? string.Empty,
+            row.Enabled,
+            row.Access,
+            row.UpdatedAt,
+            row.UpdatedBy,
+            LogoUrlFor(row.ModuleKey, row));
+
+        return (dto, oldLogoPath);
+    }
+
+    // Path fisik file logo modul saat ini (relatif ke folder uploads/modules), dipakai aksi
+    // GET publik yang menyajikan gambarnya. Null = modul belum punya logo ter-upload.
+    public async Task<string?> GetLogoPathAsync(string moduleKey)
+    {
+        var def = ModuleCatalog.Find(moduleKey);
+        var lookupKey = def?.Key ?? moduleKey.Trim().ToLowerInvariant();
+        var overrides = await OverridesAsync();
+        return overrides.TryGetValue(lookupKey, out var row) ? row.LogoPath : null;
     }
 }

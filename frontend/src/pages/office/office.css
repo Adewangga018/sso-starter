@@ -12,68 +12,105 @@
 .mo__intro-title { font-size: 1.4rem; color: var(--gcs-green-900); margin: 0 0 2px; }
 .mo__intro-sub { color: var(--gcs-text-muted); font-size: 0.9rem; margin: 0; }
 
-.mo__banner {
-  background: rgba(244, 174, 70, 0.12);
-  border: 1px solid rgba(244, 174, 70, 0.35);
-  color: #8a6d3b;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 0.86rem;
-}
-
-/* ---------- Stat cards ---------- */
-.mo__stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-@media (max-width: 820px) { .mo__stats { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .mo__stats { grid-template-columns: 1fr; } }
-
-.mo-stat {
-  display: flex; align-items: center; gap: 13px;
-  background: var(--gcs-white); border: 1px solid var(--gcs-border);
-  border-radius: 14px; padding: 15px 17px; box-shadow: var(--gcs-shadow);
-}
-.mo-stat__icon {
-  width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(47, 108, 63, 0.12); color: var(--gcs-green-600);
-}
-.mo-stat--ok .mo-stat__icon { background: rgba(60, 138, 81, 0.14); color: var(--gcs-green-500); }
-.mo-stat--gold .mo-stat__icon { background: rgba(244, 174, 70, 0.18); color: var(--gcs-gold-700); }
-.mo-stat--muted .mo-stat__icon { background: var(--gcs-bg); color: var(--gcs-text-muted); }
-.mo-stat__value { font-size: 1.55rem; font-weight: 800; color: var(--gcs-ink); line-height: 1; }
-.mo-stat__label { font-size: 0.78rem; color: var(--gcs-text-muted); margin-top: 4px; }
-
-/* ---------- Card + roadmap ---------- */
+/* ---------- Card ---------- */
 .mo-card { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 16px; padding: 16px; }
 .mo-card__head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--gcs-green-900); font-size: 0.92rem; margin-bottom: 14px; }
 .mo-card__head svg { color: var(--gcs-green-600); }
-
-.mo-roadmap {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+.mo-card__head--split { justify-content: space-between; }
+.mo-card__tools { display: flex; align-items: center; gap: 8px; }
+.mo-select {
+  border: 1px solid var(--gcs-border); border-radius: 8px; padding: 5px 10px;
+  font-size: 0.82rem; color: var(--gcs-ink); background: var(--gcs-white); cursor: pointer;
 }
-@media (max-width: 720px) { .mo-roadmap { grid-template-columns: 1fr; } }
-.mo-roadmap__item {
-  display: flex; align-items: flex-start; gap: 12px;
-  background: var(--gcs-bg); border: 1px solid var(--gcs-border);
-  border-radius: 12px; padding: 12px 14px;
-}
-.mo-roadmap__icon {
-  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(47, 108, 63, 0.1); color: var(--gcs-green-600);
-}
-.mo-roadmap__title { font-weight: 700; font-size: 0.9rem; color: var(--gcs-ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.mo-roadmap__desc { font-size: 0.8rem; color: var(--gcs-text-muted); margin-top: 3px; line-height: 1.45; }
 .mo-badge {
   font-size: 0.64rem; font-weight: 700; letter-spacing: 0.03em;
   background: rgba(244, 174, 70, 0.18); color: var(--gcs-gold-700);
   border-radius: 999px; padding: 2px 8px; text-transform: uppercase;
 }
+
+/* ---------- Dashboard: metrik rata-rata lama proses ---------- */
+.mo-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 820px) { .mo-metrics { grid-template-columns: 1fr; } }
+.mo-metric {
+  display: flex; align-items: flex-start; gap: 13px;
+  background: var(--gcs-bg); border: 1px solid var(--gcs-border);
+  border-radius: 14px; padding: 14px 16px;
+}
+.mo-metric__icon {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(47, 108, 63, 0.12); color: var(--gcs-green-600);
+}
+.mo-metric__icon--ungu { background: rgba(120, 96, 200, 0.14); color: #6d5bbd; }
+.mo-metric__icon--kuning { background: rgba(244, 174, 70, 0.2); color: var(--gcs-gold-700); }
+.mo-metric__icon--biru { background: rgba(47, 106, 168, 0.14); color: #2f6aa8; }
+.mo-metric__body { min-width: 0; }
+.mo-metric__value { font-size: 1.35rem; font-weight: 800; color: var(--gcs-ink); line-height: 1.15; }
+.mo-metric__unit { font-size: 0.82rem; font-weight: 600; color: var(--gcs-text-muted); }
+.mo-metric__label { font-size: 0.82rem; font-weight: 600; color: var(--gcs-ink); margin-top: 2px; }
+.mo-metric__hint { font-size: 0.72rem; color: var(--gcs-text-muted); margin-top: 2px; line-height: 1.4; }
+
+/* ---------- Dashboard: kotak PERHATIAN ---------- */
+.mo-warn {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(192, 57, 43, 0.06); border: 1px solid rgba(192, 57, 43, 0.3);
+  color: #a33227; border-radius: 12px; padding: 12px 16px; font-size: 0.83rem; line-height: 1.5;
+}
+.mo-warn > svg { flex-shrink: 0; margin-top: 2px; }
+.mo-warn__list { margin: 4px 0 0; padding-left: 18px; }
+.mo-warn__list li + li { margin-top: 3px; }
+
+/* ---------- Dashboard: enam kartu ringkasan ---------- */
+.mo-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 900px) { .mo-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .mo-cards { grid-template-columns: 1fr; } }
+
+.mo-tile {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--gcs-border); border-radius: 14px;
+  padding: 15px 17px; min-height: 118px; text-decoration: none;
+  box-shadow: var(--gcs-shadow); transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.mo-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px -8px rgba(15, 38, 31, 0.35); }
+.mo-tile__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mo-tile__label { font-size: 0.85rem; font-weight: 700; color: var(--gcs-ink); line-height: 1.35; }
+.mo-tile__go { color: var(--gcs-text-muted); flex-shrink: 0; }
+.mo-tile__value { font-size: 1.7rem; font-weight: 800; color: var(--gcs-ink); line-height: 1; }
+.mo-tile__subs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.mo-tile__sub { display: inline-flex; align-items: stretch; border-radius: 7px; overflow: hidden; font-size: 0.7rem; font-weight: 700; }
+.mo-tile__sub-label { padding: 3px 8px; color: #fff; background: var(--gcs-green-900); }
+.mo-tile__sub-label--gelap { background: #223c33; }
+.mo-tile__sub-value { padding: 3px 9px; background: var(--gcs-white); color: var(--gcs-ink); }
+
+/* Warna kartu mengikuti dashboard DOF, disetel ke palet lembut MyGCS. */
+.mo-tile--biru { background: #e8f1fb; border-color: #cfe0f3; }
+.mo-tile--merah { background: #fdeaea; border-color: #f5cdcd; }
+.mo-tile--hijau { background: #e8f6ec; border-color: #cbe8d4; }
+.mo-tile--kuning { background: #fdf6e0; border-color: #f0e2b4; }
+.mo-tile--abu { background: #eeeeec; border-color: #dcdcd8; }
+.mo-tile--coklat { background: #ece2d9; border-color: #dbcabb; }
+
+/* ---------- Dashboard: keterangan kaki ---------- */
+.mo-keterangan { font-size: 0.78rem; color: var(--gcs-text-muted); line-height: 1.6; }
+.mo-keterangan__title { font-weight: 700; color: var(--gcs-ink); margin-bottom: 2px; }
+.mo-legend { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: var(--gcs-text-muted); }
+.mo-legend__item { display: flex; align-items: center; gap: 6px; }
+.mo-legend__item svg { flex-shrink: 0; color: var(--gcs-green-600); }
+
+.mo__alert--row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ---------- Penomoran halaman tabel (Inbox & Inbox CC Otomatis) ---------- */
+.mo-pager {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: 14px; padding-top: 12px; margin-top: 12px;
+  border-top: 1px solid var(--gcs-border);
+  font-size: 0.8rem; color: var(--gcs-text-muted);
+}
+.mo-pager__size { display: inline-flex; align-items: center; gap: 7px; }
+.mo-pager__range { font-variant-numeric: tabular-nums; }
+.mo-pager__nav { display: inline-flex; gap: 6px; }
+.mo-pager__nav .mo-icon-btn:disabled { opacity: 0.4; cursor: default; }
+@media (max-width: 560px) { .mo-pager { justify-content: space-between; } }
 
 /* ---------- Umum (Buat/Daftar/Detail Surat) ---------- */
 .mo__head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
@@ -118,6 +155,205 @@
 .mo-status--ditolak { background: #fbeaea; color: #b03636; }
 .mo-status--batal { background: #f1f2f1; color: #8a8f8b; }
 .mo-status--menunggu { background: #fff4de; color: #a9761b; }
+
+/* ---------- Kotak masuk (tab + pencarian + tabel terurut, meniru DOF) ---------- */
+.mo-inbox__tabs {
+  display: flex; align-items: stretch; justify-content: center; gap: 4px;
+  background: var(--gcs-white); border: 1px solid var(--gcs-border);
+  border-radius: 16px; padding: 8px 6px;
+}
+.mo-inbox__tab {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  border: none; background: none; cursor: pointer; border-radius: 12px;
+  padding: 12px 6px 10px; color: var(--gcs-text-muted);
+  border-bottom: 2px solid transparent;
+}
+.mo-inbox__tab:hover { background: var(--gcs-bg); }
+.mo-inbox__tab.is-active { color: var(--gcs-green-900); border-bottom-color: var(--gcs-green-600); }
+.mo-inbox__tab.is-active .mo-inbox__tab-icon { color: var(--gcs-green-600); }
+.mo-inbox__tab.is-active .mo-inbox__tab-label { font-weight: 700; }
+
+.mo-inbox__tab-icon { position: relative; display: inline-flex; color: inherit; }
+.mo-inbox__tab-label { font-size: 0.8rem; line-height: 1.2; text-align: center; }
+.mo-inbox__badge {
+  position: absolute; top: -8px; left: 60%;
+  background: var(--gcs-green-600); color: #fff;
+  font-size: 0.62rem; font-weight: 700; line-height: 1;
+  border-radius: 999px; padding: 3px 6px; min-width: 10px; text-align: center;
+}
+.mo-inbox__badge--alert { background: #c0392b; }
+
+.mo-inbox__bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.mo-inbox__search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--gcs-border); border-radius: 10px; padding: 0 12px; background: var(--gcs-white);
+}
+.mo-inbox__search svg { color: var(--gcs-text-muted); flex: none; }
+.mo-inbox__search input {
+  flex: 1; min-width: 0; border: none; background: none; padding: 10px 0;
+  font: inherit; font-size: 0.88rem; color: var(--gcs-ink);
+}
+.mo-inbox__search input:focus { outline: none; }
+.mo-inbox__search:focus-within { border-color: var(--gcs-gold-500); }
+.mo-inbox__refresh {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px; cursor: pointer;
+  background: var(--gcs-green-900); color: #fff;
+}
+.mo-inbox__refresh:hover { filter: brightness(1.12); }
+.mo-inbox__refresh:disabled { opacity: 0.6; cursor: default; }
+
+.mo-inbox__table { min-width: 940px; }
+.mo-inbox__table th { padding: 0; }
+.mo-inbox__sort {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  border: none; background: none; cursor: pointer; padding: 9px 12px;
+  font: inherit; font-size: 0.85rem; font-weight: 700; color: var(--gcs-green-900); white-space: nowrap;
+}
+.mo-inbox__sort:hover { color: var(--gcs-green-600); }
+.mo-inbox__sort-icons { display: inline-flex; color: var(--gcs-text-muted); opacity: 0.6; }
+.mo-inbox__sort-icons .is-on { color: var(--gcs-green-600); opacity: 1; }
+/* Nama pengirim/approver kerap panjang — biarkan membungkus, jangan melebarkan tabel. */
+.mo-inbox__td-wrap { white-space: normal; max-width: 220px; }
+/* Surat yang belum dibaca ditebalkan, seperti daftar surel. */
+.mo-inbox__table tr.is-baru td { font-weight: 600; color: var(--gcs-ink); }
+
+/* ---------- Menu Notifikasi ---------- */
+.mo-notif__bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.mo-notif__filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.mo-notif__filter {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-text-muted);
+  border-radius: 9px; padding: 8px 14px; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.mo-notif__filter:hover { border-color: var(--gcs-green-500); color: var(--gcs-green-900); }
+.mo-notif__filter.is-active {
+  background: var(--gcs-green-900); color: #fff; border-color: var(--gcs-green-900);
+}
+
+.mo-notif__list { display: flex; flex-direction: column; gap: 10px; }
+.mo-notif {
+  display: flex; flex-direction: column; gap: 5px; width: 100%; text-align: left;
+  border: 1px solid var(--gcs-border); border-radius: 12px;
+  padding: 13px 16px; background: var(--gcs-white); cursor: pointer; font: inherit;
+}
+.mo-notif:hover { border-color: var(--gcs-green-500); background: var(--gcs-bg); }
+/* Belum dibaca ditandai bingkai merah lembut, seperti DOF. */
+.mo-notif.is-baru { border-color: rgba(192, 57, 43, 0.45); background: rgba(192, 57, 43, 0.05); }
+.mo-notif.is-baru:hover { border-color: #c0392b; background: rgba(192, 57, 43, 0.09); }
+
+.mo-notif__judul {
+  font-size: 0.9rem; font-weight: 700; color: var(--gcs-green-900);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.mo-notif__oleh { font-size: 0.84rem; color: var(--gcs-ink); line-height: 1.45; }
+.mo-notif__tgl { font-size: 0.8rem; color: var(--gcs-text-muted); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .mo-notif__bar { align-items: stretch; }
+  .mo-notif__filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .mo-notif__filters::-webkit-scrollbar { display: none; }
+  .mo-notif__filter { flex: 0 0 auto; }
+  .mo-notif__bar > .mo-btn { width: 100%; justify-content: center; }
+}
+
+/* ---------- Tab halaman detail surat (Detail/Tindak Lanjut/Riwayat/Hirarki) ---------- */
+.mo-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--gcs-border); padding-bottom: 2px;
+}
+.mo-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; background: none; cursor: pointer; border-radius: 9px 9px 0 0;
+  padding: 9px 14px; font: inherit; font-size: 0.85rem; font-weight: 600;
+  color: var(--gcs-text-muted); border-bottom: 2px solid transparent; margin-bottom: -3px;
+}
+.mo-tab:hover { background: var(--gcs-bg); color: var(--gcs-green-900); }
+.mo-tab.is-active {
+  background: rgba(47, 108, 63, 0.1); color: var(--gcs-green-900);
+  border-bottom-color: var(--gcs-green-600); font-weight: 700;
+}
+
+/* Pratinjau nomor surat di form Buat Surat */
+.mo-nomor-preview {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  background: var(--gcs-bg); border: 1px dashed var(--gcs-border);
+  border-radius: 10px; padding: 10px 14px;
+}
+.mo-nomor-preview span { font-size: 0.75rem; color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.mo-nomor-preview b { font-size: 0.95rem; color: var(--gcs-green-900); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+
+/* Klasifikasi masalah terpilih */
+.mo-klas {
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 11px; background: var(--gcs-white);
+}
+.mo-klas__body { flex: 1; min-width: 0; }
+.mo-klas__kode { font-weight: 700; font-size: 0.85rem; color: var(--gcs-green-900); }
+.mo-klas__masalah { font-size: 0.78rem; color: var(--gcs-text-muted); line-height: 1.45; margin-top: 2px; }
+.mo-klas button {
+  flex: none; border: none; background: var(--gcs-bg); color: var(--gcs-text-muted);
+  border-radius: 6px; width: 24px; height: 24px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mo-klas button:hover { color: #c0392b; }
+
+/* ---------- Diagram hirarki alur surat ---------- */
+.mo-hir__legend { flex-direction: row; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; }
+.mo-hir__dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.mo-hir__dot--ungu { background: #6d5bbd; }
+.mo-hir__dot--biru { background: #2f6aa8; }
+.mo-hir__dot--hijau { background: var(--gcs-green-600); }
+.mo-hir__dot--kuning { background: var(--gcs-gold-700); }
+.mo-hir__dot--abu { background: #8a8f8b; }
+
+/* Rantai persetujuan digambar menurun, seperti diagram Hirarki DOF. */
+.mo-hir__chain { display: flex; flex-direction: column; align-items: center; }
+.mo-hir__step { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.mo-hir__arrow { width: 2px; height: 22px; background: var(--gcs-border); position: relative; }
+.mo-hir__arrow::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 6px solid var(--gcs-border);
+}
+
+.mo-hir__node {
+  width: 100%; max-width: 280px; box-sizing: border-box;
+  border: 1px solid var(--gcs-border); border-left-width: 4px;
+  border-radius: 10px; padding: 9px 12px; background: var(--gcs-white);
+}
+.mo-hir__node--ungu { border-left-color: #6d5bbd; background: #f2f0fb; }
+.mo-hir__node--biru { border-left-color: #2f6aa8; background: #eaf2fa; }
+.mo-hir__node--hijau { border-left-color: var(--gcs-green-600); background: #e9f5ed; }
+.mo-hir__node--kuning { border-left-color: var(--gcs-gold-700); background: #fdf6e4; }
+.mo-hir__node--abu { border-left-color: #8a8f8b; background: var(--gcs-bg); }
+
+.mo-hir__head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.mo-hir__ava {
+  width: 24px; height: 24px; border-radius: 50%; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(15, 38, 31, 0.1); color: var(--gcs-green-900);
+  font-size: 0.62rem; font-weight: 700;
+}
+.mo-hir__tag {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--gcs-text-muted); border: 1px solid var(--gcs-border);
+  border-radius: 999px; padding: 2px 7px; background: var(--gcs-white);
+}
+.mo-hir__nama { font-size: 0.82rem; font-weight: 700; color: var(--gcs-ink); line-height: 1.3; }
+.mo-hir__meta { font-size: 0.72rem; color: var(--gcs-text-muted); margin-top: 2px; }
+
+.mo-hir__split {
+  margin: 22px 0 12px; text-align: center; font-size: 0.75rem; font-weight: 700;
+  color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+  border-top: 1px solid var(--gcs-border); padding-top: 12px;
+}
+.mo-hir__row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.mo-hir__row .mo-hir__node { max-width: 220px; flex: 1 1 190px; }
 
 /* Form */
 .mo-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
@@ -224,4 +460,30 @@
 
   /* Hasil pencarian pegawai tidak boleh lebih tinggi dari ruang yang ada. */
   .mo-picker__results { max-height: 200px; }
+
+  /* Tab kotak masuk digulir mendatar; label dipertahankan agar tetap terbaca. */
+  .mo-inbox__tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mo-inbox__tabs::-webkit-scrollbar { display: none; }
+  .mo-inbox__tab { flex: 0 0 auto; min-width: 92px; padding: 10px 8px 8px; }
+  .mo-inbox__tab-label { font-size: 0.72rem; }
+  .mo-inbox__td-wrap { max-width: 160px; }
+
+  /* Tab detail surat digulir mendatar, tidak dipatahkan ke banyak baris. */
+  .mo-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mo-tabs::-webkit-scrollbar { display: none; }
+  .mo-tab { flex: 0 0 auto; padding: 9px 12px; }
+
+  /* Simpul hirarki selebar layar di ponsel. */
+  .mo-hir__node { max-width: none; }
+  .mo-hir__row .mo-hir__node { max-width: none; flex: 1 1 100%; }
 }

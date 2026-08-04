@@ -29,6 +29,8 @@ import DaftarSurat from './pages/office/DaftarSurat'
 import SuratDetail from './pages/office/SuratDetail'
 import MenungguSurat from './pages/office/MenungguSurat'
 import OfficeInbox from './pages/office/Inbox'
+import OfficeInboxCc from './pages/office/InboxCc'
+import OfficeNotifikasi from './pages/office/Notifikasi'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
 import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
@@ -152,6 +154,8 @@ export default function App() {
               <Route path="/my-office" element={<MyOfficeLayout />}>
                 <Route index element={<MyOfficeBeranda />} />
                 <Route path="inbox" element={<OfficeInbox />} />
+                <Route path="inbox-cc" element={<OfficeInboxCc />} />
+                <Route path="notifikasi" element={<OfficeNotifikasi />} />
                 <Route path="buat" element={<BuatSurat />} />
                 <Route path="daftar" element={<DaftarSurat />} />
                 <Route path="review" element={<MenungguSurat mode="review" />} />

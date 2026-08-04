@@ -42,6 +42,31 @@ public class OfficeController : ControllerBase
         return Ok(await _office.CariPegawaiAsync(q));
     }
 
+    // Statistik dashboard My Office (?tahun=2026). Seluruh angka dihitung dari data surat.
+    [HttpGet("dashboard")]
+    public async Task<ActionResult<OfficeDashboardDto>> Dashboard([FromQuery] int? tahun = null)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.DashboardAsync(user.Nik, tahun));
+    }
+
+    // Master kode surat untuk form Buat Surat (jenis, bagian, klasifikasi) plus
+    // tebakan kode bagian pembuat dari data organisasi.
+    [HttpGet("referensi")]
+    public async Task<ActionResult<OfficeReferensiDto>> Referensi()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.ReferensiAsync(user.Nik));
+    }
+
     // Daftar surat milik saya; filter status opsional (?status=Draft dst).
     [HttpGet("surat")]
     public async Task<ActionResult<IReadOnlyList<SuratListItemDto>>> List([FromQuery] string? status = null)
@@ -63,7 +88,15 @@ public class OfficeController : ControllerBase
             return Unauthorized();
         }
         var detail = await _office.DetailAsync(id, user.Nik);
-        return detail is null ? NotFound(new { message = "Surat tidak ditemukan." }) : Ok(detail);
+        if (detail is null)
+        {
+            return NotFound(new { message = "Surat tidak ditemukan." });
+        }
+        // Membuka surat = menandainya sudah dibaca (memindahnya dari tab Belum Dibaca)
+        // sekaligus meninggalkan jejak di tab Riwayat.
+        await _office.TandaiDibacaAsync(id, user.Nik);
+        await _office.CatatAksesAsync(id, user.Nik, user.Name, "Melihat dokumen");
+        return Ok(detail);
     }
 
     [HttpPost("surat")]
@@ -78,16 +111,81 @@ public class OfficeController : ControllerBase
         return ok ? Ok(new { id }) : BadRequest(new { message = error });
     }
 
-    // Kotak masuk: surat final (Disetujui) yang ditujukan / ditembuskan ke saya.
+    // Kotak masuk: surat yang melibatkan saya, dipilah ke tab seperti DOF
+    // (belum-dibaca | dibaca | dalam-proses | selesai | dibatalkan). Jumlah tiap tab ikut
+    // dikembalikan supaya badge tetap akurat tanpa lima permintaan terpisah.
     [HttpGet("inbox")]
-    public async Task<ActionResult<IReadOnlyList<SuratListItemDto>>> Inbox()
+    public async Task<ActionResult<InboxResponseDto>> Inbox([FromQuery] string? tab = null)
     {
         var (user, _) = await _currentUser.ResolveAsync(User);
         if (user is null || string.IsNullOrWhiteSpace(user.Nik))
         {
             return Unauthorized();
         }
-        return Ok(await _office.InboxAsync(user.Nik));
+        return Ok(await _office.InboxAsync(user.Nik, tab));
+    }
+
+    // Inbox CC Otomatis: sama seperti /inbox tetapi hanya surat yang saya terima
+    // sebagai tembusan (surat_distribusi.tipe = 'CC').
+    [HttpGet("inbox-cc")]
+    public async Task<ActionResult<InboxResponseDto>> InboxCc([FromQuery] string? tab = null)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.InboxAsync(user.Nik, tab, hanyaCc: true));
+    }
+
+    // ---- Notifikasi ----
+
+    // Daftar pemberitahuan saya (?filter=all|read|unread) beserta jumlah tiap tab.
+    [HttpGet("notifikasi")]
+    public async Task<ActionResult<NotifikasiResponseDto>> Notifikasi([FromQuery] string? filter = null)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.NotifikasiAsync(user.Nik, filter));
+    }
+
+    [HttpPost("notifikasi/{id:long}/baca")]
+    public async Task<IActionResult> BacaNotifikasi(long id)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        var ok = await _office.TandaiNotifikasiAsync(id, user.Nik);
+        return ok ? NoContent() : NotFound(new { message = "Notifikasi tidak ditemukan." });
+    }
+
+    // Tombol "Tandai Sudah Dibaca".
+    [HttpPost("notifikasi/baca-semua")]
+    public async Task<IActionResult> BacaSemuaNotifikasi()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(new { ditandai = await _office.TandaiSemuaNotifikasiAsync(user.Nik) });
+    }
+
+    // Angka badge sidebar My Office (surat masuk belum dibuka + notifikasi belum dibaca).
+    [HttpGet("badge")]
+    public async Task<ActionResult<OfficeBadgeDto>> Badge()
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.BadgeAsync(user.Nik));
     }
 
     // Surat yang menunggu review saya.
@@ -125,6 +223,45 @@ public class OfficeController : ControllerBase
         }
         var (ok, error) = await _office.ActPengesahanAsync(id, user.Nik, user.Name, req.Aksi ?? string.Empty, req.Komentar);
         return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // ---- Tindak lanjut (tab "Tindak Lanjut") ----
+
+    [HttpGet("surat/{id:long}/tindak-lanjut")]
+    public async Task<ActionResult<IReadOnlyList<SuratTindakLanjutDto>>> TindakLanjut(long id)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        return Ok(await _office.TindakLanjutAsync(id, user.Nik));
+    }
+
+    [HttpPost("surat/{id:long}/tindak-lanjut")]
+    public async Task<IActionResult> TambahTindakLanjut(long id, [FromBody] SuratTindakLanjutRequest req)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        var (ok, error, tlId) = await _office.TambahTindakLanjutAsync(id, user.Nik, user.Name, req);
+        return ok ? Ok(new { id = tlId }) : BadRequest(new { message = error });
+    }
+
+    // ---- Hirarki alur surat (tab "Hirarki") ----
+
+    [HttpGet("surat/{id:long}/hirarki")]
+    public async Task<ActionResult<HirarkiDto>> Hirarki(long id)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null || string.IsNullOrWhiteSpace(user.Nik))
+        {
+            return Unauthorized();
+        }
+        var h = await _office.HirarkiAsync(id, user.Nik);
+        return h is null ? NotFound(new { message = "Surat tidak ditemukan." }) : Ok(h);
     }
 
     // ---- Lampiran ----
@@ -195,6 +332,7 @@ public class OfficeController : ControllerBase
         {
             return NotFound(new { message = "Berkas lampiran tidak tersedia." });
         }
+        await _office.CatatAksesAsync(id, user.Nik, user.Name, "Mengunduh dokumen");
         return PhysicalFile(full, info.Value.Tipe ?? "application/octet-stream", info.Value.Nama);
     }
 

@@ -386,6 +386,9 @@ public class Jabatan
 public class PegawaiTkno
 {
     public string IdKaryawan { get; set; } = string.Empty;
+    // Nama bagian — tingkat terspesifik pegawai TKNO. Dipakai My Office untuk
+    // menebak kode bagian pembuat surat; tidak semua pegawai TKNO mengisinya.
+    public string? Bagian { get; set; }
     public int? IdDepartemen { get; set; }
     public int? IdKompartemen { get; set; }
     public int? IdDirektorat { get; set; }

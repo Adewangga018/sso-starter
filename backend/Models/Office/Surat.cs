@@ -6,7 +6,11 @@ public class Surat
 {
     public long Id { get; set; }
     public string? Nomor { get; set; }
-    public string Jenis { get; set; } = "Surat";            // Surat|SP|ASP|Memo
+    public string Jenis { get; set; } = "DR";               // kode office.ref_jenis_surat: DR|MI|BA|RR
+    public string? KodeBagian { get; set; }                 // kode office.ref_bagian: GCS.01..GCS.12
+    public string? KodeKlasifikasi { get; set; }            // kode office.ref_klasifikasi: mis. NK.01.03
+    // Uraian klasifikasi, disalin saat surat dibuat supaya arsip tetap terbaca
+    // meski master berubah — pola yang sama dengan pembuat_nama & distribusi.nama.
     public string? Klasifikasi { get; set; }
     public string Sifat { get; set; } = "Biasa";            // Rahasia|Terbatas|Biasa
     public string Kecepatan { get; set; } = "Biasa";        // Biasa|Segera|Sangat Segera

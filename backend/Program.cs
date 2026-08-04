@@ -28,6 +28,14 @@ builder.Services.AddDbContext<GcsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GcsConnection"));
 });
 
+// --- View onto the live SMP database (DBSMP): master jenis surat (dbo.TB_SURAT_JENIS)
+//     yang mengisi dropdown "Jenis Surat" di My Office. Tabel itu dimiliki aplikasi SMP,
+//     jadi dibaca di tempatnya — read-only, tanpa migrasi. ---
+builder.Services.AddDbContext<DbsmpDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DbsmpConnection"));
+});
+
 // --- My Innovation (Sistem Saran / GIO): lives in db_mygcs (schema "inovasi")
 //     alongside Identity & grading. Tables are created by the idempotent SQL
 //     script (backend/Database/inovasi/01-schema-ddl.sql), NOT EF migrations. ---

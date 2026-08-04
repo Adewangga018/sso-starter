@@ -34,6 +34,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SuratDistribusi> SuratDistribusi => Set<SuratDistribusi>();
     public DbSet<SuratLampiran> SuratLampiran => Set<SuratLampiran>();
     public DbSet<SuratRiwayat> SuratRiwayat => Set<SuratRiwayat>();
+    public DbSet<SuratDibaca> SuratDibaca => Set<SuratDibaca>();
+    public DbSet<RefJenisSurat> RefJenisSurat => Set<RefJenisSurat>();
+    public DbSet<RefBagian> RefBagian => Set<RefBagian>();
+    public DbSet<RefKlasifikasi> RefKlasifikasi => Set<RefKlasifikasi>();
+    public DbSet<RefBagianUnit> RefBagianUnit => Set<RefBagianUnit>();
+    public DbSet<SuratTindakLanjut> SuratTindakLanjut => Set<SuratTindakLanjut>();
+    public DbSet<Notifikasi> Notifikasi => Set<Notifikasi>();
     // Cuti (schema cuti) — sistem cuti MyGCS baru, dikelola manual (raw SQL).
     public DbSet<CutiSaldo> CutiSaldo => Set<CutiSaldo>();
     public DbSet<CutiPengajuan> CutiPengajuan => Set<CutiPengajuan>();
@@ -125,6 +132,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.ModuleKey).HasMaxLength(50);
             e.Property(x => x.Access).HasMaxLength(20).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.Property(x => x.Label).HasMaxLength(100);
+            e.Property(x => x.Subtitle).HasMaxLength(200);
+            e.Property(x => x.Icon).HasMaxLength(50);
+            e.Property(x => x.LogoPath).HasMaxLength(300);
+            e.Property(x => x.CreatedBy).HasMaxLength(256);
         });
 
         // Tugas My Team (myteam.tugas). Tabel dikelola di luar EF (raw SQL, seperti skema
@@ -153,6 +165,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Id).HasColumnName("id");
             e.Property(x => x.Nomor).HasColumnName("nomor");
             e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.KodeBagian).HasColumnName("kode_bagian");
+            e.Property(x => x.KodeKlasifikasi).HasColumnName("kode_klasifikasi");
             e.Property(x => x.Klasifikasi).HasColumnName("klasifikasi");
             e.Property(x => x.Sifat).HasColumnName("sifat");
             e.Property(x => x.Kecepatan).HasColumnName("kecepatan");
@@ -226,6 +240,89 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.OlehNama).HasColumnName("oleh_nama");
             e.Property(x => x.Catatan).HasColumnName("catatan");
             e.Property(x => x.Tgl).HasColumnName("tgl");
+        });
+
+        builder.Entity<Notifikasi>(e =>
+        {
+            e.ToTable("notifikasi", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Judul).HasColumnName("judul");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.OlehNik).HasColumnName("oleh_nik");
+            e.Property(x => x.OlehNama).HasColumnName("oleh_nama");
+            e.Property(x => x.OlehJabatan).HasColumnName("oleh_jabatan");
+            e.Property(x => x.DibacaPada).HasColumnName("dibaca_pada");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<SuratTindakLanjut>(e =>
+        {
+            e.ToTable("surat_tindak_lanjut", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.DariNik).HasColumnName("dari_nik");
+            e.Property(x => x.DariNama).HasColumnName("dari_nama");
+            e.Property(x => x.UntukNik).HasColumnName("untuk_nik");
+            e.Property(x => x.UntukNama).HasColumnName("untuk_nama");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.NamaLampiran).HasColumnName("nama_lampiran");
+            e.Property(x => x.PathLampiran).HasColumnName("path_lampiran");
+            e.Property(x => x.Ukuran).HasColumnName("ukuran");
+            e.Property(x => x.Tipe).HasColumnName("tipe");
+            e.Property(x => x.Tgl).HasColumnName("tgl");
+        });
+
+        // Master kode surat (diisi lewat docs/office-kode-surat.sql, aplikasi hanya membaca).
+        builder.Entity<RefJenisSurat>(e =>
+        {
+            e.ToTable("ref_jenis_surat", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Kode);
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+        });
+
+        builder.Entity<RefBagian>(e =>
+        {
+            e.ToTable("ref_bagian", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Kode);
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+        });
+
+        builder.Entity<RefKlasifikasi>(e =>
+        {
+            e.ToTable("ref_klasifikasi", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Kode);
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Kelompok).HasColumnName("kelompok");
+            e.Property(x => x.Masalah).HasColumnName("masalah");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+        });
+
+        builder.Entity<RefBagianUnit>(e =>
+        {
+            e.ToTable("ref_bagian_unit", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.NamaUnit);
+            e.Property(x => x.NamaUnit).HasColumnName("nama_unit");
+            e.Property(x => x.KodeBagian).HasColumnName("kode_bagian");
+            e.Property(x => x.Tingkat).HasColumnName("tingkat");
+        });
+
+        builder.Entity<SuratDibaca>(e =>
+        {
+            e.ToTable("surat_dibaca", "office", t => t.ExcludeFromMigrations());
+            e.HasKey(x => new { x.IdSurat, x.Nik });
+            e.Property(x => x.IdSurat).HasColumnName("id_surat");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.DibacaPada).HasColumnName("dibaca_pada");
         });
 
         builder.Entity<CutiSaldo>(e =>

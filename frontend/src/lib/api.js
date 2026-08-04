@@ -129,16 +129,35 @@ export const api = {
 
   // My Office (persuratan)
   cariPegawaiOffice: (q) => apiFetch(`/api/office/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  // Statistik dashboard My Office; tahun opsional (default: tahun terbaru yang ada datanya).
+  getOfficeDashboard: (tahun) => apiFetch(`/api/office/dashboard${tahun ? `?tahun=${tahun}` : ''}`),
+  // Master kode surat (jenis/bagian/klasifikasi) + tebakan bagian pembuat.
+  getReferensiOffice: () => apiFetch('/api/office/referensi'),
   getDaftarSurat: (status) => apiFetch(`/api/office/surat${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   getSuratDetail: (id) => apiFetch(`/api/office/surat/${id}`),
   buatSurat: (payload) => apiFetch('/api/office/surat', { method: 'POST', body: JSON.stringify(payload) }),
   kirimSurat: (id) => apiFetch(`/api/office/surat/${id}/kirim`, { method: 'POST' }),
   batalSurat: (id) => apiFetch(`/api/office/surat/${id}/batal`, { method: 'POST' }),
-  getInboxOffice: () => apiFetch('/api/office/inbox'),
+  // tab: belum-dibaca | dibaca | dalam-proses | selesai | dibatalkan
+  getInboxOffice: (tab) => apiFetch(`/api/office/inbox${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`),
+  // Inbox CC Otomatis: bentuk balasan sama, isinya hanya surat tembusan (tipe CC).
+  getInboxCcOffice: (tab) => apiFetch(`/api/office/inbox-cc${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`),
+  // Notifikasi persuratan. filter: all | read | unread
+  getNotifikasiOffice: (filter) =>
+    apiFetch(`/api/office/notifikasi${filter ? `?filter=${encodeURIComponent(filter)}` : ''}`),
+  bacaNotifikasiOffice: (id) => apiFetch(`/api/office/notifikasi/${id}/baca`, { method: 'POST' }),
+  bacaSemuaNotifikasiOffice: () => apiFetch('/api/office/notifikasi/baca-semua', { method: 'POST' }),
+  // Angka badge sidebar My Office (inbox belum dibuka + notifikasi belum dibaca).
+  getBadgeOffice: () => apiFetch('/api/office/badge'),
   getMenungguReviewOffice: () => apiFetch('/api/office/review'),
   getMenungguApprovalOffice: () => apiFetch('/api/office/approval'),
   aksiPengesahanSurat: (id, payload) =>
     apiFetch(`/api/office/surat/${id}/pengesahan`, { method: 'POST', body: JSON.stringify(payload) }),
+  // Tab "Tindak Lanjut" & "Hirarki" pada detail surat.
+  getTindakLanjutSurat: (id) => apiFetch(`/api/office/surat/${id}/tindak-lanjut`),
+  tambahTindakLanjutSurat: (id, payload) =>
+    apiFetch(`/api/office/surat/${id}/tindak-lanjut`, { method: 'POST', body: JSON.stringify(payload) }),
+  getHirarkiSurat: (id) => apiFetch(`/api/office/surat/${id}/hirarki`),
   uploadLampiranSurat: (id, file) => {
     const body = new FormData()
     body.append('file', file)
@@ -430,6 +449,15 @@ export const api = {
   getAdminModules: () => apiFetch('/api/admin/modules'),
   updateAdminModule: (key, payload) =>
     apiFetch(`/api/admin/modules/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  // Mendaftarkan modul baru. payload = { key, label, subtitle, icon, enabled, access }.
+  createAdminModule: (payload) =>
+    apiFetch('/api/admin/modules', { method: 'POST', body: JSON.stringify(payload) }),
+  // Upload/ganti logo modul (berlaku untuk modul katalog maupun modul custom).
+  uploadAdminModuleLogo: (key, file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiFetch(`/api/admin/modules/${encodeURIComponent(key)}/logo`, { method: 'POST', body })
+  },
 
   // admin: lokasi geofence absensi (Admin IT, Bearer)
   getAdminLocations: () => apiFetch('/api/admin/locations'),

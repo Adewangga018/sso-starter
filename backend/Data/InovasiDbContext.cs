@@ -393,6 +393,7 @@ public class InovasiDbContext : DbContext
             e.ToTable("pegawai_tkno", "grading");
             e.HasKey(x => x.IdKaryawan);
             e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Bagian).HasColumnName("bagian");
             e.Property(x => x.IdDepartemen).HasColumnName("id_departemen");
             e.Property(x => x.IdKompartemen).HasColumnName("id_kompartemen");
             e.Property(x => x.IdDirektorat).HasColumnName("id_direktorat");
