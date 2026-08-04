@@ -140,9 +140,11 @@ export default function DashboardPage() {
               <div className="module-tile__body">
                 <div className="module-tile__label">
                   {mod.label}
-                  {/* Kartu terbuka + badge = hanya terlihat oleh Admin IT; karyawan lain
+                  {/* Kartu terbuka + badge = modul dengan akses terbatas yang kebetulan boleh
+                      dibuka pemirsa ini (Admin IT, atau Admin Modul terkait). Karyawan lain
                       mendapat kartu terkunci "Coming Soon" untuk modul yang sama. */}
-                  {isAdmin && mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                  {mod.access === 'admin' && <span className="module-tile__badge">Khusus Admin</span>}
+                  {mod.access === 'admin_modul' && <span className="module-tile__badge">Admin Modul</span>}
                 </div>
                 <div className="module-tile__subtitle">{mod.subtitle}</div>
               </div>

@@ -37,11 +37,20 @@ public class ProsedurController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ProsedurListDto>> List([FromQuery] string? q, [FromQuery] string? jenis)
+    public async Task<ActionResult<ProsedurListDto>> List([FromQuery] string? q, [FromQuery] string? jenis, [FromQuery] string? kompartemen, [FromQuery] string? lingkup)
     {
         var (nik, _) = await MeAsync();
         if (string.IsNullOrWhiteSpace(nik)) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
-        return Ok(await _prosedur.GetListAsync(nik, q, jenis));
+        return Ok(await _prosedur.GetListAsync(nik, q, jenis, kompartemen, lingkup));
+    }
+
+    // Opsi dropdown form (Departemen & Kompartemen dari grading).
+    [HttpGet("opsi")]
+    public async Task<ActionResult<ProsedurOpsiDto>> Opsi()
+    {
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        return Ok(await _prosedur.GetOpsiAsync());
     }
 
     [HttpGet("{id:long}")]
@@ -56,7 +65,9 @@ public class ProsedurController : ControllerBase
     [HttpGet("versi/{versiId:long}/file")]
     public async Task<IActionResult> File(long versiId)
     {
-        var f = await _prosedur.GetFileAsync(versiId);
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var f = await _prosedur.GetFileAsync(nik, versiId);
         if (f is null) return NotFound();
         Response.Headers["Content-Disposition"] = $"inline; filename=\"{f.Value.Nama}\"";
         return File(f.Value.Konten, f.Value.Tipe ?? "application/octet-stream");
@@ -80,17 +91,18 @@ public class ProsedurController : ControllerBase
         return ok ? Ok(data) : Forbid();
     }
 
-    // ---- Admin Kepatuhan (multipart) ----
+    // ---- Buat dokumen (multipart). lingkup 'Umum' (Admin Kepatuhan) atau 'Unit' (pimpinan unit) ----
     [HttpPost]
     public async Task<IActionResult> Buat(
         [FromForm] string kode, [FromForm] string judul, [FromForm] string jenis,
         [FromForm] string? unit, [FromForm] string? kategori, [FromForm] string? deskripsi,
+        [FromForm] bool semuaKompartemen, [FromForm] List<string>? kompartemen, [FromForm] string? lingkup,
         [FromForm] string? ringkasan, [FromForm] string? tglBerlaku, IFormFile? file)
     {
         var (nik, nama) = await MeAsync();
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
         if (file is null) return BadRequest(new { message = "Berkas dokumen wajib diunggah." });
-        var meta = new UbahDokumenRequest(kode, judul, jenis, unit, kategori, deskripsi);
+        var meta = new UbahDokumenRequest(kode, judul, jenis, unit, kategori, deskripsi, semuaKompartemen, kompartemen, lingkup);
         var (ok, error, id) = await _prosedur.CreateAsync(nik, nama, meta, ParseTgl(tglBerlaku), ringkasan,
             await ReadBytesAsync(file), file.FileName, file.ContentType);
         return ok ? Ok(new { id }) : BadRequest(new { message = error });

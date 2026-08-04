@@ -80,3 +80,51 @@
 .pr__f--full { grid-column: 1 / -1; }
 .pr__f input, .pr__f textarea, .pr__f select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 0.88rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
 .pr__f input:focus, .pr__f textarea:focus, .pr__f select:focus { outline: none; border-color: var(--gcs-gold-500); }
+
+/* ---- filter kompartemen di toolbar ---- */
+.pr__tools .pr__select { min-width: 150px; }
+
+/* ---- katalog kartu ---- */
+.pr__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.pr__card { position: relative; display: flex; flex-direction: column; gap: 8px; background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 14px 14px 12px; border-top: 3px solid var(--gcs-border); transition: box-shadow .15s, transform .15s; }
+.pr__card:hover { box-shadow: 0 10px 26px -14px rgba(15,38,31,0.35); transform: translateY(-2px); }
+.pr__card--green { border-top-color: #2f7a45; }
+.pr__card--navy { border-top-color: #1e2a5a; }
+.pr__card--gold { border-top-color: var(--gcs-gold-500); }
+.pr__card--grey { border-top-color: #9aa3a0; }
+
+.pr__card-top { display: flex; align-items: center; gap: 8px; }
+.pr__card-ico { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; flex: none; }
+.pr__card-ico--green { background: #e6f5ea; color: #1f7a3a; }
+.pr__card-ico--navy { background: rgba(30,42,90,0.1); color: #1e2a5a; }
+.pr__card-ico--gold { background: rgba(244,174,70,0.18); color: var(--gcs-gold-700); }
+.pr__card-ico--grey { background: #eef0ee; color: #6f7772; }
+.pr__card-read { margin-left: auto; color: #1f7a3a; display: inline-flex; }
+
+.pr__card-title { margin: 2px 0 0; font-size: 0.98rem; line-height: 1.3; color: var(--gcs-green-900); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pr__card-kode { font-size: 0.76rem; font-weight: 700; color: var(--gcs-green-700); letter-spacing: 0.02em; }
+.pr__card-scope { display: flex; flex-wrap: wrap; gap: 5px; }
+.pr__card-meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.76rem; color: var(--gcs-text-muted); margin-top: auto; }
+.pr__card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px solid var(--gcs-border); }
+.pr__card-act { display: flex; gap: 6px; }
+
+/* ---- chip cakupan / unit ---- */
+.pr__chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.pr__chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.68rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--gcs-bg); color: var(--gcs-text-muted); border: 1px solid var(--gcs-border); max-width: 100%; }
+.pr__chip svg { flex: none; }
+.pr__chip--all { background: rgba(47,122,69,0.1); color: #2f7a45; border-color: rgba(47,122,69,0.25); }
+.pr__chip--unit { background: rgba(30,42,90,0.07); color: #1e2a5a; border-color: rgba(30,42,90,0.18); }
+.pr__chip--umum { background: rgba(47,122,69,0.1); color: #2f7a45; border-color: rgba(47,122,69,0.25); }
+.pr__chip--priv { background: rgba(176,54,54,0.09); color: #b03636; border-color: rgba(176,54,54,0.25); }
+
+.pr__privnote { display: flex; align-items: center; gap: 7px; flex-direction: row; text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 0.82rem; color: var(--gcs-ink); background: rgba(176,54,54,0.06); border: 1px solid rgba(176,54,54,0.2); border-radius: 10px; padding: 9px 12px; }
+.pr__privnote svg { color: #b03636; flex: none; }
+
+/* ---- form: pilih kompartemen ---- */
+.pr__check { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.86rem; font-weight: 500; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
+.pr__check input { width: 16px; height: 16px; }
+.pr__komplist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--gcs-border); border-radius: 10px; background: var(--gcs-bg); }
+.pr__kompitem { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 500; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
+.pr__kompitem input { width: 15px; height: 15px; flex: none; }
+
+@media (max-width: 560px) { .pr__komplist { grid-template-columns: 1fr; } }

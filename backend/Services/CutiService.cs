@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SsoBackend.Data;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Dto;
@@ -13,12 +14,14 @@ public class CutiService
     private readonly ApplicationDbContext _db;   // cuti.* + grading.* (db_mygcs)
     private readonly GcsDbContext _gcs;           // riwayat SDM lama
     private readonly ModuleAccessService _access; // hak Admin Modul SDM
+    private readonly ILogger<CutiService> _log;
 
-    public CutiService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access)
+    public CutiService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access, ILogger<CutiService> log)
     {
         _db = db;
         _gcs = gcs;
         _access = access;
+        _log = log;
     }
 
     public async Task<CutiDto> GetAsync(string nik)
@@ -32,67 +35,175 @@ public class CutiService
         var persetujuanRows = await _db.CutiPengajuan.AsNoTracking()
             .Where(p => p.IdAtasan == nik && p.Status == "Menunggu").OrderBy(p => p.Id).ToListAsync();
 
-        // Riwayat cuti tahunan dari SDM lama.
-        var riwRows = await _gcs.WebSdmCutiView
-            .Where(c => c.IdUser == nik && c.ListJenis == "Tahunan")
-            .OrderByDescending(c => c.TglInput).Take(50).ToListAsync();
-        var riwayat = riwRows.Select(c => new CutiRiwayatDto(
-            c.KodeCuti,
-            c.TglInput.HasValue ? DateOnly.FromDateTime(c.TglInput.Value) : (DateOnly?)null,
-            c.Keterangan, c.Status ?? "-",
-            c.TglApprove.HasValue ? DateOnly.FromDateTime(c.TglApprove.Value) : (DateOnly?)null)).ToList();
+        // Riwayat cuti tahunan dari SDM lama. Bersifat PELENGKAP: view intranet.vw_web_sdm_cuti
+        // memanggil fungsi legacy GCSSDM.dbo.getPerJabatan yang butuh izin EXECUTE tersendiri
+        // bagi login aplikasi (di dev pakai 'sa' → jalan; di prod 'svc_mygcs' bisa belum diberi
+        // izin). Kalau gagal, JANGAN jatuhkan seluruh halaman Cuti — tampilkan tanpa riwayat.
+        var riwayat = new List<CutiRiwayatDto>();
+        try
+        {
+            var riwRows = await _gcs.WebSdmCutiView
+                .Where(c => c.IdUser == nik && c.ListJenis == "Tahunan")
+                .OrderByDescending(c => c.TglInput).Take(50).ToListAsync();
+            riwayat = riwRows.Select(c => new CutiRiwayatDto(
+                c.KodeCuti,
+                c.TglInput.HasValue ? DateOnly.FromDateTime(c.TglInput.Value) : (DateOnly?)null,
+                c.Keterangan, c.Status ?? "-",
+                c.TglApprove.HasValue ? DateOnly.FromDateTime(c.TglApprove.Value) : (DateOnly?)null)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex,
+                "Gagal memuat riwayat cuti SDM untuk {Nik}; menampilkan halaman Cuti tanpa riwayat. " +
+                "Jika ini permission (EXECUTE getPerJabatan), beri izin ke login aplikasi di server.", nik);
+        }
 
         var setelan = await GetOrInitSetelanAsync();
         var isAdminSdm = await _access.IsSdmAdminAsync(nik);
+
+        var cbList = await _db.CutiBersama.AsNoTracking()
+            .OrderByDescending(x => x.TglMulai)
+            .Select(x => new CutiBersamaDto(x.Id, x.TglMulai, x.TglSelesai, x.JumlahHari, x.Keterangan, x.MengurangiHak, x.Tahun))
+            .ToListAsync();
+        var nasList = await _db.CutiNasional.AsNoTracking()
+            .OrderByDescending(x => x.TglMulai)
+            .Select(x => new CutiNasionalDto(x.Id, x.TglMulai, x.TglSelesai, x.JumlahHari, x.Keterangan, x.Tahun))
+            .ToListAsync();
 
         return new CutiDto(
             Sisa: saldo?.Saldo ?? 0,
             AdaData: saldo is not null,
             Periode: saldo?.Periode,
             Tmt: saldo?.Tmt,
+            Akrual: saldo?.Akrual ?? 0,
             Hak: saldo?.Hak ?? 0,
             Diambil: saldo?.Diambil ?? 0,
-            // Diturunkan dari hak agar rincian selalu konsisten (hak_dasar - cutber = hak),
-            // tidak bergantung pada kolom cuti_bersama lama yang mungkin belum sinkron.
-            CutiBersama: Math.Max(0, setelan.HakDasar - (saldo?.Hak ?? setelan.HakDasar)),
-            HakDasar: setelan.HakDasar,
+            CutiBersama: saldo?.CutiBersama ?? 0,
+            HakPerTahun: setelan.HakPerTahun,
+            BatasAkumulasi: setelan.BatasAkumulasi,
             BisaApprove: persetujuanRows.Count > 0,
             IsAdminSdm: isAdminSdm,
             Pengajuan: pengajuanRows.Select(Map).ToList(),
             Persetujuan: persetujuanRows.Select(Map).ToList(),
-            Riwayat: riwayat);
+            Riwayat: riwayat,
+            CutiBersamaList: cbList,
+            CutiNasionalList: nasList);
     }
 
-    // ---- Setelan cuti bersama (khusus Admin SDM) ----
-    public async Task<CutiSetelanDto> GetSetelanAsync()
+    // ==== Cuti Bersama (CRUD, Admin SDM). mengurangi_hak → potong saldo semua ====
+    public async Task<(bool Ok, string? Error, long Id)> CreateCutiBersamaAsync(string nik, string? nama, SimpanCutiBersamaRequest req)
     {
-        var s = await GetOrInitSetelanAsync();
-        return new CutiSetelanDto(s.HakDasar, s.CutiBersama);
-    }
-
-    // Set jumlah cuti bersama N, lalu hitung ulang hak & saldo SEMUA karyawan:
-    // hak (net) = hak_dasar - N ; saldo = hak - diambil.
-    public async Task<(bool Ok, string? Error)> SimpanCutiBersamaAsync(string nik, string? nama, int cutiBersama)
-    {
-        if (!await _access.IsSdmAdminAsync(nik))
-            return (false, "Hanya Admin Modul SDM yang dapat mengatur cuti bersama.");
-        if (cutiBersama < 0) return (false, "Jumlah cuti bersama tidak boleh negatif.");
-
-        var s = await GetOrInitSetelanAsync();
-        if (cutiBersama > s.HakDasar) return (false, $"Jumlah cuti bersama ({cutiBersama}) melebihi hak dasar ({s.HakDasar}).");
-
-        s.CutiBersama = cutiBersama;
-        s.DiperbaruiPada = DateTime.UtcNow;
-        s.DiperbaruiOleh = nama ?? nik;
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm, 0);
+        var (ok, err, hari) = ValidasiRentang(req.TglMulai, req.TglSelesai, req.Keterangan);
+        if (!ok) return (false, err, 0);
+        var cb = new CutiBersama
+        {
+            TglMulai = req.TglMulai, TglSelesai = req.TglSelesai, JumlahHari = hari,
+            Keterangan = req.Keterangan.Trim(), MengurangiHak = req.MengurangiHak,
+            Tahun = req.TglMulai.Year, IdPembuat = nik, NamaPembuat = nama, DibuatPada = DateTime.UtcNow,
+        };
+        _db.CutiBersama.Add(cb);
         await _db.SaveChangesAsync();
+        await RecomputeSaldoAsync(TahunSekarang());
+        return (true, null, cb.Id);
+    }
 
-        // Hitung ulang seluruh saldo. Raw SQL agar satu kali jalan (bukan per-baris).
-        var hakNet = s.HakDasar - cutiBersama;
-        await _db.Database.ExecuteSqlRawAsync(
-            "UPDATE cuti.saldo SET hak = {0}, cuti_bersama = {1}, saldo = {0} - diambil, diperbarui_pada = SYSUTCDATETIME()",
-            hakNet, cutiBersama);
+    public async Task<(bool Ok, string? Error)> UpdateCutiBersamaAsync(string nik, long id, SimpanCutiBersamaRequest req)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm);
+        var (ok, err, hari) = ValidasiRentang(req.TglMulai, req.TglSelesai, req.Keterangan);
+        if (!ok) return (false, err);
+        var cb = await _db.CutiBersama.FirstOrDefaultAsync(x => x.Id == id);
+        if (cb is null) return (false, "Cuti bersama tidak ditemukan.");
+        cb.TglMulai = req.TglMulai; cb.TglSelesai = req.TglSelesai; cb.JumlahHari = hari;
+        cb.Keterangan = req.Keterangan.Trim(); cb.MengurangiHak = req.MengurangiHak;
+        cb.Tahun = req.TglMulai.Year; cb.DiubahPada = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await RecomputeSaldoAsync(TahunSekarang());
         return (true, null);
     }
+
+    public async Task<(bool Ok, string? Error)> DeleteCutiBersamaAsync(string nik, long id)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm);
+        var cb = await _db.CutiBersama.FirstOrDefaultAsync(x => x.Id == id);
+        if (cb is null) return (false, "Cuti bersama tidak ditemukan.");
+        _db.CutiBersama.Remove(cb);
+        await _db.SaveChangesAsync();
+        await RecomputeSaldoAsync(TahunSekarang());
+        return (true, null);
+    }
+
+    // ==== Cuti Nasional (CRUD, Admin SDM). TIDAK memotong hak ====
+    public async Task<(bool Ok, string? Error, long Id)> CreateCutiNasionalAsync(string nik, string? nama, SimpanCutiNasionalRequest req)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm, 0);
+        var (ok, err, hari) = ValidasiRentang(req.TglMulai, req.TglSelesai, req.Keterangan);
+        if (!ok) return (false, err, 0);
+        var n = new CutiNasional
+        {
+            TglMulai = req.TglMulai, TglSelesai = req.TglSelesai, JumlahHari = hari,
+            Keterangan = req.Keterangan.Trim(), Tahun = req.TglMulai.Year,
+            IdPembuat = nik, NamaPembuat = nama, DibuatPada = DateTime.UtcNow,
+        };
+        _db.CutiNasional.Add(n);
+        await _db.SaveChangesAsync();
+        return (true, null, n.Id);
+    }
+
+    public async Task<(bool Ok, string? Error)> UpdateCutiNasionalAsync(string nik, long id, SimpanCutiNasionalRequest req)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm);
+        var (ok, err, hari) = ValidasiRentang(req.TglMulai, req.TglSelesai, req.Keterangan);
+        if (!ok) return (false, err);
+        var n = await _db.CutiNasional.FirstOrDefaultAsync(x => x.Id == id);
+        if (n is null) return (false, "Cuti nasional tidak ditemukan.");
+        n.TglMulai = req.TglMulai; n.TglSelesai = req.TglSelesai; n.JumlahHari = hari;
+        n.Keterangan = req.Keterangan.Trim(); n.Tahun = req.TglMulai.Year; n.DiubahPada = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    public async Task<(bool Ok, string? Error)> DeleteCutiNasionalAsync(string nik, long id)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm);
+        var n = await _db.CutiNasional.FirstOrDefaultAsync(x => x.Id == id);
+        if (n is null) return (false, "Cuti nasional tidak ditemukan.");
+        _db.CutiNasional.Remove(n);
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    private const string ForbidSdm = "Hanya Admin Modul SDM yang dapat mengelola cuti bersama/nasional.";
+
+    private static (bool Ok, string? Error, int Hari) ValidasiRentang(DateOnly mulai, DateOnly selesai, string? ket)
+    {
+        if (string.IsNullOrWhiteSpace(ket)) return (false, "Keterangan wajib diisi.", 0);
+        if (selesai < mulai) return (false, "Tanggal selesai tidak boleh sebelum tanggal mulai.", 0);
+        var hari = HitungHariKerja(mulai, selesai);
+        if (hari <= 0) return (false, "Rentang tanggal tidak mengandung hari kerja (Senin–Jumat).", 0);
+        return (true, null, hari);
+    }
+
+    // Total hari cuti bersama yang MENGURANGI hak pada tahun periode.
+    private async Task<int> CutiBersamaPengurangAsync(int tahun) =>
+        await _db.CutiBersama.Where(x => x.MengurangiHak && x.Tahun == tahun).SumAsync(x => (int?)x.JumlahHari) ?? 0;
+
+    // Hitung ulang saldo SEMUA karyawan pada periode `tahun`:
+    // cuti_bersama = total pengurang; hak = akrual - cuti_bersama; saldo = hak - diambil.
+    private async Task RecomputeSaldoAsync(int tahun)
+    {
+        var total = await CutiBersamaPengurangAsync(tahun);
+        var periode = $"{tahun}-{tahun + 1}";
+        await _db.Database.ExecuteSqlRawAsync(
+            "UPDATE cuti.saldo SET cuti_bersama = {0}, hak = akrual - {0}, saldo = akrual - {0} - diambil, " +
+            "diperbarui_pada = SYSUTCDATETIME() WHERE periode = {1}",
+            total, periode);
+    }
+
+    private static int TahunSekarang() => DateTime.UtcNow.AddHours(7).Year;
+    private static int TahunPeriode(string periode) =>
+        int.TryParse(periode.Split('-')[0], out var y) ? y : TahunSekarang();
 
     // Periode cuti berjalan = "{tahun}-{tahun+1}" berdasarkan tanggal WIB. Berganti
     // otomatis tiap 1 Januari (mis. 2026-2027, lalu 2027-2028).
@@ -102,21 +213,25 @@ public class CutiService
         return $"{wib.Year}-{wib.Year + 1}";
     }
 
-    // Reset saldo bila periode karyawan sudah bukan periode berjalan: hak kembali ke
-    // hak awal (hak_dasar - cuti_bersama), diambil = 0. Dipanggil saat karyawan membuka
-    // atau mengajukan cuti — jadi "berjalan & reset tiap tahun" tanpa job terjadwal.
+    // Reset saldo bila periode karyawan sudah bukan periode berjalan (pergantian tahun).
+    // Akrual DI MUKA: sisa tahun lalu + hak/tahun (12), DIBATASI batas_akumulasi (24).
+    // Lalu dikurangi cuti bersama (yang mengurangi hak) untuk periode baru. diambil = 0.
+    // Dipanggil saat karyawan membuka/mengajukan cuti — "berjalan & reset tiap tahun".
     private async Task ResetJikaPeriodeBaruAsync(CutiSaldo saldo)
     {
         var periodeNow = PeriodeSekarang();
         if (saldo.Periode == periodeNow) return;
 
         var setelan = await GetOrInitSetelanAsync();
-        var hakNet = setelan.HakDasar - setelan.CutiBersama;
+        var akrual = Math.Min(setelan.BatasAkumulasi, saldo.Saldo + setelan.HakPerTahun);
+        if (akrual < 0) akrual = 0;
+        var cbTotal = await CutiBersamaPengurangAsync(TahunPeriode(periodeNow));
         saldo.Periode = periodeNow;
-        saldo.Hak = hakNet;
-        saldo.CutiBersama = setelan.CutiBersama;
+        saldo.Akrual = akrual;
+        saldo.CutiBersama = cbTotal;
+        saldo.Hak = akrual - cbTotal;
         saldo.Diambil = 0;
-        saldo.Saldo = hakNet;
+        saldo.Saldo = akrual - cbTotal;
         saldo.TglCutoff = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
         saldo.DiperbaruiPada = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -127,7 +242,7 @@ public class CutiService
         var s = await _db.CutiSetelan.FirstOrDefaultAsync(x => x.Id == 1);
         if (s is null)
         {
-            s = new CutiSetelan { Id = 1, HakDasar = 24, CutiBersama = 0 };
+            s = new CutiSetelan { Id = 1, HakDasar = 24, CutiBersama = 0, HakPerTahun = 12, BatasAkumulasi = 24 };
             _db.CutiSetelan.Add(s);
             await _db.SaveChangesAsync();
         }

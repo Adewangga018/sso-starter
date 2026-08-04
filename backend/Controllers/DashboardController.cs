@@ -88,7 +88,8 @@ public class DashboardController : ControllerBase
         // modul yang dikunci ke Admin IT dikirim sebagai kartu terkunci ("Coming Soon"),
         // bukan dihilangkan - lihat ModuleSettingsService.GetTilesForAsync.
         var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
-        var modules = await _modules.GetTilesForAsync(isAdmin);
+        var nik = pegawai?.ID_KARYAWAN;
+        var modules = await _modules.GetTilesForAsync(isAdmin, key => _access.IsModuleAdminAsync(key, nik));
 
         // Modul "Payroll" khusus Admin Modul SDM (konfigurasi tarif gaji). Tidak ada di
         // katalog modul umum; kartunya hanya ditambahkan untuk yang berhak. Ini juga jadi

@@ -198,9 +198,11 @@ export default function AdminModulesPage() {
 
       <div className="admin-modules__note">
         Atur modul mana yang aktif dan siapa yang boleh membukanya. <b>Semua Pengguna</b> = modul
-        dapat dibuka setiap karyawan; <b>Admin IT Saja</b> = bagi karyawan kartunya tetap tampil
-        di dashboard tetapi terkunci &ldquo;Coming Soon&rdquo;, dan API-nya menolak akses mereka.
-        Modul yang dinonaktifkan juga tampil &ldquo;Coming Soon&rdquo;. Admin IT selalu dapat
+        dapat dibuka setiap karyawan; <b>Admin Modul (SDM / Kepatuhan)</b> = selain Admin IT, admin
+        modul terkait berbasis grading (mis. Admin SDM untuk KPI, Admin Kepatuhan untuk Prosedur,
+        Health &amp; Aset) juga dapat membukanya; <b>Admin IT Saja</b> = bagi karyawan lain kartunya
+        tetap tampil di dashboard tetapi terkunci &ldquo;Coming Soon&rdquo;, dan API-nya menolak akses
+        mereka. Modul yang dinonaktifkan juga tampil &ldquo;Coming Soon&rdquo;. Admin IT selalu dapat
         membuka semua modul, termasuk yang sedang nonaktif, untuk keperluan uji coba. Modul baru
         yang didaftarkan di sini tampil sebagai kartu &ldquo;Coming Soon&rdquo; sampai halaman
         sungguhannya dibangun developer.
@@ -348,6 +350,7 @@ export default function AdminModulesPage() {
                       onChange={(e) => save(m, { access: e.target.value })}
                     >
                       <option value="semua">Semua Pengguna</option>
+                      <option value="admin_modul">Admin Modul (SDM / Kepatuhan)</option>
                       <option value="admin">Admin IT Saja</option>
                     </select>
                   </td>
