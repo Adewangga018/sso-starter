@@ -12,6 +12,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("coaching")]
 [ModuleGate("my-team")]
+[FeatureGate("my-team:coaching")]
 public class CoachingController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
@@ -62,6 +63,17 @@ public class CoachingController : ControllerBase
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
         var detail = await _coaching.GetSesiAsync(nik, id);
         return detail is null ? NotFound(new { message = "Sesi tidak ditemukan." }) : Ok(detail);
+    }
+
+    // Unduh transkrip PDF. Akses: peserta sesi, atau Admin Modul SDM.
+    [HttpGet("sesi/{id:long}/download")]
+    public async Task<IActionResult> DownloadSesi(long id)
+    {
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var t = await _coaching.GetSesiTranscriptAsync(nik, id);
+        if (t is null) return NotFound(new { message = "Sesi tidak ditemukan atau bukan hak akses Anda." });
+        return File(CoachingPdf.Build(t), "application/pdf", t.NamaBerkas);
     }
 
     [HttpPost("sesi/{id:long}/pesan")]
@@ -117,5 +129,26 @@ public class CoachingController : ControllerBase
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
         var (ok, error) = await _coaching.KirimPesanRuangAsync(nik, nama, ownerNik, req.Isi);
         return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // Unduh transkrip ruang tim (PDF). Akses: anggota ruang, atau Admin Modul SDM.
+    [HttpGet("ruang/{ownerNik}/download")]
+    public async Task<IActionResult> DownloadRuang(string ownerNik)
+    {
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var t = await _coaching.GetRuangTranscriptAsync(nik, ownerNik);
+        if (t is null) return NotFound(new { message = "Ruang tim tidak ditemukan atau bukan hak akses Anda." });
+        return File(CoachingPdf.Build(t), "application/pdf", t.NamaBerkas);
+    }
+
+    // ---- Admin Modul SDM: daftar semua coaching untuk unduh ----
+    [HttpGet("admin/semua")]
+    public async Task<ActionResult<CoachingAdminListDto>> AdminSemua()
+    {
+        var (nik, _) = await MeAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var data = await _coaching.GetAllCoachingAsync(nik);
+        return data is null ? Forbid() : Ok(data);
     }
 }

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Activity, Archive, ArrowLeft, Boxes, ClipboardCheck, Lightbulb, Mail, TrendingUp, Users, Users2,
+  Activity, Archive, ArrowLeft, Boxes, ChevronDown, ChevronRight, ClipboardCheck, Lightbulb,
+  Lock, LockOpen, Mail, TrendingUp, Users, Users2,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -45,15 +46,20 @@ function formatUpdated(iso) {
 export default function AdminModulesPage() {
   const { isAdmin, refreshSummary } = useAuth()
   const [modules, setModules] = useState([])
+  const [features, setFeatures] = useState([])
+  const [expanded, setExpanded] = useState(() => new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [busyKey, setBusyKey] = useState(null)
+  const [busyFeature, setBusyFeature] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      setModules(await api.getAdminModules())
+      const [mods, feats] = await Promise.all([api.getAdminModules(), api.getAdminFeatures()])
+      setModules(mods)
+      setFeatures(feats)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar modul.')
     } finally {
@@ -86,6 +92,33 @@ export default function AdminModulesPage() {
     }
   }
 
+  async function saveFeature(f, enabled) {
+    setBusyFeature(f.key)
+    setError('')
+    try {
+      const saved = await api.updateAdminFeature(f.key, enabled)
+      setFeatures((prev) => prev.map((x) => (x.key === saved.key ? saved : x)))
+      refreshSummary()   // menu sidebar admin ikut menyesuaikan
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal menyimpan pengaturan fitur.')
+    } finally {
+      setBusyFeature(null)
+    }
+  }
+
+  function toggleExpand(key) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  const featuresByModule = features.reduce((acc, f) => {
+    (acc[f.moduleKey] ??= []).push(f)
+    return acc
+  }, {})
+
   if (!isAdmin) {
     return <div className="admin-modules"><p className="admin-modules__forbidden">Akses ditolak. Hanya Admin IT.</p></div>
   }
@@ -105,6 +138,10 @@ export default function AdminModulesPage() {
         tetap tampil di dashboard tetapi terkunci &ldquo;Coming Soon&rdquo;, dan API-nya menolak akses
         mereka. Modul yang dinonaktifkan juga tampil &ldquo;Coming Soon&rdquo;. Admin IT selalu dapat
         membuka semua modul, termasuk yang sedang nonaktif, untuk keperluan uji coba.
+        <br /><br />
+        Klik tanda <b>&rsaquo;</b> di sebuah modul untuk mengunci/membuka <b>fitur</b> (item menu
+        sidebar) di dalamnya satu per satu. Fitur yang <b>Terkunci</b> disembunyikan dari menu
+        pengguna & API-nya ditolak; Admin IT tetap melihat & bisa mengujinya.
       </div>
 
       {error && <div className="admin-modules__alert admin-modules__alert--err">{error}</div>}
@@ -124,14 +161,23 @@ export default function AdminModulesPage() {
             {modules.map((m) => {
               const Icon = ICONS[m.icon] ?? Boxes
               const busy = busyKey === m.key
+              const feats = featuresByModule[m.key] ?? []
+              const isOpen = expanded.has(m.key)
               return (
-                <tr key={m.key} className={busy ? 'is-busy' : ''}>
+                <Fragment key={m.key}>
+                <tr className={busy ? 'is-busy' : ''}>
                   <td>
                     <div className="admin-modules__mod">
+                      {feats.length > 0 ? (
+                        <button type="button" className="admin-modules__expand" onClick={() => toggleExpand(m.key)}
+                          title={isOpen ? 'Sembunyikan fitur' : `Kelola ${feats.length} fitur`}>
+                          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                      ) : <span className="admin-modules__expand-spacer" />}
                       <span className="admin-modules__mod-icon"><Icon size={18} /></span>
                       <div>
                         <div className="admin-modules__mod-label">{m.label}</div>
-                        <div className="admin-modules__mod-sub">{m.subtitle}</div>
+                        <div className="admin-modules__mod-sub">{m.subtitle}{feats.length > 0 ? ` · ${feats.length} fitur` : ''}</div>
                       </div>
                     </div>
                   </td>
@@ -160,6 +206,34 @@ export default function AdminModulesPage() {
                     {m.updatedBy && <div className="admin-modules__updated-by">{m.updatedBy}</div>}
                   </td>
                 </tr>
+                {isOpen && feats.map((f) => {
+                  const fbusy = busyFeature === f.key
+                  return (
+                    <tr key={f.key} className={`admin-modules__feature-row${fbusy ? ' is-busy' : ''}`}>
+                      <td>
+                        <div className="admin-modules__feature">
+                          {f.enabled ? <LockOpen size={14} /> : <Lock size={14} />}
+                          <span>{f.label}</span>
+                          {!f.enabled && <span className="admin-modules__feature-locked">Terkunci</span>}
+                        </div>
+                      </td>
+                      <td className="admin-modules__col-center">
+                        <Switch
+                          checked={f.enabled}
+                          disabled={fbusy}
+                          title={f.enabled ? 'Kunci fitur' : 'Buka fitur'}
+                          onChange={() => saveFeature(f, !f.enabled)}
+                        />
+                      </td>
+                      <td className="admin-modules__feature-hint">{f.enabled ? 'Terbuka untuk pengguna' : 'Disembunyikan dari menu & diblok'}</td>
+                      <td className="admin-modules__updated">
+                        {formatUpdated(f.updatedAt)}
+                        {f.updatedBy && <div className="admin-modules__updated-by">{f.updatedBy}</div>}
+                      </td>
+                    </tr>
+                  )
+                })}
+                </Fragment>
               )
             })}
             {!modules.length && !loading && (

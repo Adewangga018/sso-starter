@@ -13,7 +13,7 @@ function buildSections() {
     {
       label: 'Payroll',
       items: [
-        { key: 'tarif', label: 'Konfigurasi Tarif', icon: SlidersHorizontal, to: '/payroll', end: true },
+        { key: 'tarif', feature: 'payroll:tarif', label: 'Konfigurasi Tarif', icon: SlidersHorizontal, to: '/payroll', end: true },
       ],
     },
   ]

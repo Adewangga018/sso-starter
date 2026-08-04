@@ -12,6 +12,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("health")]
 [ModuleGate("my-health")]
+[FeatureGate("my-health:mcu")]
 public class HealthController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

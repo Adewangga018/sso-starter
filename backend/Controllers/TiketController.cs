@@ -13,6 +13,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/tiket")]
 [ModuleGate("my-personal")]
+[FeatureGate("my-personal:tiket")]
 public class TiketController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

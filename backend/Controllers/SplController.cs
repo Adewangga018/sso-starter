@@ -14,6 +14,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/spl")]
 [ModuleGate("my-personal")]
+[FeatureGate("my-personal:lembur")]
 public class SplController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

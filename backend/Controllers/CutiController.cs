@@ -11,6 +11,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/cuti")]
 [ModuleGate("my-personal")]
+[FeatureGate("my-personal:cuti")]
 public class CutiController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

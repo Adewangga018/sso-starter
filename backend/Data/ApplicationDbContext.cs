@@ -27,6 +27,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
+    public DbSet<FeatureAccess> FeatureAccess => Set<FeatureAccess>();
     public DbSet<Tugas> Tugas => Set<Tugas>();
     // My Office (schema office) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Surat> Surat => Set<Surat>();
@@ -127,6 +128,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasKey(x => x.ModuleKey);
             e.Property(x => x.ModuleKey).HasMaxLength(50);
             e.Property(x => x.Access).HasMaxLength(20).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+        });
+
+        // Akses fitur (item menu sidebar) per modul — lihat FeatureAccess.cs / FeatureCatalog.
+        builder.Entity<FeatureAccess>(e =>
+        {
+            e.ToTable("feature_access");
+            e.HasKey(x => x.FeatureKey);
+            e.Property(x => x.FeatureKey).HasMaxLength(80);
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
         });
 

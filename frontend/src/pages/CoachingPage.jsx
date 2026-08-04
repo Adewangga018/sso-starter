@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Loader2, Plus, Send, X, MessagesSquare, Users, Target,
-  CheckSquare, Square, CheckCircle2, RotateCcw, ListChecks,
+  CheckSquare, Square, CheckCircle2, RotateCcw, ListChecks, Download, ShieldCheck,
 } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './CoachingPage.css'
@@ -34,6 +34,9 @@ export default function CoachingPage() {
   const [tlOpen, setTlOpen] = useState(false)
   const [tlDraft, setTlDraft] = useState('')
   const [modal, setModal] = useState(null)     // {lawan:[], target, topik}
+  const [downloading, setDownloading] = useState(null) // "tipe:key" yang sedang diunduh
+  const [adminMode, setAdminMode] = useState(false)
+  const [adminList, setAdminList] = useState(null)
   const threadRef = useRef(null)
 
   const loadInbox = useCallback(async () => {
@@ -81,6 +84,22 @@ export default function CoachingPage() {
     finally { setSending(false) }
   }
 
+  // Unduh transkrip PDF (peserta: coaching sendiri; Admin SDM: siapa pun).
+  async function unduh(tipe, key) {
+    setDownloading(`${tipe}:${key}`)
+    try {
+      if (tipe === 'sesi') await api.downloadCoachingSesi(key)
+      else await api.downloadCoachingRuang(key)
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Gagal mengunduh transkrip.') }
+    finally { setDownloading(null) }
+  }
+
+  const loadAdmin = useCallback(async () => {
+    try { setAdminList(await api.getCoachingAdminSemua()) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar coaching.') }
+  }, [])
+  useEffect(() => { if (adminMode && !adminList) loadAdmin() }, [adminMode, adminList, loadAdmin])
+
   async function openNew() {
     try {
       const lawan = await api.getCoachingLawanBicara()
@@ -117,6 +136,15 @@ export default function CoachingPage() {
   return (
     <div className="co">
       <aside className="co__list">
+        {inbox.isAdminSdm && (
+          <button type="button" className={`co__admintoggle${adminMode ? ' is-on' : ''}`} onClick={() => { setAdminMode((v) => !v); setSel(null) }}>
+            <ShieldCheck size={15} /> {adminMode ? '← Coaching Saya' : 'Semua Coaching (Admin SDM)'}
+          </button>
+        )}
+        {adminMode ? (
+          <div className="co__admin-hint">Menampilkan seluruh coaching karyawan di panel kanan. Klik <b>PDF</b> untuk mengunduh transkrip.</div>
+        ) : (
+        <>
         <button type="button" className="co__new" onClick={openNew}><Plus size={16} /> Sesi Coaching Baru</button>
 
         {loading ? <div className="co__loading"><Loader2 className="co__spin" size={18} /> Memuat…</div> : (
@@ -148,10 +176,48 @@ export default function CoachingPage() {
             ))}
           </>
         )}
+        </>
+        )}
       </aside>
 
       <section className="co__main">
         {error && <div className="co__err">{error}</div>}
+        {adminMode ? (
+          !adminList ? (
+            <div className="co__loading"><Loader2 className="co__spin" size={22} /> Memuat…</div>
+          ) : (
+            <div className="co__admin">
+              <h3 className="co__admin-title"><ShieldCheck size={16} /> Semua Coaching — Admin SDM</h3>
+              <div className="co__admin-group">Sesi 1-on-1 ({adminList.sesi.length})</div>
+              {adminList.sesi.length === 0 && <div className="co__empty-sm">Belum ada sesi.</div>}
+              {adminList.sesi.map((it) => (
+                <div key={`s${it.idSesi}`} className="co__admin-row">
+                  <div className="co__admin-main">
+                    <div className="co__admin-judul">{it.judul}</div>
+                    <div className="co__admin-sub">{it.topik} · {it.status} · {it.jumlahPesan} pesan{it.tglTerakhir ? ` · ${waktu(it.tglTerakhir)}` : ''}</div>
+                  </div>
+                  <button type="button" className="co__btn co__btn--ghost" disabled={downloading === `sesi:${it.idSesi}`} onClick={() => unduh('sesi', it.idSesi)}>
+                    {downloading === `sesi:${it.idSesi}` ? <Loader2 size={15} className="co__spin" /> : <Download size={15} />} PDF
+                  </button>
+                </div>
+              ))}
+              <div className="co__admin-group">Ruang Tim ({adminList.ruang.length})</div>
+              {adminList.ruang.length === 0 && <div className="co__empty-sm">Belum ada ruang tim.</div>}
+              {adminList.ruang.map((it) => (
+                <div key={`r${it.ownerNik}`} className="co__admin-row">
+                  <div className="co__admin-main">
+                    <div className="co__admin-judul">{it.judul}</div>
+                    <div className="co__admin-sub">{it.jumlahPesan} pesan{it.tglTerakhir ? ` · ${waktu(it.tglTerakhir)}` : ''}</div>
+                  </div>
+                  <button type="button" className="co__btn co__btn--ghost" disabled={downloading === `ruang:${it.ownerNik}`} onClick={() => unduh('ruang', it.ownerNik)}>
+                    {downloading === `ruang:${it.ownerNik}` ? <Loader2 size={15} className="co__spin" /> : <Download size={15} />} PDF
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+        <>{/* mode normal */}
         {!sel ? (
           <div className="co__placeholder"><MessagesSquare size={40} /><p>Pilih percakapan, atau mulai sesi coaching baru dengan atasan/bawahan Anda.</p></div>
         ) : detailLoading || !detail ? (
@@ -166,19 +232,26 @@ export default function CoachingPage() {
                     : <><Users size={16} /> {detail.peran === 'Pemilik' ? 'Tim Saya' : `Tim ${detail.ownerNama || detail.ownerNik}`}</>}
                 </div>
                 <div className="co__head-sub">
-                  {detail.tipe === 'sesi' ? <><Target size={13} /> {detail.topik}</> : `${detail.anggota.length} anggota`}
+                  {detail.tipe === 'sesi'
+                    ? <><Target size={13} /> {detail.topik}</>
+                    : <><Users size={13} /> <span>{detail.anggota.map((a) => a.nama).join(', ')} <span className="co__head-count">· {detail.anggota.length} anggota</span></span></>}
                 </div>
               </div>
-              {detail.tipe === 'sesi' && (
-                <div className="co__head-act">
+              <div className="co__head-act">
+                {detail.tipe === 'sesi' && (
+                  <>
                   <button type="button" className="co__btn co__btn--ghost" onClick={() => setTlOpen((v) => !v)}>
                     <ListChecks size={15} /> Tindak Lanjut ({detail.tindakLanjut.length})
                   </button>
                   <button type="button" className="co__btn co__btn--ghost" onClick={toggleSesiStatus}>
                     {detail.status === 'Selesai' ? <><RotateCcw size={15} /> Buka lagi</> : <><CheckCircle2 size={15} /> Selesaikan</>}
                   </button>
-                </div>
-              )}
+                  </>
+                )}
+                <button type="button" className="co__btn co__btn--ghost" disabled={downloading === `${sel.tipe}:${sel.key}`} onClick={() => unduh(sel.tipe, sel.key)} title="Unduh transkrip PDF">
+                  {downloading === `${sel.tipe}:${sel.key}` ? <Loader2 size={15} className="co__spin" /> : <Download size={15} />} Download
+                </button>
+              </div>
             </header>
 
             {detail.tipe === 'sesi' && tlOpen && (
@@ -225,6 +298,8 @@ export default function CoachingPage() {
               </div>
             )}
           </>
+        )}
+        </>
         )}
       </section>
 

@@ -104,6 +104,9 @@ export function AuthProvider({ children }) {
   // Admin Modul SDM: derivasi dari grading (Kabag SDM ke atas s/d GM SKP), dihitung
   // di backend dan ikut di dashboard summary — bukan role Identity.
   const isAdminModulSdm = summary?.isAdminModulSdm ?? false
+  // Fitur (item menu) yang dikunci Admin IT. Disembunyikan bagi non-Admin IT.
+  const lockedFeatures = summary?.lockedFeatures ?? []
+  const isFeatureLocked = (key) => !isAdmin && !!key && lockedFeatures.includes(key)
 
   const value = {
     user: isAuthenticated
@@ -115,6 +118,8 @@ export function AuthProvider({ children }) {
     isJuri,
     isPengelolaJuri,
     isAdminModulSdm,
+    lockedFeatures,
+    isFeatureLocked,
     initializing,
     login,
     logout,

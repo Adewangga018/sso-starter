@@ -13,7 +13,7 @@ function buildSections() {
     {
       label: 'My Prosedur',
       items: [
-        { key: 'dokumen', label: 'SOP & Kebijakan', icon: FileText, to: '/my-prosedur', end: true },
+        { key: 'dokumen', feature: 'my-prosedur:dokumen', label: 'SOP & Kebijakan', icon: FileText, to: '/my-prosedur', end: true },
       ],
     },
   ]

@@ -13,7 +13,7 @@ function buildSections() {
     {
       label: 'My Health',
       items: [
-        { key: 'mcu', label: 'Medical Check-Up', icon: HeartPulse, to: '/my-health', end: true },
+        { key: 'mcu', feature: 'my-health:mcu', label: 'Medical Check-Up', icon: HeartPulse, to: '/my-health', end: true },
       ],
     },
   ]

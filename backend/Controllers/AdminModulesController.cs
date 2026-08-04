@@ -20,11 +20,13 @@ public class AdminModulesController : ControllerBase
     private const string AdminRole = "Admin";
 
     private readonly ModuleSettingsService _modules;
+    private readonly FeatureSettingsService _features;
     private readonly IAuditLogger _audit;
 
-    public AdminModulesController(ModuleSettingsService modules, IAuditLogger audit)
+    public AdminModulesController(ModuleSettingsService modules, FeatureSettingsService features, IAuditLogger audit)
     {
         _modules = modules;
+        _features = features;
         _audit = audit;
     }
 
@@ -37,6 +39,29 @@ public class AdminModulesController : ControllerBase
         }
 
         return Ok(await _modules.GetSettingsAsync());
+    }
+
+    // ---- Fitur (item menu) per modul ----
+    [HttpGet("features")]
+    public async Task<ActionResult<IReadOnlyList<FeatureSettingDto>>> GetFeatures()
+    {
+        if (!IsAdmin()) return Forbid();
+        return Ok(await _features.GetSettingsAsync());
+    }
+
+    [HttpPut("features/{key}")]
+    public async Task<ActionResult<FeatureSettingDto>> UpdateFeature(string key, [FromBody] FeatureSettingRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+        var saved = await _features.SetAsync(key, request.Enabled, User.FindFirstValue("email"));
+        if (saved is null) return NotFound(new { message = "Fitur tidak dikenal." });
+
+        await _audit.LogAsync(
+            "feature.access_changed",
+            User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier),
+            User.FindFirstValue("email"),
+            $"Fitur {saved.Label} ({saved.Key}) diatur {(saved.Enabled ? "terbuka" : "terkunci")}.");
+        return Ok(saved);
     }
 
     [HttpPut("{key}")]

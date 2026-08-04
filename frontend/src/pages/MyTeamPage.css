@@ -216,12 +216,20 @@
 .mt-task.is-dragging { opacity: 0.5; transform: rotate(1.5deg); }
 .mt-task__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .mt-task__title { font-weight: 700; font-size: 0.88rem; color: var(--gcs-ink); line-height: 1.25; }
+.mt-task__actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .mt-task__del {
   border: none; background: none; color: var(--gcs-text-muted); cursor: pointer; padding: 2px; border-radius: 6px; flex-shrink: 0;
   opacity: 0; transition: opacity 0.12s;
 }
 .mt-task:hover .mt-task__del { opacity: 1; }
 .mt-task__del:hover { color: #c0392b; background: rgba(192, 57, 43, 0.1); }
+.mt-task__copy {
+  border: none; background: none; color: var(--gcs-text-muted); cursor: pointer; padding: 2px; border-radius: 6px; flex-shrink: 0;
+  opacity: 0; transition: opacity 0.12s, color 0.12s;
+}
+.mt-task:hover .mt-task__copy { opacity: 1; }
+.mt-task__copy:hover { color: var(--gcs-green-700); background: rgba(47, 108, 63, 0.1); }
+.mt-task__copy.is-copied { opacity: 1; color: var(--gcs-green-600); }
 .mt-task__desc { font-size: 0.8rem; color: var(--gcs-text-muted); margin-top: 4px; line-height: 1.35; }
 .mt-task__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px; }
 .mt-task__who { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--gcs-ink); min-width: 0; }
@@ -269,7 +277,7 @@
    Di perangkat sentuh hover tidak pernah terjadi, jadi tombolnya tidak pernah
    terlihat - di sana tombol dibuat selalu tampak. */
 @media (hover: none) and (pointer: coarse) {
-  .mt-task__del {
+  .mt-task__del, .mt-task__copy {
     opacity: 1;
   }
 }

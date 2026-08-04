@@ -34,22 +34,22 @@ function buildSections() {
     {
       label: 'My Office',
       items: [
-        { key: 'beranda', label: 'Beranda', icon: Table2, to: `${BASE}`, end: true },
-        { key: 'inbox', label: 'Kotak Masuk', icon: Inbox, to: `${BASE}/inbox` },
+        { key: 'beranda', feature: 'my-office:beranda', label: 'Beranda', icon: Table2, to: `${BASE}`, end: true },
+        { key: 'inbox', feature: 'my-office:inbox', label: 'Kotak Masuk', icon: Inbox, to: `${BASE}/inbox` },
       ],
     },
     {
       label: 'Penciptaan Surat',
       items: [
-        { key: 'buat', label: 'Buat Surat', icon: FilePlus2, to: `${BASE}/buat` },
-        { key: 'daftar', label: 'Daftar Surat', icon: Files, to: `${BASE}/daftar` },
+        { key: 'buat', feature: 'my-office:buat', label: 'Buat Surat', icon: FilePlus2, to: `${BASE}/buat` },
+        { key: 'daftar', feature: 'my-office:daftar', label: 'Daftar Surat', icon: Files, to: `${BASE}/daftar` },
       ],
     },
     {
       label: 'Persetujuan',
       items: [
-        { key: 'review', label: 'Menunggu Review', icon: ClipboardCheck, to: `${BASE}/review` },
-        { key: 'approval', label: 'Menunggu Approval', icon: CheckSquare, to: `${BASE}/approval` },
+        { key: 'review', feature: 'my-office:review', label: 'Menunggu Review', icon: ClipboardCheck, to: `${BASE}/review` },
+        { key: 'approval', feature: 'my-office:approval', label: 'Menunggu Approval', icon: CheckSquare, to: `${BASE}/approval` },
       ],
     },
     {

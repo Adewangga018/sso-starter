@@ -9,6 +9,9 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// QuestPDF (transkrip coaching PDF). Lisensi Community (gratis utk internal/non-komersial <$1jt).
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // Retry kegagalan transient ke SQL (mis. Error 10054 "existing connection forcibly closed",
 // 10053, timeout) — server 192.168.100.2 kadang memutus koneksi saat handshake, membuat
 // startup/seed OpenIddict gagal. Aman diaktifkan: TIDAK ada transaksi eksplisit di kode
@@ -65,6 +68,7 @@ builder.Services.AddScoped<HealthService>();
 // pada setiap request modul lewat ModuleGateAttribute.
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ModuleSettingsService>();
+builder.Services.AddScoped<FeatureSettingsService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();

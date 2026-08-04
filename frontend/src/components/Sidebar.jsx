@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { Lock, LogOut, Menu } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import './Sidebar.css'
 
 export default function Sidebar({
@@ -16,6 +17,9 @@ export default function Sidebar({
   // On mobile the drawer is always shown at full width with labels, regardless
   // of the persisted desktop "collapsed" (icon-rail) preference.
   const showLabels = !collapsed || mobileOpen
+
+  // Fitur (item menu) yang dikunci Admin IT disembunyikan bagi non-Admin IT.
+  const { isFeatureLocked } = useAuth()
 
   return (
     <>
@@ -43,14 +47,18 @@ export default function Sidebar({
         </div>
 
         <nav className="sidebar__nav">
-          {sections.map((section, idx) => (
-            <div className="sidebar__section" key={section.label ?? idx}>
-              {section.label && showLabels && <div className="sidebar__section-label">{section.label}</div>}
-              {section.items.map((item) => (
-                <SidebarItem key={item.key} item={item} showLabels={showLabels} onNavigate={onCloseMobile} />
-              ))}
-            </div>
-          ))}
+          {sections.map((section, idx) => {
+            const items = section.items.filter((item) => !isFeatureLocked(item.feature))
+            if (items.length === 0) return null
+            return (
+              <div className="sidebar__section" key={section.label ?? idx}>
+                {section.label && showLabels && <div className="sidebar__section-label">{section.label}</div>}
+                {items.map((item) => (
+                  <SidebarItem key={item.key} item={item} showLabels={showLabels} onNavigate={onCloseMobile} />
+                ))}
+              </div>
+            )
+          })}
         </nav>
 
         <div className="sidebar__footer">

@@ -21,19 +21,22 @@ public class DashboardController : ControllerBase
     private readonly PosisiResolver _posisi;
     private readonly ModuleAccessService _access;
     private readonly ModuleSettingsService _modules;
+    private readonly FeatureSettingsService _features;
 
     public DashboardController(
         CurrentUserContext currentUser,
         GcsDbContext db,
         PosisiResolver posisi,
         ModuleAccessService access,
-        ModuleSettingsService modules)
+        ModuleSettingsService modules,
+        FeatureSettingsService features)
     {
         _currentUser = currentUser;
         _db = db;
         _posisi = posisi;
         _access = access;
         _modules = modules;
+        _features = features;
     }
 
     // Daftar modul tidak lagi statis di sini: katalognya di ModuleCatalog dan status
@@ -99,6 +102,7 @@ public class DashboardController : ControllerBase
             modules = modules.Append(new ModuleTileDto("payroll", "Payroll", "GAJI & TARIF", "wallet", true)).ToList();
         }
 
-        return Ok(new DashboardSummaryDto(nama, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm));
+        var lockedFeatures = await _features.GetLockedKeysAsync();
+        return Ok(new DashboardSummaryDto(nama, jabatan, modules, profileComplete, tingkatan, band, isAdminModulSdm, lockedFeatures));
     }
 }

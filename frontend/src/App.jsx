@@ -30,6 +30,7 @@ import SuratDetail from './pages/office/SuratDetail'
 import MenungguSurat from './pages/office/MenungguSurat'
 import OfficeInbox from './pages/office/Inbox'
 import MyPersonalLayout from './layouts/MyPersonalLayout'
+import RequireFeature from './components/RequireFeature'
 import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
 import GajiPage from './pages/GajiPage'
@@ -116,7 +117,7 @@ export default function App() {
             <Route element={<RequireModule moduleKey="my-team" />}>
               <Route path="/team" element={<MyTeamLayout />}>
                 <Route index element={<MyTeamPage />} />
-                <Route path="coaching" element={<CoachingPage />} />
+                <Route element={<RequireFeature featureKey="my-team:coaching" />}><Route path="coaching" element={<CoachingPage />} /></Route>
                 <Route path="rekap" element={<RekapTimPage />} />
               </Route>
             </Route>
@@ -138,13 +139,13 @@ export default function App() {
 
             <Route element={<RequireModule moduleKey="my-prosedur" />}>
               <Route path="/my-prosedur" element={<MyProsedurLayout />}>
-                <Route index element={<ProsedurPage />} />
+                <Route element={<RequireFeature featureKey="my-prosedur:dokumen" />}><Route index element={<ProsedurPage />} /></Route>
               </Route>
             </Route>
 
             <Route element={<RequireModule moduleKey="my-health" />}>
               <Route path="/my-health" element={<MyHealthLayout />}>
-                <Route index element={<HealthPage />} />
+                <Route element={<RequireFeature featureKey="my-health:mcu" />}><Route index element={<HealthPage />} /></Route>
               </Route>
             </Route>
 
@@ -164,15 +165,15 @@ export default function App() {
               <Route path="/my-personal" element={<MyPersonalLayout />}>
                 <Route index element={<Navigate to="profil" replace />} />
                 <Route path="profil" element={<ProfilPage />} />
-                <Route path="cuti" element={<CutiPage />} />
-                <Route path="gaji" element={<GajiPage />} />
-                <Route path="persetujuan" element={<PersetujuanPage />} />
-                <Route path="absensi" element={<AbsensiPage />} />
-                <Route path="lembur" element={<SplPage />} />
-                <Route path="izin" element={<IzinPage />} />
-                <Route path="sppd" element={<SppdPage />} />
-                <Route path="umdl" element={<UmdlPage />} />
-                <Route path="tiket" element={<TiketPage />} />
+                <Route element={<RequireFeature featureKey="my-personal:cuti" />}><Route path="cuti" element={<CutiPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:gaji" />}><Route path="gaji" element={<GajiPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:persetujuan" />}><Route path="persetujuan" element={<PersetujuanPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:absensi" />}><Route path="absensi" element={<AbsensiPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:lembur" />}><Route path="lembur" element={<SplPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:izin" />}><Route path="izin" element={<IzinPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:sppd" />}><Route path="sppd" element={<SppdPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:umdl" />}><Route path="umdl" element={<UmdlPage />} /></Route>
+                <Route element={<RequireFeature featureKey="my-personal:tiket" />}><Route path="tiket" element={<TiketPage />} /></Route>
               </Route>
             </Route>
 

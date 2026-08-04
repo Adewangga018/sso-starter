@@ -232,6 +232,10 @@ export const api = {
   statusTindakLanjut: (tlId, status) => apiFetch(`/api/coaching/tindak-lanjut/${tlId}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   getCoachingRuang: (ownerNik) => apiFetch(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}`),
   kirimPesanRuang: (ownerNik, isi) => apiFetch(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}/pesan`, { method: 'POST', body: JSON.stringify({ isi }) }),
+  // Download transkrip PDF + panel admin SDM (semua coaching)
+  downloadCoachingSesi: (id) => apiDownload(`/api/coaching/sesi/${id}/download`, `coaching-sesi-${id}.pdf`),
+  downloadCoachingRuang: (ownerNik) => apiDownload(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}/download`, `coaching-ruang-${ownerNik}.pdf`),
+  getCoachingAdminSemua: () => apiFetch('/api/coaching/admin/semua'),
 
   // My Asset
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -441,6 +445,10 @@ export const api = {
   getAdminModules: () => apiFetch('/api/admin/modules'),
   updateAdminModule: (key, payload) =>
     apiFetch(`/api/admin/modules/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  // admin: lock/unlock fitur (item menu) per modul
+  getAdminFeatures: () => apiFetch('/api/admin/modules/features'),
+  updateAdminFeature: (key, enabled) =>
+    apiFetch(`/api/admin/modules/features/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
 
   // admin: lokasi geofence absensi (Admin IT, Bearer)
   getAdminLocations: () => apiFetch('/api/admin/locations'),

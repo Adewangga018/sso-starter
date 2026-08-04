@@ -14,6 +14,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/umdl")]
 [ModuleGate("my-personal")]
+[FeatureGate("my-personal:umdl")]
 public class UmdlController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";
