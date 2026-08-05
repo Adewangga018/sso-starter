@@ -185,7 +185,8 @@ public record GagasanApprovalDto(int Id, int Urutan, string Peran, string? Nik, 
 public record GagasanRingkasDto(int Id, string? NoRegistrasi, string Judul, string? Metodologi,
     string? NamaDepartemenAsal, string? NamaDepartemenTujuan, string Status, string PeranSaya,
     int? IdGugus, DateTime CreatedAt,
-    string? CreatedByNik = null, string? CreatedByNama = null);
+    string? CreatedByNik = null, string? CreatedByNama = null,
+    string? NamaKompartemenAsal = null, string? NamaKompartemenTujuan = null);
 
 public record GagasanListDto(IReadOnlyList<GagasanRingkasDto> Items);
 

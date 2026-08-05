@@ -88,6 +88,33 @@ public class OrgResolver
         return result;
     }
 
+    // Fallback resolusi departemen+kompartemen dari NAMA departemen (bukan NIK) - dipakai
+    // saat seorang pegawai tidak punya baris di grading.penempatan maupun pegawai_tkno (mis.
+    // sedang cuti panjang sehingga penempatannya nonaktif/dihapus), tapi PEGAWAI_SDM.BAGIAN
+    // di GCS sudah menyebut nama departemennya secara eksplisit. Tanpa ini kolom
+    // Departemen/Kompartemen pada Daftar Pegawai tampil kosong padahal datanya sebenarnya ada.
+    public async Task<Dictionary<string, OrgUnit>> ResolveManyByDepartemenNamaAsync(IReadOnlyCollection<string> namaDepartemens)
+    {
+        var result = new Dictionary<string, OrgUnit>(StringComparer.OrdinalIgnoreCase);
+        if (namaDepartemens is null || namaDepartemens.Count == 0) return result;
+        var distinct = namaDepartemens.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (distinct.Count == 0) return result;
+
+        var units = await LoadUnitsAsync();
+        var byNama = units.Values
+            .Where(u => u.Tipe is "Departemen" or "Region" or "Kelompok")
+            .GroupBy(u => u.Nama, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().IdUnit, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var nama in distinct)
+        {
+            if (byNama.TryGetValue(nama, out var idUnit))
+                result[nama] = ResolveFromUnits(units, idUnit);
+        }
+        return result;
+    }
+
     // Semua NIK penempatan aktif yang berada dalam cakupan sebuah unit
     // (departemen bila asDepartemen, atau kompartemen). Kebalikan dari ResolveAsync:
     // dipakai untuk menampilkan daftar pegawai default (tanpa mengetik) pada

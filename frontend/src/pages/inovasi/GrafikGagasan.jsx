@@ -4,10 +4,9 @@ import { api, ApiError, isEmptyDataError } from '../../lib/api'
 import { METODOLOGI, unduhCsv } from './rekapUtils'
 import './inovasi.css'
 
-// Rekap Kegiatan Inovasi > Grafik Sumbang Gagasan. Tiga tampilan sederhana:
-// jumlah gagasan per bulan (batang), sebaran status, dan sebaran metodologi.
-// Satu deret data = satu warna (tanpa legenda); angka ditulis langsung pada
-// batang agar terbaca tanpa bergantung pada warna.
+// Rekap Kegiatan Inovasi > Grafik Sumbang Gagasan.
+// Menampilkan jumlah inovasi per bulan, sebaran status, sebaran metodologi,
+// serta grafik statistik per Kompartemen & Departemen beserta statusnya.
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const HIJAU = '#1f6b39'
 
@@ -16,6 +15,7 @@ export default function GrafikGagasan() {
   const [err, setErr] = useState('')
   const [tahun, setTahun] = useState(null)   // null = belum ditentukan, '' = semua tahun
   const [metodologi, setMetodologi] = useState('')
+  const [unitTab, setUnitTab] = useState('kompartemen') // 'kompartemen' | 'departemen'
 
   useEffect(() => {
     api.listGagasan()
@@ -27,8 +27,7 @@ export default function GrafikGagasan() {
     () => [...new Set((rows ?? []).map((r) => new Date(r.createdAt).getFullYear()))].sort((a, b) => b - a),
     [rows])
 
-  // Tahun default = tahun terbaru yang ada datanya (sekali saja, agar pilihan
-  // "Semua Tahun" tidak langsung dikembalikan).
+  // Tahun default = tahun terbaru yang ada datanya
   useEffect(() => { if (tahun === null && tahunOpsi.length) setTahun(String(tahunOpsi[0])) }, [tahunOpsi, tahun])
 
   const terpilih = useMemo(() => (rows ?? []).filter((r) =>
@@ -54,13 +53,70 @@ export default function GrafikGagasan() {
       .filter((x) => x.nilai > 0)
   }, [terpilih])
 
+  // Sebaran Jumlah Inovasi Per Kompartemen
+  const perKompartemen = useMemo(() => {
+    const map = new Map()
+    terpilih.forEach((r) => {
+      const komp = r.namaKompartemenAsal || 'Kompartemen Lainnya'
+      map.set(komp, (map.get(komp) ?? 0) + 1)
+    })
+    return [...map.entries()].map(([label, nilai]) => ({ label, nilai })).sort((a, b) => b.nilai - a.nilai)
+  }, [terpilih])
+
+  // Sebaran Jumlah Inovasi Per Departemen
+  const perDepartemen = useMemo(() => {
+    const map = new Map()
+    terpilih.forEach((r) => {
+      const dept = r.namaDepartemenAsal || 'Departemen Lainnya'
+      map.set(dept, (map.get(dept) ?? 0) + 1)
+    })
+    return [...map.entries()].map(([label, nilai]) => ({ label, nilai })).sort((a, b) => b.nilai - a.nilai)
+  }, [terpilih])
+
+  // Status Inovasi per Kompartemen & Departemen (Matrix Detail)
+  const statusPerKompartemen = useMemo(() => {
+    const map = new Map()
+    terpilih.forEach((r) => {
+      const unit = r.namaKompartemenAsal || 'Kompartemen Lainnya'
+      if (!map.has(unit)) map.set(unit, { unit, total: 0, dikirim: 0, verifikator: 0, disetujui: 0, revisi: 0, ditolak: 0 })
+      const u = map.get(unit)
+      u.total += 1
+      const st = r.status ?? ''
+      if (st === 'Dikirim') u.dikirim += 1
+      else if (st === 'Disetujui Verifikator') u.verifikator += 1
+      else if (st.includes('Disetujui') || st === 'Siap Risalah') u.disetujui += 1
+      else if (st.includes('Revisi')) u.revisi += 1
+      else if (st.includes('Ditolak')) u.ditolak += 1
+    })
+    return [...map.values()].sort((a, b) => b.total - a.total)
+  }, [terpilih])
+
+  const statusPerDepartemen = useMemo(() => {
+    const map = new Map()
+    terpilih.forEach((r) => {
+      const unit = r.namaDepartemenAsal || 'Departemen Lainnya'
+      if (!map.has(unit)) map.set(unit, { unit, total: 0, dikirim: 0, verifikator: 0, disetujui: 0, revisi: 0, ditolak: 0 })
+      const u = map.get(unit)
+      u.total += 1
+      const st = r.status ?? ''
+      if (st === 'Dikirim') u.dikirim += 1
+      else if (st === 'Disetujui Verifikator') u.verifikator += 1
+      else if (st.includes('Disetujui') || st === 'Siap Risalah') u.disetujui += 1
+      else if (st.includes('Revisi')) u.revisi += 1
+      else if (st.includes('Ditolak')) u.ditolak += 1
+    })
+    return [...map.values()].sort((a, b) => b.total - a.total)
+  }, [terpilih])
+
   function unduh() {
-    unduhCsv(`grafik-sumbang-gagasan-${tahun || 'semua'}`,
+    unduhCsv(`grafik-statistik-inovasi-${tahun || 'semua'}`,
       ['Kelompok', 'Label', 'Jumlah'],
       [
         ...perBulan.map((x) => ['Per Bulan', x.label, x.nilai]),
         ...perStatus.map((x) => ['Per Status', x.label, x.nilai]),
         ...perMetodologi.map((x) => ['Per Metodologi', x.label, x.nilai]),
+        ...perKompartemen.map((x) => ['Per Kompartemen', x.label, x.nilai]),
+        ...perDepartemen.map((x) => ['Per Departemen', x.label, x.nilai]),
       ])
   }
 
@@ -68,8 +124,8 @@ export default function GrafikGagasan() {
 
   return (
     <div className="inv">
-      <h2 className="inv__title">Grafik Sumbang Gagasan</h2>
-      <p className="inv__subtitle">Sebaran usulan Sumbang Gagasan per bulan, status, dan metodologi dalam lingkup yang dapat Anda lihat.</p>
+      <h2 className="inv__title">Grafik & Statistik Inovasi</h2>
+      <p className="inv__subtitle">Sebaran usulan inovasi per bulan, status, metodologi, kompartemen, dan departemen.</p>
       {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
       <div className="inv__toolbar">
@@ -84,26 +140,88 @@ export default function GrafikGagasan() {
           </select>
         </div>
         <button type="button" className="inv__btn inv__btn--soft" onClick={unduh} disabled={terpilih.length === 0}>
-          <Download size={15} /> Download
+          <Download size={15} /> Download CSV
         </button>
       </div>
 
       {terpilih.length === 0
-        ? <div className="inv__banner inv__banner--info">Belum ada gagasan pada filter ini.</div>
+        ? <div className="inv__banner inv__banner--info">Belum ada data inovasi pada filter ini.</div>
         : (
           <>
+            {/* Tren Bulanan */}
             <div className="inv__chart-card">
-              <h3 className="inv__chart-title">Jumlah Gagasan per Bulan{tahun ? ` - ${tahun}` : ''}</h3>
+              <h3 className="inv__chart-title">Jumlah Inovasi per Bulan{tahun ? ` - ${tahun}` : ''}</h3>
               <BatangVertikal data={perBulan} />
             </div>
+
+            {/* Status & Metodologi */}
             <div className="inv__chart-row">
               <div className="inv__chart-card">
-                <h3 className="inv__chart-title">Sebaran Status</h3>
+                <h3 className="inv__chart-title">Sebaran Status Inovasi</h3>
                 <BatangHorizontal data={perStatus} />
               </div>
               <div className="inv__chart-card">
                 <h3 className="inv__chart-title">Sebaran Metodologi</h3>
                 <BatangHorizontal data={perMetodologi} />
+              </div>
+            </div>
+
+            {/* Inovasi per Kompartemen & Departemen */}
+            <div className="inv__chart-row" style={{ marginTop: 20 }}>
+              <div className="inv__chart-card">
+                <h3 className="inv__chart-title">Jumlah Inovasi per Kompartemen</h3>
+                <BatangHorizontal data={perKompartemen} />
+              </div>
+              <div className="inv__chart-card">
+                <h3 className="inv__chart-title">Jumlah Inovasi per Departemen</h3>
+                <BatangHorizontal data={perDepartemen} />
+              </div>
+            </div>
+
+            {/* Rincian Status per Unit (Kompartemen & Departemen) */}
+            <div className="inv__card" style={{ marginTop: 24 }}>
+              <div className="inv__section-head" style={{ justifyContent: 'space-between' }}>
+                <div>
+                  <span className="inv__section-tag">Status Inovasi per Unit</span>
+                  <h3 style={{ marginTop: 4 }}>Rincian Status Pengajuan di Tiap Unit Kerja</h3>
+                </div>
+                <div className="inv__steps" style={{ marginBottom: 0 }}>
+                  <button type="button" className={`inv__step${unitTab === 'kompartemen' ? ' inv__step--active' : ''}`} onClick={() => setUnitTab('kompartemen')}>
+                    Kompartemen
+                  </button>
+                  <button type="button" className={`inv__step${unitTab === 'departemen' ? ' inv__step--active' : ''}`} onClick={() => setUnitTab('departemen')}>
+                    Departemen
+                  </button>
+                </div>
+              </div>
+
+              <div className="inv__table-wrap">
+                <table className="inv__table">
+                  <thead>
+                    <tr>
+                      <th>Nama Unit Kerja</th>
+                      <th style={{ width: 90, textAlign: 'center' }}>Total</th>
+                      <th style={{ width: 110, textAlign: 'center' }}>Dikirim</th>
+                      <th style={{ width: 140, textAlign: 'center' }}>Verifikasi Mgr</th>
+                      <th style={{ width: 130, textAlign: 'center' }}>Disetujui GM</th>
+                      <th style={{ width: 100, textAlign: 'center' }}>Revisi</th>
+                      <th style={{ width: 100, textAlign: 'center' }}>Ditolak</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(unitTab === 'kompartemen' ? statusPerKompartemen : statusPerDepartemen).map((u) => (
+                      <tr key={u.unit}>
+                        <td style={{ fontWeight: 600 }}>{u.unit}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 800 }}>{u.total}</td>
+                        <td style={{ textAlign: 'center', color: '#1f4f2c', fontWeight: 700 }}>{u.dikirim}</td>
+                        <td style={{ textAlign: 'center', color: '#2563eb', fontWeight: 700 }}>{u.verifikator}</td>
+                        <td style={{ textAlign: 'center', color: '#16a34a', fontWeight: 700 }}>{u.disetujui}</td>
+                        <td style={{ textAlign: 'center', color: '#d97706', fontWeight: 700 }}>{u.revisi}</td>
+                        <td style={{ textAlign: 'center', color: '#b91c1c', fontWeight: 700 }}>{u.ditolak}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </>
@@ -112,7 +230,6 @@ export default function GrafikGagasan() {
   )
 }
 
-// Batang dengan ujung membulat 4px yang menempel pada garis dasar.
 function batangTegak(x, y, w, h, r = 4) {
   const rr = Math.min(r, h, w / 2)
   return `M${x},${y + h} V${y + rr} a${rr},${rr} 0 0 1 ${rr},-${rr} h${w - rr * 2} a${rr},${rr} 0 0 1 ${rr},${rr} V${y + h} Z`
@@ -131,7 +248,7 @@ function BatangVertikal({ data }) {
   const garis = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maks * f))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Diagram batang jumlah gagasan per bulan" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Diagram batang jumlah inovasi per bulan" style={{ display: 'block' }}>
       {[...new Set(garis)].map((v) => {
         const y = T + plotH - (v / maks) * plotH
         return (
@@ -154,7 +271,7 @@ function BatangVertikal({ data }) {
               </>
             )}
             <text x={x + bw / 2} y={H - 10} textAnchor="middle" fontSize={10.5} fill="#5c6b60">{d.label}</text>
-            <title>{`${d.label}: ${d.nilai} gagasan`}</title>
+            <title>{`${d.label}: ${d.nilai} inovasi`}</title>
           </g>
         )
       })}
@@ -170,7 +287,7 @@ function BatangHorizontal({ data }) {
   const maks = Math.max(1, ...data.map((d) => d.nilai))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Diagram batang sebaran gagasan" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Diagram batang sebaran inovasi" style={{ display: 'block' }}>
       {data.map((d, i) => {
         const y = T + i * (BAR + GAP)
         const w = Math.max(2, (d.nilai / maks) * plotW)
@@ -179,7 +296,7 @@ function BatangHorizontal({ data }) {
             <text x={LABEL - 8} y={y + BAR / 2 + 4} textAnchor="end" fontSize={11} fill="#5c6b60">{d.label}</text>
             <path d={batangDatar(LABEL, y, w, BAR)} fill={HIJAU} />
             <text x={LABEL + w + 7} y={y + BAR / 2 + 4} fontSize={11} fontWeight={700} fill="#2c3a30">{d.nilai}</text>
-            <title>{`${d.label}: ${d.nilai} gagasan`}</title>
+            <title>{`${d.label}: ${d.nilai} inovasi`}</title>
           </g>
         )
       })}

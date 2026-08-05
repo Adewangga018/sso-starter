@@ -71,12 +71,24 @@ public class GagasanController : ControllerBase
         var (nik, _) = await IdentitasAsync();
         if (nik is null) return Unauthorized(new { message = "Akun tidak tertaut ke NIK pegawai." });
 
+        var org = await _org.ResolveAsync(nik);
+        var band = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+            select (byte?)j.IdBand).FirstOrDefaultAsync();
+        int? scopeDept = band == 2 ? org.IdDepartemen : null;   // Manager -> seluruh departemen
+        int? scopeKomp = band == 1 ? org.IdKompartemen : null;  // GM -> seluruh kompartemen
+
         var rows = await _db.Gagasan.AsNoTracking()
-            .Where(g => g.CreatedByNik == nik || g.Approval.Any(a => a.Nik == nik))
+            .Where(g => g.CreatedByNik == nik || g.Approval.Any(a => a.Nik == nik) ||
+                (scopeDept != null && (g.IdDepartemenAsal == scopeDept || g.IdDepartemenTujuan == scopeDept)) ||
+                (scopeKomp != null && (g.IdKompartemenAsal == scopeKomp || g.IdKompartemenTujuan == scopeKomp)))
             .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
             .Select(g => new
             {
                 g.Id, g.NoRegistrasi, g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan,
+                g.NamaKompartemenAsal, g.NamaKompartemenTujuan,
                 g.Status, g.CreatedByNik, g.CreatedByNama, g.IdGugus, g.CreatedAt,
                 PeranAppr = g.Approval.Where(a => a.Nik == nik).Select(a => a.Peran).FirstOrDefault(),
             })
@@ -94,7 +106,8 @@ public class GagasanController : ControllerBase
             (g.IdGugus is int gid && gugusNoReg.TryGetValue(gid, out var gn) ? gn : null) ?? g.NoRegistrasi,
             g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan, g.Status,
             PeranSaya: g.CreatedByNik == nik ? "Pengaju" : g.PeranAppr ?? "-",
-            g.IdGugus, g.CreatedAt, g.CreatedByNik, g.CreatedByNama)).ToList();
+            g.IdGugus, g.CreatedAt, g.CreatedByNik, g.CreatedByNama,
+            g.NamaKompartemenAsal, g.NamaKompartemenTujuan)).ToList();
 
         return Ok(new GagasanListDto(items));
     }
