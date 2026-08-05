@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Search, Send, Save, X } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Loader2, Search, Send, Save, Underline, X } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
+import { sanitizeHtml } from '../../lib/sanitizeHtml'
 import './office.css'
 
 const SIFAT = ['Biasa', 'Terbatas', 'Rahasia']
@@ -134,11 +135,61 @@ function PegawaiPicker({ label, hint, selected, onChange }) {
   )
 }
 
+// Editor kaya ringan untuk Isi Surat: contentEditable + toolbar dasar lewat
+// document.execCommand. Sengaja tanpa pustaka eksternal (mengikuti pola cetak
+// dokumen lain di modul ini, lihat lib/suratPdf.js) — hasilnya HTML sederhana
+// yang disaring lib/sanitizeHtml sebelum disimpan maupun ditampilkan.
+function IsiSuratEditor({ value, onChange }) {
+  const ref = useRef(null)
+  const initialised = useRef(false)
+
+  // Isi awal disuntikkan sekali saja; sesudahnya DOM contentEditable adalah
+  // sumber kebenarannya sendiri — menimpa innerHTML tiap render akan
+  // memindahkan caret pengguna di tengah mengetik.
+  useEffect(() => {
+    if (!initialised.current && ref.current) {
+      ref.current.innerHTML = value || ''
+      initialised.current = true
+    }
+  }, [value])
+
+  function exec(cmd) {
+    ref.current?.focus()
+    document.execCommand(cmd)
+    onChange(sanitizeHtml(ref.current?.innerHTML))
+  }
+
+  return (
+    <div className="mo-field mo-field--full">
+      <label className="mo-field__label">Isi Surat <span className="mo-field__hint">(opsional)</span></label>
+      <div className="mo-editor">
+        <div className="mo-editor__bar">
+          <button type="button" title="Tebal" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')}><Bold size={14} /></button>
+          <button type="button" title="Miring" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')}><Italic size={14} /></button>
+          <button type="button" title="Garis bawah" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('underline')}><Underline size={14} /></button>
+          <span className="mo-editor__sep" />
+          <button type="button" title="Daftar bertitik" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')}><List size={14} /></button>
+          <button type="button" title="Daftar bernomor" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}><ListOrdered size={14} /></button>
+        </div>
+        <div
+          ref={ref}
+          className="mo-editor__area"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={() => onChange(sanitizeHtml(ref.current?.innerHTML))}
+          onBlur={() => onChange(sanitizeHtml(ref.current?.innerHTML))}
+          data-placeholder="Tulis isi surat…"
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function BuatSurat() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     jenis: '', kodeBagian: '', kodeKlasifikasi: '', sifat: 'Biasa', kecepatan: 'Biasa',
-    judul: '', keterangan: '', tanggalSurat: '', berlakuMulai: '', berlakuSampai: '',
+    judul: '', keterangan: '', isi: '', tanggalSurat: '', berlakuMulai: '', berlakuSampai: '',
   })
   const [ref, setRef] = useState({ jenis: [], bagian: [], klasifikasi: [], bagianSaya: null })
   const [loadingRef, setLoadingRef] = useState(true)
@@ -193,7 +244,7 @@ export default function BuatSurat() {
       kecepatan: form.kecepatan,
       judul: form.judul.trim(),
       keterangan: form.keterangan.trim() || null,
-      isi: null,
+      isi: form.isi && form.isi.trim() ? form.isi : null,
       tanggalSurat: form.tanggalSurat || null,
       berlakuMulai: form.berlakuMulai || null,
       berlakuSampai: form.berlakuSampai || null,
@@ -300,9 +351,17 @@ export default function BuatSurat() {
         </div>
       </div>
 
+      {/* Isi Surat */}
+      <div className="mo-card">
+        <div className="mo-card__head">02 · Isi Surat</div>
+        <div className="mo-form-grid">
+          <IsiSuratEditor value={form.isi} onChange={(v) => set('isi', v)} />
+        </div>
+      </div>
+
       {/* Penanggung Jawab */}
       <div className="mo-card">
-        <div className="mo-card__head">02 · Penanggung Jawab</div>
+        <div className="mo-card__head">03 · Penanggung Jawab</div>
         <div className="mo-form-grid">
           <PegawaiPicker label="Reviewer" hint="(wajib untuk dikirim)" selected={reviewer} onChange={setReviewer} />
           <PegawaiPicker label="Approver" hint="(wajib untuk dikirim)" selected={approver} onChange={setApprover} />
@@ -311,7 +370,7 @@ export default function BuatSurat() {
 
       {/* Distribusi */}
       <div className="mo-card">
-        <div className="mo-card__head">03 · Distribusi Surat</div>
+        <div className="mo-card__head">04 · Distribusi Surat</div>
         <div className="mo-form-grid">
           <PegawaiPicker label="Tujuan" selected={tujuan} onChange={setTujuan} />
           <PegawaiPicker label="Tembusan (CC)" selected={cc} onChange={setCc} />

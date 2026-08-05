@@ -51,6 +51,8 @@ const MODULE_LOGOS = {
   'my-asset': '/asset.png',
   'my-progress': '/progress.png',
   'my-team': '/team.png',
+  payroll: '/payroll.png',
+  'my-payroll': '/payroll.png',
 }
 
 export default function DashboardPage() {

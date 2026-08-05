@@ -412,6 +412,55 @@
 .mo-approve__note { width: 100%; box-sizing: border-box; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 0.88rem; resize: vertical; margin-bottom: 12px; }
 .mo-approve__note:focus { outline: none; border-color: var(--gcs-gold-500); }
 
+/* ---------- Isi Surat: tampilan dokumen + ribbon dekoratif ala DOF ---------- */
+.mo-doc__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.mo-doc__title { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; cursor: pointer; font-weight: 700; color: var(--gcs-green-900); font-size: 0.92rem; padding: 0; }
+.mo-doc__title svg { transition: transform 0.15s ease; }
+.mo-doc__title svg.is-open { transform: rotate(180deg); }
+.mo-doc__tools { display: flex; gap: 8px; }
+
+.mo-doc__frame { border: 1px solid var(--gcs-border); border-radius: 12px; overflow: hidden; background: var(--gcs-bg); }
+.mo-doc__ribbon { display: flex; gap: 2px; background: var(--gcs-white); border-bottom: 1px solid var(--gcs-border); padding: 6px 10px 0; overflow-x: auto; scrollbar-width: none; }
+.mo-doc__ribbon::-webkit-scrollbar { display: none; }
+.mo-doc__ribtab { flex: none; border: none; background: none; cursor: pointer; padding: 8px 14px; font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--gcs-text-muted); border-bottom: 2px solid transparent; }
+.mo-doc__ribtab:hover { color: var(--gcs-green-900); }
+.mo-doc__ribtab.is-active { color: var(--gcs-green-900); border-bottom-color: var(--gcs-green-600); background: rgba(47, 108, 63, 0.06); border-radius: 6px 6px 0 0; }
+
+.mo-doc__toolbar { display: flex; align-items: center; gap: 4px; background: var(--gcs-white); border-bottom: 1px solid var(--gcs-border); padding: 8px 10px; flex-wrap: wrap; }
+.mo-doc__tool { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; color: #b7bdb9; background: var(--gcs-bg); cursor: not-allowed; }
+
+.mo-doc__ruler {
+  height: 16px; border-bottom: 1px solid var(--gcs-border); background-color: #eceeec;
+  background-image: repeating-linear-gradient(90deg, #d7ddd8 0, #d7ddd8 1px, transparent 1px, transparent 24px);
+}
+
+.mo-doc__paper { background: var(--gcs-white); margin: 18px auto; max-width: 720px; padding: 40px 48px; box-shadow: 0 2px 10px -4px rgba(15, 38, 31, 0.25); min-height: 320px; }
+.mo-doc__kop { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid var(--gcs-green-900); padding-bottom: 10px; margin-bottom: 16px; }
+.mo-doc__kop img { height: 40px; }
+.mo-doc__kop-nama { font-size: 0.98rem; font-weight: 800; color: var(--gcs-green-900); }
+.mo-doc__kop-sub { font-size: 0.72rem; color: var(--gcs-text-muted); }
+.mo-doc__meta { display: flex; gap: 16px; font-size: 0.78rem; color: var(--gcs-text-muted); margin-bottom: 10px; }
+.mo-doc__judul { font-size: 0.95rem; font-weight: 700; text-align: center; text-decoration: underline; text-underline-offset: 3px; margin: 10px 0 18px; }
+.mo-doc__isi { font-size: 0.88rem; line-height: 1.7; color: var(--gcs-ink); }
+.mo-doc__isi p, .mo-doc__isi div { margin: 0 0 10px; }
+.mo-doc__isi ul, .mo-doc__isi ol { padding-left: 22px; margin: 0 0 10px; }
+.mo-doc__kosong { color: var(--gcs-text-muted); font-size: 0.85rem; font-style: italic; padding: 20px 0; text-align: center; }
+
+@media (max-width: 640px) {
+  .mo-doc__paper { padding: 24px 20px; }
+}
+
+/* Editor Isi Surat (Buat Surat) */
+.mo-editor { border: 1px solid var(--gcs-border); border-radius: 9px; overflow: hidden; }
+.mo-editor__bar { display: flex; align-items: center; gap: 4px; background: var(--gcs-bg); border-bottom: 1px solid var(--gcs-border); padding: 6px 8px; }
+.mo-editor__bar button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 6px; background: none; color: var(--gcs-ink); cursor: pointer; }
+.mo-editor__bar button:hover { background: rgba(47, 108, 63, 0.12); color: var(--gcs-green-900); }
+.mo-editor__sep { width: 1px; height: 18px; background: var(--gcs-border); margin: 0 4px; }
+.mo-editor__area { min-height: 160px; padding: 12px 14px; font-size: 0.88rem; line-height: 1.6; color: var(--gcs-ink); background: var(--gcs-white); }
+.mo-editor__area:focus { outline: none; }
+.mo-editor__area:empty::before { content: attr(data-placeholder); color: var(--gcs-text-muted); }
+.mo-editor__area ul, .mo-editor__area ol { padding-left: 22px; margin: 6px 0; }
+
 /* Lampiran */
 .mo-lamp-list { display: flex; flex-direction: column; gap: 6px; }
 .mo-lamp { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--gcs-border); border-radius: 9px; background: var(--gcs-bg); }

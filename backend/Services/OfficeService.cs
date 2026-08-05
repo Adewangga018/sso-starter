@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Dto;
-using SsoBackend.Models.Dbsmp;
 using SsoBackend.Models.Office;
 
 namespace SsoBackend.Services;
@@ -20,38 +19,37 @@ public class OfficeService
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
     private readonly InovasiDbContext _grading;   // schema grading: penempatan/jabatan/unit/pegawai_tkno
-    private readonly DbsmpDbContext _dbsmp;       // DBSMP: master jenis surat (dbo.TB_SURAT_JENIS)
 
-    public OfficeService(ApplicationDbContext db, GcsDbContext gcs, InovasiDbContext grading, DbsmpDbContext dbsmp)
+    public OfficeService(ApplicationDbContext db, GcsDbContext gcs, InovasiDbContext grading)
     {
         _db = db;
         _gcs = gcs;
         _grading = grading;
-        _dbsmp = dbsmp;
     }
 
     // ---- Master kode surat ----
 
-    // Kosakata jenis surat berasal dari master SMP (DBSMP.dbo.TB_SURAT_JENIS), bukan lagi
-    // office.ref_jenis_surat. Yang disimpan di office.surat.jenis adalah kolom KD — kunci
-    // baris yang unik. (Kolom KODE tidak dipakai sebagai nilai simpan karena tidak unik:
-    // SP, AD, dan DR sama-sama ber-KODE "DR", sehingga pilihan pengguna akan hilang.)
-    // Hanya baris berstatus Aktif yang boleh dipilih di form.
-    private IQueryable<SuratJenisDbsmp> JenisAktif =>
-        _dbsmp.SuratJenis.AsNoTracking().Where(x => x.Status == "Aktif");
+    // Kosakata jenis surat: office.ref_jenis_surat, disalin dari master SMP (DBSMP.dbo.
+    // TB_SURAT_JENIS) lewat docs/office-jenis-surat-lokal.sql. Awalnya kode ini membaca
+    // DBSMP langsung lintas-database, tapi login aplikasi produksi tidak pernah diberi izin
+    // SELECT di sana sehingga tiap pembacaan jenis surat (Inbox, Daftar Surat, dst) gagal
+    // dengan error permission -> 500. Disalin lokal supaya menu-menu itu tidak lagi
+    // bergantung pada izin lintas-database. Hanya baris aktif yang boleh dipilih di form.
+    private IQueryable<RefJenisSurat> JenisAktif =>
+        _db.RefJenisSurat.AsNoTracking().Where(x => x.Aktif);
 
-    // Peta kode -> nama untuk SELURUH baris (termasuk Pasif), supaya surat lama yang
+    // Peta kode -> nama untuk SELURUH baris (termasuk nonaktif), supaya surat lama yang
     // memakai jenis yang kini dinonaktifkan tetap tampil namanya di daftar & detail.
     private Task<Dictionary<string, string>> PetaNamaJenisAsync() =>
-        _dbsmp.SuratJenis.AsNoTracking()
-            .ToDictionaryAsync(j => j.Kd, j => j.NamaJenis ?? j.Kd);
+        _db.RefJenisSurat.AsNoTracking()
+            .ToDictionaryAsync(j => j.Kode, j => j.Nama);
 
     // Isi seluruh dropdown form Buat Surat sekaligus, plus tebakan bagian pembuat.
     public async Task<OfficeReferensiDto> ReferensiAsync(string nik)
     {
         var jenis = await JenisAktif
-            .OrderBy(x => x.NamaJenis)
-            .Select(x => new RefJenisSuratDto(x.Kd, x.NamaJenis ?? x.Kd)).ToListAsync();
+            .OrderBy(x => x.Urutan)
+            .Select(x => new RefJenisSuratDto(x.Kode, x.Nama)).ToListAsync();
         var bagian = await _db.RefBagian.AsNoTracking().Where(x => x.Aktif)
             .OrderBy(x => x.Urutan).ThenBy(x => x.Kode)
             .Select(x => new RefBagianDto(x.Kode, x.Nama)).ToListAsync();
@@ -170,7 +168,7 @@ public class OfficeService
         }
         // Jenis wajib salah satu kode aktif di master SMP — tidak ada nilai cadangan diam-diam,
         // karena kode ikut merakit nomor surat dan salah kode berarti nomor yang salah.
-        if (string.IsNullOrWhiteSpace(req.Jenis) || !await JenisAktif.AnyAsync(x => x.Kd == req.Jenis))
+        if (string.IsNullOrWhiteSpace(req.Jenis) || !await JenisAktif.AnyAsync(x => x.Kode == req.Jenis))
         {
             return (false, "Jenis surat tidak dikenali atau sudah tidak aktif.", 0);
         }
@@ -342,8 +340,8 @@ public class OfficeService
         }
 
         // Nama panjang kode surat, agar halaman detail tidak menampilkan kode telanjang.
-        var jenisNama = await _dbsmp.SuratJenis.AsNoTracking()
-            .Where(j => j.Kd == s.Jenis).Select(j => j.NamaJenis).FirstOrDefaultAsync();
+        var jenisNama = await _db.RefJenisSurat.AsNoTracking()
+            .Where(j => j.Kode == s.Jenis).Select(j => j.Nama).FirstOrDefaultAsync();
         var bagianNama = s.KodeBagian is null ? null : await _db.RefBagian.AsNoTracking()
             .Where(b => b.Kode == s.KodeBagian).Select(b => b.Nama).FirstOrDefaultAsync();
 

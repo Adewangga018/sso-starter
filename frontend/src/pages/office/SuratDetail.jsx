@@ -1,21 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
+  AlignCenter,
+  AlignLeft,
   ArrowLeft,
   ArrowRight,
+  Bold,
+  Bookmark,
+  BookOpen,
   CheckCircle2,
+  ChevronDown,
+  Columns,
+  Download,
+  Eye,
   History,
+  Image as ImageIcon,
+  Italic,
+  Link2,
+  List,
+  ListTree,
   Loader2,
+  Maximize2,
   Network,
   Paperclip,
   PenLine,
+  Printer,
+  Ruler,
   Search,
   Send,
+  Strikethrough,
+  Table2,
   Trash2,
+  Underline,
   Upload,
   X,
 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
+import { sanitizeHtml } from '../../lib/sanitizeHtml'
+import { cetakSurat } from '../../lib/suratPdf'
 import TablePager from './TablePager'
 import { potongHalaman } from './tablePaging'
 import './office.css'
@@ -136,6 +158,119 @@ function PegawaiTunggal({ nilai, onChange }) {
 // Inbox/Inbox CC Otomatis akan memulangkan ke Daftar Surat, yang bagi penerima
 // tembusan justru kosong (Daftar Surat hanya memuat surat yang ia buat sendiri).
 const ASAL_DEFAULT = { to: '/my-office/daftar', label: 'Daftar Surat' }
+
+// ---------- Isi Surat: tampilan dokumen dengan ribbon dekoratif ala DOF ----------
+const RIBBON_TABS = [
+  { key: 'home', label: 'Home' },
+  { key: 'insert', label: 'Insert' },
+  { key: 'layout', label: 'Page Layout' },
+  { key: 'ref', label: 'References' },
+  { key: 'view', label: 'View' },
+]
+
+// Ikon per tab murni dekoratif (nonaktif) — halaman ini menampilkan surat yang
+// sudah final, bukan editor. Ribbon dipertahankan demi kemiripan visual dengan
+// DOF, yang juga menonaktifkan sebagian besar tombolnya pada tampilan Detail Surat.
+const RIBBON_ICONS = {
+  home: [
+    { Icon: Bold, label: 'Tebal' },
+    { Icon: Italic, label: 'Miring' },
+    { Icon: Underline, label: 'Garis bawah' },
+    { Icon: Strikethrough, label: 'Coret' },
+    { Icon: AlignLeft, label: 'Rata kiri' },
+    { Icon: AlignCenter, label: 'Rata tengah' },
+    { Icon: List, label: 'Daftar' },
+  ],
+  insert: [
+    { Icon: Table2, label: 'Tabel' },
+    { Icon: ImageIcon, label: 'Gambar' },
+    { Icon: Bookmark, label: 'Bookmark' },
+    { Icon: Link2, label: 'Hyperlink' },
+  ],
+  layout: [
+    { Icon: Columns, label: 'Kolom' },
+    { Icon: Ruler, label: 'Margin' },
+  ],
+  ref: [
+    { Icon: BookOpen, label: 'Daftar Isi' },
+    { Icon: ListTree, label: 'Tabel Gambar' },
+  ],
+  view: [
+    { Icon: Eye, label: 'Print Layout' },
+    { Icon: Maximize2, label: 'Full Screen' },
+  ],
+}
+
+function formatTglPanjang(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(d)
+}
+
+function IsiSuratCard({ data }) {
+  const [buka, setBuka] = useState(true)
+  const [ribbonTab, setRibbonTab] = useState('home')
+  const isiBersih = useMemo(() => sanitizeHtml(data.isi || ''), [data.isi])
+
+  return (
+    <div className="mo-card mo-doc">
+      <div className="mo-doc__head">
+        <button type="button" className="mo-doc__title" onClick={() => setBuka((b) => !b)}>
+          Isi Surat <ChevronDown size={16} className={buka ? 'is-open' : undefined} />
+        </button>
+        <div className="mo-doc__tools">
+          <button type="button" className="mo-btn" onClick={() => cetakSurat(data)}><Download size={15} /> Unduh</button>
+          <button type="button" className="mo-btn" onClick={() => cetakSurat(data)}><Printer size={15} /> Cetak</button>
+        </div>
+      </div>
+
+      {buka && (
+        <div className="mo-doc__frame">
+          <div className="mo-doc__ribbon" role="tablist">
+            {RIBBON_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={ribbonTab === t.key}
+                className={`mo-doc__ribtab${ribbonTab === t.key ? ' is-active' : ''}`}
+                onClick={() => setRibbonTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="mo-doc__toolbar">
+            {RIBBON_ICONS[ribbonTab].map(({ Icon, label }) => (
+              <span key={label} className="mo-doc__tool" title={label} aria-disabled="true"><Icon size={15} /></span>
+            ))}
+          </div>
+          <div className="mo-doc__ruler" aria-hidden="true" />
+          <div className="mo-doc__paper">
+            <div className="mo-doc__kop">
+              <img src="/LOGO GCS.png" alt="" />
+              <div>
+                <div className="mo-doc__kop-nama">PT. Gresik Cipta Sejahtera</div>
+                <div className="mo-doc__kop-sub">My Office · Persuratan</div>
+              </div>
+            </div>
+            <div className="mo-doc__meta">
+              {data.nomor && <span>No. {data.nomor}</span>}
+              <span>{formatTglPanjang(data.tanggalSurat)}</span>
+            </div>
+            <div className="mo-doc__judul">{data.judul}</div>
+            {isiBersih ? (
+              <div className="mo-doc__isi" dangerouslySetInnerHTML={{ __html: isiBersih }} />
+            ) : (
+              <div className="mo-doc__kosong">Isi surat belum ditambahkan.</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function SuratDetail() {
   const { id } = useParams()
@@ -353,6 +488,8 @@ export default function SuratDetail() {
               {data.keterangan && <div className="mo-detail--full"><span>Keterangan</span><b>{data.keterangan}</b></div>}
             </div>
           </div>
+
+          <IsiSuratCard data={data} />
 
           <div className="mo-card">
             <div className="mo-card__head">Penanggung Jawab</div>

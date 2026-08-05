@@ -17,9 +17,8 @@ ke **Windows Server + IIS** dengan pendekatan **subfolder** di domain `my.gcs-gr
 | **DB SDM** (`GCS`) | — | SQL Server (live) | `ConnectionStrings:GcsConnection` |
 
 - Frontend & backend **satu origin** → tidak ada CORS; cookie sesi login berfungsi.
-- Backend memakai **tiga database**: `db_mygcs` (Identity, OpenIddict, audit), `GCS` (data SDM
-  live: pegawai, absensi, lembur/SPL, approval), dan `DBSMP` (master jenis surat My Office,
-  hanya dibaca).
+- Backend memakai **dua database**: `db_mygcs` (Identity, OpenIddict, audit, termasuk schema
+  `office` My Office) dan `GCS` (data SDM live: pegawai, absensi, lembur/SPL, approval).
 - Autentikasi: **OpenID Connect (OpenIddict)**, Authorization Code + PKCE.
 
 ---
@@ -73,7 +72,7 @@ C:\inetpub\mygcs\api    <- isi backend/publish
 
 ## 3. Database & SQL Login
 
-Aplikasi butuh tiga database yang **sudah ada** di SQL Server: `db_mygcs`, `GCS`, dan `DBSMP`.
+Aplikasi butuh dua database yang **sudah ada** di SQL Server: `db_mygcs` dan `GCS`.
 
 **Jangan pakai `sa`.** Buat login khusus least-privilege:
 ```sql
@@ -105,13 +104,10 @@ ALTER ROLE db_datareader ADD MEMBER svc_mygcs;   -- tabel & view (ABSENSI_DETAIL
 GRANT EXECUTE ON dbo.checkSppdCuti     TO svc_mygcs;
 GRANT EXECUTE ON dbo.getCatatanMangkir TO svc_mygcs;
 GRANT EXECUTE ON dbo.getDireksi        TO svc_mygcs;
-
--- DBSMP: master jenis surat My Office. HANYA BACA satu tabel - tabelnya milik aplikasi SMP,
--- MyGCS tidak pernah menulis ke sini. Tanpa izin ini, dropdown "Jenis Surat" pada Buat Surat
--- Baru kosong dan surat tidak bisa dibuat.
-USE DBSMP; CREATE USER svc_mygcs FOR LOGIN svc_mygcs;
-GRANT SELECT ON dbo.TB_SURAT_JENIS TO svc_mygcs;
 ```
+> Master jenis surat My Office (dulu dibaca langsung dari `DBSMP.dbo.TB_SURAT_JENIS`) kini
+> disalin ke `office.ref_jenis_surat` di `db_mygcs` lewat `docs/office-jenis-surat-lokal.sql` —
+> tidak ada lagi ketergantungan lintas-database ke `DBSMP` untuk fitur ini.
 > ⚠️ Tabel `web_sdm_spl` & `web_sdm_surat_ijin` punya **trigger legacy** yang bisa **menulis** ke
 > tabel/basis data SDM lain (mis. `GCSSDM`). Bila pengajuan gagal karena error permission dari
 > trigger, koordinasikan dengan DBA/tim SDM untuk hak tulis tambahan yang dibutuhkan trigger.
@@ -208,11 +204,9 @@ Edit `C:\inetpub\mygcs\api\web.config`, tambahkan `<environmentVariables>` di da
   <environmentVariables>
     <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
 
-    <!-- Tiga koneksi database -->
+    <!-- Dua koneksi database -->
     <environmentVariable name="ConnectionStrings__DefaultConnection" value="Server=SQLHOST,PORT;Database=db_mygcs;User Id=svc_mygcs;Password=...;TrustServerCertificate=True;Encrypt=False;" />
     <environmentVariable name="ConnectionStrings__GcsConnection"     value="Server=SQLHOST,PORT;Database=GCS;User Id=svc_mygcs;Password=...;TrustServerCertificate=True;Encrypt=False;" />
-    <!-- DBSMP: master jenis surat My Office (dbo.TB_SURAT_JENIS), cukup hak SELECT -->
-    <environmentVariable name="ConnectionStrings__DbsmpConnection"   value="Server=SQLHOST,PORT;Database=DBSMP;User Id=svc_mygcs;Password=...;TrustServerCertificate=True;Encrypt=False;" />
 
     <!-- Sertifikat OIDC (thumbprint dari Bab 4) -->
     <environmentVariable name="Oidc__SigningCertificateThumbprint"    value="THUMBPRINT_SIGNING" />
@@ -429,7 +423,6 @@ Start-WebAppPool -Name "mygcs-api-pool"
 | `ASPNETCORE_ENVIRONMENT` | `Production` | ✅ |
 | `ConnectionStrings__DefaultConnection` | `...Database=db_mygcs...` | ✅ |
 | `ConnectionStrings__GcsConnection` | `...Database=GCS...` | ✅ |
-| `ConnectionStrings__DbsmpConnection` | `...Database=DBSMP...` | ✅ |
 | `Oidc__SigningCertificateThumbprint` | `A1B2...` | ✅ |
 | `Oidc__EncryptionCertificateThumbprint` | `C3D4...` | ✅ |
 | `Oidc__Issuer` | `https://my.gcs-gresik.com/api` | ✅ |

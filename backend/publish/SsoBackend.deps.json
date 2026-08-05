@@ -13,7 +13,8 @@
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "10.0.9",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.9",
           "OpenIddict.AspNetCore": "7.5.0",
-          "OpenIddict.EntityFrameworkCore": "7.5.0"
+          "OpenIddict.EntityFrameworkCore": "7.5.0",
+          "QuestPDF": "2026.7.2"
         },
         "runtime": {
           "SsoBackend.dll": {}
@@ -779,6 +780,113 @@
           }
         }
       },
+      "QuestPDF/2026.7.2": {
+        "runtime": {
+          "lib/net10.0/QuestPDF.dll": {
+            "assemblyVersion": "2026.7.2.0",
+            "fileVersion": "2026.7.2.0",
+            "localPath": "QuestPDF.dll"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/linux-arm64/native/libQuestPdfSkia.so": {
+            "rid": "linux-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-arm64/native/libQuestPdfSkia.so"
+          },
+          "runtimes/linux-arm64/native/libqpdf.so": {
+            "rid": "linux-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-arm64/native/libqpdf.so"
+          },
+          "runtimes/linux-musl-x64/native/libQuestPdfSkia.so": {
+            "rid": "linux-musl-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-musl-x64/native/libQuestPdfSkia.so"
+          },
+          "runtimes/linux-musl-x64/native/libqpdf.so": {
+            "rid": "linux-musl-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-musl-x64/native/libqpdf.so"
+          },
+          "runtimes/linux-x64/native/libQuestPdfSkia.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-x64/native/libQuestPdfSkia.so"
+          },
+          "runtimes/linux-x64/native/libqpdf.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/linux-x64/native/libqpdf.so"
+          },
+          "runtimes/osx-arm64/native/libQuestPdfSkia.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/osx-arm64/native/libQuestPdfSkia.dylib"
+          },
+          "runtimes/osx-arm64/native/libqpdf.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/osx-arm64/native/libqpdf.dylib"
+          },
+          "runtimes/osx-x64/native/libQuestPdfSkia.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/osx-x64/native/libQuestPdfSkia.dylib"
+          },
+          "runtimes/osx-x64/native/libqpdf.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/osx-x64/native/libqpdf.dylib"
+          },
+          "runtimes/win-arm64/native/QuestPdfSkia.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-arm64/native/QuestPdfSkia.dll"
+          },
+          "runtimes/win-arm64/native/qpdf.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-arm64/native/qpdf.dll"
+          },
+          "runtimes/win-x64/native/QuestPdfSkia.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-x64/native/QuestPdfSkia.dll"
+          },
+          "runtimes/win-x64/native/qpdf.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-x64/native/qpdf.dll"
+          },
+          "runtimes/win-x86/native/QuestPdfSkia.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-x86/native/QuestPdfSkia.dll"
+          },
+          "runtimes/win-x86/native/qpdf.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0",
+            "localPath": "runtimes/win-x86/native/qpdf.dll"
+          }
+        }
+      },
       "System.ClientModel/1.5.1": {
         "dependencies": {
           "System.Memory.Data": "8.0.1"
@@ -1240,6 +1348,13 @@
       "sha512": "sha512-ehTImQ/eUyO07VYW2WvwSmU9rRH200SKJ/3jku9rOkyWE0A2JxNFmAVms8dSn49QLSjmjFRRSgfNyOgr/2PSmA==",
       "path": "polly.ratelimiting/8.4.2",
       "hashPath": "polly.ratelimiting.8.4.2.nupkg.sha512"
+    },
+    "QuestPDF/2026.7.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-GSPOoErqB4Yh7mnbV4m/ykHOF6erHdm5qyMRHDr4sjk+fvrtkEL+RoG5YpOqiWrS833jEiktC1Uthyy5/QMNQA==",
+      "path": "questpdf/2026.7.2",
+      "hashPath": "questpdf.2026.7.2.nupkg.sha512"
     },
     "System.ClientModel/1.5.1": {
       "type": "package",
