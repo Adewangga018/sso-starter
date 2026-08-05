@@ -55,8 +55,18 @@ function buildSections(peran, isJuri) {
     ],
   }
 
-  // Manager & GM hanya melakukan persetujuan (tidak menyumbang gagasan). Sidebar
-  // mereka ramping: menu persetujuan + pemantauan risalah + jejak approval sendiri.
+  const rekapSection = {
+    label: 'Rekap & Statistik Inovasi',
+    items: [
+      { key: 'roadmap', label: 'Roadmap Inovasi', icon: Map, to: `${BASE}/roadmap` },
+      { key: 'rekap-gagasan', label: 'Sumbang Gagasan', icon: MessageSquarePlus, to: `${BASE}/rekap/gagasan` },
+      { key: 'rekap-metodologi', label: 'Inovasi Per Metodologi', icon: Layers, to: `${BASE}/rekap/metodologi` },
+      { key: 'ranking', label: 'Ranking', icon: Medal, to: `${BASE}/rekap/ranking` },
+      { key: 'grafik-gagasan', label: 'Grafik Sumbang Gagasan', icon: BarChart3, to: `${BASE}/rekap/grafik-gagasan` },
+    ],
+  }
+
+  // Manager & GM: menu persetujuan + pemantauan risalah + statistik & rekap + history.
   if (peran === 'Manager' || peran === 'GM') {
     const gagasanItem = peran === 'Manager'
       ? { key: 'gagasan', label: 'Verifikasi Gagasan', icon: ClipboardCheck, to: `${BASE}/gagasan` }
@@ -65,6 +75,7 @@ function buildSections(peran, isJuri) {
       { items: [dashboard] },
       { label: 'Menu Utama', items: [beranda, panduan] },
       { label: peran === 'Manager' ? 'Menu Verifikasi' : 'Menu Persetujuan', items: [gagasanItem, daftar] },
+      rekapSection,
       historySection,
     ])
   }

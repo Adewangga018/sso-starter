@@ -51,6 +51,8 @@ const MODULE_LOGOS = {
   'my-asset': '/asset.png',
   'my-progress': '/progress.png',
   'my-team': '/team.png',
+  payroll: '/payroll.png',
+  'my-payroll': '/payroll.png',
 }
 
 export default function DashboardPage() {
@@ -93,7 +95,7 @@ export default function DashboardPage() {
         {modules.map((mod) => {
           const Icon = ICONS[mod.icon] ?? Users
           const target = MODULE_ROUTES[mod.key]
-          const logo = MODULE_LOGOS[mod.key]
+          const logo = mod.logoUrl ?? MODULE_LOGOS[mod.key]
 
           if (!mod.enabled || !target) {
             return (

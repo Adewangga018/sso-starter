@@ -17,8 +17,8 @@ ke **Windows Server + IIS** dengan pendekatan **subfolder** di domain `my.gcs-gr
 | **DB SDM** (`GCS`) | — | SQL Server (live) | `ConnectionStrings:GcsConnection` |
 
 - Frontend & backend **satu origin** → tidak ada CORS; cookie sesi login berfungsi.
-- Backend memakai **dua database**: `db_mygcs` (Identity, OpenIddict, audit) dan `GCS` (data SDM
-  live: pegawai, absensi, lembur/SPL, approval).
+- Backend memakai **dua database**: `db_mygcs` (Identity, OpenIddict, audit, termasuk schema
+  `office` My Office) dan `GCS` (data SDM live: pegawai, absensi, lembur/SPL, approval).
 - Autentikasi: **OpenID Connect (OpenIddict)**, Authorization Code + PKCE.
 
 ---
@@ -105,6 +105,9 @@ GRANT EXECUTE ON dbo.checkSppdCuti     TO svc_mygcs;
 GRANT EXECUTE ON dbo.getCatatanMangkir TO svc_mygcs;
 GRANT EXECUTE ON dbo.getDireksi        TO svc_mygcs;
 ```
+> Master jenis surat My Office (dulu dibaca langsung dari `DBSMP.dbo.TB_SURAT_JENIS`) kini
+> disalin ke `office.ref_jenis_surat` di `db_mygcs` lewat `docs/office-jenis-surat-lokal.sql` —
+> tidak ada lagi ketergantungan lintas-database ke `DBSMP` untuk fitur ini.
 > ⚠️ Tabel `web_sdm_spl` & `web_sdm_surat_ijin` punya **trigger legacy** yang bisa **menulis** ke
 > tabel/basis data SDM lain (mis. `GCSSDM`). Bila pengajuan gagal karena error permission dari
 > trigger, koordinasikan dengan DBA/tim SDM untuk hak tulis tambahan yang dibutuhkan trigger.

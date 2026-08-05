@@ -144,8 +144,8 @@
   }
 
   .module-tile__logo {
-    height: 32px;
-    max-width: 130px;
+    height: 44px;
+    max-width: 160px;
   }
 
   .module-tile__icon {
@@ -178,7 +178,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 176px;
+  min-height: 195px;
   background: linear-gradient(155deg, #163528 0%, var(--gcs-green-900) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -235,8 +235,8 @@
 }
 
 .module-tile__icon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -250,9 +250,9 @@
 .module-tile__logo {
   align-self: flex-start;
   display: block;
-  height: 40px;
+  height: 56px;
   width: auto;
-  max-width: 150px;
+  max-width: 180px;
   object-fit: contain;
   object-position: left center;
   transition: transform 0.18s ease;

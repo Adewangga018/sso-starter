@@ -1,8 +1,68 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Loader2, Paperclip, Send, Trash2, Upload, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import {
+  AlignCenter,
+  AlignLeft,
+  ArrowLeft,
+  ArrowRight,
+  Bold,
+  Bookmark,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  Columns,
+  Download,
+  Eye,
+  History,
+  Image as ImageIcon,
+  Italic,
+  Link2,
+  List,
+  ListTree,
+  Loader2,
+  Maximize2,
+  Network,
+  Paperclip,
+  PenLine,
+  Printer,
+  Ruler,
+  Search,
+  Send,
+  Strikethrough,
+  Table2,
+  Trash2,
+  Underline,
+  Upload,
+  X,
+} from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
+import { sanitizeHtml } from '../../lib/sanitizeHtml'
+import { cetakSurat } from '../../lib/suratPdf'
+import TablePager from './TablePager'
+import { potongHalaman } from './tablePaging'
 import './office.css'
+
+// Halaman detail surat mengikuti DOF: satu surat, empat tab —
+// Detail Surat (isi & lampiran), Tindak Lanjut (disposisi), Riwayat (jejak akses
+// & alur), Hirarki (rantai drafter -> reviewer -> approver -> penerima).
+const TABS = [
+  { key: 'detail', label: 'Detail Surat', icon: PenLine },
+  { key: 'tindak-lanjut', label: 'Tindak Lanjut', icon: ArrowRight },
+  { key: 'riwayat', label: 'Riwayat', icon: History },
+  { key: 'hirarki', label: 'Hirarki', icon: Network },
+]
+
+const KETERANGAN_TL = ['Diteruskan', 'Disposisi', 'Tanggapan', 'Selesai']
+
+// Warna simpul hirarki mengikuti legenda DOF.
+const PERAN_TONE = {
+  Drafter: 'ungu',
+  Reviewer: 'biru',
+  Approver: 'hijau',
+  Signer: 'hijau',
+  Tujuan: 'kuning',
+  CC: 'abu',
+}
 
 function formatSize(n) {
   if (!n) return ''
@@ -15,6 +75,7 @@ function StatusBadge({ status }) {
   const slug = status.toLowerCase().replace(/\s+/g, '-')
   return <span className={`mo-status mo-status--${slug}`}>{status}</span>
 }
+
 function formatTgl(value) {
   if (!value) return '-'
   const d = new Date(value)
@@ -22,9 +83,201 @@ function formatTgl(value) {
   return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d)
 }
 
+function formatTglJam(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+  }).format(d)
+}
+
+function inisial(nama) {
+  if (!nama) return '?'
+  return nama.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
+}
+
+// Pemilih satu pegawai untuk tujuan tindak lanjut.
+function PegawaiTunggal({ nilai, onChange }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const timer = useRef(null)
+
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults([]); return }
+    setLoading(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(async () => {
+      try { setResults(await api.cariPegawaiOffice(q.trim())) }
+      catch { /* abaikan */ }
+      finally { setLoading(false) }
+    }, 300)
+    return () => clearTimeout(timer.current)
+  }, [q])
+
+  if (nilai) {
+    return (
+      <div className="mo-chips">
+        <span className="mo-chip2">
+          <span>{nilai.nama}</span>
+          <button type="button" onClick={() => onChange(null)} aria-label="Hapus"><X size={12} /></button>
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mo-picker">
+      <div className="mo-picker__input">
+        <Search size={15} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau NIK…" />
+        {loading && <Loader2 size={15} className="mo__spin" />}
+      </div>
+      {results.length > 0 && (
+        <div className="mo-picker__results">
+          {results.map((p) => (
+            <button
+              type="button"
+              key={p.nik}
+              className="mo-picker__result"
+              onClick={() => { onChange(p); setQ(''); setResults([]) }}
+            >
+              <span className="mo-picker__name">{p.nama}</span>
+              <span className="mo-picker__meta">{p.nik}{p.jabatan ? ` · ${p.jabatan}` : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Tombol "Kembali" harus memulangkan ke daftar tempat surat ini dibuka — halaman
+// pemanggil mengirim asalnya lewat router state. Tanpa itu, surat yang dibuka dari
+// Inbox/Inbox CC Otomatis akan memulangkan ke Daftar Surat, yang bagi penerima
+// tembusan justru kosong (Daftar Surat hanya memuat surat yang ia buat sendiri).
+const ASAL_DEFAULT = { to: '/my-office/daftar', label: 'Daftar Surat' }
+
+// ---------- Isi Surat: tampilan dokumen dengan ribbon dekoratif ala DOF ----------
+const RIBBON_TABS = [
+  { key: 'home', label: 'Home' },
+  { key: 'insert', label: 'Insert' },
+  { key: 'layout', label: 'Page Layout' },
+  { key: 'ref', label: 'References' },
+  { key: 'view', label: 'View' },
+]
+
+// Ikon per tab murni dekoratif (nonaktif) — halaman ini menampilkan surat yang
+// sudah final, bukan editor. Ribbon dipertahankan demi kemiripan visual dengan
+// DOF, yang juga menonaktifkan sebagian besar tombolnya pada tampilan Detail Surat.
+const RIBBON_ICONS = {
+  home: [
+    { Icon: Bold, label: 'Tebal' },
+    { Icon: Italic, label: 'Miring' },
+    { Icon: Underline, label: 'Garis bawah' },
+    { Icon: Strikethrough, label: 'Coret' },
+    { Icon: AlignLeft, label: 'Rata kiri' },
+    { Icon: AlignCenter, label: 'Rata tengah' },
+    { Icon: List, label: 'Daftar' },
+  ],
+  insert: [
+    { Icon: Table2, label: 'Tabel' },
+    { Icon: ImageIcon, label: 'Gambar' },
+    { Icon: Bookmark, label: 'Bookmark' },
+    { Icon: Link2, label: 'Hyperlink' },
+  ],
+  layout: [
+    { Icon: Columns, label: 'Kolom' },
+    { Icon: Ruler, label: 'Margin' },
+  ],
+  ref: [
+    { Icon: BookOpen, label: 'Daftar Isi' },
+    { Icon: ListTree, label: 'Tabel Gambar' },
+  ],
+  view: [
+    { Icon: Eye, label: 'Print Layout' },
+    { Icon: Maximize2, label: 'Full Screen' },
+  ],
+}
+
+function formatTglPanjang(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(d)
+}
+
+function IsiSuratCard({ data }) {
+  const [buka, setBuka] = useState(true)
+  const [ribbonTab, setRibbonTab] = useState('home')
+  const isiBersih = useMemo(() => sanitizeHtml(data.isi || ''), [data.isi])
+
+  return (
+    <div className="mo-card mo-doc">
+      <div className="mo-doc__head">
+        <button type="button" className="mo-doc__title" onClick={() => setBuka((b) => !b)}>
+          Isi Surat <ChevronDown size={16} className={buka ? 'is-open' : undefined} />
+        </button>
+        <div className="mo-doc__tools">
+          <button type="button" className="mo-btn" onClick={() => cetakSurat(data)}><Download size={15} /> Unduh</button>
+          <button type="button" className="mo-btn" onClick={() => cetakSurat(data)}><Printer size={15} /> Cetak</button>
+        </div>
+      </div>
+
+      {buka && (
+        <div className="mo-doc__frame">
+          <div className="mo-doc__ribbon" role="tablist">
+            {RIBBON_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={ribbonTab === t.key}
+                className={`mo-doc__ribtab${ribbonTab === t.key ? ' is-active' : ''}`}
+                onClick={() => setRibbonTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="mo-doc__toolbar">
+            {RIBBON_ICONS[ribbonTab].map(({ Icon, label }) => (
+              <span key={label} className="mo-doc__tool" title={label} aria-disabled="true"><Icon size={15} /></span>
+            ))}
+          </div>
+          <div className="mo-doc__ruler" aria-hidden="true" />
+          <div className="mo-doc__paper">
+            <div className="mo-doc__kop">
+              <img src="/LOGO GCS.png" alt="" />
+              <div>
+                <div className="mo-doc__kop-nama">PT. Gresik Cipta Sejahtera</div>
+                <div className="mo-doc__kop-sub">My Office · Persuratan</div>
+              </div>
+            </div>
+            <div className="mo-doc__meta">
+              {data.nomor && <span>No. {data.nomor}</span>}
+              <span>{formatTglPanjang(data.tanggalSurat)}</span>
+            </div>
+            <div className="mo-doc__judul">{data.judul}</div>
+            {isiBersih ? (
+              <div className="mo-doc__isi" dangerouslySetInnerHTML={{ __html: isiBersih }} />
+            ) : (
+              <div className="mo-doc__kosong">Isi surat belum ditambahkan.</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SuratDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const asal = location.state?.asal ?? ASAL_DEFAULT
+  const [tab, setTab] = useState('detail')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,6 +286,14 @@ export default function SuratDetail() {
   const [komentar, setKomentar] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef(null)
+
+  // Isi tab Tindak Lanjut & Hirarki diambil terpisah, hanya saat tabnya dibuka.
+  const [tl, setTl] = useState(null)
+  const [hirarki, setHirarki] = useState(null)
+  const [tlForm, setTlForm] = useState({ keterangan: 'Diteruskan', untuk: null, catatan: '' })
+  const [cariRiwayat, setCariRiwayat] = useState('')
+  const [halRiwayat, setHalRiwayat] = useState(1)
+  const [perRiwayat, setPerRiwayat] = useState(10)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -46,6 +307,18 @@ export default function SuratDetail() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  const loadTl = useCallback(async () => {
+    try { setTl(await api.getTindakLanjutSurat(id)) }
+    catch { setTl([]) }
+  }, [id])
+
+  useEffect(() => {
+    if (tab === 'tindak-lanjut' && tl === null) loadTl()
+    if (tab === 'hirarki' && hirarki === null) {
+      api.getHirarkiSurat(id).then((d) => setHirarki(d?.nodes ?? [])).catch(() => setHirarki([]))
+    }
+  }, [tab, tl, hirarki, id, loadTl])
 
   async function act(fn, okText) {
     setBusy(true); setMsg(null)
@@ -107,6 +380,41 @@ export default function SuratDetail() {
     }
   }
 
+  async function kirimTindakLanjut() {
+    const perluTujuan = tlForm.keterangan === 'Diteruskan' || tlForm.keterangan === 'Disposisi'
+    if (perluTujuan && !tlForm.untuk) {
+      setMsg({ type: 'err', text: 'Pilih pegawai tujuan tindak lanjut.' }); return
+    }
+    setBusy(true); setMsg(null)
+    try {
+      await api.tambahTindakLanjutSurat(id, {
+        keterangan: tlForm.keterangan,
+        untukNik: tlForm.untuk?.nik ?? null,
+        untukNama: tlForm.untuk?.nama ?? null,
+        catatan: tlForm.catatan.trim() || null,
+      })
+      setTlForm({ keterangan: 'Diteruskan', untuk: null, catatan: '' })
+      setMsg({ type: 'ok', text: 'Tindak lanjut dicatat.' })
+      await loadTl()
+      await load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mencatat tindak lanjut.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const riwayatTampil = useMemo(() => {
+    const q = cariRiwayat.trim().toLowerCase()
+    const rows = data?.riwayat ?? []
+    if (!q) return rows
+    return rows.filter((r) =>
+      [r.aksi, r.olehNama, r.catatan].some((v) => (v ?? '').toLowerCase().includes(q)))
+  }, [data, cariRiwayat])
+
+  // Pencarian bisa memperkecil hasil sampai halaman berjalan tak ada lagi.
+  useEffect(() => { setHalRiwayat(1) }, [cariRiwayat, perRiwayat])
+
   if (loading) return <div className="mo"><div className="mo__loading"><Loader2 className="mo__spin" size={20} /> Memuat…</div></div>
   if (error) return <div className="mo"><div className="mo__alert mo__alert--err">{error}</div></div>
   if (!data) return null
@@ -116,158 +424,367 @@ export default function SuratDetail() {
   const tujuan = data.distribusi.filter((d) => d.tipe === 'Tujuan')
   const cc = data.distribusi.filter((d) => d.tipe === 'CC')
   const bisaAksi = data.isPembuat && (data.status === 'Draft' || data.status === 'Revisi')
+  const perluTujuanTl = tlForm.keterangan === 'Diteruskan' || tlForm.keterangan === 'Disposisi'
+  // Rantai persetujuan digambar menurun; penerima berjajar di baris bawah.
+  const rantai = (hirarki ?? []).filter((n) => n.peran !== 'Tujuan' && n.peran !== 'CC')
+  const penerima = (hirarki ?? []).filter((n) => n.peran === 'Tujuan' || n.peran === 'CC')
 
   return (
     <div className="mo">
-      <button type="button" className="mo__back" onClick={() => navigate('/my-office/daftar')}><ArrowLeft size={16} /> Daftar Surat</button>
+      <button type="button" className="mo__back" onClick={() => navigate(asal.to)}>
+        <ArrowLeft size={16} /> {asal.label}
+      </button>
 
       <div className="mo__head-row">
         <div>
           <h2 className="mo__intro-title">{data.judul}</h2>
-          <p className="mo__intro-sub">{data.jenis}{data.nomor ? ` · ${data.nomor}` : ''} · Dibuat {formatTgl(data.dibuatPada)}</p>
+          <p className="mo__intro-sub">
+            {data.jenisNama || data.jenis}{data.nomor ? ` · ${data.nomor}` : ''} · Dibuat {formatTgl(data.dibuatPada)}
+          </p>
         </div>
         <StatusBadge status={data.status} />
       </div>
 
+      <div className="mo-tabs" role="tablist">
+        {TABS.map((t) => {
+          const Icon = t.icon
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={t.key === tab}
+              className={`mo-tab${t.key === tab ? ' is-active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              <Icon size={15} /> {t.label}
+            </button>
+          )
+        })}
+      </div>
+
       {msg && <div className={`mo__alert mo__alert--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
 
-      <div className="mo-card">
-        <div className="mo-card__head">Informasi Surat</div>
-        <div className="mo-detail-grid">
-          <div><span>Jenis</span><b>{data.jenis}</b></div>
-          <div><span>Sifat</span><b>{data.sifat}</b></div>
-          <div><span>Kecepatan</span><b>{data.kecepatan}</b></div>
-          <div><span>Klasifikasi</span><b>{data.klasifikasi || '-'}</b></div>
-          <div><span>Tanggal Surat</span><b>{formatTgl(data.tanggalSurat)}</b></div>
-          <div><span>Pembuat</span><b>{data.pembuatNama || data.pembuatNik}</b></div>
-          {data.berlakuMulai && <div><span>Berlaku</span><b>{formatTgl(data.berlakuMulai)} – {formatTgl(data.berlakuSampai)}</b></div>}
-          {data.keterangan && <div className="mo-detail--full"><span>Keterangan</span><b>{data.keterangan}</b></div>}
-        </div>
-      </div>
-
-      <div className="mo-card">
-        <div className="mo-card__head">Penanggung Jawab</div>
-        <div className="mo-pjcols">
-          <div>
-            <div className="mo-pjcols__title">Reviewer</div>
-            {reviewer.length === 0 ? <div className="mo-empty2">—</div> : reviewer.map((p) => (
-              <div className="mo-person2" key={p.id}>
-                <div><div className="mo-person2__name">{p.nama || p.nik}</div><div className="mo-person2__meta">{p.jabatan || p.nik}</div></div>
-                <StatusBadge status={p.status} />
-              </div>
-            ))}
+      {/* ---------- Tab 1: Detail Surat ---------- */}
+      {tab === 'detail' && (
+        <>
+          <div className="mo-card">
+            <div className="mo-card__head">Informasi Surat</div>
+            <div className="mo-detail-grid">
+              <div><span>No Surat</span><b>{data.nomor || 'Belum terbit'}</b></div>
+              <div><span>Jenis</span><b>{data.jenisNama ? `${data.jenis} · ${data.jenisNama}` : data.jenis}</b></div>
+              <div><span>Bagian</span><b>{data.bagianNama ? `${data.kodeBagian} · ${data.bagianNama}` : (data.kodeBagian || '-')}</b></div>
+              <div><span>Sifat</span><b>{data.sifat}</b></div>
+              <div><span>Kecepatan</span><b>{data.kecepatan}</b></div>
+              <div><span>Tanggal Surat</span><b>{formatTgl(data.tanggalSurat)}</b></div>
+              <div><span>Pembuat</span><b>{data.pembuatNama || data.pembuatNik}</b></div>
+              {data.berlakuMulai && <div><span>Berlaku</span><b>{formatTgl(data.berlakuMulai)} – {formatTgl(data.berlakuSampai)}</b></div>}
+              {data.kodeKlasifikasi && (
+                <div className="mo-detail--full">
+                  <span>Klasifikasi Masalah</span>
+                  <b>{data.kodeKlasifikasi}{data.klasifikasi ? ` · ${data.klasifikasi}` : ''}</b>
+                </div>
+              )}
+              {data.keterangan && <div className="mo-detail--full"><span>Keterangan</span><b>{data.keterangan}</b></div>}
+            </div>
           </div>
-          <div>
-            <div className="mo-pjcols__title">Approver</div>
-            {approver.length === 0 ? <div className="mo-empty2">—</div> : approver.map((p) => (
-              <div className="mo-person2" key={p.id}>
-                <div><div className="mo-person2__name">{p.nama || p.nik}</div><div className="mo-person2__meta">{p.jabatan || p.nik}</div></div>
-                <StatusBadge status={p.status} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {(tujuan.length > 0 || cc.length > 0) && (
+          <IsiSuratCard data={data} />
+
+          <div className="mo-card">
+            <div className="mo-card__head">Penanggung Jawab</div>
+            <div className="mo-pjcols">
+              <div>
+                <div className="mo-pjcols__title">Reviewer</div>
+                {reviewer.length === 0 ? <div className="mo-empty2">—</div> : reviewer.map((p) => (
+                  <div className="mo-person2" key={p.id}>
+                    <div><div className="mo-person2__name">{p.nama || p.nik}</div><div className="mo-person2__meta">{p.jabatan || p.nik}</div></div>
+                    <StatusBadge status={p.status} />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="mo-pjcols__title">Approver</div>
+                {approver.length === 0 ? <div className="mo-empty2">—</div> : approver.map((p) => (
+                  <div className="mo-person2" key={p.id}>
+                    <div><div className="mo-person2__name">{p.nama || p.nik}</div><div className="mo-person2__meta">{p.jabatan || p.nik}</div></div>
+                    <StatusBadge status={p.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {(tujuan.length > 0 || cc.length > 0) && (
+            <div className="mo-card">
+              <div className="mo-card__head">Distribusi</div>
+              <div className="mo-pjcols">
+                <div>
+                  <div className="mo-pjcols__title">Tujuan</div>
+                  {tujuan.length === 0 ? <div className="mo-empty2">—</div> : tujuan.map((d) => (
+                    <div className="mo-person2" key={d.id}><div><div className="mo-person2__name">{d.nama || d.nik}</div><div className="mo-person2__meta">{d.jabatan || d.nik}</div></div></div>
+                  ))}
+                </div>
+                <div>
+                  <div className="mo-pjcols__title">Tembusan (CC)</div>
+                  {cc.length === 0 ? <div className="mo-empty2">—</div> : cc.map((d) => (
+                    <div className="mo-person2" key={d.id}><div><div className="mo-person2__name">{d.nama || d.nik}</div><div className="mo-person2__meta">{d.jabatan || d.nik}</div></div></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mo-card">
+            <div className="mo-card__head mo-card__head--split">
+              <span>Lampiran</span>
+              {bisaAksi && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    hidden
+                    onChange={onUpload}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  />
+                  <button type="button" className="mo-btn mo-btn--soft" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 size={15} className="mo__spin" /> : <Upload size={15} />} Tambah Lampiran
+                  </button>
+                </>
+              )}
+            </div>
+            {data.lampiran.length === 0 ? (
+              <div className="mo-empty2">Belum ada lampiran.</div>
+            ) : (
+              <div className="mo-lamp-list">
+                {data.lampiran.map((l) => (
+                  <div className="mo-lamp" key={l.id}>
+                    <Paperclip size={15} />
+                    <button type="button" className="mo-lamp__name" onClick={() => onDownload(l)} title="Unduh">{l.namaFile}</button>
+                    {l.ukuran ? <span className="mo-lamp__size">{formatSize(l.ukuran)}</span> : null}
+                    {bisaAksi && (
+                      <button type="button" className="mo-lamp__del" onClick={() => onDeleteLamp(l.id)} title="Hapus"><Trash2 size={14} /></button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {data.aksiPeran && (
+            <div className="mo-card">
+              <div className="mo-card__head">Tindakan {data.aksiPeran}</div>
+              <textarea
+                className="mo-approve__note"
+                rows={2}
+                placeholder="Komentar (opsional)…"
+                value={komentar}
+                onChange={(e) => setKomentar(e.target.value)}
+              />
+              <div className="mo-actions">
+                <button type="button" className="mo-btn mo-btn--ghost" onClick={() => doPengesahan('Tolak')} disabled={busy}>Tolak</button>
+                <button type="button" className="mo-btn mo-btn--soft" onClick={() => doPengesahan('Revisi')} disabled={busy}>Minta Revisi</button>
+                <button type="button" className="mo-btn" onClick={() => doPengesahan('Setujui')} disabled={busy}>
+                  {busy ? <Loader2 size={16} className="mo__spin" /> : <CheckCircle2 size={16} />} Setujui
+                </button>
+              </div>
+            </div>
+          )}
+
+          {bisaAksi && (
+            <div className="mo-actions">
+              <button type="button" className="mo-btn mo-btn--ghost" onClick={() => act(api.batalSurat, 'Surat dibatalkan.')} disabled={busy}>
+                <X size={16} /> Batalkan
+              </button>
+              <button type="button" className="mo-btn" onClick={() => act(api.kirimSurat, 'Surat dikirim ke reviewer.')} disabled={busy}>
+                {busy ? <Loader2 size={16} className="mo__spin" /> : <Send size={16} />} Kirim ke Reviewer
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ---------- Tab 2: Tindak Lanjut ---------- */}
+      {tab === 'tindak-lanjut' && (
+        <>
+          {data.bolehTindakLanjut && (
+            <div className="mo-card">
+              <div className="mo-card__head">Catat Tindak Lanjut</div>
+              <div className="mo-form-grid">
+                <div className="mo-field">
+                  <label className="mo-field__label">Keterangan</label>
+                  <select
+                    value={tlForm.keterangan}
+                    onChange={(e) => setTlForm((f) => ({ ...f, keterangan: e.target.value }))}
+                  >
+                    {KETERANGAN_TL.map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </div>
+                <div className="mo-field">
+                  <label className="mo-field__label">
+                    Untuk{!perluTujuanTl && <span className="mo-field__hint"> (opsional)</span>}
+                  </label>
+                  <PegawaiTunggal nilai={tlForm.untuk} onChange={(p) => setTlForm((f) => ({ ...f, untuk: p }))} />
+                </div>
+                <div className="mo-field mo-field--full">
+                  <label className="mo-field__label">Catatan <span className="mo-field__hint">(opsional)</span></label>
+                  <textarea
+                    rows={3}
+                    value={tlForm.catatan}
+                    onChange={(e) => setTlForm((f) => ({ ...f, catatan: e.target.value }))}
+                    placeholder="Instruksi atau tanggapan…"
+                  />
+                </div>
+              </div>
+              <div className="mo-actions">
+                <button type="button" className="mo-btn" onClick={kirimTindakLanjut} disabled={busy}>
+                  {busy ? <Loader2 size={16} className="mo__spin" /> : <ArrowRight size={16} />} Simpan
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mo-card">
+            <div className="mo-card__head">Riwayat Tindak Lanjut</div>
+            <div className="mo-table-wrap">
+              <table className="mo-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Keterangan</th>
+                    <th>Dari</th>
+                    <th>Untuk</th>
+                    <th>Catatan</th>
+                    <th>Lampiran</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tl === null && <tr><td colSpan={6} className="mo-empty">Memuat…</td></tr>}
+                  {tl !== null && tl.length === 0 && (
+                    <tr><td colSpan={6} className="mo-empty">Belum ada riwayat tindak lanjut.</td></tr>
+                  )}
+                  {(tl ?? []).map((r) => (
+                    <tr key={r.id}>
+                      <td>{formatTglJam(r.tgl)}</td>
+                      <td>{r.keterangan}</td>
+                      <td className="mo-inbox__td-wrap">{r.dari || '-'}</td>
+                      <td className="mo-inbox__td-wrap">{r.untuk || '-'}</td>
+                      <td className="mo-inbox__td-wrap">{r.catatan || '-'}</td>
+                      <td>{r.namaLampiran || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ---------- Tab 3: Riwayat ---------- */}
+      {tab === 'riwayat' && (
         <div className="mo-card">
-          <div className="mo-card__head">Distribusi</div>
-          <div className="mo-pjcols">
-            <div>
-              <div className="mo-pjcols__title">Tujuan</div>
-              {tujuan.length === 0 ? <div className="mo-empty2">—</div> : tujuan.map((d) => (
-                <div className="mo-person2" key={d.id}><div><div className="mo-person2__name">{d.nama || d.nik}</div><div className="mo-person2__meta">{d.jabatan || d.nik}</div></div></div>
-              ))}
-            </div>
-            <div>
-              <div className="mo-pjcols__title">Tembusan (CC)</div>
-              {cc.length === 0 ? <div className="mo-empty2">—</div> : cc.map((d) => (
-                <div className="mo-person2" key={d.id}><div><div className="mo-person2__name">{d.nama || d.nik}</div><div className="mo-person2__meta">{d.jabatan || d.nik}</div></div></div>
-              ))}
+          <div className="mo-inbox__bar">
+            <div className="mo-inbox__search">
+              <Search size={16} />
+              <input
+                type="search"
+                value={cariRiwayat}
+                onChange={(e) => setCariRiwayat(e.target.value)}
+                placeholder="Cari riwayat dokumen"
+                aria-label="Cari riwayat dokumen"
+              />
             </div>
           </div>
+          <div className="mo-table-wrap">
+            <table className="mo-table">
+              <thead>
+                <tr><th>Tanggal</th><th>Status</th><th>Oleh</th><th>Catatan</th></tr>
+              </thead>
+              <tbody>
+                {riwayatTampil.length === 0 && (
+                  <tr><td colSpan={4} className="mo-empty">
+                    {cariRiwayat.trim() ? 'Tidak ada riwayat yang cocok.' : 'Belum ada riwayat.'}
+                  </td></tr>
+                )}
+                {potongHalaman(riwayatTampil, halRiwayat, perRiwayat).map((r) => (
+                  <tr key={r.id}>
+                    <td>{formatTglJam(r.tgl)}</td>
+                    <td>{r.aksi}</td>
+                    <td className="mo-inbox__td-wrap">{r.olehNama || '-'}</td>
+                    <td className="mo-inbox__td-wrap">{r.catatan || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Jejak akses satu surat bisa ratusan baris (tiap buka/unduh tercatat). */}
+          <TablePager
+            total={riwayatTampil.length}
+            halaman={halRiwayat}
+            perHalaman={perRiwayat}
+            onHalaman={setHalRiwayat}
+            onPerHalaman={setPerRiwayat}
+          />
         </div>
       )}
 
-      <div className="mo-card">
-        <div className="mo-card__head" style={{ justifyContent: 'space-between' }}>
-          <span>Lampiran</span>
-          {bisaAksi && (
+      {/* ---------- Tab 4: Hirarki ---------- */}
+      {tab === 'hirarki' && (
+        <div className="mo-card">
+          <div className="mo-legend mo-hir__legend">
+            {Object.entries(PERAN_TONE).filter(([p]) => p !== 'Signer').map(([peran, tone]) => (
+              <span className="mo-legend__item" key={peran}>
+                <i className={`mo-hir__dot mo-hir__dot--${tone}`} /> {peran}
+              </span>
+            ))}
+          </div>
+
+          {hirarki === null ? (
+            <div className="mo__loading"><Loader2 className="mo__spin" size={20} /> Memuat…</div>
+          ) : hirarki.length === 0 ? (
+            <div className="mo-empty2">Belum ada alur untuk surat ini.</div>
+          ) : (
             <>
-              <input
-                ref={fileRef}
-                type="file"
-                hidden
-                onChange={onUpload}
-                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-              />
-              <button type="button" className="mo-btn mo-btn--soft" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                {uploading ? <Loader2 size={15} className="mo__spin" /> : <Upload size={15} />} Tambah Lampiran
-              </button>
+              <div className="mo-hir__chain">
+                {rantai.map((n, i) => (
+                  <div className="mo-hir__step" key={`${n.peran}-${n.nik}-${i}`}>
+                    <div className={`mo-hir__node mo-hir__node--${PERAN_TONE[n.peran] || 'abu'}`}>
+                      <div className="mo-hir__head">
+                        <span className="mo-hir__ava">{inisial(n.nama || n.nik)}</span>
+                        <span className="mo-hir__tag">
+                          {n.peran}{n.urutan > 0 ? ` ${n.urutan}` : ''}
+                        </span>
+                      </div>
+                      <div className="mo-hir__nama">{n.nama || n.nik}</div>
+                      <div className="mo-hir__meta">{n.status}{n.tgl ? ` · ${formatTglJam(n.tgl)}` : ''}</div>
+                    </div>
+                    {i < rantai.length - 1 && <div className="mo-hir__arrow" aria-hidden="true" />}
+                  </div>
+                ))}
+              </div>
+
+              {penerima.length > 0 && (
+                <>
+                  <div className="mo-hir__split">Penerima</div>
+                  <div className="mo-hir__row">
+                    {penerima.map((n, i) => (
+                      <div
+                        className={`mo-hir__node mo-hir__node--${PERAN_TONE[n.peran] || 'abu'}`}
+                        key={`${n.peran}-${n.nik}-${i}`}
+                      >
+                        <div className="mo-hir__head">
+                          <span className="mo-hir__ava">{inisial(n.nama || n.nik)}</span>
+                          <span className="mo-hir__tag">{n.peran === 'CC' ? 'CC SURAT' : 'TUJUAN'}</span>
+                        </div>
+                        <div className="mo-hir__nama">{n.nama || n.nik}</div>
+                        <div className="mo-hir__meta">{n.jabatan || n.nik}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
-        </div>
-        {data.lampiran.length === 0 ? (
-          <div className="mo-empty2">Belum ada lampiran.</div>
-        ) : (
-          <div className="mo-lamp-list">
-            {data.lampiran.map((l) => (
-              <div className="mo-lamp" key={l.id}>
-                <Paperclip size={15} />
-                <button type="button" className="mo-lamp__name" onClick={() => onDownload(l)} title="Unduh">{l.namaFile}</button>
-                {l.ukuran ? <span className="mo-lamp__size">{formatSize(l.ukuran)}</span> : null}
-                {bisaAksi && (
-                  <button type="button" className="mo-lamp__del" onClick={() => onDeleteLamp(l.id)} title="Hapus"><Trash2 size={14} /></button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mo-card">
-        <div className="mo-card__head">Riwayat</div>
-        <div className="mo-riwayat">
-          {data.riwayat.length === 0 ? <div className="mo-empty2">Belum ada riwayat.</div> : data.riwayat.map((r) => (
-            <div className="mo-riwayat__item" key={r.id}>
-              <div className="mo-riwayat__dot" />
-              <div>
-                <div className="mo-riwayat__aksi">{r.aksi}{r.olehNama ? ` · ${r.olehNama}` : ''}</div>
-                <div className="mo-riwayat__tgl">{formatTgl(r.tgl)}{r.catatan ? ` — ${r.catatan}` : ''}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {data.aksiPeran && (
-        <div className="mo-card">
-          <div className="mo-card__head">Tindakan {data.aksiPeran}</div>
-          <textarea
-            className="mo-approve__note"
-            rows={2}
-            placeholder="Komentar (opsional)…"
-            value={komentar}
-            onChange={(e) => setKomentar(e.target.value)}
-          />
-          <div className="mo-actions">
-            <button type="button" className="mo-btn mo-btn--ghost" onClick={() => doPengesahan('Tolak')} disabled={busy}>Tolak</button>
-            <button type="button" className="mo-btn mo-btn--soft" onClick={() => doPengesahan('Revisi')} disabled={busy}>Minta Revisi</button>
-            <button type="button" className="mo-btn" onClick={() => doPengesahan('Setujui')} disabled={busy}>
-              {busy ? <Loader2 size={16} className="mo__spin" /> : <CheckCircle2 size={16} />} Setujui
-            </button>
-          </div>
-        </div>
-      )}
-
-      {bisaAksi && (
-        <div className="mo-actions">
-          <button type="button" className="mo-btn mo-btn--ghost" onClick={() => act(api.batalSurat, 'Surat dibatalkan.')} disabled={busy}>
-            <X size={16} /> Batalkan
-          </button>
-          <button type="button" className="mo-btn" onClick={() => act(api.kirimSurat, 'Surat dikirim ke reviewer.')} disabled={busy}>
-            {busy ? <Loader2 size={16} className="mo__spin" /> : <Send size={16} />} Kirim ke Reviewer
-          </button>
         </div>
       )}
     </div>

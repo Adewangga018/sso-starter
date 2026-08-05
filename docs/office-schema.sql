@@ -11,6 +11,7 @@
 IF SCHEMA_ID('office') IS NULL EXEC('CREATE SCHEMA office');
 GO
 
+IF OBJECT_ID('office.surat_dibaca', 'U')     IS NOT NULL DROP TABLE office.surat_dibaca;
 IF OBJECT_ID('office.surat_riwayat', 'U')    IS NOT NULL DROP TABLE office.surat_riwayat;
 IF OBJECT_ID('office.surat_lampiran', 'U')   IS NOT NULL DROP TABLE office.surat_lampiran;
 IF OBJECT_ID('office.surat_distribusi', 'U') IS NOT NULL DROP TABLE office.surat_distribusi;
@@ -106,4 +107,17 @@ CREATE TABLE office.surat_riwayat (
     tgl       DATETIME2     NOT NULL CONSTRAINT df_riw_tgl DEFAULT SYSUTCDATETIME(),
     CONSTRAINT fk_riw_surat FOREIGN KEY (id_surat) REFERENCES office.surat(id) ON DELETE CASCADE
 );
+GO
+
+-- Penanda baca kotak masuk (tab "Belum Dibaca"/"Dibaca" seperti DOF). Satu baris per
+-- (surat, pegawai); tidak adanya baris berarti belum dibaca.
+CREATE TABLE office.surat_dibaca (
+    id_surat    BIGINT       NOT NULL,
+    nik         NVARCHAR(50) NOT NULL,
+    dibaca_pada DATETIME2    NOT NULL CONSTRAINT df_dibaca_tgl DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT pk_surat_dibaca PRIMARY KEY (id_surat, nik),
+    CONSTRAINT fk_dibaca_surat FOREIGN KEY (id_surat) REFERENCES office.surat(id) ON DELETE CASCADE
+);
+GO
+CREATE INDEX ix_dibaca_nik ON office.surat_dibaca (nik);
 GO

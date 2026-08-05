@@ -5,7 +5,7 @@ namespace SsoBackend.Models.Dto;
 // dipaksa false untuk non-Admin sehingga tampil "Coming Soon" (lihat
 // ModuleSettingsService.GetTilesForAsync). Di dashboard Admin, Access = "admin" ditandai badge
 // "Khusus Admin".
-public record ModuleTileDto(string Key, string Label, string Subtitle, string Icon, bool Enabled, string Access = "semua");
+public record ModuleTileDto(string Key, string Label, string Subtitle, string Icon, bool Enabled, string Access = "semua", string? LogoUrl = null);
 
 // Jabatan dipakai sebagai baris kecil di bawah nama pada bilah atas (mis. "INTERN").
 // Tingkatan/Band = level berbasis band (General Manager..Pelaksana Junior / Direksi),

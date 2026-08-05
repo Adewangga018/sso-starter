@@ -1303,3 +1303,129 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- Dashboard Statistik Manager & GM --- */
+.inv__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.inv__stat-card {
+  background: #ffffff;
+  border: 1px solid var(--inv-line);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.inv__stat-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--inv-ink);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inv__progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inv__progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inv__progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--inv-ink);
+  font-weight: 600;
+}
+
+.inv__progress-bar {
+  height: 8px;
+  background: #eef2ef;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.inv__progress-fill {
+  height: 100%;
+  background: var(--inv-green);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.inv__progress-fill--gio {
+  background: #1f6b39;
+}
+
+.inv__progress-fill--ss {
+  background: #2563eb;
+}
+
+.inv__progress-fill--5r {
+  background: #d97706;
+}
+
+.inv__progress-fill--pending {
+  background: #6b7280;
+}
+
+.inv__stat-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.inv__shortcut-card {
+  background: #fff;
+  border: 1px solid var(--inv-line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.inv__shortcut-card:hover {
+  border-color: var(--inv-green);
+  transform: translateY(-2px);
+}
+
+.inv__shortcut-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--inv-green-soft);
+  color: var(--inv-green);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.inv__shortcut-info h4 {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--inv-ink);
+}
+
+.inv__shortcut-info p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--inv-muted);
+}
+

@@ -452,6 +452,10 @@ namespace SsoBackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("IdAtasan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_atasan");
+
                     b.Property<string>("IdKaryawan")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
@@ -499,6 +503,154 @@ namespace SsoBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("pengajuan", "approval", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Aset.Aset", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("catatan");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("IdPic")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pic");
+
+                    b.Property<string>("Kategori")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kategori");
+
+                    b.Property<string>("Kode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode");
+
+                    b.Property<string>("Kondisi")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kondisi");
+
+                    b.Property<string>("Lokasi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("lokasi");
+
+                    b.Property<string>("Merk")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("merk");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<string>("NamaPic")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_pic");
+
+                    b.Property<decimal?>("Nilai")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("nilai");
+
+                    b.Property<string>("NomorSeri")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nomor_seri");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglDiubah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_diubah");
+
+                    b.Property<DateOnly?>("TglPerolehan")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_perolehan");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("aset", "aset", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Aset.AsetMaintenance", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal?>("Biaya")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("biaya");
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("catatan");
+
+                    b.Property<long>("IdAset")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_aset");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("Jenis")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("jenis");
+
+                    b.Property<string>("Pelaksana")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("pelaksana");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateOnly>("TglJadwal")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_jadwal");
+
+                    b.Property<DateOnly?>("TglSelesai")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_selesai");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("maintenance", "aset", t =>
                         {
                             t.ExcludeFromMigrations();
                         });
@@ -621,6 +773,173 @@ namespace SsoBackend.Migrations
                     b.HasIndex("TimestampUtc");
 
                     b.ToTable("AuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Coaching.CoachingBaca", b =>
+                {
+                    b.Property<string>("Nik")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("nik");
+
+                    b.Property<string>("Kanal")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("kanal");
+
+                    b.Property<DateTime>("TglBaca")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_baca");
+
+                    b.HasKey("Nik", "Kanal");
+
+                    b.ToTable("baca", "coaching", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Coaching.CoachingPesan", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("IdPengirim")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pengirim");
+
+                    b.Property<long?>("IdSesi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_sesi");
+
+                    b.Property<string>("Isi")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("isi");
+
+                    b.Property<string>("NamaPengirim")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_pengirim");
+
+                    b.Property<string>("RuangNik")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ruang_nik");
+
+                    b.Property<DateTime>("TglKirim")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_kirim");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("pesan", "coaching", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Coaching.CoachingSesi", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("IdAtasan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_atasan");
+
+                    b.Property<string>("IdBawahan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_bawahan");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("NamaAtasan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_atasan");
+
+                    b.Property<string>("NamaBawahan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_bawahan");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglTerakhir")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_terakhir");
+
+                    b.Property<string>("Topik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("topik");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("sesi", "coaching", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Coaching.CoachingTindakLanjut", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<long>("IdSesi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_sesi");
+
+                    b.Property<string>("Isi")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("isi");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglSelesai")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_selesai");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("tindak_lanjut", "coaching", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("SsoBackend.Models.Cuti.CutiPengajuan", b =>
@@ -749,6 +1068,515 @@ namespace SsoBackend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SsoBackend.Models.Cuti.CutiSetelan", b =>
+                {
+                    b.Property<byte>("Id")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CutiBersama")
+                        .HasColumnType("int")
+                        .HasColumnName("cuti_bersama");
+
+                    b.Property<string>("DiperbaruiOleh")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("diperbarui_oleh");
+
+                    b.Property<DateTime?>("DiperbaruiPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("diperbarui_pada");
+
+                    b.Property<int>("HakDasar")
+                        .HasColumnType("int")
+                        .HasColumnName("hak_dasar");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("setelan", "cuti", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Gaji.GajiKomponen", b =>
+                {
+                    b.Property<int>("IdKomponen")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_komponen");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdKomponen"));
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit")
+                        .HasColumnName("aktif");
+
+                    b.Property<string>("Basis")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("basis");
+
+                    b.Property<string>("Kategori")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kategori");
+
+                    b.Property<bool>("KenaPotonganTerlambat")
+                        .HasColumnType("bit")
+                        .HasColumnName("kena_potongan_terlambat");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("keterangan");
+
+                    b.Property<string>("Kode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<bool>("Opsional")
+                        .HasColumnType("bit")
+                        .HasColumnName("opsional");
+
+                    b.Property<string>("Tipe")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tipe");
+
+                    b.Property<int>("Urutan")
+                        .HasColumnType("int")
+                        .HasColumnName("urutan");
+
+                    b.HasKey("IdKomponen");
+
+                    b.ToTable("komponen", "gaji", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Gaji.GajiPeriode", b =>
+                {
+                    b.Property<int>("IdPeriode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_periode");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPeriode"));
+
+                    b.Property<byte>("Bulan")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("bulan");
+
+                    b.Property<DateTime>("DibuatPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("dibuat_pada");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<short>("Tahun")
+                        .HasColumnType("smallint")
+                        .HasColumnName("tahun");
+
+                    b.HasKey("IdPeriode");
+
+                    b.ToTable("periode", "gaji", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Gaji.GajiSlip", b =>
+                {
+                    b.Property<long>("IdSlip")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_slip");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("IdSlip"));
+
+                    b.Property<DateTime>("DibuatPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("dibuat_pada");
+
+                    b.Property<byte?>("IdBand")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("id_band");
+
+                    b.Property<string>("IdKaryawan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_karyawan");
+
+                    b.Property<int>("IdPeriode")
+                        .HasColumnType("int")
+                        .HasColumnName("id_periode");
+
+                    b.Property<string>("Jabatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("jabatan");
+
+                    b.Property<byte?>("Jg")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("jg");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<byte?>("Pg")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("pg");
+
+                    b.Property<decimal>("PotonganTerlambat")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("potongan_terlambat");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Tingkatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tingkatan");
+
+                    b.HasKey("IdSlip");
+
+                    b.ToTable("slip", "gaji", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Gaji.GajiSlipDetail", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("IdKomponen")
+                        .HasColumnType("int")
+                        .HasColumnName("id_komponen");
+
+                    b.Property<long>("IdSlip")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_slip");
+
+                    b.Property<decimal>("Nominal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("nominal");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("slip_detail", "gaji", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Gaji.GajiTarif", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IdKomponen")
+                        .HasColumnType("int")
+                        .HasColumnName("id_komponen");
+
+                    b.Property<byte>("Jg")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("jg");
+
+                    b.Property<decimal>("Nominal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("nominal");
+
+                    b.Property<byte>("Pg")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("pg");
+
+                    b.Property<short>("TahunBerlaku")
+                        .HasColumnType("smallint")
+                        .HasColumnName("tahun_berlaku");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("tarif", "gaji", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Health.HealthHasil", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal?>("Berat")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("berat");
+
+                    b.Property<string>("IdPencatat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pencatat");
+
+                    b.Property<long>("IdPeriode")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_periode");
+
+                    b.Property<byte[]>("Konten")
+                        .HasColumnType("varbinary(max)")
+                        .HasColumnName("konten");
+
+                    b.Property<string>("Nama")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<string>("NamaFile")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_file");
+
+                    b.Property<string>("NamaPencatat")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_pencatat");
+
+                    b.Property<string>("Nik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nik");
+
+                    b.Property<string>("Rekomendasi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("rekomendasi");
+
+                    b.Property<string>("Ringkasan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ringkasan");
+
+                    b.Property<string>("StatusTindakLanjut")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status_tindak_lanjut");
+
+                    b.Property<string>("StatusUmum")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status_umum");
+
+                    b.Property<string>("TekananDarah")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tekanan_darah");
+
+                    b.Property<DateTime>("TglDicatat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dicatat");
+
+                    b.Property<DateTime?>("TglDiubah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_diubah");
+
+                    b.Property<DateOnly?>("TglPemeriksaan")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_pemeriksaan");
+
+                    b.Property<decimal?>("Tinggi")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("tinggi");
+
+                    b.Property<string>("TipeFile")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tipe_file");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("hasil", "health", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Health.HealthPeriode", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("catatan");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("judul");
+
+                    b.Property<string>("Lokasi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("lokasi");
+
+                    b.Property<string>("Penyelenggara")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("penyelenggara");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("Tahun")
+                        .HasColumnType("int")
+                        .HasColumnName("tahun");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglDiubah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_diubah");
+
+                    b.Property<DateOnly?>("TglMulai")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_mulai");
+
+                    b.Property<DateOnly?>("TglSelesai")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_selesai");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("periode", "health", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Kpi.Kpi", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal?>("Bobot")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("bobot");
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("catatan");
+
+                    b.Property<string>("Deskripsi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("deskripsi");
+
+                    b.Property<long?>("IdParent")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_parent");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("IdPemilik")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pemilik");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("judul");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("level");
+
+                    b.Property<string>("NamaPembuat")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_pembuat");
+
+                    b.Property<string>("NamaPemilik")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_pemilik");
+
+                    b.Property<string>("Periode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("periode");
+
+                    b.Property<decimal>("Realisasi")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("realisasi");
+
+                    b.Property<string>("Satuan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("satuan");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Target")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("target");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglDiubah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_diubah");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("kpi", "kpi", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
             modelBuilder.Entity("SsoBackend.Models.Location", b =>
                 {
                     b.Property<int>("Id")
@@ -800,8 +1628,34 @@ namespace SsoBackend.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsCustom")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LogoPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Subtitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -813,6 +1667,163 @@ namespace SsoBackend.Migrations
                     b.HasKey("ModuleKey");
 
                     b.ToTable("module_access", (string)null);
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.Notifikasi", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("DibacaPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("dibaca_pada");
+
+                    b.Property<DateTime>("DibuatPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("dibuat_pada");
+
+                    b.Property<long?>("IdSurat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_surat");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("judul");
+
+                    b.Property<string>("Nik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nik");
+
+                    b.Property<string>("OlehJabatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("oleh_jabatan");
+
+                    b.Property<string>("OlehNama")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("oleh_nama");
+
+                    b.Property<string>("OlehNik")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("oleh_nik");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("notifikasi", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.RefBagian", b =>
+                {
+                    b.Property<string>("Kode")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("kode");
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit")
+                        .HasColumnName("aktif");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<int>("Urutan")
+                        .HasColumnType("int")
+                        .HasColumnName("urutan");
+
+                    b.HasKey("Kode");
+
+                    b.ToTable("ref_bagian", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.RefBagianUnit", b =>
+                {
+                    b.Property<string>("NamaUnit")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("nama_unit");
+
+                    b.Property<string>("KodeBagian")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode_bagian");
+
+                    b.Property<string>("Tingkat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tingkat");
+
+                    b.HasKey("NamaUnit");
+
+                    b.ToTable("ref_bagian_unit", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.RefJenisSurat", b =>
+                {
+                    b.Property<string>("Kode")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("kode");
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit")
+                        .HasColumnName("aktif");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<int>("Urutan")
+                        .HasColumnType("int")
+                        .HasColumnName("urutan");
+
+                    b.HasKey("Kode");
+
+                    b.ToTable("ref_jenis_surat", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.RefKlasifikasi", b =>
+                {
+                    b.Property<string>("Kode")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("kode");
+
+                    b.Property<bool>("Aktif")
+                        .HasColumnType("bit")
+                        .HasColumnName("aktif");
+
+                    b.Property<string>("Kelompok")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kelompok");
+
+                    b.Property<string>("Masalah")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("masalah");
+
+                    b.HasKey("Kode");
+
+                    b.ToTable("ref_klasifikasi", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
                 });
 
             modelBuilder.Entity("SsoBackend.Models.Office.Surat", b =>
@@ -867,6 +1878,14 @@ namespace SsoBackend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("klasifikasi");
 
+                    b.Property<string>("KodeBagian")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode_bagian");
+
+                    b.Property<string>("KodeKlasifikasi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode_klasifikasi");
+
                     b.Property<string>("Nomor")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("nomor");
@@ -897,6 +1916,28 @@ namespace SsoBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("surat", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.SuratDibaca", b =>
+                {
+                    b.Property<long>("IdSurat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_surat");
+
+                    b.Property<string>("Nik")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("nik");
+
+                    b.Property<DateTime>("DibacaPada")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("dibaca_pada");
+
+                    b.HasKey("IdSurat", "Nik");
+
+                    b.ToTable("surat_dibaca", "office", t =>
                         {
                             t.ExcludeFromMigrations();
                         });
@@ -1085,6 +2126,233 @@ namespace SsoBackend.Migrations
                     b.HasIndex("IdSurat");
 
                     b.ToTable("surat_riwayat", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Office.SuratTindakLanjut", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("catatan");
+
+                    b.Property<string>("DariNama")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("dari_nama");
+
+                    b.Property<string>("DariNik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("dari_nik");
+
+                    b.Property<long>("IdSurat")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_surat");
+
+                    b.Property<string>("Keterangan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("keterangan");
+
+                    b.Property<string>("NamaLampiran")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_lampiran");
+
+                    b.Property<string>("PathLampiran")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("path_lampiran");
+
+                    b.Property<DateTime>("Tgl")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl");
+
+                    b.Property<string>("Tipe")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tipe");
+
+                    b.Property<long?>("Ukuran")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ukuran");
+
+                    b.Property<string>("UntukNama")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("untuk_nama");
+
+                    b.Property<string>("UntukNik")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("untuk_nik");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("surat_tindak_lanjut", "office", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Prosedur.ProsedurAcknowledgement", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("IdDokumen")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_dokumen");
+
+                    b.Property<long>("IdVersi")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_versi");
+
+                    b.Property<string>("Nama")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama");
+
+                    b.Property<string>("Nik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nik");
+
+                    b.Property<DateTime>("Tgl")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("acknowledgement", "prosedur", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Prosedur.ProsedurDokumen", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Deskripsi")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("deskripsi");
+
+                    b.Property<string>("IdPembuat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_pembuat");
+
+                    b.Property<string>("Jenis")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("jenis");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("judul");
+
+                    b.Property<string>("Kategori")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kategori");
+
+                    b.Property<string>("Kode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("kode");
+
+                    b.Property<DateTime>("TglDibuat")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_dibuat");
+
+                    b.Property<DateTime?>("TglDiubah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_diubah");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("unit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("dokumen", "prosedur", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("SsoBackend.Models.Prosedur.ProsedurVersi", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("IdDokumen")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_dokumen");
+
+                    b.Property<string>("IdPenerbit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("id_penerbit");
+
+                    b.Property<byte[]>("Konten")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)")
+                        .HasColumnName("konten");
+
+                    b.Property<string>("NamaFile")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_file");
+
+                    b.Property<string>("NamaPenerbit")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("nama_penerbit");
+
+                    b.Property<string>("Ringkasan")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ringkasan");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("TglBerlaku")
+                        .HasColumnType("date")
+                        .HasColumnName("tgl_berlaku");
+
+                    b.Property<DateTime>("TglUnggah")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("tgl_unggah");
+
+                    b.Property<string>("TipeFile")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("tipe_file");
+
+                    b.Property<int>("Versi")
+                        .HasColumnType("int")
+                        .HasColumnName("versi");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("versi", "prosedur", t =>
                         {
                             t.ExcludeFromMigrations();
                         });

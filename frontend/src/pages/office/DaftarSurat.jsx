@@ -86,7 +86,7 @@ export default function DaftarSurat() {
                   <tr key={s.id}>
                     <td>{formatTgl(s.tanggalSurat ?? s.dibuatPada)}</td>
                     <td className="mo-td-judul">{s.judul}</td>
-                    <td>{s.jenis}</td>
+                    <td>{s.jenisNama || s.jenis}</td>
                     <td>{s.sifat}</td>
                     <td>{s.kecepatan}</td>
                     <td><StatusBadge status={s.status} /></td>

@@ -18,6 +18,21 @@ public class ModuleAccess
 
     public DateTime UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
+
+    // Kolom di bawah ini hanya terisi untuk modul custom (IsCustom = true), yaitu modul yang
+    // dibuat Admin IT dari Panel Admin > Akses Modul, bukan salah satu dari ModuleCatalog.All.
+    // Untuk modul katalog, Label/Subtitle/Icon tetap dari ModuleCatalog - baris ini cuma override.
+    public bool IsCustom { get; set; }
+    public string? Label { get; set; }
+    public string? Subtitle { get; set; }
+    public string? Icon { get; set; }
+
+    // Path relatif file logo di bawah folder uploads/modules (mis. "a1b2c3d4.png"), dipakai
+    // baik untuk modul katalog maupun modul custom. Null = belum ada logo yang diupload.
+    public string? LogoPath { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+    public string? CreatedBy { get; set; }
 }
 
 public static class ModuleAccessLevels

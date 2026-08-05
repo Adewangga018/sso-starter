@@ -230,7 +230,10 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
   const [metodologi, setMetodologi] = useState('SS')
 
   // Lintas departemen => SS tidak boleh (SS anggota satu departemen); hanya GIO/5R.
-  const lintasDept = Boolean(g?.namaDepartemenTujuan)
+  // Dibandingkan lewat ID, bukan sekadar "namaDepartemenTujuan ada isinya" - data lama bisa
+  // punya idDepartemenTujuan terisi tapi nilainya sama dengan idDepartemenAsal (harusnya null
+  // kalau tujuannya sama dengan asal), yang salah kalau cuma dicek truthy-nya saja.
+  const lintasDept = Boolean(g?.idDepartemenTujuan) && g.idDepartemenTujuan !== g.idDepartemenAsal
   const metodOptions = lintasDept ? ['GIO', '5R'] : ['SS', 'GIO', '5R']
 
   async function load() {
@@ -239,7 +242,7 @@ function DetailModal({ id, onClose, onChanged, navigate }) {
       setG(d)
       setEdit({ judul: d.judul, latarBelakang: d.latarBelakang ?? '', masalah: d.masalah ?? '', solusi: d.solusi ?? '' })
       if (d.metodologi) setMetodologi(d.metodologi)
-      else if (d.namaDepartemenTujuan) setMetodologi('GIO')
+      else if (d.idDepartemenTujuan && d.idDepartemenTujuan !== d.idDepartemenAsal) setMetodologi('GIO')
     } catch (e) { setErr(e instanceof ApiError ? e.message : 'Gagal memuat.') }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps

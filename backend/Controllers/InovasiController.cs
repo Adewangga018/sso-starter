@@ -708,15 +708,28 @@ public class InovasiController : ControllerBase
         var roster = await query
             .OrderBy(p => p.nama)
             .Take(500)
-            .Select(p => new { p.Nik, Nama = p.nama, Jabatan = p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
+            .Select(p => new { p.Nik, Nama = p.nama, Jabatan = p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN, p.BAGIAN })
             .ToListAsync();
 
-        // Resolusi departemen/kompartemen untuk kolom (kosong bila pegawai non-organik).
+        // Resolusi departemen/kompartemen untuk kolom. Utamakan grading.penempatan/pegawai_tkno;
+        // pegawai yang tidak punya baris di keduanya (mis. sedang cuti panjang sehingga
+        // penempatannya nonaktif) di-fallback lewat nama departemen di PEGAWAI_SDM.BAGIAN.
         var orgMap = await _org.ResolveManyAsync(roster.Select(r => r.Nik).ToList());
+        var bagianFallback = await _org.ResolveManyByDepartemenNamaAsync(
+            roster.Where(r => !orgMap.ContainsKey(r.Nik) || orgMap[r.Nik].NamaDepartemen is null)
+                .Select(r => r.BAGIAN!).ToList());
+
         var items = roster.Select(r =>
         {
             orgMap.TryGetValue(r.Nik, out var o);
-            return new InovasiPegawaiDirektoriDto(r.Nik, r.Nama ?? r.Nik, r.Jabatan, r.Unit, o?.NamaDepartemen, o?.NamaKompartemen);
+            var namaDept = o?.NamaDepartemen;
+            var namaKomp = o?.NamaKompartemen;
+            if (namaDept is null && r.BAGIAN is { } bagian && bagianFallback.TryGetValue(bagian, out var fb))
+            {
+                namaDept = fb.NamaDepartemen;
+                namaKomp = fb.NamaKompartemen;
+            }
+            return new InovasiPegawaiDirektoriDto(r.Nik, r.Nama ?? r.Nik, r.Jabatan, r.Unit, namaDept, namaKomp);
         }).ToList();
 
         return Ok(items);

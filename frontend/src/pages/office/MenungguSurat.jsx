@@ -75,12 +75,20 @@ export default function MenungguSurat({ mode }) {
                   <tr key={s.id}>
                     <td>{formatTgl(s.tanggalSurat ?? s.dibuatPada)}</td>
                     <td className="mo-td-judul">{s.judul}</td>
-                    <td>{s.jenis}</td>
+                    <td>{s.jenisNama || s.jenis}</td>
                     <td>{s.sifat}</td>
                     <td>{s.kecepatan}</td>
                     <td><StatusBadge status={s.status} /></td>
                     <td>
-                      <Link to={`/my-office/surat/${s.id}`} className="mo-icon-btn" title="Lihat & tindak">
+                      <Link
+                        to={`/my-office/surat/${s.id}`}
+                        state={{ asal: {
+                          to: `/my-office/${mode === 'approval' ? 'approval' : 'review'}`,
+                          label: mode === 'approval' ? 'Menunggu Approval' : 'Menunggu Review',
+                        } }}
+                        className="mo-icon-btn"
+                        title="Lihat & tindak"
+                      >
                         <Eye size={15} />
                       </Link>
                     </td>
