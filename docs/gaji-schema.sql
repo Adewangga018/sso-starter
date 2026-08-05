@@ -6,16 +6,12 @@
    tahun) disimpan di gaji.tarif dan SENGAJA dibiarkan kosong dulu (dikonfigurasi
    admin modul SDM belakangan).
 
-   Komponen mengikuti "komponen_gaji.xlsx":
-     Pendapatan : Gaji Pokok; Tunjangan Tetap (Jabatan, Perumahan);
-                  Tunjangan Tidak Tetap (Angkutan, Pangan, Lembur, Uang Makan
-                                         Dinas, RIT);
-                  Tunjangan Lain (BPJS Kesehatan, BPJS Ketenagakerjaan, Pajak, Shift,
-                                  Luar Daerah) *opsional
-     Potongan Tetap      : BPJS Kes, BPJS TK, Premi Asuransi, Pajak, Iuran IKGCS,
-                           Simpanan Wajib K3PG, Simpanan Wajib KKCS, DPLK, PIKGCS
-     Potongan Tidak Tetap: Potongan Presensi, K3PG, KKCS, BMT, Angsuran, KSPPS K3PG
-   Potongan Presensi kini komponen BERDIRI SENDIRI (bukan lagi memotong Tunjangan
+   Komponen mengikuti "komponen_gaji.xlsx". SEED DI BAWAH = state ASLI/historis;
+   pemecahan sub-komponen (Lembur x3, BPJS TK tunjangan x4 & potongan x2) dan
+   tambahan (Tunjangan PTS, Premi Asuransi tunjangan) ada di patch susulan
+   docs\gaji-komponen-tambahan.sql lalu docs\gaji-komponen-v2.sql (keduanya
+   idempoten, jalan berurutan setelah skrip ini - lihat prod-migrasi.sql).
+   Potongan Presensi komponen BERDIRI SENDIRI (bukan memotong Tunjangan
    Pangan/Angkutan). Kolom kena_potongan_terlambat tidak lagi dipakai (semua 0).
 
    SQL Server 2014 (compat 120): tanpa CREATE OR ALTER / DROP IF EXISTS / AT TIME

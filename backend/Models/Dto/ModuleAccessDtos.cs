@@ -20,3 +20,15 @@ public record ModuleSettingRequest(bool Enabled, string Access);
 // ModuleCatalog. Modul yang baru dibuat belum punya halaman sungguhan - tampil sebagai kartu
 // "Coming Soon" di dashboard sampai developer membangun modulnya dan menghubungkan route-nya.
 public record CreateModuleRequest(string Key, string Label, string Subtitle, string Icon, bool Enabled, string Access);
+
+// Satu baris fitur (item menu sidebar) di halaman Akses Modul, di bawah modulnya.
+public record FeatureSettingDto(
+    string Key,
+    string ModuleKey,
+    string Label,
+    bool Enabled,
+    DateTime? UpdatedAt,
+    string? UpdatedBy);
+
+// Body PUT /admin/features/{key}.
+public record FeatureSettingRequest(bool Enabled);

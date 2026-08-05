@@ -13,8 +13,8 @@ function buildSections() {
     {
       label: 'My Asset',
       items: [
-        { key: 'inventaris', label: 'Inventaris', icon: Boxes, to: '/my-asset', end: true },
-        { key: 'maintenance', label: 'Maintenance', icon: Wrench, to: '/my-asset/maintenance' },
+        { key: 'inventaris', feature: 'my-asset:inventaris', label: 'Inventaris', icon: Boxes, to: '/my-asset', end: true },
+        { key: 'maintenance', feature: 'my-asset:maintenance', label: 'Maintenance', icon: Wrench, to: '/my-asset/maintenance' },
       ],
     },
   ]

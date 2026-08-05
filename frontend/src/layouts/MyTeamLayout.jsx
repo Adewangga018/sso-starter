@@ -17,9 +17,9 @@ function buildSections() {
     {
       label: 'My Team',
       items: [
-        { key: 'tim', label: 'Tim & Tugas', icon: Users2, to: '/team', end: true },
-        { key: 'coaching', label: 'Coaching', icon: MessagesSquare, to: '/team/coaching' },
-        { key: 'rekap', label: 'Rekap Tim', icon: BarChart3, to: '/team/rekap' },
+        { key: 'tim', feature: 'my-team:tim', label: 'Tim & Tugas', icon: Users2, to: '/team', end: true },
+        { key: 'coaching', feature: 'my-team:coaching', label: 'Coaching', icon: MessagesSquare, to: '/team/coaching' },
+        { key: 'rekap', feature: 'my-team:rekap', label: 'Rekap Tim', icon: BarChart3, to: '/team/rekap' },
       ],
     },
   ]

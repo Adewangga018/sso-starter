@@ -17,6 +17,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("personal/izin")]
 [ModuleGate("my-personal")]
+[FeatureGate("my-personal:izin")]
 public class IzinController : ControllerBase
 {
     private const string StatusDibuat = "Di Buat";

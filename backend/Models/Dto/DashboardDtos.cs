@@ -21,4 +21,7 @@ public record DashboardSummaryDto(
     bool ProfileComplete = true,
     string? Tingkatan = null,
     int? Band = null,
-    bool IsAdminModulSdm = false);
+    bool IsAdminModulSdm = false,
+    // Kunci fitur (item menu) yang dikunci Admin IT. Frontend menyembunyikannya bagi
+    // non-Admin IT & memblok rutenya. Lihat FeatureCatalog / FeatureSettingsService.
+    IReadOnlyList<string>? LockedFeatures = null);

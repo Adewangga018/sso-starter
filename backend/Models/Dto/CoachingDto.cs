@@ -18,7 +18,22 @@ public record CoachingRuangRingkasDto(
 
 public record CoachingInboxDto(
     IReadOnlyList<CoachingSesiRingkasDto> Sesi,
-    IReadOnlyList<CoachingRuangRingkasDto> Ruang);
+    IReadOnlyList<CoachingRuangRingkasDto> Ruang,
+    bool IsAdminSdm);
+
+// Admin SDM — daftar "Semua Coaching" (sesi & ruang seluruh karyawan) untuk unduh transkrip.
+public record CoachingAdminItemDto(
+    string Tipe, long? IdSesi, string? OwnerNik, string Judul, string? Topik,
+    string? Status, int JumlahPesan, DateTime? TglTerakhir);
+
+public record CoachingAdminListDto(
+    IReadOnlyList<CoachingAdminItemDto> Sesi, IReadOnlyList<CoachingAdminItemDto> Ruang);
+
+// Data transkrip untuk PDF (internal). Waktu sudah WIB.
+public record CoachingTranscriptPesan(string Nama, DateTime TglKirim, string Isi);
+public record CoachingTranscript(
+    string Judul, IReadOnlyList<string> Meta,
+    IReadOnlyList<CoachingTranscriptPesan> Pesan, string NamaBerkas);
 
 // Kandidat lawan bicara untuk sesi baru (atasan langsung + bawahan langsung efektif).
 public record LawanBicaraDto(string Nik, string Nama, string? Jabatan, string Peran);

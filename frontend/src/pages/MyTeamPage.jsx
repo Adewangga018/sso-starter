@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Briefcase, Building2, CheckCircle2, ChevronUp, CircleDashed, CircleSlash,
-  Clock, ClipboardList, Download, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
+  Briefcase, Building2, Check, CheckCircle2, ChevronUp, CircleDashed, CircleSlash,
+  Clock, ClipboardList, Copy, Download, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import './MyTeamPage.css'
@@ -55,6 +55,7 @@ export default function MyTeamPage() {
   const [tab, setTab] = useState('saya') // 'saya' | 'diberikan'
   const [dragId, setDragId] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  const [copiedId, setCopiedId] = useState(null)
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ idPenerima: '', judul: '', deskripsi: '', tenggat: '' })
   const [saving, setSaving] = useState(false)
@@ -163,6 +164,34 @@ export default function MyTeamPage() {
       await reload(semua)
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menghapus tugas.' })
+    }
+  }
+
+  // Salin isi tugas (baik yang diberikan maupun yang diturunkan) ke clipboard.
+  async function copyTugas(t) {
+    const tenggat = t.tenggat
+      ? new Date(t.tenggat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null
+    const text = [
+      t.judul,
+      t.deskripsi ? `\n${t.deskripsi}` : null,
+      '',
+      (t.namaPemberi || t.idPemberi) ? `Dari: ${t.namaPemberi ?? t.idPemberi}` : null,
+      (t.namaPenerima || t.idPenerima) ? `Untuk: ${t.namaPenerima ?? t.idPenerima}` : null,
+      tenggat ? `Tenggat: ${tenggat}` : null,
+      `Status: ${t.status}`,
+    ].filter((l) => l !== null).join('\n')
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text)
+      else {
+        const ta = document.createElement('textarea')
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove()
+      }
+      setCopiedId(t.id)
+      setTimeout(() => setCopiedId((c) => (c === t.id ? null : c)), 1500)
+    } catch {
+      setMsg({ type: 'err', text: 'Gagal menyalin isi tugas.' })
     }
   }
 
@@ -310,11 +339,21 @@ export default function MyTeamPage() {
                           >
                             <div className="mt-task__top">
                               <span className="mt-task__title">{t.judul}</span>
-                              {canManage && (
-                                <button type="button" className="mt-task__del" title="Hapus" onClick={() => deleteTugas(t.id)}>
-                                  <Trash2 size={13} />
+                              <div className="mt-task__actions">
+                                <button
+                                  type="button"
+                                  className={`mt-task__copy${copiedId === t.id ? ' is-copied' : ''}`}
+                                  title={copiedId === t.id ? 'Tersalin' : 'Salin isi tugas'}
+                                  onClick={() => copyTugas(t)}
+                                >
+                                  {copiedId === t.id ? <Check size={13} /> : <Copy size={13} />}
                                 </button>
-                              )}
+                                {canManage && (
+                                  <button type="button" className="mt-task__del" title="Hapus" onClick={() => deleteTugas(t.id)}>
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             {t.deskripsi && <div className="mt-task__desc">{t.deskripsi}</div>}
                             <div className="mt-task__foot">

@@ -303,3 +303,14 @@
     gap: 9px;
   }
 }
+
+/* ---- Fitur (item menu) per modul ---- */
+.admin-modules__expand { border: none; background: none; cursor: pointer; color: var(--gcs-text-muted); padding: 2px; border-radius: 6px; display: inline-flex; align-items: center; flex: none; }
+.admin-modules__expand:hover { background: var(--gcs-bg); color: var(--gcs-green-700); }
+.admin-modules__expand-spacer { width: 20px; flex: none; display: inline-block; }
+.admin-modules__feature-row { background: var(--gcs-bg); }
+.admin-modules__feature-row td { border-top: none; }
+.admin-modules__feature { display: flex; align-items: center; gap: 8px; padding-left: 56px; font-size: 0.88rem; color: var(--gcs-ink); }
+.admin-modules__feature svg { color: var(--gcs-text-muted); flex: none; }
+.admin-modules__feature-locked { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #b03636; background: #fbeaea; padding: 1px 7px; border-radius: 999px; }
+.admin-modules__feature-hint { font-size: 0.78rem; color: var(--gcs-text-muted); }

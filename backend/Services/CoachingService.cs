@@ -14,8 +14,15 @@ namespace SsoBackend.Services;
 public class CoachingService
 {
     private readonly ApplicationDbContext _db;
+    private readonly ModuleAccessService _access;
 
-    public CoachingService(ApplicationDbContext db) => _db = db;
+    public CoachingService(ApplicationDbContext db, ModuleAccessService access)
+    {
+        _db = db;
+        _access = access;
+    }
+
+    private static DateTime Wib(DateTime utc) => utc.AddHours(7);
 
     // ===================== Inbox =====================
     public async Task<CoachingInboxDto> GetInboxAsync(string nik)
@@ -66,7 +73,93 @@ public class CoachingService
                 last?.Isi, last?.TglKirim, Unread($"ruang:{nik}", last)));
         }
 
-        return new CoachingInboxDto(sesi, ruang);
+        return new CoachingInboxDto(sesi, ruang, await _access.IsSdmAdminAsync(nik));
+    }
+
+    // ===================== Download transkrip (PDF) =====================
+    // Akses: peserta sesi/ruang, ATAU Admin Modul SDM (semua coaching).
+    public async Task<CoachingTranscript?> GetSesiTranscriptAsync(string nik, long id)
+    {
+        var s = await _db.CoachingSesi.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (s is null) return null;
+        var peserta = s.IdAtasan == nik || s.IdBawahan == nik;
+        if (!peserta && !await _access.IsSdmAdminAsync(nik)) return null;
+
+        var pesan = await _db.CoachingPesan.AsNoTracking()
+            .Where(p => p.IdSesi == id).OrderBy(p => p.Id).ToListAsync();
+
+        var meta = new List<string>
+        {
+            $"Atasan: {s.NamaAtasan ?? s.IdAtasan}",
+            $"Bawahan: {s.NamaBawahan ?? s.IdBawahan}",
+            $"Topik: {s.Topik}",
+            $"Status: {s.Status}",
+            $"Jumlah pesan: {pesan.Count}",
+            $"Diunduh: {Wib(DateTime.UtcNow):dd MMM yyyy HH:mm} WIB",
+        };
+        return new CoachingTranscript(
+            $"Coaching 1-on-1: {s.NamaAtasan ?? s.IdAtasan} & {s.NamaBawahan ?? s.IdBawahan}",
+            meta,
+            pesan.Select(p => new CoachingTranscriptPesan(p.NamaPengirim ?? p.IdPengirim, Wib(p.TglKirim), p.Isi)).ToList(),
+            $"coaching-sesi-{id}.pdf");
+    }
+
+    public async Task<CoachingTranscript?> GetRuangTranscriptAsync(string nik, string ownerNik)
+    {
+        var anggota = await PeranRuangAsync(nik, ownerNik) is not null;
+        if (!anggota && !await _access.IsSdmAdminAsync(nik)) return null;
+        // Ruang hanya "ada" bila pemiliknya memang punya bawahan; jika tidak & bukan admin, tolak.
+        var ownerPunyaTim = (await EffectiveBawahanAsync(ownerNik)).Count > 0;
+        if (!ownerPunyaTim) return null;
+
+        var ownerNama = await NamaPenempatanAsync(ownerNik) ?? ownerNik;
+        var pesan = await _db.CoachingPesan.AsNoTracking()
+            .Where(p => p.RuangNik == ownerNik).OrderBy(p => p.Id).ToListAsync();
+
+        var meta = new List<string>
+        {
+            $"Pemilik / Atasan: {ownerNama}",
+            $"Jumlah pesan: {pesan.Count}",
+            $"Diunduh: {Wib(DateTime.UtcNow):dd MMM yyyy HH:mm} WIB",
+        };
+        return new CoachingTranscript(
+            $"Coaching Ruang Tim: {ownerNama}",
+            meta,
+            pesan.Select(p => new CoachingTranscriptPesan(p.NamaPengirim ?? p.IdPengirim, Wib(p.TglKirim), p.Isi)).ToList(),
+            $"coaching-ruang-{ownerNik}.pdf");
+    }
+
+    // ===================== Admin SDM: daftar semua coaching =====================
+    public async Task<CoachingAdminListDto?> GetAllCoachingAsync(string nik)
+    {
+        if (!await _access.IsSdmAdminAsync(nik)) return null;
+
+        var sesiRows = await _db.CoachingSesi.AsNoTracking()
+            .OrderByDescending(s => s.TglTerakhir ?? s.TglDibuat).ToListAsync();
+        var sesiCount = (await _db.CoachingPesan.AsNoTracking()
+            .Where(p => p.IdSesi != null)
+            .GroupBy(p => p.IdSesi!.Value)
+            .Select(g => new { Id = g.Key, N = g.Count() }).ToListAsync())
+            .ToDictionary(x => x.Id, x => x.N);
+        var sesi = sesiRows.Select(s => new CoachingAdminItemDto(
+            "sesi", s.Id, null,
+            $"{s.NamaAtasan ?? s.IdAtasan} & {s.NamaBawahan ?? s.IdBawahan}",
+            s.Topik, s.Status,
+            sesiCount.TryGetValue(s.Id, out var n) ? n : 0,
+            s.TglTerakhir ?? s.TglDibuat)).ToList();
+
+        var ruangGroups = await _db.CoachingPesan.AsNoTracking()
+            .Where(p => p.RuangNik != null)
+            .GroupBy(p => p.RuangNik!)
+            .Select(g => new { Owner = g.Key, N = g.Count(), Last = g.Max(x => x.TglKirim) })
+            .ToListAsync();
+        var ruang = new List<CoachingAdminItemDto>();
+        foreach (var rg in ruangGroups.OrderByDescending(x => x.Last))
+        {
+            var nama = await NamaPenempatanAsync(rg.Owner) ?? rg.Owner;
+            ruang.Add(new CoachingAdminItemDto("ruang", null, rg.Owner, $"Tim {nama}", null, null, rg.N, rg.Last));
+        }
+        return new CoachingAdminListDto(sesi, ruang);
     }
 
     // Kandidat lawan bicara sesi baru: atasan langsung + bawahan langsung efektif.

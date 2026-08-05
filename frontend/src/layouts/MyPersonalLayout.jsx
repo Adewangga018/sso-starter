@@ -34,9 +34,9 @@ function buildSections(profileComplete) {
     {
       label: 'My Personal',
       items: [
-        { key: 'profil', label: 'Profil', icon: UserCircle, to: PROFIL_PATH },
+        { key: 'profil', label: 'Profil', icon: UserCircle, to: PROFIL_PATH, feature: 'my-personal:profil' },
         {
-          key: 'absensi',
+          key: 'absensi', feature: 'my-personal:absensi',
           label: 'Absensi',
           icon: ClipboardList,
           to: '/my-personal/absensi',
@@ -44,7 +44,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'izin',
+          key: 'izin', feature: 'my-personal:izin',
           label: 'Izin',
           icon: FileSignature,
           to: '/my-personal/izin',
@@ -52,7 +52,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'lembur',
+          key: 'lembur', feature: 'my-personal:lembur',
           label: 'Lembur',
           icon: Clock3,
           to: '/my-personal/lembur',
@@ -60,7 +60,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'cuti',
+          key: 'cuti', feature: 'my-personal:cuti',
           label: 'Cuti',
           icon: CalendarDays,
           to: '/my-personal/cuti',
@@ -68,7 +68,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'persetujuan',
+          key: 'persetujuan', feature: 'my-personal:persetujuan',
           label: 'Persetujuan',
           icon: ClipboardCheck,
           to: '/my-personal/persetujuan',
@@ -76,7 +76,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'sppd',
+          key: 'sppd', feature: 'my-personal:sppd',
           label: 'SPPD',
           icon: Plane,
           to: '/my-personal/sppd',
@@ -84,7 +84,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'umdl',
+          key: 'umdl', feature: 'my-personal:umdl',
           label: 'UMDL',
           icon: Banknote,
           to: '/my-personal/umdl',
@@ -92,7 +92,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'tiket',
+          key: 'tiket', feature: 'my-personal:tiket',
           label: 'Pemesanan Tiket',
           icon: Ticket,
           to: '/my-personal/tiket',
@@ -100,7 +100,7 @@ function buildSections(profileComplete) {
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
         {
-          key: 'gaji',
+          key: 'gaji', feature: 'my-personal:gaji',
           label: 'Slip Gaji',
           icon: Wallet,
           to: '/my-personal/gaji',

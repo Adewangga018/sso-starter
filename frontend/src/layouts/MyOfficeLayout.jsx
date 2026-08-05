@@ -12,7 +12,6 @@ import {
   FileSignature,
   FileText,
   Inbox,
-  LayoutGrid,
   MailCheck,
   Search,
   Table2,
@@ -26,31 +25,18 @@ import { api } from '../lib/api'
 import './AppShell.css'
 
 const BASE = '/my-office'
+const soon = { disabled: true, disabledReason: 'Fitur sedang dikembangkan' }
 
-// Struktur menu meniru DOF (Digital Office) — sistem persuratan Petrokimia Gresik —
-// disesuaikan ke dalam MyGCS: nama section, urutan item, serta pengelompokan
-// "Penciptaan Surat" & "Master Data" sebagai submenu buka-tutup dibuat sama persis
-// dengan DOF. Fitur inti dibangun bertahap; menu yang belum siap ditandai
-// "Segera hadir" agar peta jalannya jelas.
-//
-// Label section sengaja ditulis KAPITAL di sini (bukan lewat text-transform di
-// Sidebar.css) supaya hanya My Office yang tampil seperti DOF — 9 modul lain tetap
-// memakai label Title Case seperti sebelumnya.
-// badge = { inboxBelumDibaca, notifikasiBelumDibaca } dari /office/badge; angka 0
-// sengaja dilewatkan sebagai undefined supaya lencananya tidak muncul sama sekali.
+function angka(val) {
+  return typeof val === 'number' && val > 0 ? val : null
+}
+
 function buildSections(badge) {
-  const soon = { disabled: true, disabledReason: 'Segera hadir' }
-  const angka = (n) => (n > 0 ? n : undefined)
   return [
-    {
-      items: [
-        { key: 'dashboard-utama', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard', variant: 'home' },
-      ],
-    },
     {
       label: 'DASHBOARD',
       items: [
-        { key: 'beranda', label: 'Beranda', icon: Table2, to: `${BASE}`, end: true },
+        { key: 'beranda', feature: 'my-office:beranda', label: 'Beranda', icon: Table2, to: `${BASE}`, end: true },
       ],
     },
     {
@@ -58,14 +44,16 @@ function buildSections(badge) {
       items: [
         {
           key: 'inbox',
+          feature: 'my-office:inbox',
           label: 'Inbox',
           icon: Inbox,
           to: `${BASE}/inbox`,
           badge: angka(badge?.inboxBelumDibaca),
         },
-        { key: 'inbox-cc', label: 'Inbox CC Otomatis', icon: MailCheck, to: `${BASE}/inbox-cc` },
+        { key: 'inbox-cc', feature: 'my-office:inbox-cc', label: 'Inbox CC Otomatis', icon: MailCheck, to: `${BASE}/inbox-cc` },
         {
           key: 'notifikasi',
+          feature: 'my-office:notifikasi',
           label: 'Notifikasi',
           icon: Bell,
           to: `${BASE}/notifikasi`,
@@ -78,23 +66,25 @@ function buildSections(badge) {
       items: [
         {
           key: 'penciptaan',
+          feature: 'my-office:penciptaan',
           label: 'Penciptaan Surat',
           icon: FileText,
           children: [
-            { key: 'buat', label: 'Buat Surat Baru', icon: FilePlus2, to: `${BASE}/buat` },
-            { key: 'buat-sp', label: 'Buat Surat SP/ASP', icon: FileSignature, ...soon },
-            { key: 'daftar', label: 'Daftar Surat', icon: Files, to: `${BASE}/daftar` },
-            { key: 'review', label: 'Menunggu Review', icon: ClipboardCheck, to: `${BASE}/review` },
-            { key: 'approval', label: 'Menunggu Approval', icon: CheckSquare, to: `${BASE}/approval` },
+            { key: 'buat', feature: 'my-office:buat', label: 'Buat Surat Baru', icon: FilePlus2, to: `${BASE}/buat` },
+            { key: 'buat-sp', feature: 'my-office:buat-sp', label: 'Buat Surat SP/ASP', icon: FileSignature, ...soon },
+            { key: 'daftar', feature: 'my-office:daftar', label: 'Daftar Surat', icon: Files, to: `${BASE}/daftar` },
+            { key: 'review', feature: 'my-office:review', label: 'Menunggu Review', icon: ClipboardCheck, to: `${BASE}/review` },
+            { key: 'approval', feature: 'my-office:approval', label: 'Menunggu Approval', icon: CheckSquare, to: `${BASE}/approval` },
           ],
         },
         {
           key: 'master-data',
+          feature: 'my-office:master-data',
           label: 'Master Data',
           icon: Database,
           children: [
-            { key: 'perusahaan', label: 'List Perusahaan', icon: Building2, ...soon },
-            { key: 'group', label: 'List Group', icon: UsersRound, ...soon },
+            { key: 'perusahaan', feature: 'my-office:perusahaan', label: 'List Perusahaan', icon: Building2, ...soon },
+            { key: 'group', feature: 'my-office:group', label: 'List Group', icon: UsersRound, ...soon },
           ],
         },
       ],
@@ -102,8 +92,8 @@ function buildSections(badge) {
     {
       label: 'REKAP DAN PENCARIAN',
       items: [
-        { key: 'rekap', label: 'Rekap', icon: ClipboardList, ...soon },
-        { key: 'pencarian', label: 'Pencarian', icon: Search, ...soon },
+        { key: 'rekap', feature: 'my-office:rekap', label: 'Rekap', icon: ClipboardList, ...soon },
+        { key: 'pencarian', feature: 'my-office:pencarian', label: 'Pencarian', icon: Search, ...soon },
       ],
     },
   ]
@@ -122,7 +112,6 @@ export default function MyOfficeLayout() {
 
   // Lencana dihitung ulang tiap pindah halaman di dalam My Office — membuka surat
   // atau notifikasi langsung menurunkan angkanya tanpa perlu muat ulang penuh.
-  // Kegagalannya sengaja didiamkan: lencana bukan alasan menggagalkan tata letak.
   useEffect(() => {
     let alive = true
     api.getBadgeOffice()

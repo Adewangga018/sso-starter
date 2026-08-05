@@ -12,6 +12,7 @@ namespace SsoBackend.Controllers;
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("prosedur")]
 [ModuleGate("my-prosedur")]
+[FeatureGate("my-prosedur:dokumen")]
 public class ProsedurController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;

@@ -9,11 +9,11 @@ import './AppShell.css'
 
 function buildSections(isAdminModulSdm) {
   const items = [
-    { key: 'saya', label: 'KPI Saya', icon: Target, to: '/my-progress', end: true },
-    { key: 'tim', label: 'KPI Tim', icon: Users2, to: '/my-progress/tim' },
+    { key: 'saya', feature: 'my-progress:saya', label: 'KPI Saya', icon: Target, to: '/my-progress', end: true },
+    { key: 'tim', feature: 'my-progress:tim', label: 'KPI Tim', icon: Users2, to: '/my-progress/tim' },
   ]
   if (isAdminModulSdm) {
-    items.push({ key: 'perusahaan', label: 'KPI Perusahaan', icon: Building2, to: '/my-progress/perusahaan' })
+    items.push({ key: 'perusahaan', feature: 'my-progress:perusahaan', label: 'KPI Perusahaan', icon: Building2, to: '/my-progress/perusahaan' })
   }
   return [
     { items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard', variant: 'home' }] },
