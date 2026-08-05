@@ -27,8 +27,12 @@ BEGIN
 END
 GO
 
-/* Kolom: kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan */
+/* Kolom: kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan.
+   'LEMBUR' agregat TIDAK disisipkan bila sudah dipecah jadi sub-komponen oleh
+   gaji-komponen-v2.sql (ditandai keberadaan 'LEMBUR_BIASA') - mencegah skrip ini
+   membangkitkan kembali baris yang sengaja dihapus saat dipecah. */
 IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'LEMBUR')
+   AND NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'LEMBUR_BIASA')
     INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
     VALUES ('LEMBUR', N'Lembur', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 32, N'Upah lembur; sesuai jam lembur per periode');
 GO

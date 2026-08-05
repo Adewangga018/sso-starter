@@ -52,7 +52,8 @@ public static class FeatureCatalog
         new("my-health:mcu",           "my-health", "Medical Check-Up"),
 
         // Payroll
-        new("payroll:tarif",           "payroll", "Konfigurasi Tarif"),
+        new("payroll:formula",         "payroll", "Formula & Generalisasi"),
+        new("payroll:manual",          "payroll", "Manual per Karyawan"),
     ];
 
     public static FeatureDefinition? Find(string? key) =>

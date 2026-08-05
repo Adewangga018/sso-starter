@@ -74,6 +74,123 @@ public class GajiController : ControllerBase
         return NoContent();
     }
 
+    // --- Pendapatan Dasar: tarif satu dimensi (Band | JG | PG) ---
+    // Gaji Pokok (Band), Tunjangan Jabatan (JG), Tunjangan Perumahan (PG),
+    // Tunjangan Pangan (Band), Tunjangan Angkutan (Band).
+
+    [HttpGet("admin/pendapatan-dasar")]
+    public async Task<ActionResult<PendapatanDasarDto>> PendapatanDasar([FromQuery] int tahun)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        return Ok(await _gaji.GetPendapatanDasarAsync(tahun));
+    }
+
+    [HttpPut("admin/pendapatan-dasar")]
+    public async Task<IActionResult> SimpanPendapatanDasar([FromBody] SimpanPendapatanDasarRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (req.Tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        var (ok, error) = await _gaji.SimpanPendapatanDasarAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Potongan per Band/JG/PG (mis. Potongan DPLK per Band) - mekanisme sama dgn
+    //     Pendapatan Dasar, dipisah agar tak tercampur dalam basis rumus BPJS Kesehatan ---
+
+    [HttpGet("admin/potongan-tunggal")]
+    public async Task<ActionResult<PendapatanDasarDto>> PotonganTunggal([FromQuery] int tahun)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        return Ok(await _gaji.GetPotonganTunggalAsync(tahun));
+    }
+
+    [HttpPut("admin/potongan-tunggal")]
+    public async Task<IActionResult> SimpanPotonganTunggal([FromBody] SimpanPendapatanDasarRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (req.Tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        var (ok, error) = await _gaji.SimpanPotonganTunggalAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Komponen basis 'Flat': nilai sama untuk semua karyawan ---
+
+    [HttpGet("admin/flat")]
+    public async Task<ActionResult<FlatListDto>> Flat()
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _gaji.GetFlatAsync());
+    }
+
+    [HttpPut("admin/flat")]
+    public async Task<IActionResult> SimpanFlat([FromBody] SimpanFlatRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _gaji.SimpanFlatAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Nominal manual per karyawan (basis 'Karyawan_Periode': Lembur, RIT, Potongan
+    //     Presensi, K3PG, KKCS, BMT, Angsuran, KSPPS, dst - nilainya beda tiap orang) ---
+
+    [HttpGet("admin/pegawai")]
+    public async Task<ActionResult<IReadOnlyList<GajiPegawaiPickerDto>>> CariPegawai([FromQuery] string? q)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _gaji.CariPegawaiAsync(q));
+    }
+
+    [HttpGet("admin/manual")]
+    public async Task<IActionResult> Manual([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.GetManualAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    [HttpPut("admin/manual")]
+    public async Task<IActionResult> SimpanManual([FromBody] SimpanGajiManualRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _gaji.SimpanManualAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Potongan Presensi: preview hitung otomatis dari Absensi + Surat Ijin disetujui
+    //     (Nota Dinas 0188/08/ND 2018). TIDAK menyimpan - admin review lalu Simpan via
+    //     admin/manual biasa (POT_PRESENSI tetap basis Karyawan_Periode). ---
+
+    [HttpGet("admin/potongan-presensi")]
+    public async Task<IActionResult> PotonganPresensi([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungPotonganPresensiAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Komponen berbasis rumus (mis. Tunjangan BPJS Kesehatan = %  Pendapatan Dasar) ---
+
+    [HttpGet("admin/formula")]
+    public async Task<ActionResult<FormulaListDto>> Formula()
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _gaji.GetFormulaAsync());
+    }
+
+    [HttpPut("admin/formula")]
+    public async Task<IActionResult> SimpanFormula([FromBody] SimpanFormulaRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _gaji.SimpanFormulaAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
     private async Task<bool> IsSdmAdminAsync()
     {
         var (user, pegawai) = await _currentUser.ResolveAsync(User);

@@ -1,0 +1,149 @@
+.agt { max-width: 960px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+.agt__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.agt__back { display: inline-flex; align-items: center; gap: 6px; color: var(--gcs-green-600); font-size: 0.86rem; text-decoration: none; }
+.agt__back:hover { color: var(--gcs-green-900); }
+.agt__role { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 3px 10px; border-radius: 999px; background: rgba(244,174,70,0.18); color: var(--gcs-gold-700); }
+
+.agt__head { margin-bottom: 2px; }
+.agt__title { display: flex; align-items: center; gap: 8px; font-size: 1.35rem; color: var(--gcs-green-900); margin: 0 0 3px; }
+.agt__title svg { color: var(--gcs-green-600); }
+.agt__sub { color: var(--gcs-text-muted); font-size: 0.88rem; margin: 0; }
+
+.agt__sel { display: flex; gap: 14px; flex-wrap: wrap; background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 14px 16px; }
+.agt__sel label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
+.agt__sel select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 0.9rem; background: var(--gcs-white); color: var(--gcs-ink); cursor: pointer; min-width: 120px; }
+.agt__sel select:focus { outline: none; border-color: var(--gcs-gold-500); }
+.agt__sel--inline { padding: 10px 14px; }
+
+/* Pencarian karyawan (halaman Manual per Karyawan) */
+.agt__manual-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.agt__manual-bar label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
+.agt__manual-bar select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 12px; font: inherit; font-size: 0.9rem; background: var(--gcs-white); color: var(--gcs-ink); cursor: pointer; }
+.agt__pegawai-search { position: relative; flex: 1 1 260px; min-width: 220px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 0 12px; background: var(--gcs-white); color: var(--gcs-text-muted); }
+.agt__pegawai-search input { flex: 1; border: none; outline: none; padding: 10px 0; font: inherit; font-size: 0.9rem; background: none; color: var(--gcs-ink); }
+.agt__pegawai-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 10px; box-shadow: 0 12px 30px -12px rgba(15,38,31,0.35); max-height: 280px; overflow-y: auto; }
+.agt__pegawai-item { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; border: none; background: none; cursor: pointer; padding: 9px 12px; }
+.agt__pegawai-item:hover { background: var(--gcs-bg); }
+.agt__pegawai-item .agt__pegawai-nama { font-size: 0.86rem; font-weight: 600; color: var(--gcs-ink); }
+.agt__pegawai-item .agt__pegawai-sub { font-size: 0.74rem; color: var(--gcs-text-muted); }
+.agt__pegawai-sel { flex: 1 1 260px; min-width: 220px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--gcs-border); background: var(--gcs-bg); border-radius: 9px; padding: 8px 12px; }
+.agt__pegawai-nama { font-size: 0.86rem; font-weight: 700; color: var(--gcs-green-900); }
+.agt__pegawai-sub { font-size: 0.74rem; color: var(--gcs-text-muted); }
+.agt__ibtn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-text-muted); cursor: pointer; flex: none; }
+.agt__ibtn:hover { border-color: var(--gcs-green-500); color: var(--gcs-green-700); }
+
+.agt__msg { border-radius: 10px; padding: 10px 14px; font-size: 0.86rem; }
+.agt__msg--ok { background: rgba(47,108,63,0.12); color: var(--gcs-green-600); }
+.agt__msg--err { background: rgba(192,57,43,0.1); color: #c0392b; }
+
+.agt__loading { display: flex; align-items: center; gap: 10px; padding: 30px; color: var(--gcs-text-muted); }
+.agt__spin { animation: agt-spin 0.8s linear infinite; }
+@keyframes agt-spin { to { transform: rotate(360deg); } }
+.agt__empty { color: var(--gcs-text-muted); padding: 24px; text-align: center; }
+
+/* Pendapatan Dasar (tarif satu dimensi: Band / JG / PG) */
+.agt__pd { display: flex; flex-direction: column; gap: 12px; }
+.agt__pd-head h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 3px; font-size: 1rem; color: var(--gcs-green-900); }
+.agt__pd-head h3 svg { color: var(--gcs-gold-700); }
+.agt__pd-head p { margin: 0; font-size: 0.82rem; color: var(--gcs-text-muted); line-height: 1.5; }
+.agt__pd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.agt__pd-kom { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.agt__pd-kom-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--gcs-border); }
+.agt__pd-basis { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-gold-700); background: rgba(244,174,70,0.14); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.agt__pd-rows { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.agt__pd-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.agt__pd-label { font-size: 0.8rem; color: var(--gcs-ink); flex: 1; min-width: 0; }
+.agt__pd-row .agt__input-wrap { width: 140px; flex-shrink: 0; }
+.agt__pd-note { margin: 4px 0 0; font-size: 0.74rem; color: var(--gcs-text-muted); line-height: 1.4; border-top: 1px dashed var(--gcs-border); padding-top: 6px; }
+
+.agt__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 720px) { .agt__grid { grid-template-columns: 1fr; } }
+.agt__kat { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 6px 0 10px; }
+.agt__kat-head { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-green-900); padding: 12px 16px 8px; }
+
+.agt__field { display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 10px; padding: 7px 16px; }
+.agt__k-nama { font-size: 0.86rem; }
+.agt__k-nama--out { color: #b03636; }
+.agt__k-nama--in { color: var(--gcs-ink); }
+.agt__input-wrap { display: flex; align-items: center; border: 1px solid var(--gcs-border); border-radius: 9px; overflow: hidden; }
+.agt__input-wrap:focus-within { border-color: var(--gcs-gold-500); }
+.agt__rp { padding: 0 8px; font-size: 0.8rem; color: var(--gcs-text-muted); background: var(--gcs-bg); align-self: stretch; display: flex; align-items: center; }
+.agt__input-wrap input { border: none; outline: none; padding: 8px 10px; font: inherit; font-size: 0.88rem; width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+.agt__preview { grid-column: 2; font-size: 0.72rem; color: var(--gcs-text-muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Sub-komponen (dropdown/accordion): BPJS Ketenagakerjaan (tunjangan & potongan), dll. */
+.agt__subgrup { border-top: 1px dashed var(--gcs-border); margin-top: 2px; }
+.agt__subgrup-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none;
+  cursor: pointer; padding: 8px 16px; font: inherit; font-size: 0.86rem; text-align: left; color: var(--gcs-ink);
+}
+.agt__subgrup-head:hover { background: var(--gcs-bg); }
+.agt__subgrup-head svg { flex-shrink: 0; color: var(--gcs-text-muted); }
+.agt__subgrup-label { font-weight: 600; }
+.agt__subgrup-count { font-size: 0.72rem; color: var(--gcs-text-muted); }
+.agt__subgrup-total { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--gcs-ink); white-space: nowrap; }
+.agt__subgrup.is-open .agt__subgrup-head { color: var(--gcs-green-700); }
+.agt__subgrup-body { background: var(--gcs-bg); padding-bottom: 4px; }
+.agt__subgrup-body .agt__field { padding-left: 32px; }
+
+.agt__foot { display: flex; justify-content: flex-end; position: sticky; bottom: 12px; }
+.agt__save { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 10px; padding: 11px 18px; background: var(--gcs-green-900); color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 20px -8px rgba(15,38,31,0.5); }
+.agt__save:hover { filter: brightness(1.12); }
+.agt__save:disabled { opacity: 0.6; cursor: default; }
+/* Sub-bagian (Pendapatan Dasar, Potongan Tunggal, Formula, Flat, Matriks JG×PG) -
+   tombol lebih ringkas & tidak sticky, supaya beberapa sub-bagian dalam satu halaman
+   tidak terasa seperti banyak tombol besar bertumpuk. */
+.agt__save--sm { position: static; padding: 8px 14px; font-size: 0.82rem; box-shadow: none; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-green-700); }
+.agt__save--sm:hover { background: var(--gcs-bg); filter: none; }
+.agt__pd .agt__foot { position: static; }
+
+/* Kalkulator Potongan Presensi (Manual per Karyawan) */
+.agt__presensi { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.agt__presensi-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.agt__presensi-nama { display: block; font-size: 0.9rem; font-weight: 700; color: var(--gcs-green-900); }
+.agt__presensi-note { display: block; font-size: 0.76rem; color: var(--gcs-text-muted); margin-top: 2px; max-width: 46ch; }
+.agt__presensi-hasil { border-top: 1px dashed var(--gcs-border); padding-top: 4px; }
+.agt__presensi-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin: 6px 0; }
+.agt__presensi-table th, .agt__presensi-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--gcs-border); white-space: nowrap; }
+.agt__presensi-table th { color: var(--gcs-text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.66rem; letter-spacing: 0.02em; }
+
+.agt__denied { max-width: 460px; margin: 60px auto; text-align: center; background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 16px; padding: 30px; color: var(--gcs-text-muted); }
+.agt__denied svg { color: var(--gcs-gold-700); }
+.agt__denied h2 { color: var(--gcs-green-900); margin: 10px 0 6px; font-size: 1.2rem; }
+.agt__denied p { font-size: 0.88rem; margin: 0 0 16px; }
+
+/* ===========================================================================
+   Responsif (pelengkap media query 720px di atas)
+   =========================================================================== */
+@media (max-width: 640px) {
+  .agt { padding: 16px 14px 40px; gap: 12px; }
+  .agt__title { font-size: 1.2rem; }
+
+  .agt__sel { gap: 10px; padding: 12px; }
+  .agt__sel label { flex: 1 1 140px; }
+  .agt__sel select { min-width: 0; width: 100%; }
+
+  /* Nama komponen + kolom nominal: 150px untuk kolom nominal menyisakan ruang
+     terlalu sempit bagi nama di layar 360px, jadi nominal turun ke bawah nama. */
+  .agt__field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    padding: 8px 12px;
+  }
+
+  .agt__preview {
+    grid-column: 1;
+  }
+
+  /* Tombol simpan melekat di dasar layar - formulir tarif ini panjang. */
+  .agt__foot {
+    bottom: calc(10px + var(--safe-b));
+  }
+
+  .agt__save {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 18px;
+  }
+}

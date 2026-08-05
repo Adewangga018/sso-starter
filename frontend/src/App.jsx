@@ -34,7 +34,8 @@ import RequireFeature from './components/RequireFeature'
 import ProfilPage from './pages/ProfilPage'
 import CutiPage from './pages/CutiPage'
 import GajiPage from './pages/GajiPage'
-import AdminGajiTarifPage from './pages/AdminGajiTarifPage'
+import PayrollFormulaPage from './pages/PayrollFormulaPage'
+import PayrollManualPage from './pages/PayrollManualPage'
 import MyPayrollLayout from './layouts/MyPayrollLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
@@ -102,7 +103,8 @@ export default function App() {
                 /modul-sdm/gaji-tarif diarahkan ke sini. */}
             <Route element={<RequireModule moduleKey="payroll" />}>
               <Route path="/payroll" element={<MyPayrollLayout />}>
-                <Route index element={<AdminGajiTarifPage />} />
+                <Route index element={<PayrollFormulaPage />} />
+                <Route path="manual" element={<PayrollManualPage />} />
               </Route>
             </Route>
             <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />

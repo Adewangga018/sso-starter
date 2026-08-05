@@ -46,6 +46,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Slip Gaji (schema gaji) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<GajiKomponen> GajiKomponen => Set<GajiKomponen>();
     public DbSet<GajiTarif> GajiTarif => Set<GajiTarif>();
+    public DbSet<GajiTarifTunggal> GajiTarifTunggal => Set<GajiTarifTunggal>();
     public DbSet<GajiPeriode> GajiPeriode => Set<GajiPeriode>();
     public DbSet<GajiSlip> GajiSlip => Set<GajiSlip>();
     public DbSet<GajiSlipDetail> GajiSlipDetail => Set<GajiSlipDetail>();
@@ -357,6 +358,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Urutan).HasColumnName("urutan");
             e.Property(x => x.Aktif).HasColumnName("aktif");
             e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.GrupKode).HasColumnName("grup_kode");
+            e.Property(x => x.GrupLabel).HasColumnName("grup_label");
+            e.Property(x => x.FormulaPersen).HasColumnName("formula_persen").HasPrecision(7, 4);
+            e.Property(x => x.FormulaBatas).HasColumnName("formula_batas").HasPrecision(18, 2);
+            e.Property(x => x.NilaiFlat).HasColumnName("nilai_flat").HasPrecision(18, 2);
+            e.Property(x => x.MasukTotal).HasColumnName("masuk_total");
         });
 
         builder.Entity<GajiTarif>(e =>
@@ -367,6 +374,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
             e.Property(x => x.Jg).HasColumnName("jg");
             e.Property(x => x.Pg).HasColumnName("pg");
+            e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
+            e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<GajiTarifTunggal>(e =>
+        {
+            e.ToTable("tarif_tunggal", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Nilai).HasColumnName("nilai");
             e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
             e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
         });

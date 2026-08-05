@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { LayoutGrid, SlidersHorizontal } from 'lucide-react'
+import { LayoutGrid, SlidersHorizontal, UserCog } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -13,7 +13,8 @@ function buildSections() {
     {
       label: 'Payroll',
       items: [
-        { key: 'tarif', feature: 'payroll:tarif', label: 'Konfigurasi Tarif', icon: SlidersHorizontal, to: '/payroll', end: true },
+        { key: 'formula', feature: 'payroll:formula', label: 'Formula & Generalisasi', icon: SlidersHorizontal, to: '/payroll', end: true },
+        { key: 'manual', feature: 'payroll:manual', label: 'Manual per Karyawan', icon: UserCog, to: '/payroll/manual' },
       ],
     },
   ]
