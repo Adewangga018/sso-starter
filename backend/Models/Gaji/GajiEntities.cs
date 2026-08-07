@@ -16,6 +16,22 @@ public class GajiKomponen
     public int Urutan { get; set; }
     public bool Aktif { get; set; }
     public string? Keterangan { get; set; }
+    // Pengelompokan tampilan (dropdown/accordion) untuk komponen yang punya sub-komponen,
+    // mis. Lembur (Biasa/Crash/Pengganti) atau BPJS TK (JHT/JKK/JKM/JP). NULL = berdiri sendiri.
+    public string? GrupKode { get; set; }
+    public string? GrupLabel { get; set; }
+    // Parameter rumus untuk basis 'PendapatanDasar': nominal = FormulaPersen% x
+    // MIN(total Pendapatan Dasar, FormulaBatas). FormulaBatas NULL = tanpa batas atas.
+    public decimal? FormulaPersen { get; set; }
+    public decimal? FormulaBatas { get; set; }
+    // Nilai untuk basis 'Flat': satu nominal yang sama untuk SEMUA karyawan (bukan
+    // per Band/JG/PG, bukan per periode). NULL = belum diisi admin (nominal 0).
+    public decimal? NilaiFlat { get; set; }
+    // false = komponen tetap tampil di slip (informasi) tapi TIDAK menambah
+    // Total Pendapatan/Potongan maupun Gaji Bersih - mis. kontribusi BPJS TK
+    // sisi perusahaan (JHT/JKK/JKM/JP) yang dibayarkan langsung ke BPJS, bukan
+    // diterima/dipotong dari karyawan. Default true (perilaku lama, tak berubah).
+    public bool MasukTotal { get; set; } = true;
 }
 
 // Tarif komponen basis JG_PG per (JG, PG, tahun). Kosong sampai dikonfigurasi.
@@ -25,6 +41,19 @@ public class GajiTarif
     public int IdKomponen { get; set; }
     public byte Jg { get; set; }
     public byte Pg { get; set; }
+    public short TahunBerlaku { get; set; }
+    public decimal Nominal { get; set; }
+}
+
+// Tarif SATU DIMENSI (Band | JG | PG saja) per (komponen, nilai, tahun). Dipakai
+// komponen "Pendapatan Dasar" (Gaji Pokok/Tunjangan Jabatan/Perumahan/Pangan/
+// Angkutan) yang basis-nya bukan lagi matriks JG x PG (gaji.tarif) melainkan satu
+// nilai saja - lihat GajiKomponen.Basis ('Band'|'JG'|'PG').
+public class GajiTarifTunggal
+{
+    public int Id { get; set; }
+    public int IdKomponen { get; set; }
+    public short Nilai { get; set; }
     public short TahunBerlaku { get; set; }
     public decimal Nominal { get; set; }
 }

@@ -6,6 +6,7 @@ using SsoBackend.Models.Approval;
 using SsoBackend.Models.Aset;
 using SsoBackend.Models.Coaching;
 using SsoBackend.Models.Cuti;
+using SsoBackend.Models.Dinas;
 using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
@@ -25,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<DinasBukti> DinasBukti => Set<DinasBukti>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
     public DbSet<FeatureAccess> FeatureAccess => Set<FeatureAccess>();
@@ -53,6 +55,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Slip Gaji (schema gaji) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<GajiKomponen> GajiKomponen => Set<GajiKomponen>();
     public DbSet<GajiTarif> GajiTarif => Set<GajiTarif>();
+    public DbSet<GajiTarifTunggal> GajiTarifTunggal => Set<GajiTarifTunggal>();
     public DbSet<GajiPeriode> GajiPeriode => Set<GajiPeriode>();
     public DbSet<GajiSlip> GajiSlip => Set<GajiSlip>();
     public DbSet<GajiSlipDetail> GajiSlipDetail => Set<GajiSlipDetail>();
@@ -150,6 +153,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasKey(x => x.FeatureKey);
             e.Property(x => x.FeatureKey).HasMaxLength(80);
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
+        });
+
+        // Bukti perjalanan dinas (rentang km + foto lokasi) UMDL/SPPD - lihat DinasBukti.cs.
+        // Tabel dikelola raw SQL (docs/dinas-bukti-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<DinasBukti>(e =>
+        {
+            e.ToTable("bukti", "dinas", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.RefId).HasColumnName("ref_id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.RentangKm).HasColumnName("rentang_km");
+            e.Property(x => x.Foto).HasColumnName("foto");
+            e.Property(x => x.Lat).HasColumnName("lat").HasPrecision(9, 6);
+            e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(9, 6);
+            e.Property(x => x.Accuracy).HasColumnName("accuracy").HasPrecision(9, 2);
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 
         // Tugas My Team (myteam.tugas). Tabel dikelola di luar EF (raw SQL, seperti skema
@@ -454,6 +475,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Urutan).HasColumnName("urutan");
             e.Property(x => x.Aktif).HasColumnName("aktif");
             e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.GrupKode).HasColumnName("grup_kode");
+            e.Property(x => x.GrupLabel).HasColumnName("grup_label");
+            e.Property(x => x.FormulaPersen).HasColumnName("formula_persen").HasPrecision(7, 4);
+            e.Property(x => x.FormulaBatas).HasColumnName("formula_batas").HasPrecision(18, 2);
+            e.Property(x => x.NilaiFlat).HasColumnName("nilai_flat").HasPrecision(18, 2);
+            e.Property(x => x.MasukTotal).HasColumnName("masuk_total");
         });
 
         builder.Entity<GajiTarif>(e =>
@@ -464,6 +491,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
             e.Property(x => x.Jg).HasColumnName("jg");
             e.Property(x => x.Pg).HasColumnName("pg");
+            e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
+            e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<GajiTarifTunggal>(e =>
+        {
+            e.ToTable("tarif_tunggal", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Nilai).HasColumnName("nilai");
             e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
             e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
         });

@@ -302,6 +302,22 @@
   }
 }
 
+/* Varian "compact" (DinasKameraCapture) - dipakai di dalam MODAL form (UMDL/SPPD), yang
+   jauh lebih sempit dari halaman Absensi penuh tempat kamera__body dirancang. Grid 2-kolom
+   dgn kolom pertama minmax(0,660px) MEMAKSA panel kanan (info lokasi) terjepit jadi
+   beberapa piksel saja saat kontainer sesungguhnya sempit tapi viewport lebar (media query
+   max-width lebar VIEWPORT, bukan lebar modal, jadi tak ikut aktif) - teks jadi terbungkus
+   1 huruf per baris. Modal selalu sempit, jadi SELALU susun 1 kolom, apa pun lebar viewport. */
+.kamera__card--compact {
+  padding: 16px 18px;
+  margin-bottom: 0;
+}
+
+.kamera__card--compact .kamera__body {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
 @media (max-width: 640px) {
   .kamera__card {
     padding: 14px 12px;

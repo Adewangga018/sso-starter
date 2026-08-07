@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Wallet, Loader2, Info, TrendingUp, TrendingDown } from 'lucide-react'
+import { Wallet, Loader2, Info, TrendingUp, TrendingDown, ChevronDown, ChevronRight } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './GajiPage.css'
 
@@ -9,23 +9,72 @@ const BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli
 const rupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n ?? 0)
 
+// Komponen yang punya sub-komponen (mis. Lembur, BPJS Ketenagakerjaan) berbagi
+// `grupKode` yang sama & berurutan — kelompokkan jadi satu entri dropdown/accordion
+// beserta subtotalnya; komponen tanpa grupKode tetap tampil sebagai baris biasa.
+function kelompokkan(items) {
+  const entries = []
+  let i = 0
+  while (i < items.length) {
+    const it = items[i]
+    if (it.grupKode) {
+      const cluster = [it]
+      let j = i + 1
+      while (j < items.length && items[j].grupKode === it.grupKode) { cluster.push(items[j]); j++ }
+      entries.push({ type: 'sub', grupKode: it.grupKode, grupLabel: it.grupLabel, items: cluster, subtotal: cluster.reduce((s, x) => s + x.nominal, 0) })
+      i = j
+    } else {
+      entries.push({ type: 'row', item: it })
+      i++
+    }
+  }
+  return entries
+}
+
+function Baris({ it }) {
+  return (
+    <div className="gaji__row">
+      <div className="gaji__row-label">
+        <span className="gaji__row-nama">{it.nama}</span>
+        {it.opsional && <span className="gaji__tag gaji__tag--opsional">opsional</span>}
+        {it.kenaTerlambat && <span className="gaji__tag gaji__tag--terlambat">dipotong keterlambatan</span>}
+        {it.masukTotal === false && <span className="gaji__tag gaji__tag--info">dibayar ke BPJS, tak termasuk Gaji Bersih</span>}
+      </div>
+      <div className="gaji__row-nominal">{rupiah(it.nominal)}</div>
+    </div>
+  )
+}
+
+function SubGrup({ sub }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={`gaji__subgrup${open ? ' is-open' : ''}`}>
+      <button type="button" className="gaji__subgrup-head" onClick={() => setOpen((v) => !v)}>
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <span className="gaji__subgrup-label">{sub.grupLabel}</span>
+        <span className="gaji__subgrup-count">{sub.items.length} sub-komponen</span>
+        <span className="gaji__subgrup-total">{rupiah(sub.subtotal)}</span>
+      </button>
+      {open && (
+        <div className="gaji__subgrup-body">
+          {sub.items.map((it) => <Baris key={it.kode} it={it} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Grup({ grup }) {
+  const entries = kelompokkan(grup.items)
   return (
     <div className="gaji__grup">
       <div className="gaji__grup-head">
         <span>{grup.kategori}</span>
         <span>{rupiah(grup.subtotal)}</span>
       </div>
-      {grup.items.map((it) => (
-        <div className="gaji__row" key={it.kode}>
-          <div className="gaji__row-label">
-            <span className="gaji__row-nama">{it.nama}</span>
-            {it.opsional && <span className="gaji__tag gaji__tag--opsional">opsional</span>}
-            {it.kenaTerlambat && <span className="gaji__tag gaji__tag--terlambat">dipotong keterlambatan</span>}
-          </div>
-          <div className="gaji__row-nominal">{rupiah(it.nominal)}</div>
-        </div>
-      ))}
+      {entries.map((en) => en.type === 'sub'
+        ? <SubGrup key={en.grupKode} sub={en} />
+        : <Baris key={en.item.kode} it={en.item} />)}
     </div>
   )
 }

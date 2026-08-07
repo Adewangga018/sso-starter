@@ -289,6 +289,43 @@ export const api = {
   getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
   getGajiTarif: (tahun, jg, pg) => apiFetch(`/api/personal/gaji/admin/tarif?tahun=${tahun}&jg=${jg}&pg=${pg}`),
   simpanGajiTarif: (payload) => apiFetch('/api/personal/gaji/admin/tarif', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Pendapatan Dasar: tarif satu dimensi (Band/JG/PG) - Gaji Pokok, Tunjangan Jabatan/Perumahan/Pangan/Angkutan
+  getPendapatanDasar: (tahun) => apiFetch(`/api/personal/gaji/admin/pendapatan-dasar?tahun=${tahun}`),
+  simpanPendapatanDasar: (payload) => apiFetch('/api/personal/gaji/admin/pendapatan-dasar', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Komponen berbasis rumus (mis. Tunjangan BPJS Kesehatan = % dari Pendapatan Dasar)
+  getGajiFormula: () => apiFetch('/api/personal/gaji/admin/formula'),
+  simpanGajiFormula: (payload) => apiFetch('/api/personal/gaji/admin/formula', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Potongan per Band/JG/PG (mis. Potongan DPLK per Band) - mekanisme sama dgn Pendapatan Dasar
+  getPotonganTunggal: (tahun) => apiFetch(`/api/personal/gaji/admin/potongan-tunggal?tahun=${tahun}`),
+  simpanPotonganTunggal: (payload) => apiFetch('/api/personal/gaji/admin/potongan-tunggal', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Komponen basis 'Flat': nilai sama untuk semua karyawan
+  getGajiFlat: () => apiFetch('/api/personal/gaji/admin/flat'),
+  simpanGajiFlat: (payload) => apiFetch('/api/personal/gaji/admin/flat', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Nominal manual per karyawan (basis Karyawan_Periode: Lembur, RIT, Potongan Presensi, dst)
+  cariPegawaiGaji: (q) => apiFetch(`/api/personal/gaji/admin/pegawai?q=${encodeURIComponent(q)}`),
+  getGajiManual: (nik, tahun, bulan) => apiFetch(`/api/personal/gaji/admin/manual?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  simpanGajiManual: (payload) => apiFetch('/api/personal/gaji/admin/manual', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Potongan Presensi: preview hitung otomatis dari Absensi + Surat Ijin disetujui (TIDAK menyimpan)
+  hitungPotonganPresensi: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/potongan-presensi?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Lembur Biasa: preview hitung otomatis dari SPL "Biasa" disetujui (khusus Band V/VI, TIDAK menyimpan)
+  hitungLemburBiasa: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/lembur-biasa?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Lembur Crash Program: preview hitung otomatis dari SPL "Crash Program" disetujui (khusus Band I-IV, TIDAK menyimpan)
+  hitungLemburCrash: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/lembur-crash?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Lembur Pengganti: preview hitung otomatis dari SPL "Mengganti" disetujui (rumus sama dgn Lembur Biasa, TIDAK menyimpan)
+  hitungLemburPengganti: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/lembur-pengganti?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Tarif SPPD per Band (dipakai nominal SPPD sendiri & basis formula Uang Makan Dinas 75-150km)
+  getTarifSppd: (tahun) => apiFetch(`/api/personal/gaji/admin/tarif-sppd?tahun=${tahun}`),
+  simpanTarifSppd: (payload) => apiFetch('/api/personal/gaji/admin/tarif-sppd', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Uang Makan Dinas: preview hitung otomatis dari UMDL disetujui (TIDAK menyimpan)
+  hitungUmdlFormula: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/umdl-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // SPPD: preview hitung otomatis dari SPPD disetujui (TIDAK menyimpan)
+  hitungSppdFormula: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/sppd-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>
@@ -343,6 +380,18 @@ export const api = {
   cariPegawai: (q) => apiFetch(`/api/personal/sppd/pegawai?q=${encodeURIComponent(q ?? '')}`),
   // POST, not GET: printing registers the document in the QR-validation registry.
   printSppd: (id) => apiFetch(`/api/personal/sppd/${id}/print`, { method: 'POST' }),
+
+  // Bukti dinas (rentang km + foto lokasi, UMDL/SPPD): foto lewat blob (butuh Bearer token,
+  // sama pola dgn dokumen lain) - pemilik/atasan-penyetuju/Admin SDM boleh lihat (server cek
+  // ulang). `path` datang APA ADANYA dari field fotoUrl yang sudah dibentuk backend (UmdlDto/
+  // SppdDto/ApprovalDetailDto/DinasBuktiAdminDto) - jangan disusun ulang di sisi frontend,
+  // krn refId beda makna antar konteks (mis. id approval.pengajuan BUKAN id UMDL/SPPD).
+  getBlob: (path) => apiBlob(path),
+  getDinasAdminList: (params) => {
+    const qs = new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v)).toString()
+    return apiFetch(`/api/personal/dinas/admin${qs ? `?${qs}` : ''}`)
+  },
+
   uploadSuratDokter: (id, file) => {
     const body = new FormData()
     body.append('file', file)

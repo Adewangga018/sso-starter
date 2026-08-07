@@ -42,12 +42,14 @@ public class SppdController : ControllerBase
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
     private readonly ApprovalService _approval;
+    private readonly DinasBuktiService _bukti;
 
-    public SppdController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
+    public SppdController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval, DinasBuktiService bukti)
     {
         _db = db;
         _currentUser = currentUser;
         _approval = approval;
+        _bukti = bukti;
     }
 
     [HttpGet]
@@ -78,6 +80,10 @@ public class SppdController : ControllerBase
             .Where(p => pesertaNik.Contains(p.Nik))
             .ToDictionaryAsync(p => p.Nik, p => p.nama);
 
+        // Bukti dinas (rentang km + foto) hidup di db_mygcs (dinas.bukti), bukan di baris
+        // legacy ini - dimuat sekaligus per (jenis="SPPD", refId) supaya tak N+1 query.
+        var buktiByRefId = await _bukti.CariBanyakAsync("SPPD", rows.Select(r => r.id.ToString()).ToList());
+
         var items = rows.Select(s =>
         {
             // Every traveller is listed, not just the leader: an SPPD routinely carries
@@ -88,6 +94,8 @@ public class SppdController : ControllerBase
                 .OrderBy(d => d.posisi == "Ketua" ? 0 : 1)
                 .ThenBy(d => d.id_det)
                 .ToList();
+
+            buktiByRefId.TryGetValue(s.id.ToString(), out var b);
 
             return new SppdDto(
                 s.id,
@@ -104,7 +112,9 @@ public class SppdController : ControllerBase
                 pesertaSppd
                     .Select(d => nama.GetValueOrDefault(d.id_user) ?? d.id_user)
                     .ToList(),
-                pesertaSppd.Select(d => d.tugas).Distinct().ToList());
+                pesertaSppd.Select(d => d.tugas).Distinct().ToList(),
+                b?.RentangKm,
+                b is null ? null : $"/api/personal/dinas/foto/SPPD/{s.id}");
         }).ToList();
 
         return Ok(new SppdListDto(items));
@@ -122,6 +132,10 @@ public class SppdController : ControllerBase
         if (Validate(request) is { } error)
         {
             return BadRequest(new { message = error });
+        }
+        if (string.IsNullOrWhiteSpace(request.Foto))
+        {
+            return BadRequest(new { message = "Foto bukti dinas wajib diambil terlebih dahulu." });
         }
 
         var atasan = await ResolveAtasanAsync(pegawai.ID_KARYAWAN);
@@ -152,6 +166,19 @@ public class SppdController : ControllerBase
         _db.WebSdmSppd.Add(sppd);
         await _db.SaveChangesAsync();
 
+        var (buktiOk, buktiError) = await _bukti.SimpanAsync(
+            "SPPD", sppd.id.ToString(), pegawai.ID_KARYAWAN, request.RentangKm,
+            request.Foto, request.Lat, request.Lng, request.Accuracy);
+        if (!buktiOk)
+        {
+            // SPPD legacy SUDAH tercatat (GCS & db_mygcs beda database, tak ada transaksi
+            // lintas-DB) - sangat jarang krn rentang km & foto sudah divalidasi di atas.
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = $"SPPD tersimpan, tapi bukti dinas gagal disimpan: {buktiError} Hubungi IT, lalu coba Ubah SPPD ini untuk mengunggah ulang bukti."
+            });
+        }
+
         var ringkasan = $"SPPD {request.Jenis} ke {request.Tujuan.Trim()} · {request.TglBerangkat:dd MMM}–{request.TglPulang:dd MMM}";
         await _approval.CreateAsync("SPPD", sppd.id.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
 
@@ -162,7 +189,7 @@ public class SppdController : ControllerBase
             .FirstOrDefaultAsync();
 
         // Baru dibuat, jadi belum punya peserta.
-        return Ok(ToDto(sppd, kode, [], []));
+        return Ok(ToDto(sppd, kode, [], []) with { RentangKm = request.RentangKm, FotoUrl = $"/api/personal/dinas/foto/SPPD/{sppd.id}" });
     }
 
     [HttpPut("{id:int}")]
@@ -194,6 +221,16 @@ public class SppdController : ControllerBase
         sppd.jenis = request.Jenis;
 
         await _db.SaveChangesAsync();
+
+        // Foto kosong = pertahankan foto lama (SimpanAsync sudah menangani ini).
+        var (buktiOk, buktiError) = await _bukti.SimpanAsync(
+            "SPPD", sppd.id.ToString(), pegawai.ID_KARYAWAN, request.RentangKm,
+            request.Foto, request.Lat, request.Lng, request.Accuracy);
+        if (!buktiOk)
+        {
+            return BadRequest(new { message = buktiError });
+        }
+
         return NoContent();
     }
 
@@ -219,6 +256,7 @@ public class SppdController : ControllerBase
         _db.WebSdmSppd.Remove(sppd);
 
         await _db.SaveChangesAsync();
+        await _bukti.HapusAsync("SPPD", id.ToString());
         return NoContent();
     }
 
@@ -560,6 +598,11 @@ public class SppdController : ControllerBase
         if (!AllowedKendaraan.Contains(request.Kendaraan))
         {
             return "Transportasi tidak dikenal.";
+        }
+
+        if (!_bukti.RentangValidUntuk("SPPD", request.RentangKm))
+        {
+            return _bukti.PesanRentangSalah("SPPD");
         }
 
         if (string.IsNullOrWhiteSpace(request.Tujuan))

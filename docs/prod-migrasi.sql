@@ -527,8 +527,12 @@ BEGIN
 END
 GO
 
-/* Kolom: kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan */
+/* Kolom: kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan.
+   'LEMBUR' agregat TIDAK disisipkan bila sudah dipecah jadi sub-komponen oleh
+   gaji-komponen-v2.sql (ditandai keberadaan 'LEMBUR_BIASA') - mencegah skrip ini
+   membangkitkan kembali baris yang sengaja dihapus saat dipecah. */
 IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'LEMBUR')
+   AND NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'LEMBUR_BIASA')
     INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
     VALUES ('LEMBUR', N'Lembur', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 32, N'Upah lembur; sesuai jam lembur per periode');
 GO
@@ -631,6 +635,359 @@ WHERE NOT EXISTS (SELECT 1 FROM gaji.komponen k WHERE k.kode = i.kode);
 
 COMMIT;
 PRINT 'Komponen gaji v2 diterapkan (BPJS TK 4/2, Lembur 3, +Tunjangan PTS & Premi).';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3d] GAJI KOMPONEN GRUP (dropdown Lembur/BPJS TK) ################';
+GO
+/* ============================================================================
+   Pengelompokan tampilan (dropdown/accordion) untuk komponen yang punya
+   sub-komponen: Lembur (3), Tunjangan BPJS Ketenagakerjaan (4), Potongan BPJS
+   Ketenagakerjaan (2). Kolom baru grup_kode/grup_label di gaji.komponen -
+   NULL berarti komponen berdiri sendiri (tampil baris biasa seperti sekarang).
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF COL_LENGTH('gaji.komponen', 'grup_kode') IS NULL
+    ALTER TABLE gaji.komponen ADD grup_kode NVARCHAR(40) NULL;
+GO
+IF COL_LENGTH('gaji.komponen', 'grup_label') IS NULL
+    ALTER TABLE gaji.komponen ADD grup_label NVARCHAR(80) NULL;
+GO
+
+UPDATE gaji.komponen SET grup_kode = 'LEMBUR', grup_label = N'Lembur'
+    WHERE kode IN ('LEMBUR_BIASA','LEMBUR_CRASH','LEMBUR_PENGGANTI');
+
+UPDATE gaji.komponen SET grup_kode = 'TJ_BPJS_TK', grup_label = N'Tunjangan BPJS Ketenagakerjaan'
+    WHERE kode IN ('TJ_BPJS_JHT','TJ_BPJS_JKK','TJ_BPJS_JKM','TJ_BPJS_JP');
+
+UPDATE gaji.komponen SET grup_kode = 'POT_BPJS_TK', grup_label = N'Potongan BPJS Ketenagakerjaan'
+    WHERE kode IN ('POT_BPJS_JHT','POT_BPJS_JP');
+
+PRINT 'Pengelompokan dropdown Lembur / BPJS TK (tunjangan & potongan) diterapkan.';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3e] GAJI TARIF TUNGGAL (Pendapatan Dasar per Band/JG/PG) ################';
+GO
+/* ============================================================================
+   Tarif SATU DIMENSI (Band / JG / PG saja) untuk komponen "Pendapatan Dasar":
+   - Gaji Pokok          -> per Band  (0=Direksi .. 6=Pelaksana Junior)
+   - Tunjangan Jabatan   -> per JG    (7..21)
+   - Tunjangan Perumahan -> per PG    (7..21)
+   - Tunjangan Pangan    -> per Band
+   - Tunjangan Angkutan  -> per Band
+   Menggantikan matriks JG x PG (gaji.tarif) UNTUK KELIMA komponen ini saja -
+   komponen JG_PG lain (BPJS, DPLK, dst) TIDAK terpengaruh, tetap di gaji.tarif.
+   Admin SDM cukup input satu nominal per nilai Band/JG/PG, bukan per sel JG x PG.
+
+   "Band" di sini = grading.band.urutan (identik dgn grading.band.id_band di
+   dataset ini - 0..6), sama dgn nilai Band yang sudah tampil di slip gaji.
+
+   NON-DESTRUKTIF & idempoten. gaji.tarif untuk kelima komponen ini kosong saat
+   skrip ini ditulis (basis-nya baru dipindah dari JG_PG), jadi aman dibersihkan.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+/* 1) Tabel tarif satu-dimensi ------------------------------------------------ */
+IF OBJECT_ID('gaji.tarif_tunggal', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.tarif_tunggal
+    (
+        id            INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_gaji_tarif_tunggal PRIMARY KEY,
+        id_komponen   INT      NOT NULL,
+        nilai         SMALLINT NOT NULL,             -- nilai Band (0-6) / JG / PG tergantung komponen.basis
+        tahun_berlaku SMALLINT NOT NULL,
+        nominal       DECIMAL(18,2) NOT NULL CONSTRAINT df_gaji_tarif_tunggal_nominal DEFAULT (0),
+        CONSTRAINT fk_gaji_tarif_tunggal_komponen FOREIGN KEY (id_komponen) REFERENCES gaji.komponen (id_komponen),
+        CONSTRAINT uq_gaji_tarif_tunggal UNIQUE (id_komponen, nilai, tahun_berlaku)
+    );
+    PRINT 'Tabel gaji.tarif_tunggal dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.tarif_tunggal sudah ada.';
+GO
+
+/* 2) Perluas CHECK basis. Daftar SELALU superset final (termasuk 'PendapatanDasar'
+      dari gaji-formula-bpjs-kes.sql & 'Flat' dari gaji-potongan-flat.sql) supaya
+      skrip ini idempoten & aman dijalankan dalam urutan apa pun relatif skrip
+      basis lain - tidak pernah menyempitkan constraint di bawah nilai yang
+      sudah dipakai data. */
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'ck_gaji_komponen_basis')
+    ALTER TABLE gaji.komponen DROP CONSTRAINT ck_gaji_komponen_basis;
+GO
+ALTER TABLE gaji.komponen ADD CONSTRAINT ck_gaji_komponen_basis
+    CHECK (basis IN ('Karyawan_Periode','JG_PG','Band','JG','PG','PendapatanDasar','Flat'));
+GO
+
+/* 3) Pindahkan basis 5 komponen "Pendapatan Dasar" dari JG_PG -> dimensi tunggal */
+UPDATE gaji.komponen SET basis = 'Band' WHERE kode = 'GAPOK';
+UPDATE gaji.komponen SET basis = 'JG'   WHERE kode = 'TJ_JABATAN';
+UPDATE gaji.komponen SET basis = 'PG'   WHERE kode = 'TJ_PERUMAHAN';
+UPDATE gaji.komponen SET basis = 'Band' WHERE kode = 'TJ_PANGAN';
+UPDATE gaji.komponen SET basis = 'Band' WHERE kode = 'TJ_ANGKUTAN';
+
+/* 4) Bersihkan sisa tarif JG x PG kelima komponen itu (kosong saat ditulis,
+      dijaga agar skrip ini aman diulang / dijalankan setelah ada isian salah). */
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode IN ('GAPOK','TJ_JABATAN','TJ_PERUMAHAN','TJ_PANGAN','TJ_ANGKUTAN');
+
+PRINT 'Pendapatan Dasar (Gaji Pokok/Tunjangan Jabatan/Perumahan/Pangan/Angkutan) kini bertarif satu dimensi (Band/JG/PG).';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3f] GAJI FORMULA BPJS KESEHATAN (rumus Pendapatan Dasar) ################';
+GO
+/* ============================================================================
+   Tunjangan BPJS Kesehatan (TJ_BPJS_KES) dihitung dari RUMUS, bukan diinput
+   manual per JG x PG:
+     Pendapatan Dasar = Gaji Pokok + Tj. Jabatan + Tj. Perumahan + Tj. Pangan
+                         + Tj. Angkutan (jumlah seluruh komponen basis Band/JG/PG)
+     Tunjangan BPJS Kesehatan = persen% x MIN(Pendapatan Dasar, batas_atas)
+   Default: persen=4, batas_atas=12.000.000 (aturan BPJS Kesehatan standar).
+   Kolom formula_persen/formula_batas di gaji.komponen dibuat GENERIK - basis
+   'PendapatanDasar' bisa dipakai komponen lain nanti tanpa migrasi baru.
+
+   NON-DESTRUKTIF & idempoten. gaji.tarif utk TJ_BPJS_KES kosong (basisnya
+   pindah dari JG_PG), aman dibersihkan.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+/* 1) Kolom parameter rumus (generik, dipakai basis 'PendapatanDasar') --------- */
+IF COL_LENGTH('gaji.komponen', 'formula_persen') IS NULL
+    ALTER TABLE gaji.komponen ADD formula_persen DECIMAL(7,4) NULL;
+GO
+IF COL_LENGTH('gaji.komponen', 'formula_batas') IS NULL
+    ALTER TABLE gaji.komponen ADD formula_batas DECIMAL(18,2) NULL;
+GO
+
+/* 2) Perluas CHECK basis. Daftar SELALU superset final (termasuk 'Flat' dari
+      gaji-potongan-flat.sql) - lihat catatan idempotensi di gaji-tarif-tunggal-schema.sql. */
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'ck_gaji_komponen_basis')
+    ALTER TABLE gaji.komponen DROP CONSTRAINT ck_gaji_komponen_basis;
+GO
+ALTER TABLE gaji.komponen ADD CONSTRAINT ck_gaji_komponen_basis
+    CHECK (basis IN ('Karyawan_Periode','JG_PG','Band','JG','PG','PendapatanDasar','Flat'));
+GO
+
+/* 3) Pindahkan TJ_BPJS_KES ke basis rumus ------------------------------------ */
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 4, formula_batas = 12000000,
+    keterangan = N'4% dari Pendapatan Dasar (Gaji Pokok + Tj. Jabatan + Tj. Perumahan + Tj. Pangan + Tj. Angkutan), maksimum 4% x Rp12.000.000'
+WHERE kode = 'TJ_BPJS_KES';
+
+/* 4) Bersihkan sisa tarif JG x PG-nya (kosong saat ditulis) ------------------ */
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode = 'TJ_BPJS_KES';
+
+PRINT 'Tunjangan BPJS Kesehatan kini dihitung otomatis dari rumus Pendapatan Dasar.';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3g] GAJI POTONGAN FLAT (DPLK per Band, IKGCS/KKCS/K3PG flat) ################';
+GO
+/* ============================================================================
+   Aturan potongan (2026-08-04):
+   - POT_DPLK              -> per Band (mekanisme sama dgn Pendapatan Dasar,
+                              tapi ini POTONGAN - lihat catatan penting di bawah).
+   - POT_IKGCS, POT_SW_KKCS, POT_SW_K3PG -> 'Flat': SATU nominal, sama untuk
+     SEMUA karyawan (bukan per Band/JG/PG, bukan per Karyawan_Periode).
+   - K3PG (POT_K3PG), PIKGCS, KSPPS, BMT, Angsuran, RIT: SUDAH 'Karyawan_Periode'
+     (manual per orang) sebelum skrip ini - tidak diubah.
+
+   Basis baru 'Flat': nilai tunggal di kolom gaji.komponen.nilai_flat (TIDAK
+   per-tahun, TIDAK per Band/JG/PG - satu angka berlaku untuk semua slip sampai
+   diubah admin lagi). Sama pola dgn formula_persen/formula_batas (basis
+   'PendapatanDasar') yang sudah ada.
+
+   PENTING: POT_DPLK ber-basis 'Band' tapi TIPE-nya 'Potongan'. Perhitungan
+   "Pendapatan Dasar" (dasar rumus Tunjangan BPJS Kesehatan) HARUS hanya
+   menjumlah komponen TIPE='Pendapatan' - diperbaiki di kode C# (GajiService),
+   bukan di skrip ini.
+
+   NON-DESTRUKTIF & idempoten. Keempat komponen kosong di gaji.tarif/slip_detail.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+/* 1) Kolom nilai flat (generik, dipakai basis 'Flat') ------------------------ */
+IF COL_LENGTH('gaji.komponen', 'nilai_flat') IS NULL
+    ALTER TABLE gaji.komponen ADD nilai_flat DECIMAL(18,2) NULL;
+GO
+
+/* 2) Perluas CHECK basis. SELALU superset final (7 nilai) - lihat catatan di
+      gaji-tarif-tunggal-schema.sql & gaji-formula-bpjs-kes.sql: skrip mana pun
+      yang drop+recreate constraint ini harus pakai daftar yang SAMA supaya
+      idempoten & tak tergantung urutan run relatif skrip basis lain. */
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'ck_gaji_komponen_basis')
+    ALTER TABLE gaji.komponen DROP CONSTRAINT ck_gaji_komponen_basis;
+GO
+ALTER TABLE gaji.komponen ADD CONSTRAINT ck_gaji_komponen_basis
+    CHECK (basis IN ('Karyawan_Periode','JG_PG','Band','JG','PG','PendapatanDasar','Flat'));
+GO
+
+/* 3) Pindahkan basis komponen terkait ---------------------------------------- */
+UPDATE gaji.komponen SET basis = 'Band' WHERE kode = 'POT_DPLK';
+UPDATE gaji.komponen SET basis = 'Flat' WHERE kode IN ('POT_IKGCS','POT_SW_KKCS','POT_SW_K3PG');
+
+/* 4) Bersihkan sisa tarif/slip_detail lama (kosong saat ditulis) ------------- */
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode = 'POT_DPLK';
+DELETE d FROM gaji.slip_detail d
+    JOIN gaji.komponen k ON k.id_komponen = d.id_komponen
+    WHERE k.kode IN ('POT_IKGCS','POT_SW_KKCS','POT_SW_K3PG');
+
+PRINT 'POT_DPLK kini per Band; IKGCS/Simpanan Wajib KKCS/K3PG kini flat (sama semua karyawan).';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3h] GAJI BPJS KETENAGAKERJAAN (JHT/JKK/JKM/JP) FORMULA ################';
+GO
+/* ============================================================================
+   Tunjangan BPJS Ketenagakerjaan (JHT/JKK/JKM/JP) dihitung dari RUMUS, sama
+   pola dgn TJ_BPJS_KES di blok [3f], basis 'PendapatanDasar':
+     TJ_BPJS_JHT = 3,7%  x Pendapatan Dasar (tanpa batas)
+     TJ_BPJS_JKK = 0,24% x Pendapatan Dasar (tanpa batas)
+     TJ_BPJS_JKM = 0,3%  x Pendapatan Dasar (tanpa batas)
+     TJ_BPJS_JP  = 2%    x MIN(Pendapatan Dasar, Rp11.086.300)
+
+   BEDA dari TJ_BPJS_KES: keempat komponen ini kontribusi PERUSAHAAN ke BPJS
+   TK, "dibayarkan" langsung ke BPJS - bukan diterima karyawan. Jadi HARUS
+   tetap tampil di slip (informasi), tapi TIDAK menambah Total Pendapatan /
+   Gaji Bersih. Kolom baru gaji.komponen.masuk_total (bit, default 1) menandai
+   ini; hanya keempat komponen ini yg di-set 0 - semua komponen lain (termasuk
+   TJ_BPJS_KES) tetap masuk_total=1 (default), TIDAK berubah perilakunya.
+
+   Potongan BPJS TK sisi karyawan (POT_BPJS_JHT/POT_BPJS_JP) SENGAJA TIDAK
+   disentuh blok ini (belum diminta) - tetap basis JG_PG kosong.
+
+   NON-DESTRUKTIF & idempoten. gaji.tarif utk keempat komponen ini kosong
+   (basisnya pindah dari JG_PG), aman dibersihkan.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+/* 1) Kolom flag "masuk ke Total Pendapatan / Gaji Bersih" --------------------- */
+IF COL_LENGTH('gaji.komponen', 'masuk_total') IS NULL
+    ALTER TABLE gaji.komponen ADD masuk_total BIT NOT NULL CONSTRAINT df_gaji_komponen_masuk_total DEFAULT (1);
+GO
+
+/* 2) Pindahkan TJ_BPJS_JHT/JKK/JKM/JP ke basis rumus, kecualikan dari total --- */
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 3.7, formula_batas = NULL, masuk_total = 0,
+    keterangan = N'3,7% dari Pendapatan Dasar - kontribusi perusahaan, dibayarkan ke BPJS TK, tidak menambah Gaji Bersih'
+WHERE kode = 'TJ_BPJS_JHT';
+
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 0.24, formula_batas = NULL, masuk_total = 0,
+    keterangan = N'0,24% dari Pendapatan Dasar - kontribusi perusahaan, dibayarkan ke BPJS TK, tidak menambah Gaji Bersih'
+WHERE kode = 'TJ_BPJS_JKK';
+
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 0.3, formula_batas = NULL, masuk_total = 0,
+    keterangan = N'0,3% dari Pendapatan Dasar - kontribusi perusahaan, dibayarkan ke BPJS TK, tidak menambah Gaji Bersih'
+WHERE kode = 'TJ_BPJS_JKM';
+
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 2, formula_batas = 11086300, masuk_total = 0,
+    keterangan = N'2% dari Pendapatan Dasar, maksimum 2% x Rp11.086.300 - kontribusi perusahaan, dibayarkan ke BPJS TK, tidak menambah Gaji Bersih'
+WHERE kode = 'TJ_BPJS_JP';
+
+/* 3) Bersihkan sisa tarif JG x PG-nya (kosong saat ditulis) ------------------- */
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode IN ('TJ_BPJS_JHT','TJ_BPJS_JKK','TJ_BPJS_JKM','TJ_BPJS_JP');
+
+PRINT 'Tunjangan BPJS Ketenagakerjaan (JHT/JKK/JKM/JP) kini dihitung otomatis dari rumus, dikecualikan dari Total Pendapatan/Gaji Bersih.';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [3i] GAJI POTONGAN BPJS KETENAGAKERJAAN (JHT/JP) FORMULA ################';
+GO
+/* ============================================================================
+   Potongan BPJS Ketenagakerjaan sisi karyawan (JHT/JP) dihitung dari RUMUS,
+   sama pola dgn blok [3f]/[3h], basis 'PendapatanDasar':
+     POT_BPJS_JHT = 2% x Pendapatan Dasar (tanpa batas)
+     POT_BPJS_JP  = 1% x Pendapatan Dasar (tanpa batas)
+
+   BEDA dari TJ_BPJS_JHT/JKK/JKM/JP di blok [3h] (kontribusi PERUSAHAAN,
+   masuk_total=0): ini POTONGAN GAJI KARYAWAN sungguhan (dipotong dari gaji,
+   mengurangi Gaji Bersih) - jadi masuk_total TETAP default true (1).
+
+   NON-DESTRUKTIF & idempoten. gaji.tarif utk kedua komponen ini kosong
+   (basisnya pindah dari JG_PG), aman dibersihkan.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 2, formula_batas = NULL,
+    keterangan = N'2% dari Pendapatan Dasar - potongan gaji karyawan (iuran BPJS TK)'
+WHERE kode = 'POT_BPJS_JHT';
+
+UPDATE gaji.komponen
+SET basis = 'PendapatanDasar', formula_persen = 1, formula_batas = NULL,
+    keterangan = N'1% dari Pendapatan Dasar - potongan gaji karyawan (iuran BPJS TK)'
+WHERE kode = 'POT_BPJS_JP';
+
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode IN ('POT_BPJS_JHT','POT_BPJS_JP');
+
+PRINT 'Potongan BPJS Ketenagakerjaan (JHT/JP) kini dihitung otomatis dari rumus Pendapatan Dasar.';
 GO
 SET NOEXEC OFF;
 GO
@@ -1302,6 +1659,88 @@ END
 ELSE PRINT 'LEWATI: dbo.feature_access sudah ada.';
 GO
 
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [9] DINAS BUKTI (rentang km + foto lokasi UMDL/SPPD) ################';
+GO
+/* ============================================================================
+   dinas.bukti - bukti perjalanan dinas (rentang km + foto lokasi bertimestamp)
+   utk pengajuan UMDL dan SPPD (My Personal). Layer PARALEL: TIDAK menyentuh
+   tabel legacy GCS (web_sdm_umdl / web_sdm_sppd), yang dipakai bersama EASy.
+   ref_id merujuk baris legacy terkait, dipasangkan lewat (jenis, ref_id) sama
+   pola dgn approval.pengajuan.
+
+   rentang_km sekaligus aturan pemilihan form (dikonfirmasi user):
+     UMDL : '<75' atau '75-150' (keduanya Pulang-Pergi)
+     SPPD : '>150' (Pulang-Pergi)
+   Foto disimpan sbg FILE di disk (path relatif dicatat di kolom foto), sama pola
+   dgn db_mygcs.attendances (foto absensi kamera) - BUKAN base64 di database.
+
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF SCHEMA_ID('dinas') IS NULL EXEC('CREATE SCHEMA dinas');
+GO
+
+IF OBJECT_ID('dinas.bukti', 'U') IS NULL
+BEGIN
+    CREATE TABLE dinas.bukti (
+        id           INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_dinas_bukti PRIMARY KEY,
+        jenis        NVARCHAR(10)   NOT NULL,
+        ref_id       NVARCHAR(50)   NOT NULL,
+        id_karyawan  NVARCHAR(50)   NOT NULL,
+        rentang_km   NVARCHAR(20)   NOT NULL,
+        foto         NVARCHAR(255)  NOT NULL,
+        lat          DECIMAL(9,6)   NOT NULL,
+        lng          DECIMAL(9,6)   NOT NULL,
+        accuracy     DECIMAL(9,2)   NULL,
+        dibuat_pada  DATETIME2      NOT NULL CONSTRAINT df_dinas_bukti_tgl DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT ck_dinas_bukti_jenis CHECK (jenis IN ('UMDL','SPPD')),
+        CONSTRAINT ck_dinas_bukti_km CHECK (rentang_km IN ('<75','75-150','>150')),
+        CONSTRAINT uq_dinas_bukti_ref UNIQUE (jenis, ref_id)
+    );
+    CREATE INDEX ix_dinas_bukti_karyawan ON dinas.bukti (id_karyawan);
+    PRINT 'dinas.bukti dibuat.';
+END
+ELSE PRINT 'LEWATI: dinas.bukti sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [10] GAJI KOMPONEN SPPD (Tunjangan Perjalanan Dinas) ################';
+GO
+/* ============================================================================
+   Komponen gaji baru: SPPD (Tunjangan Perjalanan Dinas), Tunjangan Tidak Tetap,
+   basis Karyawan_Periode - nominal = tarif per Band (admin/tarif-sppd) x jumlah
+   SPPD disetujui dalam periode. Dipakai jg sbg basis formula Uang Makan Dinas
+   (MAKAN_DINAS) utk rentang 75-150km (20% dari tarif SPPD Band pegawai).
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'TJ_SPPD')
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
+    VALUES ('TJ_SPPD', N'SPPD', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 37,
+            N'Tunjangan perjalanan dinas; tarif per Band x jumlah SPPD disetujui per periode');
+
+PRINT 'Komponen SPPD (Tunjangan Perjalanan Dinas) dipastikan ada di Tunjangan Tidak Tetap.';
+GO
 SET NOEXEC OFF;
 GO
 

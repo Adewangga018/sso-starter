@@ -14,12 +14,14 @@ public class ApprovalService
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
     private readonly CutiService _cuti;
+    private readonly DinasBuktiService _bukti;
 
-    public ApprovalService(ApplicationDbContext db, GcsDbContext gcs, CutiService cuti)
+    public ApprovalService(ApplicationDbContext db, GcsDbContext gcs, CutiService cuti, DinasBuktiService bukti)
     {
         _db = db;
         _gcs = gcs;
         _cuti = cuti;
+        _bukti = bukti;
     }
 
     public async Task CreateAsync(string jenis, string refId, string nik, string? nama, string? ringkasan)
@@ -84,12 +86,27 @@ public class ApprovalService
             }
         }
 
+        // Bukti dinas (rentang km + foto lokasi) - terisi bila jenis = UMDL/SPPD. Foto
+        // dilihat lewat endpoint terpisah (DinasController) yang cek ulang hak lihat
+        // (pemilik/manager/atasan/Admin SDM) - URL di sini cukup dibentuk apa adanya.
+        string? rentangKm = null, fotoUrl = null;
+        if (a.Jenis is "UMDL" or "SPPD")
+        {
+            var bukti = await _bukti.CariAsync(a.Jenis, a.RefId);
+            if (bukti is not null)
+            {
+                rentangKm = bukti.RentangKm;
+                fotoUrl = $"/api/personal/dinas/foto/{a.Jenis}/{a.RefId}";
+            }
+        }
+
         var jabatan = await ResolveJabatanManyAsync(new[] { a.IdKaryawan });
         return new ApprovalDetailDto(
             a.Id, a.Jenis, a.IdKaryawan, a.Nama, a.Ringkasan, a.Status, a.Komentar,
             PeranSaya(isManager, isAtasan), isManager,
             jabatan.TryGetValue(a.IdKaryawan, out var jab) ? jab : null,
-            ijJenis, ijKep, ijMulai, ijSelesai, ijKet, ijKode, ijStatus);
+            ijJenis, ijKep, ijMulai, ijSelesai, ijKet, ijKode, ijStatus,
+            rentangKm, fotoUrl);
     }
 
     // Hanya MANAGER yang boleh approve/reject.
