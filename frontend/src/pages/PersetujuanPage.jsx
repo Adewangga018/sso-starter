@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircle2, ClipboardCheck, Eye, Loader2, X } from 'lucide-react'
+import { Camera, CheckCircle2, ClipboardCheck, Eye, Loader2, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import './PersetujuanPage.css'
 
@@ -24,6 +24,8 @@ export default function PersetujuanPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [komentar, setKomentar] = useState('')
   const [busy, setBusy] = useState(false)
+  const [buktiPreview, setBuktiPreview] = useState(null) // { url } | null
+  const [buktiLoading, setBuktiLoading] = useState(false)
 
   const load = useCallback(async () => {
     try { setData(await api.getPersetujuan()); setLoading(false) }
@@ -37,6 +39,25 @@ export default function PersetujuanPage() {
     try { setDetail(await api.getPersetujuanDetail(id)) }
     catch (err) { setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal memuat detail.' }); setDetail(null) }
     finally { setDetailLoading(false) }
+  }
+
+  // Foto perlu Bearer token (bukan <img src> biasa) - diambil sbg blob, ditampilkan di modal
+  // preview, lalu object URL-nya di-revoke saat modal ditutup.
+  async function lihatBukti(fotoUrl) {
+    setBuktiLoading(true)
+    try {
+      const { url } = await api.getBlob(fotoUrl)
+      setBuktiPreview({ url })
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal memuat foto bukti dinas.' })
+    } finally {
+      setBuktiLoading(false)
+    }
+  }
+
+  function closeBuktiPreview() {
+    if (buktiPreview?.url) URL.revokeObjectURL(buktiPreview.url)
+    setBuktiPreview(null)
   }
 
   async function putusan(id, setuju, fromModal) {
@@ -150,7 +171,21 @@ export default function PersetujuanPage() {
                   ) : (
                     <div className="apr__dfull"><span>Ringkasan</span><b>{detail.ringkasan || '-'}</b></div>
                   )}
+                  {(detail.jenis === 'UMDL' || detail.jenis === 'SPPD') && detail.rentangKm && (
+                    <div><span>Rentang Jarak</span><b>{detail.rentangKm} km (PP)</b></div>
+                  )}
                 </div>
+
+                {(detail.jenis === 'UMDL' || detail.jenis === 'SPPD') && detail.fotoUrl && (
+                  <button
+                    type="button"
+                    className="apr__btn apr__btn--ghost"
+                    onClick={() => lihatBukti(detail.fotoUrl)}
+                    disabled={buktiLoading}
+                  >
+                    {buktiLoading ? <Loader2 size={15} className="apr__spin" /> : <Camera size={15} />} Lihat Foto Bukti Dinas
+                  </button>
+                )}
 
                 {detail.bisaAksi && detail.status === 'Menunggu' ? (
                   <div className="apr__modal-foot">
@@ -167,6 +202,20 @@ export default function PersetujuanPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {buktiPreview && (
+        <div className="apr__overlay" onClick={closeBuktiPreview}>
+          <div className="apr__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="apr__modal-head">
+              <h3>Foto Bukti Dinas</h3>
+              <button type="button" className="apr__modal-x" onClick={closeBuktiPreview} aria-label="Tutup"><X size={18} /></button>
+            </div>
+            <div className="apr__modal-body">
+              <img src={buktiPreview.url} alt="Foto bukti dinas" style={{ width: '100%', borderRadius: 10 }} />
+            </div>
           </div>
         </div>
       )}

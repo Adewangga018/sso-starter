@@ -784,6 +784,410 @@ public class GajiService
         }
     }
 
+    // ============== Lembur Biasa & Lembur Pengganti: hitung dari SPL disetujui ==============
+    // Rumus BERTINGKAT (Jam I-IV) dipakai bersama oleh dua jenis lembur - lihat
+    // HitungLemburBiasaAsync (khusus Band V/VI, SPL jenis "Biasa") & HitungLemburPenggantiAsync
+    // (tanpa batas Band, SPL jenis "Mengganti" - security yg menggantikan rekan jaga; rumus
+    // dikonfirmasi user PERSIS sama dgn Lembur Biasa). Tarif = Gaji Pokok (Band pegawai) / 173.
+    // Periode gaji (Tahun/Bulan) berarti siklus 16 (bulan sebelumnya) s/d 15 (bulan berjalan) -
+    // dikonfirmasi user, dipakai konsisten di sini (BUKAN kalender 1-akhir bulan).
+    private static readonly TimeOnly LemburJamI = new(16, 0);
+    private static readonly TimeOnly LemburJamII = new(17, 0);
+    private const decimal LemburJamKerjaMax = 45m;
+    private static readonly int[] LemburBandBerlaku = [5, 6];
+
+    // Preview (TIDAK menyimpan apa pun) - Admin Payroll mereview hasil ini sebelum Simpan
+    // (jalur admin/manual biasa, komponen LEMBUR_BIASA basis Karyawan_Periode).
+    public Task<(bool Ok, string? Error, LemburBiasaDto? Data)> HitungLemburBiasaAsync(string nik, int tahun, int bulan) =>
+        HitungLemburBertingkatAsync(nik, tahun, bulan, "Biasa", LemburBandBerlaku,
+            "Formula Lembur Biasa saat ini hanya berlaku untuk Band V dan Band VI.");
+
+    // Lembur Pengganti (security yang menggantikan rekan jaga): SPL jenis "Mengganti",
+    // rumus PERSIS sama dgn Lembur Biasa (dikonfirmasi user) - TANPA batasan Band, sistem
+    // tidak memvalidasi apakah pegawai benar dari Security atau durasi 12 jam (dikonfirmasi
+    // user: bukan validasi ketat, cuma konteks shift jaga) - admin Payroll yang menilai SPL
+    // mana yang sah sebelum menyetujui.
+    public Task<(bool Ok, string? Error, LemburBiasaDto? Data)> HitungLemburPenggantiAsync(string nik, int tahun, int bulan) =>
+        HitungLemburBertingkatAsync(nik, tahun, bulan, "Mengganti", null, null);
+
+    private async Task<(bool Ok, string? Error, LemburBiasaDto? Data)> HitungLemburBertingkatAsync(
+        string nik, int tahun, int bulan, string jenisSpl, int[]? bandBerlaku, string? peringatanBand)
+    {
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var (_, band, _) = await ResolveJabatanAsync(nik);
+
+        if (band is not int bandValue)
+        {
+            return (true, null, new LemburBiasaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, band, 0m, 0m, false, 0m,
+                Array.Empty<LemburBiasaKejadianDto>(),
+                "Jabatan/Band pegawai belum ditempatkan di sistem grading - tidak bisa menghitung tarif dari Gaji Pokok."));
+        }
+        if (bandBerlaku is not null && !bandBerlaku.Contains(bandValue))
+        {
+            return (true, null, new LemburBiasaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, band, 0m, 0m, false, 0m,
+                Array.Empty<LemburBiasaKejadianDto>(), peringatanBand));
+        }
+
+        // Periode 16 - 15: "bulan" = bulan tanggal 15-nya (akhir periode).
+        var akhir = new DateOnly(tahun, bulan, 15);
+        var awal = akhir.AddMonths(-1).AddDays(1);
+        var awalDt = awal.ToDateTime(TimeOnly.MinValue);
+        var akhirDt = akhir.ToDateTime(TimeOnly.MaxValue);
+
+        var idGapok = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "GAPOK").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        short bandS = (short)bandValue;
+        var gajiPokok = idGapok is int ig
+            ? await _db.GajiTarifTunggal.AsNoTracking()
+                .Where(t => t.IdKomponen == ig && t.Nilai == bandS && t.TahunBerlaku == (short)tahun)
+                .Select(t => (decimal?)t.Nominal).FirstOrDefaultAsync() ?? 0m
+            : 0m;
+        var tarif = Math.Round(gajiPokok / 173m, 2, MidpointRounding.AwayFromZero);
+
+        // Hari libur (dipakai menentukan tipe hari tiap kejadian): akhir pekan + Cuti
+        // Nasional/Bersama, pola sama dgn HitungPotonganPresensiAsync.
+        var liburSet = new HashSet<DateOnly>();
+        foreach (var n in await _db.CutiNasional.AsNoTracking()
+            .Where(n => n.TglMulai <= akhir && n.TglSelesai >= awal).ToListAsync())
+            for (var d = n.TglMulai; d <= n.TglSelesai; d = d.AddDays(1)) if (d >= awal && d <= akhir) liburSet.Add(d);
+        foreach (var b in await _db.CutiBersama.AsNoTracking()
+            .Where(b => b.TglMulai <= akhir && b.TglSelesai >= awal).ToListAsync())
+            for (var d = b.TglMulai; d <= b.TglSelesai; d = d.AddDays(1)) if (d >= awal && d <= akhir) liburSet.Add(d);
+
+        // SPL (jenisSpl: "Biasa" utk Lembur Biasa, "Mengganti" utk Lembur Pengganti) yang
+        // sudah DISETUJUI (approval.pengajuan) dan overlap periode ini.
+        var approvalLembur = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == "Lembur" && a.IdKaryawan == nik && a.Status == "Disetujui")
+            .ToListAsync();
+        var idDisetujui = approvalLembur
+            .Select(a => decimal.TryParse(a.RefId, out var rid) ? rid : (decimal?)null)
+            .Where(x => x.HasValue).Select(x => x!.Value).ToHashSet();
+        var splRows = idDisetujui.Count == 0 ? new List<Models.Gcs.WebSdmSpl>() : (await _gcs.WebSdmSpl.AsNoTracking()
+            .Where(s => idDisetujui.Contains(s.id) && s.jenis_spl == jenisSpl && s.tgl_spl >= awalDt && s.tgl_spl <= akhirDt)
+            .ToListAsync())
+            .OrderBy(s => s.tgl_spl).ToList();
+
+        var kejadian = new List<LemburBiasaKejadianDto>();
+        decimal totalJamDibayar = 0;
+        var dibatasi = false;
+
+        foreach (var spl in splRows)
+        {
+            var tanggal = DateOnly.FromDateTime(spl.tgl_spl);
+            var isLibur = tanggal.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday || liburSet.Contains(tanggal);
+            var tipeHari = isLibur ? "Hari Libur" : "Hari Kerja";
+
+            decimal jamI = 0, jamII = 0, jamIII = 0, jamIV = 0;
+
+            if (!isLibur)
+            {
+                // Lembur hari kerja hanya dihitung sejak jam 16:00 (jam kerja normal
+                // 07:00-16:00, lihat Potongan Presensi) - bagian sebelum itu diabaikan.
+                var mulaiEfektif = spl.tgl_spl < tanggal.ToDateTime(LemburJamI) ? tanggal.ToDateTime(LemburJamI) : spl.tgl_spl;
+                if (mulaiEfektif < spl.tgl_spl2)
+                {
+                    var batas17 = tanggal.ToDateTime(LemburJamII);
+                    var akhirJamI = spl.tgl_spl2 < batas17 ? spl.tgl_spl2 : batas17;
+                    jamI = (decimal)Math.Max(0, (akhirJamI - mulaiEfektif).TotalHours);
+                    if (spl.tgl_spl2 > batas17)
+                    {
+                        var mulaiJamII = mulaiEfektif > batas17 ? mulaiEfektif : batas17;
+                        jamII = (decimal)Math.Max(0, (spl.tgl_spl2 - mulaiJamII).TotalHours);
+                    }
+                }
+            }
+            else
+            {
+                // Hari libur: 7 jam pertama = Jam II; jam ke-8 istirahat wajib TAK dibayar
+                // (dikurangi, tak masuk nominal/cap); jam ke-9 = Jam III (maks 1 jam); jam
+                // ke-10 dst = Jam IV (tak terbatas). "Jam berapapun" -> tanpa clip ke jendela waktu.
+                var totalJam = (decimal)Math.Max(0, (spl.tgl_spl2 - spl.tgl_spl).TotalHours);
+                jamII = Math.Min(totalJam, 7m);
+                var sisa = totalJam - jamII;
+                var istirahat = Math.Min(sisa, 1m);
+                sisa -= istirahat;
+                jamIII = Math.Min(sisa, 1m);
+                sisa -= jamIII;
+                jamIV = sisa;
+            }
+
+            var jamDibayarEvent = jamI + jamII + jamIII + jamIV;
+            var terpotong = false;
+
+            // Batas 45 jam/periode - dihitung TERPISAH per jenisSpl (mis. Lembur Biasa &
+            // Lembur Pengganti masing2 kuota 45 jam sendiri, BELUM digabung jadi satu kuota
+            // "seluruh lembur"; Crash Program malah tanpa batas sama sekali - lihat method
+            // masing2). Kalau kejadian ini melewati batas, potong dari segmen tarif
+            // TERTINGGI dulu (Jam IV -> I).
+            var sisaKuota = LemburJamKerjaMax - totalJamDibayar;
+            if (sisaKuota <= 0)
+            {
+                jamI = jamII = jamIII = jamIV = 0; jamDibayarEvent = 0; terpotong = true;
+            }
+            else if (jamDibayarEvent > sisaKuota)
+            {
+                var potong = jamDibayarEvent - sisaKuota;
+                var potIV = Math.Min(jamIV, potong); jamIV -= potIV; potong -= potIV;
+                var potIII = Math.Min(jamIII, potong); jamIII -= potIII; potong -= potIII;
+                var potII = Math.Min(jamII, potong); jamII -= potII; potong -= potII;
+                var potI = Math.Min(jamI, potong); jamI -= potI; potong -= potI;
+                jamDibayarEvent = jamI + jamII + jamIII + jamIV;
+                terpotong = true;
+            }
+
+            if (terpotong) dibatasi = true;
+            totalJamDibayar += jamDibayarEvent;
+
+            var nominalEvent = Math.Round(tarif * (jamI * 1.5m + jamII * 2m + jamIII * 3m + jamIV * 4m), 0, MidpointRounding.AwayFromZero);
+            kejadian.Add(new LemburBiasaKejadianDto(
+                tanggal, tipeHari, spl.jam_mulai ?? "", spl.jam_selesai ?? "",
+                jamI, jamII, jamIII, jamIV, jamDibayarEvent, nominalEvent, terpotong));
+        }
+
+        var total = kejadian.Sum(k => k.Nominal);
+        return (true, null, new LemburBiasaDto(
+            nik, pegawai.nama ?? nik, tahun, bulan, bandValue, tarif,
+            totalJamDibayar, dibatasi, total, kejadian, null));
+    }
+
+    // ===================== Lembur Crash Program: hitung dari SPL "Crash Program" =====================
+    // Khusus Band I-IV. Tarif = Gaji Pokok (Band pegawai) / 173, SAMA rumus dgn Lembur Biasa
+    // (dikonfirmasi user). "Jam mati" - TANPA pengali tarif (beda dari Lembur Biasa yg
+    // bertingkat Jam I-IV), TANPA batas 45 jam/periode. Tetap wajib SPL "Crash Program"
+    // yang sudah Disetujui - sama mekanisme dgn Lembur Biasa, tak ada syarat tambahan.
+    private static readonly int[] LemburCrashBandBerlaku = [1, 2, 3, 4];
+
+    // Preview (TIDAK menyimpan apa pun) - Admin Payroll mereview hasil ini sebelum Simpan
+    // (jalur admin/manual biasa, komponen LEMBUR_CRASH basis Karyawan_Periode).
+    public async Task<(bool Ok, string? Error, LemburCrashDto? Data)> HitungLemburCrashAsync(
+        string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var (_, band, _) = await ResolveJabatanAsync(nik);
+
+        if (band is not int bandValue || !LemburCrashBandBerlaku.Contains(bandValue))
+        {
+            return (true, null, new LemburCrashDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, band, 0m, 0m, 0m,
+                Array.Empty<LemburCrashKejadianDto>(),
+                "Formula Lembur Crash Program saat ini hanya berlaku untuk Band I s/d Band IV."));
+        }
+
+        // Periode 16 - 15 (sama dgn Lembur Biasa & komponen lain).
+        var akhir = new DateOnly(tahun, bulan, 15);
+        var awal = akhir.AddMonths(-1).AddDays(1);
+        var awalDt = awal.ToDateTime(TimeOnly.MinValue);
+        var akhirDt = akhir.ToDateTime(TimeOnly.MaxValue);
+
+        var idGapok = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "GAPOK").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        short bandS = (short)bandValue;
+        var gajiPokok = idGapok is int ig
+            ? await _db.GajiTarifTunggal.AsNoTracking()
+                .Where(t => t.IdKomponen == ig && t.Nilai == bandS && t.TahunBerlaku == (short)tahun)
+                .Select(t => (decimal?)t.Nominal).FirstOrDefaultAsync() ?? 0m
+            : 0m;
+        var tarif = Math.Round(gajiPokok / 173m, 2, MidpointRounding.AwayFromZero);
+
+        var approvalLembur = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == "Lembur" && a.IdKaryawan == nik && a.Status == "Disetujui")
+            .ToListAsync();
+        var idDisetujui = approvalLembur
+            .Select(a => decimal.TryParse(a.RefId, out var rid) ? rid : (decimal?)null)
+            .Where(x => x.HasValue).Select(x => x!.Value).ToHashSet();
+        var splRows = idDisetujui.Count == 0 ? new List<Models.Gcs.WebSdmSpl>() : (await _gcs.WebSdmSpl.AsNoTracking()
+            .Where(s => idDisetujui.Contains(s.id) && s.jenis_spl == "Crash Program" && s.tgl_spl >= awalDt && s.tgl_spl <= akhirDt)
+            .ToListAsync())
+            .OrderBy(s => s.tgl_spl).ToList();
+
+        var kejadian = new List<LemburCrashKejadianDto>();
+        foreach (var spl in splRows)
+        {
+            var jam = (decimal)Math.Max(0, (spl.tgl_spl2 - spl.tgl_spl).TotalHours);
+            var nominal = Math.Round(jam * tarif, 0, MidpointRounding.AwayFromZero);
+            kejadian.Add(new LemburCrashKejadianDto(
+                DateOnly.FromDateTime(spl.tgl_spl), spl.jam_mulai ?? "", spl.jam_selesai ?? "", jam, nominal));
+        }
+
+        var totalJam = kejadian.Sum(k => k.Jam);
+        var total = kejadian.Sum(k => k.Nominal);
+        return (true, null, new LemburCrashDto(
+            nik, pegawai.nama ?? nik, tahun, bulan, bandValue, tarif, totalJam, total, kejadian, null));
+    }
+
+    // ===================== Tarif SPPD per Band (admin) =====================
+    // Dipakai (1) nominal komponen SPPD sendiri dan (2) basis formula Uang Makan Dinas
+    // rentang 75-150km. Komponen TJ_SPPD basis-nya 'Karyawan_Periode' (bukan 'Band') -
+    // jadi TIDAK muncul di panel generik Pendapatan Dasar/Potongan Tunggal (yang cuma
+    // menampilkan komponen basis Band/JG/PG). Endpoint SENDIRI, reuse tabel
+    // gaji.tarif_tunggal (id_komponen milik TJ_SPPD, nilai=band) tanpa bergantung pada
+    // kolom basis komponen.
+    public async Task<TarifSppdDto> GetTarifSppdAsync(int tahun)
+    {
+        var idSppd = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_SPPD").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        if (idSppd is not int ids) return new TarifSppdDto(tahun, Array.Empty<TarifTunggalNilaiDto>());
+
+        short th = (short)tahun;
+        var rows = await _db.GajiTarifTunggal.AsNoTracking()
+            .Where(t => t.IdKomponen == ids && t.TahunBerlaku == th)
+            .ToListAsync();
+        var nilai = BandLabel.Keys.OrderBy(x => x)
+            .Select(n => new TarifTunggalNilaiDto(n, BandLabel[n], rows.FirstOrDefault(r => r.Nilai == n)?.Nominal ?? 0m))
+            .ToList();
+        return new TarifSppdDto(tahun, nilai);
+    }
+
+    public async Task<(bool Ok, string? Error)> SimpanTarifSppdAsync(SimpanTarifSppdRequest req)
+    {
+        var komponen = await _db.GajiKomponen.FirstOrDefaultAsync(k => k.Kode == "TJ_SPPD");
+        if (komponen is null) return (false, "Komponen SPPD belum tersedia - jalankan migrasi terbaru.");
+
+        short th = (short)req.Tahun;
+        var existing = await _db.GajiTarifTunggal
+            .Where(t => t.IdKomponen == komponen.IdKomponen && t.TahunBerlaku == th)
+            .ToListAsync();
+        foreach (var item in req.Items)
+        {
+            var row = existing.FirstOrDefault(e => e.Nilai == (short)item.Nilai);
+            if (row is null)
+            {
+                _db.GajiTarifTunggal.Add(new Models.Gaji.GajiTarifTunggal
+                {
+                    IdKomponen = komponen.IdKomponen, Nilai = (short)item.Nilai, TahunBerlaku = th, Nominal = item.Nominal,
+                });
+            }
+            else
+            {
+                row.Nominal = item.Nominal;
+            }
+        }
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    private async Task<decimal> TarifSppdBandAsync(int band, int tahun)
+    {
+        var idSppd = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_SPPD").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        if (idSppd is not int ids) return 0m;
+        return await _db.GajiTarifTunggal.AsNoTracking()
+            .Where(t => t.IdKomponen == ids && t.Nilai == (short)band && t.TahunBerlaku == (short)tahun)
+            .Select(t => (decimal?)t.Nominal).FirstOrDefaultAsync() ?? 0m;
+    }
+
+    // ===================== Uang Makan Dinas (MAKAN_DINAS): hitung dari UMDL disetujui =====================
+    // <75km -> Rp40.000 flat; 75-150km -> 20% dari tarif SPPD Band pegawai. Periode 16-15
+    // (sama dgn komponen lain). Sumber rentang_km: dinas.bukti (jenis="UMDL", ref_id=UMDL.ID).
+    private const decimal UmdlFlatDibawah75 = 40000m;
+    private const decimal UmdlPersen75_150 = 0.20m;
+
+    public async Task<(bool Ok, string? Error, UmdlFormulaDto? Data)> HitungUmdlAsync(string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var (_, band, _) = await ResolveJabatanAsync(nik);
+        if (band is not int bandValue)
+        {
+            return (true, null, new UmdlFormulaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, band, 0m, 0m, Array.Empty<UmdlFormulaKejadianDto>(),
+                "Jabatan/Band pegawai belum ditempatkan di sistem grading - tidak bisa menghitung formula UMDL."));
+        }
+
+        var tarifSppd = await TarifSppdBandAsync(bandValue, tahun);
+
+        var akhir = new DateOnly(tahun, bulan, 15);
+        var awal = akhir.AddMonths(-1).AddDays(1);
+        var awalDt = awal.ToDateTime(TimeOnly.MinValue);
+        var akhirDt = akhir.ToDateTime(TimeOnly.MaxValue);
+
+        var approvalUmdl = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == "UMDL" && a.IdKaryawan == nik && a.Status == "Disetujui")
+            .ToListAsync();
+        var idDisetujui = approvalUmdl
+            .Select(a => decimal.TryParse(a.RefId, out var rid) ? rid : (decimal?)null)
+            .Where(x => x.HasValue).Select(x => x!.Value).ToHashSet();
+        var umdlRows = idDisetujui.Count == 0 ? new List<Models.Gcs.WebSdmUmdl>() : (await _gcs.WebSdmUmdl.AsNoTracking()
+            .Where(u => idDisetujui.Contains(u.ID) && u.TGL_UMDL >= awalDt && u.TGL_UMDL <= akhirDt)
+            .ToListAsync())
+            .OrderBy(u => u.TGL_UMDL).ToList();
+
+        var kejadian = new List<UmdlFormulaKejadianDto>();
+        foreach (var u in umdlRows)
+        {
+            var bukti = await _db.DinasBukti.AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Jenis == "UMDL" && b.RefId == u.ID.ToString());
+            var tanggal = DateOnly.FromDateTime(u.TGL_UMDL);
+            if (bukti is null)
+            {
+                kejadian.Add(new UmdlFormulaKejadianDto(tanggal, null, 0m, "Belum ada data rentang km (bukti dinas tidak ditemukan)."));
+                continue;
+            }
+            decimal nominal = bukti.RentangKm switch
+            {
+                "<75" => UmdlFlatDibawah75,
+                "75-150" => Math.Round(tarifSppd * UmdlPersen75_150, 0, MidpointRounding.AwayFromZero),
+                _ => 0m,
+            };
+            string? peringatan = bukti.RentangKm is "<75" or "75-150" ? null : $"Rentang km tidak dikenal ({bukti.RentangKm}).";
+            kejadian.Add(new UmdlFormulaKejadianDto(tanggal, bukti.RentangKm, nominal, peringatan));
+        }
+
+        var total = kejadian.Sum(k => k.Nominal);
+        return (true, null, new UmdlFormulaDto(
+            nik, pegawai.nama ?? nik, tahun, bulan, bandValue, tarifSppd, total, kejadian, null));
+    }
+
+    // ===================== SPPD (TJ_SPPD): hitung dari SPPD disetujui =====================
+    // Nominal = tarif per Band x jumlah SPPD disetujui dalam periode (16-15). Tidak
+    // bergantung rentang_km (SPPD selalu >150km, satu-satunya nilai valid).
+    public async Task<(bool Ok, string? Error, SppdFormulaDto? Data)> HitungSppdAsync(string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var (_, band, _) = await ResolveJabatanAsync(nik);
+        if (band is not int bandValue)
+        {
+            return (true, null, new SppdFormulaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, band, 0m, 0m, Array.Empty<SppdFormulaKejadianDto>(),
+                "Jabatan/Band pegawai belum ditempatkan di sistem grading - tidak bisa menghitung tarif SPPD."));
+        }
+
+        var tarif = await TarifSppdBandAsync(bandValue, tahun);
+
+        var akhir = new DateOnly(tahun, bulan, 15);
+        var awal = akhir.AddMonths(-1).AddDays(1);
+        var awalDt = awal.ToDateTime(TimeOnly.MinValue);
+        var akhirDt = akhir.ToDateTime(TimeOnly.MaxValue);
+
+        var approvalSppd = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == "SPPD" && a.IdKaryawan == nik && a.Status == "Disetujui")
+            .ToListAsync();
+        var idDisetujui = approvalSppd
+            .Select(a => int.TryParse(a.RefId, out var rid) ? rid : (int?)null)
+            .Where(x => x.HasValue).Select(x => x!.Value).ToHashSet();
+        var sppdRows = idDisetujui.Count == 0 ? new List<Models.Gcs.WebSdmSppd>() : (await _gcs.WebSdmSppd.AsNoTracking()
+            .Where(s => idDisetujui.Contains(s.id) && s.tgl_berangkat >= awalDt && s.tgl_berangkat <= akhirDt)
+            .ToListAsync())
+            .OrderBy(s => s.tgl_berangkat).ToList();
+
+        var kejadian = sppdRows
+            .Select(s => new SppdFormulaKejadianDto(DateOnly.FromDateTime(s.tgl_berangkat), s.tujuan_sppd, tarif))
+            .ToList();
+
+        var total = kejadian.Sum(k => k.Nominal);
+        return (true, null, new SppdFormulaDto(
+            nik, pegawai.nama ?? nik, tahun, bulan, bandValue, tarif, total, kejadian, null));
+    }
+
     private async Task<List<int>> ReadIntsAsync(string sql)
     {
         var conn = _db.Database.GetDbConnection();

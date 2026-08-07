@@ -39,4 +39,7 @@ public record ApprovalDetailDto(
     DateOnly? IzinSelesai,
     string? IzinKeterangan,
     string? IzinKode,
-    string? IzinStatusSdm);
+    string? IzinStatusSdm,
+    // Bukti dinas (rentang km + foto lokasi) - terisi bila jenis = UMDL atau SPPD.
+    string? RentangKm = null,
+    string? FotoUrl = null);

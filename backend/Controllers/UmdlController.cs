@@ -33,12 +33,14 @@ public class UmdlController : ControllerBase
     private readonly GcsDbContext _db;
     private readonly CurrentUserContext _currentUser;
     private readonly ApprovalService _approval;
+    private readonly DinasBuktiService _bukti;
 
-    public UmdlController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval)
+    public UmdlController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval, DinasBuktiService bukti)
     {
         _db = db;
         _currentUser = currentUser;
         _approval = approval;
+        _bukti = bukti;
     }
 
     [HttpGet]
@@ -62,14 +64,24 @@ public class UmdlController : ControllerBase
             .Where(i => idIjin.Contains(i.id))
             .ToDictionaryAsync(i => i.id, i => i.kode_ijin);
 
-        var items = rows.Select(u => new UmdlDto(
-            (long)u.ID,
-            u.KODE_UMDL,
-            u.STATUS,
-            u.TGL_UMDL,
-            u.KETERANGAN,
-            u.ID_IJIN > 0 ? kodeIjin.GetValueOrDefault(u.ID_IJIN) : null,
-            u.SOURCE)).ToList();
+        // Bukti dinas (rentang km + foto) hidup di db_mygcs (dinas.bukti), bukan di baris
+        // legacy ini - dimuat sekaligus per (jenis="UMDL", refId) supaya tak N+1 query.
+        var buktiByRefId = await _bukti.CariBanyakAsync("UMDL", rows.Select(r => r.ID.ToString()).ToList());
+
+        var items = rows.Select(u =>
+        {
+            buktiByRefId.TryGetValue(u.ID.ToString(), out var b);
+            return new UmdlDto(
+                (long)u.ID,
+                u.KODE_UMDL,
+                u.STATUS,
+                u.TGL_UMDL,
+                u.KETERANGAN,
+                u.ID_IJIN > 0 ? kodeIjin.GetValueOrDefault(u.ID_IJIN) : null,
+                u.SOURCE,
+                b?.RentangKm,
+                b is null ? null : $"/api/personal/dinas/foto/UMDL/{u.ID}");
+        }).ToList();
 
         return Ok(new UmdlListDto(items));
     }
@@ -139,6 +151,18 @@ public class UmdlController : ControllerBase
             return BadRequest(new { message = "Surat izin tersebut sudah dipakai untuk UMDL lain." });
         }
 
+        // Rentang km + foto bukti divalidasi SEBELUM baris legacy dibuat (fail-fast) -
+        // GCS dan db_mygcs adalah database terpisah, tidak ada transaksi lintas-DB, jadi
+        // kesalahan yang bisa dicegah lebih awal HARUS dicegah sebelum baris legacy tercatat.
+        if (!_bukti.RentangValidUntuk("UMDL", request.RentangKm))
+        {
+            return BadRequest(new { message = _bukti.PesanRentangSalah("UMDL") });
+        }
+        if (string.IsNullOrWhiteSpace(request.Foto))
+        {
+            return BadRequest(new { message = "Foto bukti dinas wajib diambil terlebih dahulu." });
+        }
+
         var atasan = await ResolveAtasanAsync(pegawai.ID_KARYAWAN);
         if (atasan is null)
         {
@@ -163,6 +187,20 @@ public class UmdlController : ControllerBase
         _db.WebSdmUmdl.Add(umdl);
         await _db.SaveChangesAsync();
 
+        var (buktiOk, buktiError) = await _bukti.SimpanAsync(
+            "UMDL", umdl.ID.ToString(), pegawai.ID_KARYAWAN, request.RentangKm,
+            request.Foto, request.Lat, request.Lng, request.Accuracy);
+        if (!buktiOk)
+        {
+            // Baris UMDL legacy SUDAH tercatat (GCS & db_mygcs beda database, tak ada
+            // transaksi lintas-DB) - kegagalan di sini paling sering I/O disk, sangat jarang
+            // krn rentang km & foto sudah divalidasi di atas sebelum baris legacy dibuat.
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = $"UMDL tersimpan, tapi bukti dinas gagal disimpan: {buktiError} Hubungi IT, lalu coba Ubah UMDL ini untuk mengunggah ulang bukti."
+            });
+        }
+
         var ringkasan = $"UMDL · {request.TglUmdl:dd MMM yyyy}"
             + (string.IsNullOrWhiteSpace(request.Keterangan) ? string.Empty : $": {request.Keterangan.Trim()}");
         await _approval.CreateAsync("UMDL", umdl.ID.ToString(), pegawai.ID_KARYAWAN, pegawai.NAMA_LENGKAP, ringkasan);
@@ -174,7 +212,9 @@ public class UmdlController : ControllerBase
             umdl.TGL_UMDL,
             umdl.KETERANGAN,
             izin.kode_ijin,
-            umdl.SOURCE));
+            umdl.SOURCE,
+            request.RentangKm,
+            $"/api/personal/dinas/foto/UMDL/{umdl.ID}"));
     }
 
     [HttpPut("{id:long}")]
@@ -192,11 +232,26 @@ public class UmdlController : ControllerBase
             return NotFound(new { message = "UMDL tidak ditemukan atau sudah diproses sehingga tidak bisa diubah." });
         }
 
+        if (!_bukti.RentangValidUntuk("UMDL", request.RentangKm))
+        {
+            return BadRequest(new { message = _bukti.PesanRentangSalah("UMDL") });
+        }
+
         // Surat izin asalnya tidak bisa dipindah - itu yang menentukan hak uang makannya.
         umdl.TGL_UMDL = request.TglUmdl.ToDateTime(TimeOnly.MinValue);
         umdl.KETERANGAN = request.Keterangan?.Trim();
 
         await _db.SaveChangesAsync();
+
+        // Foto kosong = pertahankan foto lama (SimpanAsync sudah menangani ini).
+        var (buktiOk, buktiError) = await _bukti.SimpanAsync(
+            "UMDL", umdl.ID.ToString(), pegawai.ID_KARYAWAN, request.RentangKm,
+            request.Foto, request.Lat, request.Lng, request.Accuracy);
+        if (!buktiOk)
+        {
+            return BadRequest(new { message = buktiError });
+        }
+
         return NoContent();
     }
 
@@ -217,6 +272,7 @@ public class UmdlController : ControllerBase
 
         _db.WebSdmUmdl.Remove(umdl);
         await _db.SaveChangesAsync();
+        await _bukti.HapusAsync("UMDL", id.ToString());
         return NoContent();
     }
 

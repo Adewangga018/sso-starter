@@ -115,3 +115,52 @@ public record PotonganPresensiDto(
     decimal PersenTpTotal, decimal PersenTaTotal,
     decimal NominalTp, decimal NominalTa, decimal Total,
     IReadOnlyList<PresensiKejadianDto> Kejadian);
+
+// ---- Lembur Biasa: dihitung (preview, TIDAK disimpan otomatis) dari SPL "Biasa" yang
+// sudah disetujui. Khusus Band V/VI - band lain tidak dihitung (Peringatan terisi). ----
+public record LemburBiasaKejadianDto(
+    DateOnly Tanggal, string TipeHari, string JamMulai, string JamSelesai,
+    decimal JamI, decimal JamII, decimal JamIII, decimal JamIV,
+    decimal JamDibayar, decimal Nominal, bool Terpotong45Jam);
+
+public record LemburBiasaDto(
+    string Nik, string Nama, int Tahun, int Bulan, int? Band, decimal Tarif,
+    decimal TotalJamDibayar, bool Dibatasi45Jam, decimal Total,
+    IReadOnlyList<LemburBiasaKejadianDto> Kejadian, string? Peringatan);
+
+// ---- Lembur Crash Program: dihitung (preview) dari SPL "Crash Program" disetujui.
+// Khusus Band I-IV. "Jam mati" - TANPA pengali tarif (beda dari Lembur Biasa), TANPA
+// batas 45 jam/periode. ----
+public record LemburCrashKejadianDto(DateOnly Tanggal, string JamMulai, string JamSelesai, decimal Jam, decimal Nominal);
+
+public record LemburCrashDto(
+    string Nik, string Nama, int Tahun, int Bulan, int? Band, decimal Tarif,
+    decimal TotalJam, decimal Total,
+    IReadOnlyList<LemburCrashKejadianDto> Kejadian, string? Peringatan);
+
+// ---- Tarif SPPD per Band (admin) - dipakai (1) nominal komponen SPPD sendiri (tarif x
+// jumlah SPPD disetujui/periode) dan (2) basis formula Uang Makan Dinas rentang 75-150km
+// (20% dari tarif SPPD Band pegawai). Reuse tabel gaji.tarif_tunggal tapi TIDAK lewat
+// panel generik Pendapatan Dasar/Potongan Tunggal (basis komponen SPPD = Karyawan_Periode,
+// bukan Band - endpoint own supaya nilainya tetap bisa diatur per Band). ----
+public record TarifSppdDto(int Tahun, IReadOnlyList<TarifTunggalNilaiDto> Nilai);
+public record SimpanTarifSppdRequest(int Tahun, IReadOnlyList<TarifTunggalItem> Items);
+
+// ---- Uang Makan Dinas (UMDL/MAKAN_DINAS): dihitung (preview) dari pengajuan UMDL yang
+// sudah disetujui, formulanya berdasar rentang_km bukti dinas (dinas.bukti):
+//   <75km    -> Rp40.000 flat
+//   75-150km -> 20% dari tarif SPPD Band pegawai (lihat TarifSppdDto)
+// (>150km tak mungkin muncul di UMDL - divalidasi UmdlController saat submit). ----
+public record UmdlFormulaKejadianDto(DateOnly Tanggal, string? RentangKm, decimal Nominal, string? Peringatan);
+
+public record UmdlFormulaDto(
+    string Nik, string Nama, int Tahun, int Bulan, int? Band, decimal TarifSppdBand, decimal Total,
+    IReadOnlyList<UmdlFormulaKejadianDto> Kejadian, string? Peringatan);
+
+// ---- SPPD (TJ_SPPD): dihitung (preview) dari pengajuan SPPD yang sudah disetujui -
+// nominal = tarif per Band (TarifSppdDto) x jumlah SPPD disetujui dalam periode. ----
+public record SppdFormulaKejadianDto(DateOnly Tanggal, string? Tujuan, decimal Nominal);
+
+public record SppdFormulaDto(
+    string Nik, string Nama, int Tahun, int Bulan, int? Band, decimal Tarif, decimal Total,
+    IReadOnlyList<SppdFormulaKejadianDto> Kejadian, string? Peringatan);

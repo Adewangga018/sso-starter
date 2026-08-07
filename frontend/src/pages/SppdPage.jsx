@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDialog } from '../components/DialogProvider'
-import { ArrowUp, ArrowDown, ArrowUpDown, Check, ListChecks, Pencil, Plus, Printer, RotateCw, Search, Trash2, X } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Camera, Check, ListChecks, Pencil, Plus, Printer, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
+import DinasKameraCapture from '../components/DinasKameraCapture'
 import './SppdPage.css'
+
+// SPPD hanya utk jarak >150km (Pulang-Pergi) - di bawah itu diajukan lewat UMDL. Cuma satu
+// nilai valid, jadi tidak perlu dropdown pilihan, langsung dikunci di form.
+const RENTANG_KM_SPPD = '>150'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -55,6 +60,7 @@ const emptyForm = {
   tujuan: '',
   keterangan: '',
   kendaraan: 'Umum',
+  bukti: null,
 }
 
 const emptyPeserta = { nik: '', nama: '', posisi: 'Ketua', tugas: '' }
@@ -88,6 +94,8 @@ export default function SppdPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
   const [pickerRows, setPickerRows] = useState([])
+
+  const [buktiPreview, setBuktiPreview] = useState(null) // { url } | null
 
   async function load() {
     try {
@@ -178,9 +186,28 @@ export default function SppdPage() {
       tujuan: row.tujuan ?? '',
       keterangan: row.keterangan ?? '',
       kendaraan: row.kendaraan ?? 'Umum',
+      bukti: null,
     })
     setFormError('')
     setModalOpen(true)
+  }
+
+  // Foto perlu Bearer token (bukan <img src> biasa) - diambil sbg blob, ditampilkan di modal
+  // preview, lalu object URL-nya di-revoke saat modal ditutup.
+  async function viewBukti(row) {
+    try {
+      const { url } = await api.getBlob(row.fotoUrl)
+      setBuktiPreview({ url })
+    } catch (err) {
+      await dialog.alert({
+        message: err instanceof ApiError ? err.message : 'Gagal memuat foto bukti dinas.',
+      })
+    }
+  }
+
+  function closeBuktiPreview() {
+    if (buktiPreview?.url) URL.revokeObjectURL(buktiPreview.url)
+    setBuktiPreview(null)
   }
 
   function updateField(key, value) {
@@ -197,9 +224,23 @@ export default function SppdPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setFormError('')
+
+    if (!editing && !form.bukti) {
+      setFormError('Ambil foto bukti lokasi dinas terlebih dahulu.')
+      return
+    }
+
     setSaving(true)
     try {
-      const payload = { ...form }
+      const { bukti, ...rest } = form
+      const payload = {
+        ...rest,
+        rentangKm: RENTANG_KM_SPPD,
+        foto: bukti?.foto ?? null,
+        lat: bukti?.lat ?? 0,
+        lng: bukti?.lng ?? 0,
+        accuracy: bukti?.accuracy ?? null,
+      }
       if (editing) {
         await api.updateSppd(editing.id, payload)
         setModalOpen(false)
@@ -482,6 +523,16 @@ export default function SppdPage() {
                   <td className="sppd__col-kendaraan" data-label="Transportasi">{row.kendaraan}</td>
                   <td className="sppd__col-aksi" data-label="Aksi">
                     <div className="sppd__row-actions">
+                      {row.fotoUrl && (
+                        <button
+                          type="button"
+                          className="sppd__row-btn"
+                          onClick={() => viewBukti(row)}
+                          title="Lihat foto bukti dinas"
+                        >
+                          <Camera size={15} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="sppd__row-btn sppd__row-btn--print"
@@ -609,6 +660,18 @@ export default function SppdPage() {
                   ))}
                 </select>
               </label>
+
+              <div className="sppd__window-hint">
+                SPPD hanya utk jarak lebih dari <b>150 km (Pulang-Pergi)</b>. Jarak di bawah itu
+                diajukan lewat <b>UMDL</b>.
+              </div>
+
+              {editing && editing.fotoUrl && !form.bukti && (
+                <div className="sppd__window-hint">
+                  Foto bukti sudah tersimpan. Ambil foto baru di bawah hanya jika ingin menggantinya.
+                </div>
+              )}
+              <DinasKameraCapture value={form.bukti} onChange={(v) => setForm((p) => ({ ...p, bukti: v }))} />
 
               {formError && <div className="sppd__error">{formError}</div>}
 
@@ -809,6 +872,22 @@ export default function SppdPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {buktiPreview && (
+        <div className="sppd__modal-backdrop" onClick={closeBuktiPreview}>
+          <div className="sppd__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sppd__modal-header">
+              <h3>Foto Bukti Dinas</h3>
+              <button type="button" className="sppd__modal-close" onClick={closeBuktiPreview} aria-label="Tutup">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="sppd__modal-body">
+              <img src={buktiPreview.url} alt="Foto bukti dinas" style={{ width: '100%', borderRadius: 10 }} />
             </div>
           </div>
         </div>

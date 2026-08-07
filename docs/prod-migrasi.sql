@@ -1662,5 +1662,87 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [9] DINAS BUKTI (rentang km + foto lokasi UMDL/SPPD) ################';
+GO
+/* ============================================================================
+   dinas.bukti - bukti perjalanan dinas (rentang km + foto lokasi bertimestamp)
+   utk pengajuan UMDL dan SPPD (My Personal). Layer PARALEL: TIDAK menyentuh
+   tabel legacy GCS (web_sdm_umdl / web_sdm_sppd), yang dipakai bersama EASy.
+   ref_id merujuk baris legacy terkait, dipasangkan lewat (jenis, ref_id) sama
+   pola dgn approval.pengajuan.
+
+   rentang_km sekaligus aturan pemilihan form (dikonfirmasi user):
+     UMDL : '<75' atau '75-150' (keduanya Pulang-Pergi)
+     SPPD : '>150' (Pulang-Pergi)
+   Foto disimpan sbg FILE di disk (path relatif dicatat di kolom foto), sama pola
+   dgn db_mygcs.attendances (foto absensi kamera) - BUKAN base64 di database.
+
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF SCHEMA_ID('dinas') IS NULL EXEC('CREATE SCHEMA dinas');
+GO
+
+IF OBJECT_ID('dinas.bukti', 'U') IS NULL
+BEGIN
+    CREATE TABLE dinas.bukti (
+        id           INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_dinas_bukti PRIMARY KEY,
+        jenis        NVARCHAR(10)   NOT NULL,
+        ref_id       NVARCHAR(50)   NOT NULL,
+        id_karyawan  NVARCHAR(50)   NOT NULL,
+        rentang_km   NVARCHAR(20)   NOT NULL,
+        foto         NVARCHAR(255)  NOT NULL,
+        lat          DECIMAL(9,6)   NOT NULL,
+        lng          DECIMAL(9,6)   NOT NULL,
+        accuracy     DECIMAL(9,2)   NULL,
+        dibuat_pada  DATETIME2      NOT NULL CONSTRAINT df_dinas_bukti_tgl DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT ck_dinas_bukti_jenis CHECK (jenis IN ('UMDL','SPPD')),
+        CONSTRAINT ck_dinas_bukti_km CHECK (rentang_km IN ('<75','75-150','>150')),
+        CONSTRAINT uq_dinas_bukti_ref UNIQUE (jenis, ref_id)
+    );
+    CREATE INDEX ix_dinas_bukti_karyawan ON dinas.bukti (id_karyawan);
+    PRINT 'dinas.bukti dibuat.';
+END
+ELSE PRINT 'LEWATI: dinas.bukti sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [10] GAJI KOMPONEN SPPD (Tunjangan Perjalanan Dinas) ################';
+GO
+/* ============================================================================
+   Komponen gaji baru: SPPD (Tunjangan Perjalanan Dinas), Tunjangan Tidak Tetap,
+   basis Karyawan_Periode - nominal = tarif per Band (admin/tarif-sppd) x jumlah
+   SPPD disetujui dalam periode. Dipakai jg sbg basis formula Uang Makan Dinas
+   (MAKAN_DINAS) utk rentang 75-150km (20% dari tarif SPPD Band pegawai).
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM gaji.komponen WHERE kode = 'TJ_SPPD')
+    INSERT INTO gaji.komponen (kode, nama, tipe, kategori, basis, opsional, kena_potongan_terlambat, urutan, keterangan)
+    VALUES ('TJ_SPPD', N'SPPD', 'Pendapatan', N'Tunjangan Tidak Tetap', 'Karyawan_Periode', 1, 0, 37,
+            N'Tunjangan perjalanan dinas; tarif per Band x jumlah SPPD disetujui per periode');
+
+PRINT 'Komponen SPPD (Tunjangan Perjalanan Dinas) dipastikan ada di Tunjangan Tidak Tetap.';
+GO
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

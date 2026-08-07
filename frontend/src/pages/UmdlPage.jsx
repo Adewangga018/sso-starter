@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDialog } from '../components/DialogProvider'
-import { ArrowUp, ArrowDown, ArrowUpDown, Check, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Camera, Check, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
+import DinasKameraCapture from '../components/DinasKameraCapture'
 import './UmdlPage.css'
+
+// Sesuai aturan: UMDL hanya utk jarak <75km atau 75-150km (Pulang-Pergi). Di atas itu
+// wajib lewat SPPD - jadi opsi >150km SENGAJA tidak muncul di sini.
+const RENTANG_KM_OPTIONS = [
+  { value: '<75', label: '< 75 km (Pulang-Pergi)' },
+  { value: '75-150', label: '75 - 150 km (Pulang-Pergi)' },
+]
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -41,7 +49,7 @@ function isoDate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-const emptyForm = { idIjin: null, kodeIjin: '', tglUmdl: '', keterangan: '' }
+const emptyForm = { idIjin: null, kodeIjin: '', tglUmdl: '', keterangan: '', rentangKm: '', bukti: null }
 
 export default function UmdlPage() {
   const dialog = useDialog()
@@ -62,6 +70,8 @@ export default function UmdlPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerRows, setPickerRows] = useState([])
   const [pickerError, setPickerError] = useState('')
+
+  const [buktiPreview, setBuktiPreview] = useState(null) // { url } | null
 
   async function load() {
     try {
@@ -149,9 +159,29 @@ export default function UmdlPage() {
       kodeIjin: row.kodeIjin ?? '',
       tglUmdl: isoDate(new Date(row.tglUmdl)),
       keterangan: row.keterangan ?? '',
+      rentangKm: row.rentangKm ?? '',
+      bukti: null,
     })
     setFormError('')
     setModalOpen(true)
+  }
+
+  // Foto perlu Bearer token (bukan <img src> biasa) - diambil sbg blob, ditampilkan di modal
+  // preview, lalu object URL-nya di-revoke saat modal ditutup.
+  async function viewBukti(row) {
+    try {
+      const { url } = await api.getBlob(row.fotoUrl)
+      setBuktiPreview({ url })
+    } catch (err) {
+      await dialog.alert({
+        message: err instanceof ApiError ? err.message : 'Gagal memuat foto bukti dinas.',
+      })
+    }
+  }
+
+  function closeBuktiPreview() {
+    if (buktiPreview?.url) URL.revokeObjectURL(buktiPreview.url)
+    setBuktiPreview(null)
   }
 
   async function openPicker() {
@@ -186,6 +216,14 @@ export default function UmdlPage() {
       setFormError('Pilih surat izin terlebih dahulu.')
       return
     }
+    if (!form.rentangKm) {
+      setFormError('Pilih rentang jarak (km) terlebih dahulu.')
+      return
+    }
+    if (!editing && !form.bukti) {
+      setFormError('Ambil foto bukti lokasi dinas terlebih dahulu.')
+      return
+    }
 
     setSaving(true)
     try {
@@ -193,6 +231,11 @@ export default function UmdlPage() {
         idIjin: form.idIjin ?? 0,
         tglUmdl: form.tglUmdl,
         keterangan: form.keterangan,
+        rentangKm: form.rentangKm,
+        foto: form.bukti?.foto ?? null,
+        lat: form.bukti?.lat ?? 0,
+        lng: form.bukti?.lng ?? 0,
+        accuracy: form.bukti?.accuracy ?? null,
       }
       if (editing) {
         await api.updateUmdl(editing.id, payload)
@@ -357,6 +400,11 @@ export default function UmdlPage() {
                   {isDibuatTab && (
                     <td className="umdl__col-aksi" data-label="Aksi">
                       <div className="umdl__row-actions">
+                        {row.fotoUrl && (
+                          <button type="button" className="umdl__row-btn" onClick={() => viewBukti(row)} title="Lihat foto bukti dinas">
+                            <Camera size={15} />
+                          </button>
+                        )}
                         <button type="button" className="umdl__row-btn umdl__row-btn--edit" onClick={() => openEdit(row)} title="Ubah">
                           <Pencil size={15} />
                         </button>
@@ -435,10 +483,32 @@ export default function UmdlPage() {
                 />
               </label>
 
+              <label className="umdl__field">
+                <span>Rentang Jarak (km)</span>
+                <select
+                  value={form.rentangKm}
+                  onChange={(e) => setForm((p) => ({ ...p, rentangKm: e.target.value }))}
+                  required
+                >
+                  <option value="" disabled>Pilih rentang jarak...</option>
+                  {RENTANG_KM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
               <div className="umdl__window-hint">
                 UMDL hanya bisa diajukan dari surat izin berjenis <b>Meninggalkan Pekerjaan</b> dengan
-                kepentingan <b>Dinas</b>. Satu surat izin hanya bisa dipakai sekali.
+                kepentingan <b>Dinas</b>. Satu surat izin hanya bisa dipakai sekali. Jarak di atas 150 km
+                wajib diajukan lewat <b>SPPD</b>.
               </div>
+
+              {editing && editing.fotoUrl && !form.bukti && (
+                <div className="umdl__window-hint">
+                  Foto bukti sudah tersimpan. Ambil foto baru di bawah hanya jika ingin menggantinya.
+                </div>
+              )}
+              <DinasKameraCapture value={form.bukti} onChange={(v) => setForm((p) => ({ ...p, bukti: v }))} />
 
               {formError && <div className="umdl__error">{formError}</div>}
 
@@ -511,6 +581,22 @@ export default function UmdlPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {buktiPreview && (
+        <div className="umdl__modal-backdrop" onClick={closeBuktiPreview}>
+          <div className="umdl__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="umdl__modal-header">
+              <h3>Foto Bukti Dinas</h3>
+              <button type="button" className="umdl__modal-close" onClick={closeBuktiPreview} aria-label="Tutup">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="umdl__modal-body">
+              <img src={buktiPreview.url} alt="Foto bukti dinas" style={{ width: '100%', borderRadius: 10 }} />
             </div>
           </div>
         </div>

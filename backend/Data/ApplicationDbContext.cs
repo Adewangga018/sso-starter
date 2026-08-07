@@ -6,6 +6,7 @@ using SsoBackend.Models.Approval;
 using SsoBackend.Models.Aset;
 using SsoBackend.Models.Coaching;
 using SsoBackend.Models.Cuti;
+using SsoBackend.Models.Dinas;
 using SsoBackend.Models.Gaji;
 using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
@@ -25,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<DinasBukti> DinasBukti => Set<DinasBukti>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
     public DbSet<FeatureAccess> FeatureAccess => Set<FeatureAccess>();
@@ -151,6 +153,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasKey(x => x.FeatureKey);
             e.Property(x => x.FeatureKey).HasMaxLength(80);
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
+        });
+
+        // Bukti perjalanan dinas (rentang km + foto lokasi) UMDL/SPPD - lihat DinasBukti.cs.
+        // Tabel dikelola raw SQL (docs/dinas-bukti-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<DinasBukti>(e =>
+        {
+            e.ToTable("bukti", "dinas", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.RefId).HasColumnName("ref_id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.RentangKm).HasColumnName("rentang_km");
+            e.Property(x => x.Foto).HasColumnName("foto");
+            e.Property(x => x.Lat).HasColumnName("lat").HasPrecision(9, 6);
+            e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(9, 6);
+            e.Property(x => x.Accuracy).HasColumnName("accuracy").HasPrecision(9, 2);
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 
         // Tugas My Team (myteam.tugas). Tabel dikelola di luar EF (raw SQL, seperti skema

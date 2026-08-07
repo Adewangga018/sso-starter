@@ -7,7 +7,10 @@ public record UmdlDto(
     DateTime TglUmdl,
     string? Keterangan,
     string? KodeIjin,
-    string? Source);
+    string? Source,
+    // Bukti dinas (rentang km + foto lokasi) - null untuk baris lama sebelum fitur ini ada.
+    string? RentangKm = null,
+    string? FotoUrl = null);
 
 public record UmdlListDto(IReadOnlyList<UmdlDto> Items);
 
@@ -21,4 +24,8 @@ public record IjinUmdlDto(
     string KepentinganIjin,
     string? Keterangan);
 
-public record UmdlRequest(long IdIjin, DateOnly TglUmdl, string? Keterangan);
+// RentangKm: "<75" | "75-150" (Pulang-Pergi) - ">150" TIDAK diizinkan di UMDL, harus lewat SPPD.
+// Foto: data URL base64 (wajib saat Create; boleh dikosongkan saat Update utk pertahankan foto lama).
+public record UmdlRequest(
+    long IdIjin, DateOnly TglUmdl, string? Keterangan,
+    string RentangKm, string? Foto, decimal Lat, decimal Lng, decimal? Accuracy);

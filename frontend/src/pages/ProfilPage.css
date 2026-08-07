@@ -1,54 +1,106 @@
-.profil__empty {
-  padding: 60px 0;
-  text-align: center;
-  color: var(--gcs-text-muted);
-  font-size: 14px;
+/* ===========================================================================
+   My Personal - Profil Page Styles (Corporate Identity Theme - Compact Edition)
+   =========================================================================== */
+
+.profil {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.profil__header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+/* Empty / Loading States */
+.profil__empty-card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
   border-radius: 14px;
-  padding: 16px 22px;
-  margin-bottom: 14px;
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--gcs-text-muted);
+}
+
+.profil__empty-icon {
+  color: var(--gcs-gold-500);
+}
+
+/* ---------------------------------------------------------------------------
+   1. Profil Hero Card Header (Compact)
+   --------------------------------------------------------------------------- */
+.profil__hero-card {
+  position: relative;
+  background: linear-gradient(135deg, var(--gcs-green-900) 0%, #153e30 60%, #1c5240 100%);
+  border: 1px solid rgba(244, 174, 70, 0.2);
+  border-radius: 16px;
+  padding: 20px 24px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px -10px rgba(15, 38, 31, 0.35);
+}
+
+.profil__hero-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 174, 70, 0.18) 0%, rgba(244, 174, 70, 0) 70%);
+  pointer-events: none;
+}
+
+.profil__hero-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .profil__avatar {
   position: relative;
-  width: 54px;
-  height: 54px;
-  border-radius: 999px;
-  background: linear-gradient(140deg, var(--gcs-green-600), var(--gcs-green-900));
-  border: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  border: 3px solid rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 21px;
-  font-weight: 700;
-  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
   flex-shrink: 0;
-  overflow: visible;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .profil__avatar-img {
   width: 100%;
   height: 100%;
-  border-radius: 999px;
+  border-radius: 50%;
   object-fit: cover;
   display: block;
 }
 
-/* Tombol kamera kecil di pojok avatar saat mode edit. */
 .profil__avatar-edit {
   position: absolute;
   right: -2px;
   bottom: -2px;
   width: 26px;
   height: 26px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 2px solid var(--gcs-white);
   background: var(--gcs-green-900);
   color: #fff;
@@ -57,10 +109,13 @@
   justify-content: center;
   cursor: pointer;
   padding: 0;
+  transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .profil__avatar-edit:hover:not(:disabled) {
-  background: var(--gcs-green-600);
+  background: var(--gcs-gold-500);
+  color: var(--gcs-green-900);
+  transform: scale(1.1);
 }
 
 .profil__avatar-edit:disabled {
@@ -68,10 +123,76 @@
   cursor: default;
 }
 
+.profil__hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profil__hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profil__hero-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.profil__status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.profil__status-pill--inactive {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.profil__hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.profil__hero-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.profil__hero-meta-item--sso {
+  background: rgba(244, 174, 70, 0.2);
+  color: var(--gcs-gold-500);
+  border: 1px solid rgba(244, 174, 70, 0.3);
+}
+
 .profil__photo-actions {
   display: flex;
-  gap: 14px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
 .profil__photo-link {
@@ -81,9 +202,9 @@
   border: none;
   background: none;
   padding: 0;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--gcs-green-600);
+  color: var(--gcs-gold-500);
   cursor: pointer;
 }
 
@@ -91,100 +212,159 @@
   text-decoration: underline;
 }
 
-.profil__photo-link:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .profil__photo-link--danger {
-  color: #c0392b;
+  color: #fca5a5;
 }
 
 .profil__photo-msg {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11.5px;
 }
 
 .profil__photo-msg--ok {
-  color: var(--gcs-green-600);
+  color: #34d399;
 }
 
 .profil__photo-msg--err {
-  color: #c0392b;
+  color: #fca5a5;
 }
 
-.profil__header-text {
-  flex: 1;
-  min-width: 0;
+/* Right Side Meter & Action Controls */
+.profil__hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
 }
 
-.profil__header-text h2 {
-  font-size: 20px;
+.profil__completeness-box {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.profil__jabatan {
-  color: var(--gcs-text-muted);
-  font-size: 13.5px;
-  margin-top: 2px;
-}
-
-.profil__status-pill {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(47, 108, 63, 0.12);
-  color: var(--gcs-green-600);
-  font-size: 12px;
+.profil__completeness-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 600;
 }
 
-.profil__status-pill--inactive {
-  background: rgba(192, 57, 43, 0.1);
-  color: #c0392b;
+.profil__completeness-val {
+  font-weight: 800;
+  color: var(--gcs-gold-500);
+  font-size: 12px;
+}
+
+.profil__completeness-bar {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.profil__completeness-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  transition: width 0.4s ease;
+}
+
+.profil__completeness-sub {
+  font-size: 10px;
+}
+
+.profil__completeness-sub .text-ok {
+  color: #34d399;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.profil__completeness-sub .text-warn {
+  color: var(--gcs-gold-500);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.profil__hero-btn-wrap {
+  display: flex;
+  align-items: center;
 }
 
 .profil__edit-btn {
-  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   border-radius: 10px;
-  padding: 10px 18px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.profil__edit-btn--active {
-  opacity: 1;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  color: var(--gcs-green-900);
+  font-size: 12.5px;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(218, 166, 40, 0.35);
+  transition: all 0.2s ease;
 }
 
-.profil__edit-btn--active:hover {
-  filter: brightness(1.08);
+.profil__edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(218, 166, 40, 0.45);
+  background: linear-gradient(135deg, #f7b754, var(--gcs-gold-500));
 }
 
 .profil__edit-actions {
   display: flex;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 .profil__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
+  transition: all 0.18s ease;
 }
 
-.profil__btn:hover {
-  filter: brightness(1.08);
+.profil__btn--primary {
+  background: linear-gradient(135deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  color: var(--gcs-green-900);
+}
+
+.profil__btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(218, 166, 40, 0.35);
+}
+
+.profil__btn--ghost {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.profil__btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .profil__btn:disabled {
@@ -192,77 +372,284 @@
   cursor: default;
 }
 
-.profil__btn--ghost {
-  background: transparent;
-  color: var(--gcs-text-muted);
+/* ---------------------------------------------------------------------------
+   2. Quick Navigation Pills
+   --------------------------------------------------------------------------- */
+.profil__quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.profil__quick-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.profil__nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
+  color: var(--gcs-ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.18s ease;
 }
 
-.profil__notice {
-  background: rgba(47, 108, 63, 0.08);
-  border: 1px solid rgba(47, 108, 63, 0.2);
+.profil__nav-pill:hover {
+  border-color: var(--gcs-gold-500);
   color: var(--gcs-green-900);
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 13px;
-  margin-bottom: 16px;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(15, 38, 31, 0.05);
 }
 
-.profil__notice--warn {
-  background: rgba(244, 174, 70, 0.14);
-  border-color: rgba(244, 174, 70, 0.4);
-  color: var(--gcs-gold-700);
-}
-
-.profil__alert {
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-bottom: 14px;
-}
-
-.profil__alert--ok {
-  background: rgba(47, 108, 63, 0.1);
+.profil__nav-pill svg {
   color: var(--gcs-green-600);
 }
 
+/* ---------------------------------------------------------------------------
+   3. Notice & Alert Banners
+   --------------------------------------------------------------------------- */
+.profil__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(60, 138, 81, 0.08);
+  border: 1px solid rgba(60, 138, 81, 0.2);
+  color: var(--gcs-green-900);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.profil__notice-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.profil__notice--warn {
+  background: rgba(244, 174, 70, 0.12);
+  border-color: rgba(244, 174, 70, 0.4);
+  color: var(--gcs-ink);
+}
+
+.profil__notice--warn .profil__notice-icon {
+  color: var(--gcs-gold-700);
+}
+
+.profil__missing-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.missing-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(225, 177, 36, 0.2);
+  color: var(--gcs-gold-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profil__alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.profil__alert--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
 .profil__alert--err {
-  background: rgba(192, 57, 43, 0.1);
-  color: #c0392b;
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+   4. Compact Profile Section Cards & 4-Column Dense Grid
+   --------------------------------------------------------------------------- */
+.profil__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(15, 38, 31, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  scroll-margin-top: 16px;
+}
+
+.profil__card:hover {
+  border-color: rgba(15, 38, 31, 0.15);
+}
+
+.profil__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--gcs-green-900);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+}
+
+.section-title-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(60, 138, 81, 0.12);
+  color: var(--gcs-green-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Dense 4-Column Grid on Desktop */
+.profil__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 18px;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gcs-border);
+  transition: background 0.18s ease;
+}
+
+.info-row:has(input, select, textarea) {
+  border-bottom: none;
+  padding-bottom: 0;
+  gap: 4px;
+}
+
+.info-row__label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.profil__required {
+  color: #ef4444;
+  margin-left: 2px;
+  font-weight: 800;
+}
+
+.info-row__value {
+  font-size: 13px;
+  color: var(--gcs-ink);
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .profil__input {
   width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
-  padding: 7px 10px;
+  padding: 6px 10px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--gcs-ink);
   background: var(--gcs-white);
+  transition: all 0.18s ease;
 }
 
 .profil__input:focus {
   outline: none;
   border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.2);
+}
+
+.profil__link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--gcs-green-600);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.profil__link:hover {
+  color: var(--gcs-gold-700);
+}
+
+/* ---------------------------------------------------------------------------
+   5. Data Keluarga & Dense Berkas Grid
+   --------------------------------------------------------------------------- */
+.profil__subsection + .profil__subsection {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--gcs-border);
+}
+
+.profil__subsection-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* 3-Column Berkas Grid on Desktop for Tight Packing */
+.profil__berkas-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .profil__upload {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
-  padding: 0 14px;
+  padding: 0 12px;
   border-left: 1px solid var(--gcs-border);
   background: var(--gcs-white);
   color: var(--gcs-green-900);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
+  transition: background 0.18s ease;
 }
 
 .profil__upload:hover {
-  background: rgba(47, 108, 63, 0.06);
+  background: rgba(60, 138, 81, 0.08);
 }
 
 .profil__upload.is-disabled {
@@ -279,420 +666,89 @@
   to { transform: rotate(360deg); }
 }
 
-/* --- Data Anak CRUD --- */
-.profil__anak-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-}
+/* ---------------------------------------------------------------------------
+   6. Responsif Breakpoints (Tablet & Mobile)
+   --------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+  .profil__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 
-.profil__iconbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--gcs-text-muted);
-  cursor: pointer;
-}
-
-.profil__iconbtn:hover {
-  background: var(--gcs-bg);
-  color: var(--gcs-ink);
-}
-
-.profil__iconbtn--danger:hover {
-  background: rgba(192, 57, 43, 0.1);
-  color: #c0392b;
-}
-
-.profil__iconbtn.is-disabled,
-.profil__iconbtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.profil__anak-item--editing {
-  display: block;
-  padding: 16px;
-  background: var(--gcs-white);
-}
-
-.profil__anak-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.profil__anak-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.profil__anak-form .profil__alert {
-  margin-bottom: 0;
-}
-
-.profil__addbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 9px 16px;
-  border: 1px dashed var(--gcs-border);
-  border-radius: 10px;
-  background: var(--gcs-bg);
-  color: var(--gcs-green-900);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.profil__addbtn:hover {
-  border-color: var(--gcs-green-600);
-  background: rgba(47, 108, 63, 0.06);
-}
-
-.profil__card {
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-radius: 14px;
-  padding: 16px 22px;
-  margin-bottom: 14px;
-}
-
-.profil__section-title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--gcs-green-900);
-  text-transform: uppercase;
-  padding-bottom: 9px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--gcs-border);
-}
-.profil__section-title::before {
-  content: '';
-  width: 3px;
-  height: 13px;
-  border-radius: 2px;
-  background: linear-gradient(var(--gcs-gold-500), var(--gcs-gold-700));
-  flex: none;
-}
-
-/* A labelled group inside a .profil__card, e.g. "Data Pasangan" / "Data Anak" living
-   together under the "Data Keluarga" card. */
-.profil__subsection + .profil__subsection {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px dashed var(--gcs-border);
-}
-
-.profil__subsection-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--gcs-text-muted);
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-
-.profil__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 11px 28px;
-}
-
-/* Baris info sebagai "data sheet" rapat: label mungil di atas nilai, dengan garis
-   pemisah tipis agar tertata namun tidak memakan ruang. */
-.info-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--gcs-border);
-}
-/* Saat mode edit (baris berisi input), buang garis agar form bersih & lega. */
-.info-row:has(input, select, textarea) {
-  border-bottom: none;
-  padding-bottom: 0;
-  gap: 5px;
-}
-
-/* Spacing before a standalone berkas row that follows a detail grid, e.g. Buku Nikah under
-   Data Pasangan. Not needed inside .profil__anak-item (Akta Kelahiran under each anak's
-   detail) - that's a flex column with its own `gap`, which would double up with this margin. */
-.profil__grid + .profil__berkas-item {
-  margin-top: 16px;
-}
-
-.profil__anak-item > .profil__grid + .profil__berkas-item {
-  margin-top: 0;
+  .profil__berkas-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 860px) {
+  .profil__hero-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px 20px;
+    gap: 16px;
+  }
+
+  .profil__hero-side {
+    align-items: stretch;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .profil__completeness-box {
+    flex: 1;
+    min-width: 0;
+  }
+
   .profil__grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 560px) {
-  .profil__header {
-    flex-wrap: wrap;
-    padding: 20px;
+@media (max-width: 600px) {
+  .profil__hero-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
   }
 
-  .profil__edit-btn {
-    order: 1;
+  .profil__hero-name {
+    font-size: 18px;
+  }
+
+  .profil__hero-side {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profil__edit-btn,
+  .profil__edit-actions {
     width: 100%;
   }
 
+  .profil__edit-actions .profil__btn {
+    flex: 1;
+    justify-content: center;
+  }
+
   .profil__card {
-    padding: 18px 20px;
+    padding: 14px 16px;
   }
 
   .profil__grid {
     grid-template-columns: 1fr;
   }
 
-  .profil__anak-item {
-    flex-wrap: wrap;
-  }
-}
-
-.info-row__label {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--gcs-text-muted);
-  text-transform: uppercase;
-  margin-bottom: 0;
-}
-
-.profil__required {
-  color: #c0392b;
-  margin-left: 3px;
-}
-
-.info-row__value {
-  font-size: 13.5px;
-  color: var(--gcs-ink);
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.profil__link {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  color: #2563eb;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.profil__link:hover {
-  color: #1d4ed8;
-}
-
-.profil__empty-inline {
-  font-size: 13px;
-  color: var(--gcs-text-muted);
-}
-
-/* The anak list lives inside the Kartu Keluarga popup, under the document itself. */
-.profil__anak-panel-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gcs-text-muted);
-  margin-bottom: 10px;
-}
-
-.profil__anak-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.profil__anak-item {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  border: 1px solid var(--gcs-border);
-  border-radius: 10px;
-  background: var(--gcs-bg);
-  padding: 16px;
-}
-
-.profil__anak-item:hover {
-  border-color: var(--gcs-gold-500);
-}
-
-.profil__anak-item .profil__berkas-item {
-  background: var(--gcs-white);
-}
-
-.profil__anak-chevron {
-  color: var(--gcs-text-muted);
-  flex-shrink: 0;
-}
-
-.profil__berkas-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-@media (max-width: 640px) {
   .profil__berkas-list {
     grid-template-columns: 1fr;
   }
 }
 
-.profil__berkas-item {
-  display: flex;
-  width: 100%;
-  align-items: stretch;
-  border: 1px solid var(--gcs-border);
-  border-radius: 10px;
-  background: var(--gcs-bg);
-  overflow: hidden;
-}
-
-.profil__berkas-item:hover {
-  border-color: var(--gcs-gold-500);
-}
-
-.profil__berkas-view {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: none;
-  background: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.profil__berkas-view:disabled {
-  cursor: default;
-}
-
-.profil__berkas-icon {
-  flex-shrink: 0;
-  color: rgba(62, 52, 48, 0.35);
-}
-
-.profil__berkas-icon--available {
-  color: var(--gcs-green-600);
-}
-
-.profil__berkas-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.profil__berkas-label {
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.profil__berkas-sub {
-  font-size: 12px;
-  color: var(--gcs-text-muted);
-  margin-top: 2px;
-}
-
-/* ===========================================================================
-   Responsif (pelengkap media query 860px & 560px di atas)
-   =========================================================================== */
-@media (max-width: 560px) {
-  /* Kartu identitas: avatar & nama sebaris, aksi turun ke bawah selebar kartu. */
-  .profil__header {
-    gap: 12px;
-    padding: 16px;
-  }
-
-  .profil__header-text h2 {
-    font-size: 16px;
-  }
-
-  /* Simpan / Batal saat mode ubah - dua tombol sempit sulit disentuh tepat. */
-  .profil__edit-actions {
-    order: 1;
-    width: 100%;
-    flex-shrink: 1;
-  }
-
-  .profil__edit-actions .profil__btn {
-    flex: 1;
-    padding: 12px 14px;
-  }
-
-  .profil__photo-actions {
-    flex-wrap: wrap;
-  }
-
-  .profil__section-title {
-    font-size: 14px;
-  }
-
-  /* Tambah/hapus anak & berkas: tombol ikon diperbesar untuk sentuh. */
-  .profil__iconbtn {
-    width: 38px;
-    height: 38px;
-  }
-
-  .profil__anak-form-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .profil__anak-form-actions .profil__btn {
-    width: 100%;
-  }
-
-  .profil__addbtn {
-    width: 100%;
-    justify-content: center;
+@media (prefers-reduced-motion: reduce) {
+  .profil__edit-btn,
+  .profil__btn,
+  .profil__nav-pill,
+  .profil__avatar-edit {
+    transition: none;
   }
 }
 
-@media (max-width: 420px) {
-  .profil__card {
-    padding: 14px;
-  }
 
-  .profil__header {
-    padding: 14px;
-  }
-
-  .profil__avatar {
-    width: 46px;
-    height: 46px;
-    font-size: 18px;
-  }
-
-  /* Nama berkas panjang (mis. "Kartu Keluarga - scan.pdf") tidak boleh
-     mendorong tombol lihat keluar kartu. */
-  .profil__berkas-label,
-  .profil__berkas-sub {
-    overflow-wrap: anywhere;
-  }
-}

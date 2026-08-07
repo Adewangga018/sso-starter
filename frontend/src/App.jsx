@@ -38,6 +38,7 @@ import CutiPage from './pages/CutiPage'
 import GajiPage from './pages/GajiPage'
 import PayrollFormulaPage from './pages/PayrollFormulaPage'
 import PayrollManualPage from './pages/PayrollManualPage'
+import DinasVerifikasiPage from './pages/DinasVerifikasiPage'
 import MyPayrollLayout from './layouts/MyPayrollLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
@@ -107,6 +108,7 @@ export default function App() {
               <Route path="/payroll" element={<MyPayrollLayout />}>
                 <Route index element={<PayrollFormulaPage />} />
                 <Route path="manual" element={<PayrollManualPage />} />
+                <Route path="dinas" element={<DinasVerifikasiPage />} />
               </Route>
             </Route>
             <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />

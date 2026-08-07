@@ -174,6 +174,92 @@ public class GajiController : ControllerBase
         return ok ? Ok(data) : NotFound(new { message = error });
     }
 
+    // --- Lembur Biasa: preview hitung otomatis dari SPL "Biasa" disetujui (khusus Band
+    //     V/VI). TIDAK menyimpan - admin review lalu Simpan via admin/manual biasa. ---
+
+    [HttpGet("admin/lembur-biasa")]
+    public async Task<IActionResult> LemburBiasa([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungLemburBiasaAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Lembur Pengganti: preview hitung otomatis dari SPL "Mengganti" disetujui (rumus
+    //     sama dgn Lembur Biasa, tanpa batasan Band). TIDAK menyimpan. ---
+
+    [HttpGet("admin/lembur-pengganti")]
+    public async Task<IActionResult> LemburPengganti([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungLemburPenggantiAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Lembur Crash Program: preview hitung otomatis dari SPL "Crash Program" disetujui
+    //     (khusus Band I-IV). TIDAK menyimpan - admin review lalu Simpan via admin/manual. ---
+
+    [HttpGet("admin/lembur-crash")]
+    public async Task<IActionResult> LemburCrash([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungLemburCrashAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Tarif SPPD per Band (dipakai nominal komponen SPPD sendiri & basis formula
+    //     Uang Makan Dinas rentang 75-150km). Endpoint SENDIRI (bukan panel Pendapatan
+    //     Dasar generik) krn basis komponen TJ_SPPD = Karyawan_Periode, bukan Band. ---
+
+    [HttpGet("admin/tarif-sppd")]
+    public async Task<ActionResult<TarifSppdDto>> TarifSppd([FromQuery] int tahun)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        return Ok(await _gaji.GetTarifSppdAsync(tahun));
+    }
+
+    [HttpPut("admin/tarif-sppd")]
+    public async Task<IActionResult> SimpanTarifSppd([FromBody] SimpanTarifSppdRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (req.Tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        var (ok, error) = await _gaji.SimpanTarifSppdAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Uang Makan Dinas (MAKAN_DINAS): preview hitung otomatis dari UMDL disetujui
+    //     (<75km=Rp40rb flat, 75-150km=20% tarif SPPD Band). TIDAK menyimpan. ---
+
+    [HttpGet("admin/umdl-formula")]
+    public async Task<IActionResult> UmdlFormula([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungUmdlAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- SPPD (TJ_SPPD): preview hitung otomatis dari SPPD disetujui (tarif Band x jumlah
+    //     SPPD dalam periode). TIDAK menyimpan. ---
+
+    [HttpGet("admin/sppd-formula")]
+    public async Task<IActionResult> SppdFormula([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungSppdAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
     // --- Komponen berbasis rumus (mis. Tunjangan BPJS Kesehatan = %  Pendapatan Dasar) ---
 
     [HttpGet("admin/formula")]
