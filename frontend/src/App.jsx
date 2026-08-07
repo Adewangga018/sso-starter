@@ -67,6 +67,7 @@ import InovasiForm from './pages/inovasi/InovasiForm'
 import GagasanList from './pages/inovasi/GagasanList'
 import InovasiPegawai from './pages/inovasi/InovasiPegawai'
 import InovasiRoadmap from './pages/inovasi/InovasiRoadmap'
+import InovasiGlobalOverview from './pages/inovasi/InovasiGlobalOverview'
 import RankingPage from './pages/inovasi/RankingPage'
 import RekapGagasan from './pages/inovasi/RekapGagasan'
 import RekapMetodologi from './pages/inovasi/RekapMetodologi'
@@ -193,6 +194,7 @@ export default function App() {
                 <Route path="panduan" element={<InovasiPanduan />} />
                 <Route path="pegawai" element={<InovasiPegawai />} />
                 <Route path="roadmap" element={<InovasiRoadmap />} />
+                <Route path="global" element={<InovasiGlobalOverview />} />
                 <Route path="rekap/gagasan" element={<RekapGagasan />} />
                 <Route path="rekap/metodologi" element={<RekapMetodologi />} />
                 {/* Ranking Sumbang Gagasan & Ranking Inovasi kini satu menu bertab;

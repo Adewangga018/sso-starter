@@ -15,6 +15,7 @@ import {
   Map,
   Medal,
   MessageSquarePlus,
+  PieChart,
   Trophy,
   UserCheck,
 } from 'lucide-react'
@@ -31,7 +32,7 @@ import './AppShell.css'
 // approver (Manager/GM) berbeda: hanya melihat & memproses persetujuan.
 const BASE = '/my-innovation'
 
-function buildSections(peran, isJuri) {
+function buildSections(peran, isJuri, globalViewer) {
   const dashboard = { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, to: '/dashboard', variant: 'home' }
   const beranda = { key: 'beranda', label: 'Beranda', icon: Lightbulb, to: `${BASE}/beranda` }
   const panduan = { key: 'panduan', label: 'Panduan Inovasi', icon: BookOpen, to: `${BASE}/panduan` }
@@ -44,6 +45,16 @@ function buildSections(peran, isJuri) {
   if (isJuri) juriItems.push({ key: 'penilaian', label: 'Daftar Penilaian', icon: Gavel, to: `${BASE}/penilaian` })
   const juriSection = { label: 'Menu Juri', items: juriItems }
   const withJuri = (sections) => (juriItems.length ? [...sections, juriSection] : sections)
+
+  // Menu tambahan untuk Kepala Bagian Sekretariat/Umum & Kepala Bagian
+  // Administrasi/Pengembangan SDM dan Inovasi (id_jabatan 38/39): lihat
+  // keseluruhan gagasan, inovasi, dan statistik lintas kompartemen & departemen -
+  // di luar peran GM/Manager/Karyawan biasa di atas.
+  const globalSection = {
+    label: 'Ringkasan Seluruh Perusahaan',
+    items: [{ key: 'global', label: 'Ringkasan Data', icon: PieChart, to: `${BASE}/global` }],
+  }
+  const withGlobal = (sections) => (globalViewer ? [...sections, globalSection] : sections)
 
   // History = jejak approval. Dipakai semua peran: approver menelusuri apa yang
   // pernah ia verifikasi/setujui, pengaju menelusuri perjalanan usulannya.
@@ -71,17 +82,17 @@ function buildSections(peran, isJuri) {
     const gagasanItem = peran === 'Manager'
       ? { key: 'gagasan', label: 'Verifikasi Gagasan', icon: ClipboardCheck, to: `${BASE}/gagasan` }
       : { key: 'gagasan', label: 'Persetujuan Gagasan', icon: CheckSquare, to: `${BASE}/gagasan` }
-    return withJuri([
+    return withGlobal(withJuri([
       { items: [dashboard] },
       { label: 'Menu Utama', items: [beranda, panduan] },
       { label: peran === 'Manager' ? 'Menu Verifikasi' : 'Menu Persetujuan', items: [gagasanItem, daftar] },
       rekapSection,
       historySection,
-    ])
+    ]))
   }
 
   // Karyawan: ruang kerja penuh.
-  return withJuri([
+  return withGlobal(withJuri([
     { items: [dashboard] },
     { label: 'Menu Utama', items: [beranda, panduan] },
     {
@@ -108,7 +119,7 @@ function buildSections(peran, isJuri) {
         { key: 'konvensi', label: 'Menu Konvensi', icon: Trophy, to: `${BASE}/konvensi` },
       ],
     },
-  ])
+  ]))
 }
 
 export default function InovasiLayout() {
@@ -134,7 +145,7 @@ export default function InovasiLayout() {
         logoSrc="/LOGO GCS.png"
         title="My Innovation"
         subtitle={isApprover ? `${peran.peran} - ${peran.peran === 'Manager' ? 'Verifikasi' : 'Persetujuan'}` : 'SS / GIO / 5R'}
-        sections={buildSections(peran?.peran ?? 'Karyawan', isJuri)}
+        sections={buildSections(peran?.peran ?? 'Karyawan', isJuri, peran?.globalViewer === true)}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapsed}
         mobileOpen={mobileOpen}

@@ -112,6 +112,39 @@ public class InovasiController : ControllerBase
         return Ok(new GugusListDto(items));
     }
 
+    // ---- list global: seluruh risalah lintas kompartemen & departemen, khusus
+    //      Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/SDM
+    //      Inovasi (id_jabatan 38/39) ----
+    [HttpGet("gugus/global")]
+    public async Task<ActionResult<GugusListDto>> ListGlobal()
+    {
+        var (nik, _) = await IdentitasAsync();
+        if (nik is null) return Unauthorized(new { message = "Akun tidak tertaut ke NIK pegawai." });
+        if (!await _org.IsGlobalInovasiViewerAsync(nik)) return Forbid();
+
+        var rows = await _db.Gugus.AsNoTracking()
+            .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
+            .Select(g => new
+            {
+                g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode, g.Judul,
+                g.NamaDepartemen, g.NamaKompartemen, g.Status, g.PlanDisahkan, g.CreatedByNik,
+                g.CreatedAt, g.UpdatedAt,
+                GagasanJudul = _db.Gagasan.Where(x => x.Id == g.IdGagasan).Select(x => x.Judul).FirstOrDefault(),
+                KetuaNama = g.Anggota.Where(a => a.Peran == "Ketua").Select(a => a.Nama).FirstOrDefault(),
+                SudahDinilai = _db.PenilaianPenugasan.Any(pp => pp.IdGugus == g.Id
+                    && _db.PenilaianSkor.Any(s => s.IdPenugasan == pp.Id)),
+            })
+            .ToListAsync();
+
+        var items = rows.Select(g => new GugusRingkasDto(
+            g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode, g.Judul,
+            g.NamaDepartemen, g.NamaKompartemen, g.Status, g.PlanDisahkan,
+            PeranSaya: g.CreatedByNik == nik ? "Pengaju" : "-",
+            g.KetuaNama, g.CreatedAt, g.UpdatedAt, g.GagasanJudul, g.SudahDinilai)).ToList();
+
+        return Ok(new GugusListDto(items));
+    }
+
     // -------------------------------------------------------- history approval
     // Jejak Lembar Pengesahan (PLAN & FINAL) risalah yang menyangkut pengguna:
     // miliknya, tempat ia jadi anggota, atau yang ia tandatangani. Satu baris =
@@ -868,6 +901,8 @@ public class InovasiController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         if (band == 2 && g.IdDepartemen != null && g.IdDepartemen == org.IdDepartemen) return true;
         if (band == 1 && g.IdKompartemen != null && g.IdKompartemen == org.IdKompartemen) return true;
+        // Global viewer (id_jabatan 38/39) boleh melihat risalah apa pun (read-only).
+        if (await _org.IsGlobalInovasiViewerAsync(nik)) return true;
         // Juri yang ditugaskan menilai gugus ini boleh melihat risalah (read-only).
         var juri = await (
             from pp in _db.PenilaianPenugasan

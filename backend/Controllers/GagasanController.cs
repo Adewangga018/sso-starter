@@ -61,7 +61,45 @@ public class GagasanController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
 
         var peran = band switch { 1 => "GM", 2 => "Manager", _ => "Karyawan" };
-        return Ok(new InovasiPeranDto(peran, peran is "GM" or "Manager"));
+        var globalViewer = await _org.IsGlobalInovasiViewerAsync(nik);
+        return Ok(new InovasiPeranDto(peran, peran is "GM" or "Manager", globalViewer));
+    }
+
+    // ---- list global: seluruh gagasan lintas kompartemen & departemen, khusus
+    //      Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/SDM
+    //      Inovasi (id_jabatan 38/39) ----
+    [HttpGet("global")]
+    public async Task<ActionResult<GagasanListDto>> ListGlobal()
+    {
+        var (nik, _) = await IdentitasAsync();
+        if (nik is null) return Unauthorized(new { message = "Akun tidak tertaut ke NIK pegawai." });
+        if (!await _org.IsGlobalInovasiViewerAsync(nik)) return Forbid();
+
+        var rows = await _db.Gagasan.AsNoTracking()
+            .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
+            .Select(g => new
+            {
+                g.Id, g.NoRegistrasi, g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan,
+                g.NamaKompartemenAsal, g.NamaKompartemenTujuan,
+                g.Status, g.CreatedByNik, g.CreatedByNama, g.IdGugus, g.CreatedAt,
+            })
+            .ToListAsync();
+
+        var gugusIds = rows.Where(r => r.IdGugus != null).Select(r => r.IdGugus!.Value).Distinct().ToList();
+        var gugusNoReg = gugusIds.Count == 0
+            ? new Dictionary<int, string?>()
+            : await _db.Gugus.AsNoTracking().Where(x => gugusIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.NoRegistrasi);
+
+        var items = rows.Select(g => new GagasanRingkasDto(
+            g.Id,
+            (g.IdGugus is int gid && gugusNoReg.TryGetValue(gid, out var gn) ? gn : null) ?? g.NoRegistrasi,
+            g.Judul, g.Metodologi, g.NamaDepartemenAsal, g.NamaDepartemenTujuan, g.Status,
+            PeranSaya: g.CreatedByNik == nik ? "Pengaju" : "-",
+            g.IdGugus, g.CreatedAt, g.CreatedByNik, g.CreatedByNama,
+            g.NamaKompartemenAsal, g.NamaKompartemenTujuan)).ToList();
+
+        return Ok(new GagasanListDto(items));
     }
 
     // ---- list ----
@@ -177,7 +215,12 @@ public class GagasanController : ControllerBase
         };
 
         // Rantai persetujuan: Verifikator (Manager) -> GM Kompartemen Asal -> [GM Kompartemen Tujuan].
-        var manager = await _org.ResolveKepalaUnitAsync(asal.IdDepartemen);   // Manager departemen asal
+        // Departemen SDM tidak punya Manager (band 2) terisi, jadi Verifikatornya
+        // bergilir tiap kuartal antara dua Kepala Bagian di sana (lihat
+        // ResolveVerifikatorRotasiSdmAsync) alih-alih dept head seperti departemen lain.
+        var manager = asal.NamaDepartemen == "Departemen SDM"
+            ? await _org.ResolveVerifikatorRotasiSdmAsync()
+            : await _org.ResolveKepalaUnitAsync(asal.IdDepartemen);   // Manager departemen asal
         var gmAsal = await _org.ResolveKepalaUnitAsync(asal.IdKompartemen);   // GM kompartemen asal
         g.Approval.Add(new GagasanApproval { Urutan = 0, Peran = RoleVerifikator, Nik = manager?.Nik, Nama = manager?.Nama, Status = "Menunggu" });
         g.Approval.Add(new GagasanApproval { Urutan = 1, Peran = RoleGmAsal, Nik = gmAsal?.Nik, Nama = gmAsal?.Nama, Status = "Menunggu" });
@@ -201,7 +244,8 @@ public class GagasanController : ControllerBase
 
         var g = await _db.Gagasan.Include(x => x.Approval).FirstOrDefaultAsync(x => x.Id == id);
         if (g is null) return NotFound(new { message = "Gagasan tidak ditemukan." });
-        if (g.CreatedByNik != nik && !g.Approval.Any(a => a.Nik == nik)) return Forbid();
+        if (g.CreatedByNik != nik && !g.Approval.Any(a => a.Nik == nik) && !await _org.IsGlobalInovasiViewerAsync(nik))
+            return Forbid();
 
         var steps = g.Approval.OrderBy(a => a.Urutan).ToList();
         var isOwner = g.CreatedByNik == nik;

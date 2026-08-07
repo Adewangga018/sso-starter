@@ -162,6 +162,37 @@ public class OrgResolver
             select j.NamaJabatan).FirstOrDefaultAsync();
     }
 
+    // Kepala Bagian Sekretariat/Umum (id_jabatan 38) & Kepala Bagian Administrasi
+    // & Pengembangan SDM dan Inovasi (id_jabatan 39) - keduanya diberi menu
+    // tambahan "lihat semua" (lintas kompartemen & departemen) pada My Innovation,
+    // di luar peran GM/Manager/Karyawan yang sudah ada.
+    private static readonly int[] JabatanGlobalViewerInovasi = [38, 39];
+
+    public async Task<bool> IsGlobalInovasiViewerAsync(string? nik)
+    {
+        if (string.IsNullOrWhiteSpace(nik)) return false;
+        return await _db.Penempatan.AsNoTracking()
+            .AnyAsync(p => p.IdKaryawan == nik && p.Status == "Aktif" && JabatanGlobalViewerInovasi.Contains(p.IdJabatan));
+    }
+
+    // Verifikator Sumbang Gagasan khusus Departemen SDM bergilir tiap kuartal
+    // antara dua Kepala Bagian (grading.penempatan id 24 & 25), menggantikan
+    // Manager departemen (ResolveKepalaUnitAsync) yang saat ini kosong di sana
+    // (lihat catatan ResolveKepalaUnitAsync di atas). Giliran: Apr-Jun & Okt-Des
+    // -> id 24, Jul-Sep & Jan-Mar -> id 25. Kuartal fiskal (dimulai April) genap
+    // selalu jatuh ke 24 karena tiap tahun selalu 4 kuartal (genap), jadi giliran
+    // tidak pernah bergeser tanpa perlu tahun acuan.
+    private const int VerifikatorSdmPenempatanGenap = 24;
+    private const int VerifikatorSdmPenempatanGanjil = 25;
+
+    public async Task<(string? Nik, string? Nama)?> ResolveVerifikatorRotasiSdmAsync()
+    {
+        var kuartalFiskal = ((DateTime.Now.Month - 4 + 12) % 12) / 3;   // 0=Apr-Jun,1=Jul-Sep,2=Okt-Des,3=Jan-Mar
+        var idPenempatan = kuartalFiskal % 2 == 0 ? VerifikatorSdmPenempatanGenap : VerifikatorSdmPenempatanGanjil;
+        var p = await _db.Penempatan.AsNoTracking().FirstOrDefaultAsync(x => x.Id == idPenempatan);
+        return p is null ? null : (p.IdKaryawan, p.Nama);
+    }
+
     private static OrgUnit ResolveFromUnits(Dictionary<int, UnitRow> units, int idUnit)
     {
         int? deptId = null; string? deptNama = null;

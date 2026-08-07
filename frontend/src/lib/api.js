@@ -394,6 +394,10 @@ export const api = {
   listDepartemenInovasi: () => apiFetch('/api/inovasi/departemen'),
   getInovasiPeran: () => apiFetch('/api/inovasi/peran'),
 
+  // Ringkasan global (khusus id_jabatan 38/39 - lihat semua kompartemen & departemen)
+  listGagasanGlobal: () => apiFetch('/api/inovasi/gagasan/global'),
+  listInovasiGlobal: () => apiFetch('/api/inovasi/gugus/global'),
+
   // History Approval - jejak langkah persetujuan (siapa memproses apa, kapan)
   historyApprovalGagasan: () => apiFetch('/api/inovasi/history/gagasan'),
   historyApprovalInovasi: () => apiFetch('/api/inovasi/history/gugus'),

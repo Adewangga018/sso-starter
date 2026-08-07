@@ -207,7 +207,10 @@ public record DaftarGagasanRequest(string? Metodologi, string? NamaGugus, int? T
 public record DaftarGagasanResultDto(int IdGugus, string Jenis, string Base);
 
 // Peran pengguna pada modul inovasi (untuk menu berbeda approver vs karyawan).
-public record InovasiPeranDto(string Peran, bool BolehApprove);  // Peran: GM | Manager | Karyawan
+// GlobalViewer: Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/SDM
+// Inovasi (id_jabatan 38/39) - dapat menu tambahan "lihat semua" lintas
+// kompartemen/departemen, terlepas dari Peran (GM/Manager/Karyawan) di atas.
+public record InovasiPeranDto(string Peran, bool BolehApprove, bool GlobalViewer = false);  // Peran: GM | Manager | Karyawan
 
 // ============================================================================
 // History Approval - jejak persetujuan gagasan/risalah. Satu baris = satu
