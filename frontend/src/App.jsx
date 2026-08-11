@@ -40,6 +40,9 @@ import PayrollFormulaPage from './pages/PayrollFormulaPage'
 import PayrollManualPage from './pages/PayrollManualPage'
 import DinasVerifikasiPage from './pages/DinasVerifikasiPage'
 import MyPayrollLayout from './layouts/MyPayrollLayout'
+import OrgStrukturPage from './pages/OrgStrukturPage'
+import OrgPenempatanPage from './pages/OrgPenempatanPage'
+import MyOrgLayout from './layouts/MyOrgLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
 import MyHealthLayout from './layouts/MyHealthLayout'
@@ -113,6 +116,14 @@ export default function App() {
               </Route>
             </Route>
             <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />
+            {/* Modul Struktur Organisasi — sama pola dengan Payroll di atas (khusus Admin
+                Modul SDM, kartu "org" menjaga rute lewat RequireModule). */}
+            <Route element={<RequireModule moduleKey="org" />}>
+              <Route path="/org" element={<MyOrgLayout />}>
+                <Route index element={<OrgStrukturPage />} />
+                <Route path="penempatan" element={<OrgPenempatanPage />} />
+              </Route>
+            </Route>
             <Route path="/admin/juri" element={<Navigate to="/juri" replace />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />

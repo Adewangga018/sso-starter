@@ -158,7 +158,7 @@ if ($doBackend) {
     Info "Menghapus file lama (kecuali: $($keep -join ', '))..."
     $stale = Get-ChildItem -LiteralPath $BackendShare -Force | Where-Object { $keep -notcontains $_.Name }
     Info "  $($stale.Count) item akan dihapus."
-    if (-not $DryRun) {
+    if (-not $DryRun) 
         foreach ($item in $stale) { Remove-Item -LiteralPath $item.FullName -Recurse -Force }
     }
 

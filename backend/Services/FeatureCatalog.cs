@@ -55,6 +55,10 @@ public static class FeatureCatalog
         new("payroll:formula",         "payroll", "Formula & Generalisasi"),
         new("payroll:manual",          "payroll", "Manual per Karyawan"),
         new("payroll:dinas",           "payroll", "Verifikasi Dinas"),
+
+        // Struktur Organisasi
+        new("org:struktur",            "org", "Unit & Jabatan"),
+        new("org:penempatan",          "org", "Penempatan Karyawan"),
     ];
 
     public static FeatureDefinition? Find(string? key) =>

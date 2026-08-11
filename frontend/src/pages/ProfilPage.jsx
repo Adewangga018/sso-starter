@@ -25,6 +25,7 @@ import PdfPopupModal from '../components/PdfPopupModal'
 import PhotoCropModal from '../components/PhotoCropModal'
 import BerkasFileRow from '../components/BerkasFileRow'
 import ChildrenSection from '../components/ChildrenSection'
+import TanggunganBpjsSection from '../components/TanggunganBpjsSection'
 import WilayahFields from '../components/WilayahFields'
 import './ProfilPage.css'
 
@@ -777,6 +778,9 @@ export default function ProfilPage() {
               </div>
             </>
           )}
+
+          {/* Tidak digantung pada status menikah - single parent dgn banyak anak jg relevan. */}
+          <TanggunganBpjsSection />
         </div>
       )}
 

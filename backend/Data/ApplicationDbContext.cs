@@ -8,6 +8,7 @@ using SsoBackend.Models.Coaching;
 using SsoBackend.Models.Cuti;
 using SsoBackend.Models.Dinas;
 using SsoBackend.Models.Gaji;
+using SsoBackend.Models.Grading;
 using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
 using SsoBackend.Models.Prosedur;
@@ -56,9 +57,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GajiKomponen> GajiKomponen => Set<GajiKomponen>();
     public DbSet<GajiTarif> GajiTarif => Set<GajiTarif>();
     public DbSet<GajiTarifTunggal> GajiTarifTunggal => Set<GajiTarifTunggal>();
+    public DbSet<GajiTarifWilayah> GajiTarifWilayah => Set<GajiTarifWilayah>();
+    public DbSet<GajiTanggunganLebih> GajiTanggunganLebih => Set<GajiTanggunganLebih>();
     public DbSet<GajiPeriode> GajiPeriode => Set<GajiPeriode>();
     public DbSet<GajiSlip> GajiSlip => Set<GajiSlip>();
     public DbSet<GajiSlipDetail> GajiSlipDetail => Set<GajiSlipDetail>();
+    // Struktur Organisasi (schema grading) — refleksi TULIS, dikelola manual (raw SQL
+    // backend/Database/grading/*.sql), EF baca/tulis saja. Dipakai OrgStrukturService
+    // (panel Admin SDM). Beda dari InovasiDbContext.UnitOrganisasi/Jabatan/Penempatan
+    // yang read-only (dipakai OrgResolver).
+    public DbSet<GradingUnitOrganisasi> GradingUnitOrganisasi => Set<GradingUnitOrganisasi>();
+    public DbSet<GradingJabatan> GradingJabatan => Set<GradingJabatan>();
+    public DbSet<GradingPenempatan> GradingPenempatan => Set<GradingPenempatan>();
+    public DbSet<GradingBand> GradingBand => Set<GradingBand>();
     // My Progress (schema kpi) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Kpi> Kpi => Set<Kpi>();
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -506,6 +517,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
         });
 
+        builder.Entity<GajiTarifWilayah>(e =>
+        {
+            e.ToTable("tarif_wilayah", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
+            e.Property(x => x.Wilayah).HasColumnName("wilayah");
+            e.Property(x => x.Band).HasColumnName("band");
+            e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
+            e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<GajiTanggunganLebih>(e =>
+        {
+            e.ToTable("tanggungan_lebih", "gaji", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.JumlahTanggungan).HasColumnName("jumlah_tanggungan");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiubahPada).HasColumnName("diubah_pada");
+        });
+
         builder.Entity<GajiPeriode>(e =>
         {
             e.ToTable("periode", "gaji", t => t.ExcludeFromMigrations());
@@ -543,6 +578,65 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdSlip).HasColumnName("id_slip");
             e.Property(x => x.IdKomponen).HasColumnName("id_komponen");
             e.Property(x => x.Nominal).HasColumnName("nominal").HasPrecision(18, 2);
+        });
+
+        builder.Entity<GradingUnitOrganisasi>(e =>
+        {
+            e.ToTable("unit_organisasi", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdUnit);
+            e.Property(x => x.IdUnit).HasColumnName("id_unit");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Tipe).HasColumnName("tipe");
+            e.Property(x => x.IdUnitInduk).HasColumnName("id_unit_induk");
+            e.Property(x => x.Wilayah).HasColumnName("wilayah");
+            e.Property(x => x.IdStrukturSdm).HasColumnName("id_struktur_sdm");
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+        });
+
+        builder.Entity<GradingJabatan>(e =>
+        {
+            e.ToTable("jabatan", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdJabatan);
+            e.Property(x => x.IdJabatan).HasColumnName("id_jabatan");
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.NamaJabatan).HasColumnName("nama_jabatan");
+            e.Property(x => x.IdBand).HasColumnName("id_band");
+            e.Property(x => x.Jg).HasColumnName("jg");
+            e.Property(x => x.IdUnit).HasColumnName("id_unit");
+            e.Property(x => x.IdAtasan).HasColumnName("id_atasan");
+            e.Property(x => x.Inti).HasColumnName("inti");
+            e.Property(x => x.KelompokFungsi).HasColumnName("kelompok_fungsi");
+            e.Property(x => x.JumlahFormasi).HasColumnName("jumlah_formasi");
+            e.Property(x => x.Alasan).HasColumnName("alasan");
+            e.Property(x => x.IdJabatanSdm).HasColumnName("id_jabatan_sdm");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiubahPada).HasColumnName("diubah_pada");
+        });
+
+        builder.Entity<GradingPenempatan>(e =>
+        {
+            e.ToTable("penempatan", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdJabatan).HasColumnName("id_jabatan");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Tmt).HasColumnName("tmt");
+            e.Property(x => x.TanggalSelesai).HasColumnName("tanggal_selesai");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GradingBand>(e =>
+        {
+            e.ToTable("band", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdBand);
+            e.Property(x => x.IdBand).HasColumnName("id_band");
+            e.Property(x => x.Kode).HasColumnName("kode");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
         });
 
         builder.Entity<Kpi>(e =>

@@ -8,7 +8,7 @@ import './PayrollShared.css'
 
 // Komponen standalone (tanpa grup_kode) yg punya panel kalkulator sendiri (di atas grid) -
 // jangan dobel tampil di grid biasa.
-const KODE_KALKULATOR_SENDIRI = ['POT_PRESENSI', 'MAKAN_DINAS', 'TJ_SPPD']
+const KODE_KALKULATOR_SENDIRI = ['POT_PRESENSI', 'MAKAN_DINAS', 'TJ_SPPD', 'TJ_LUAR', 'POT_BPJS_KES']
 
 const BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -493,6 +493,96 @@ function SppdFormulaCalculator({ pegawai, tahun, bulan, komponen, nominal, setNo
   )
 }
 
+// Menghitung Tunjangan Luar Daerah otomatis dari wilayah kerja + Band pegawai SAAT INI
+// (BUKAN dari kejadian/pengajuan spt UMDL/SPPD - tunjangan tetap selama pegawai bertugas
+// di wilayah itu). Preview saja - mengisi field TJ_LUAR (standalone).
+function LuarDaerahCalculator({ pegawai, tahun, bulan, komponen, nominal, setNominal, onHasil }) {
+  const [loading, setLoading] = useState(false)
+  const [hasil, setHasil] = useState(null)
+  const [error, setError] = useState(null)
+
+  async function hitung() {
+    setLoading(true); setError(null)
+    try {
+      const r = await api.hitungLuarDaerahFormula(pegawai.nik, tahun, bulan)
+      setHasil(r)
+      if (!r.peringatan) onHasil(komponen.idKomponen, r.nominal)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal menghitung Tunjangan Luar Daerah.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="agt__presensi">
+      <div className="agt__presensi-head">
+        <div>
+          <span className="agt__presensi-nama">{komponen.nama}</span>
+          <span className="agt__presensi-note">Dihitung dari wilayah kerja + Band pegawai saat ini (Medan/Lampung/Makassar × Band III-VI). Boleh dikoreksi manual di kolom nominal.</span>
+        </div>
+        <button type="button" className="agt__save agt__save--sm" onClick={hitung} disabled={loading}>
+          {loading ? <Loader2 size={14} className="agt__spin" /> : <Wand2 size={14} />}
+          Hitung dari Wilayah
+        </button>
+      </div>
+
+      <Field it={komponen} nominal={nominal} setNominal={setNominal} />
+
+      {error && <div className="agt__msg agt__msg--err">{error}</div>}
+      {hasil && hasil.peringatan && <div className="agt__msg agt__msg--err">{hasil.peringatan}</div>}
+      {hasil && !hasil.peringatan && (
+        <div className="agt__msg agt__msg--ok">
+          {hasil.wilayah} · Band {hasil.band} → {rupiah(hasil.nominal)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Menghitung Potongan BPJS Kesehatan: base 1% dari Pendapatan Dasar (capped) SELALU
+// dibebankan, + 1% per anggota keluarga lain yang didaftarkan mandiri (My Personal >
+// Profil, gaji.tanggungan_lebih) - tanpa batas gratis. Preview saja - mengisi field
+// POT_BPJS_KES (standalone).
+function BpjsKesCalculator({ pegawai, tahun, bulan, komponen, nominal, setNominal, onHasil }) {
+  const [loading, setLoading] = useState(false)
+  const [hasil, setHasil] = useState(null)
+  const [error, setError] = useState(null)
+
+  async function hitung() {
+    setLoading(true); setError(null)
+    try {
+      const r = await api.hitungBpjsKesFormula(pegawai.nik, tahun, bulan)
+      setHasil(r)
+      onHasil(komponen.idKomponen, r.nominal)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal menghitung Potongan BPJS Kesehatan.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="agt__presensi">
+      <div className="agt__presensi-head">
+        <div>
+          <span className="agt__presensi-nama">{komponen.nama}</span>
+          <span className="agt__presensi-note">Base 1% dari Pendapatan Dasar selalu berlaku. Kalau karyawan mendaftarkan anggota keluarga lain (My Personal &gt; Profil), tambahan 1%/orang. Boleh dikoreksi manual di kolom nominal.</span>
+        </div>
+        <button type="button" className="agt__save agt__save--sm" onClick={hitung} disabled={loading}>
+          {loading ? <Loader2 size={14} className="agt__spin" /> : <Wand2 size={14} />}
+          Hitung dari Pendaftaran
+        </button>
+      </div>
+
+      <Field it={komponen} nominal={nominal} setNominal={setNominal} />
+
+      {error && <div className="agt__msg agt__msg--err">{error}</div>}
+      {hasil && (
+        <div className="agt__msg agt__msg--ok">
+          {`Base 1% + ${hasil.jumlahTanggungan} anggota keluarga lain × 1% = ${hasil.persenTotal}% × ${rupiah(hasil.basisPerhitungan)} = ${rupiah(hasil.nominal)}`}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PayrollManualPage() {
   const { isAdminModulSdm, summary } = useAuth()
   const now = new Date()
@@ -543,6 +633,14 @@ export default function PayrollManualPage() {
   )
   const sppdKomponen = useMemo(
     () => data?.komponen.find((k) => k.kode === 'TJ_SPPD') ?? null,
+    [data],
+  )
+  const luarDaerahKomponen = useMemo(
+    () => data?.komponen.find((k) => k.kode === 'TJ_LUAR') ?? null,
+    [data],
+  )
+  const bpjsKesKomponen = useMemo(
+    () => data?.komponen.find((k) => k.kode === 'POT_BPJS_KES') ?? null,
     [data],
   )
 
@@ -653,6 +751,22 @@ export default function PayrollManualPage() {
       {pegawai && sppdKomponen && (
         <SppdFormulaCalculator
           pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={sppdKomponen}
+          nominal={nominal} setNominal={setNominal}
+          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+        />
+      )}
+
+      {pegawai && luarDaerahKomponen && (
+        <LuarDaerahCalculator
+          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={luarDaerahKomponen}
+          nominal={nominal} setNominal={setNominal}
+          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+        />
+      )}
+
+      {pegawai && bpjsKesKomponen && (
+        <BpjsKesCalculator
+          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={bpjsKesKomponen}
           nominal={nominal} setNominal={setNominal}
           onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
         />

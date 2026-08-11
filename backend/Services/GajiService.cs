@@ -1188,6 +1188,220 @@ public class GajiService
             nik, pegawai.nama ?? nik, tahun, bulan, bandValue, tarif, total, kejadian, null));
     }
 
+    // ===================== Tarif Tunjangan Luar Daerah (TJ_LUAR) per Wilayah x Band =====================
+    // Cakupan saat ini (dikonfirmasi user): 3 wilayah dari PEGAWAI_SDM.WILAYAH (Medan,
+    // Lampung, Makassar) x Band III-VI. Tabel generik (gaji.tarif_wilayah) - wilayah/band
+    // lain bisa ditambah admin lewat panel tanpa migrasi baru, cukup ubah daftar berikut.
+    private static readonly string[] WilayahLuarDaerah = ["Medan", "Lampung", "Makassar"];
+    private static readonly int[] BandLuarDaerah = [3, 4, 5, 6];
+
+    public async Task<TarifWilayahDto> GetTarifWilayahAsync(int tahun)
+    {
+        var idLuar = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_LUAR").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        if (idLuar is not int idl) return new TarifWilayahDto(tahun, WilayahLuarDaerah, BandLuarDaerah, Array.Empty<TarifWilayahSelDto>());
+
+        short th = (short)tahun;
+        var rows = await _db.GajiTarifWilayah.AsNoTracking()
+            .Where(t => t.IdKomponen == idl && t.TahunBerlaku == th)
+            .ToListAsync();
+
+        var nilai = new List<TarifWilayahSelDto>();
+        foreach (var w in WilayahLuarDaerah)
+        {
+            foreach (var b in BandLuarDaerah)
+            {
+                var nominal = rows.FirstOrDefault(r => r.Wilayah == w && r.Band == b)?.Nominal ?? 0m;
+                nilai.Add(new TarifWilayahSelDto(w, b, BandLabel.TryGetValue(b, out var bl) ? bl : $"Band {b}", nominal));
+            }
+        }
+        return new TarifWilayahDto(tahun, WilayahLuarDaerah, BandLuarDaerah, nilai);
+    }
+
+    public async Task<(bool Ok, string? Error)> SimpanTarifWilayahAsync(SimpanTarifWilayahRequest req)
+    {
+        var komponen = await _db.GajiKomponen.FirstOrDefaultAsync(k => k.Kode == "TJ_LUAR");
+        if (komponen is null) return (false, "Komponen Tunjangan Luar Daerah belum tersedia - jalankan migrasi terbaru.");
+
+        short th = (short)req.Tahun;
+        var existing = await _db.GajiTarifWilayah
+            .Where(t => t.IdKomponen == komponen.IdKomponen && t.TahunBerlaku == th)
+            .ToListAsync();
+        foreach (var item in req.Items)
+        {
+            var row = existing.FirstOrDefault(e => e.Wilayah == item.Wilayah && e.Band == item.Band);
+            if (row is null)
+            {
+                _db.GajiTarifWilayah.Add(new Models.Gaji.GajiTarifWilayah
+                {
+                    IdKomponen = komponen.IdKomponen, Wilayah = item.Wilayah, Band = (short)item.Band,
+                    TahunBerlaku = th, Nominal = item.Nominal,
+                });
+            }
+            else
+            {
+                row.Nominal = item.Nominal;
+            }
+        }
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    // Preview (TIDAK menyimpan) - berbeda dari UMDL/SPPD, Tunjangan Luar Daerah BUKAN
+    // dihitung dari kejadian/pengajuan, melainkan wilayah kerja + Band pegawai SAAT INI
+    // (tunjangan tetap selama pegawai bertugas di wilayah tsb).
+    public async Task<(bool Ok, string? Error, LuarDaerahFormulaDto? Data)> HitungLuarDaerahAsync(string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var (_, band, _) = await ResolveJabatanAsync(nik);
+        var wilayah = pegawai.WILAYAH?.Trim();
+
+        if (band is not int bandValue)
+        {
+            return (true, null, new LuarDaerahFormulaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, wilayah, band, 0m,
+                "Jabatan/Band pegawai belum ditempatkan di sistem grading - tidak bisa menghitung tunjangan luar daerah."));
+        }
+        if (string.IsNullOrWhiteSpace(wilayah) || !WilayahLuarDaerah.Contains(wilayah))
+        {
+            return (true, null, new LuarDaerahFormulaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, wilayah, bandValue, 0m,
+                $"Wilayah pegawai ({wilayah ?? "-"}) belum termasuk cakupan Tunjangan Luar Daerah ({string.Join("/", WilayahLuarDaerah)})."));
+        }
+        if (!BandLuarDaerah.Contains(bandValue))
+        {
+            return (true, null, new LuarDaerahFormulaDto(
+                nik, pegawai.nama ?? nik, tahun, bulan, wilayah, bandValue, 0m,
+                $"Band pegawai (Band {bandValue}) belum termasuk cakupan Tunjangan Luar Daerah (Band {BandLuarDaerah.Min()}-{BandLuarDaerah.Max()})."));
+        }
+
+        var idLuar = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_LUAR").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        var nominal = idLuar is int idl
+            ? await _db.GajiTarifWilayah.AsNoTracking()
+                .Where(t => t.IdKomponen == idl && t.Wilayah == wilayah && t.Band == (short)bandValue && t.TahunBerlaku == (short)tahun)
+                .Select(t => (decimal?)t.Nominal).FirstOrDefaultAsync() ?? 0m
+            : 0m;
+
+        return (true, null, new LuarDaerahFormulaDto(nik, pegawai.nama ?? nik, tahun, bulan, wilayah, bandValue, nominal, null));
+    }
+
+    // ===================== Potongan BPJS Kesehatan (POT_BPJS_KES) =====================
+    // Total dibayar ke BPJS Kes = 5% dari Pendapatan Dasar (capped): 4% perusahaan
+    // (TJ_BPJS_KES) + 1% karyawan (base, SELALU dibebankan, bukan special case). Kalau
+    // karyawan mengikutsertakan anggota keluarga lain (didaftarkan sendiri, My Personal >
+    // Profil, gaji.tanggungan_lebih), tambahan 1% dari basis yg sama PER ORANG - tanpa
+    // batas gratis (dikoreksi user 2026-08-11, menggantikan aturan lama ">3 gratis").
+    private const decimal PersenBaseBpjsKes = 0.01m;
+    private const decimal PersenPerTanggunganLebih = 0.01m;
+
+    // Total "Pendapatan Dasar" (Gaji Pokok + Tunjangan Jabatan/Perumahan/Pangan/Angkutan)
+    // pegawai - dipakai jg oleh Tunjangan BPJS Kesehatan/JHT/JKK/JKM/JP (lihat GetSlipAsync).
+    // Duplikasi resolusi Band/JG/PG yg sama dgn GetSlipAsync (basis Band/JG/PG, Tipe
+    // Pendapatan) - komponen ybs semuanya basis tarif_tunggal, TIDAK ada yg manual, jadi
+    // aman dihitung terpisah dari sebuah slip.
+    private async Task<decimal> PendapatanDasarTotalAsync(string nik, int tahun)
+    {
+        var (jg, band, _) = await ResolveJabatanAsync(nik);
+        var pg = await ResolvePgAsync(nik, tahun);
+
+        var komponen = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Aktif && k.Tipe == "Pendapatan" && (k.Basis == "Band" || k.Basis == "JG" || k.Basis == "PG"))
+            .ToListAsync();
+        if (komponen.Count == 0) return 0m;
+
+        short th = (short)tahun;
+        var ids = komponen.Select(k => k.IdKomponen).ToList();
+        var rows = await _db.GajiTarifTunggal.AsNoTracking()
+            .Where(t => t.TahunBerlaku == th && ids.Contains(t.IdKomponen))
+            .ToListAsync();
+
+        decimal total = 0;
+        foreach (var k in komponen)
+        {
+            int? nilaiPegawai = k.Basis switch { "Band" => band, "JG" => jg, "PG" => pg, _ => null };
+            if (nilaiPegawai is int np)
+            {
+                var match = rows.FirstOrDefault(r => r.IdKomponen == k.IdKomponen && r.Nilai == np);
+                if (match is not null) total += match.Nominal;
+            }
+        }
+        return total;
+    }
+
+    // Preview (TIDAK menyimpan). Base 1% SELALU dihitung; tambahan 1% per anggota
+    // keluarga lain yg didaftarkan sendiri (gaji.tanggungan_lebih, My Personal > Profil,
+    // TIDAK ada baris = 0 tanggungan tambahan, base 1% tetap berlaku). Basis dibatasi
+    // dgn nilai FormulaBatas komponen TJ_BPJS_KES supaya konsisten dgn sisi perusahaan.
+    public async Task<(bool Ok, string? Error, BpjsKesPotonganDto? Data)> HitungBpjsKesPotonganAsync(string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.MstPegawai.AsNoTracking().FirstOrDefaultAsync(p => p.ID_KARYAWAN == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+
+        var daftar = await _db.GajiTanggunganLebih.AsNoTracking().FirstOrDefaultAsync(t => t.IdKaryawan == nik);
+        var jumlahTanggungan = daftar?.JumlahTanggungan ?? 0;
+
+        var pendapatanDasar = await PendapatanDasarTotalAsync(nik, tahun);
+        var batas = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_BPJS_KES").Select(k => k.FormulaBatas).FirstOrDefaultAsync();
+        var basis = batas is decimal b ? Math.Min(pendapatanDasar, b) : pendapatanDasar;
+
+        var persenTotal = PersenBaseBpjsKes + (jumlahTanggungan * PersenPerTanggunganLebih);
+        var nominal = Math.Round(persenTotal * basis, 0, MidpointRounding.AwayFromZero);
+
+        return (true, null, new BpjsKesPotonganDto(
+            nik, pegawai.NAMA_LENGKAP, tahun, bulan, jumlahTanggungan, persenTotal * 100m,
+            basis, nominal, null));
+    }
+
+    // ===================== Pendaftaran mandiri anggota keluarga lain BPJS Kesehatan (self-service) =====================
+    public async Task<TanggunganBpjsDto> GetTanggunganBpjsAsync(string nik)
+    {
+        var row = await _db.GajiTanggunganLebih.AsNoTracking().FirstOrDefaultAsync(t => t.IdKaryawan == nik);
+        return row is null
+            ? new TanggunganBpjsDto(null, null, null, null)
+            : new TanggunganBpjsDto(row.JumlahTanggungan, row.Keterangan, row.DibuatPada, row.DiubahPada);
+    }
+
+    public async Task<(bool Ok, string? Error)> SimpanTanggunganBpjsAsync(string nik, SimpanTanggunganBpjsRequest req)
+    {
+        if (req.JumlahTanggungan <= 0)
+        {
+            return (false, "Jumlah anggota keluarga lain yang diikutsertakan harus minimal 1.");
+        }
+
+        var row = await _db.GajiTanggunganLebih.FirstOrDefaultAsync(t => t.IdKaryawan == nik);
+        if (row is null)
+        {
+            _db.GajiTanggunganLebih.Add(new Models.Gaji.GajiTanggunganLebih
+            {
+                IdKaryawan = nik, JumlahTanggungan = req.JumlahTanggungan,
+                Keterangan = string.IsNullOrWhiteSpace(req.Keterangan) ? null : req.Keterangan.Trim(),
+                DibuatPada = DateTime.UtcNow,
+            });
+        }
+        else
+        {
+            row.JumlahTanggungan = req.JumlahTanggungan;
+            row.Keterangan = string.IsNullOrWhiteSpace(req.Keterangan) ? null : req.Keterangan.Trim();
+            row.DiubahPada = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    public async Task HapusTanggunganBpjsAsync(string nik)
+    {
+        var row = await _db.GajiTanggunganLebih.FirstOrDefaultAsync(t => t.IdKaryawan == nik);
+        if (row is not null)
+        {
+            _db.GajiTanggunganLebih.Remove(row);
+            await _db.SaveChangesAsync();
+        }
+    }
+
     private async Task<List<int>> ReadIntsAsync(string sql)
     {
         var conn = _db.Database.GetDbConnection();

@@ -164,3 +164,39 @@ public record SppdFormulaKejadianDto(DateOnly Tanggal, string? Tujuan, decimal N
 public record SppdFormulaDto(
     string Nik, string Nama, int Tahun, int Bulan, int? Band, decimal Tarif, decimal Total,
     IReadOnlyList<SppdFormulaKejadianDto> Kejadian, string? Peringatan);
+
+// ---- Tarif Tunjangan Luar Daerah (TJ_LUAR) per Wilayah x Band. Cakupan saat ini: 3
+// wilayah (Medan/Lampung/Makassar) x Band III-VI (dikonfirmasi user; tabel generik,
+// wilayah/band lain bisa ditambah admin lewat panel tanpa migrasi baru). ----
+public record TarifWilayahSelDto(string Wilayah, int Band, string BandLabel, decimal Nominal);
+
+public record TarifWilayahDto(
+    int Tahun, IReadOnlyList<string> WilayahList, IReadOnlyList<int> BandList,
+    IReadOnlyList<TarifWilayahSelDto> Nilai);
+
+public record TarifWilayahItem(string Wilayah, int Band, decimal Nominal);
+public record SimpanTarifWilayahRequest(int Tahun, IReadOnlyList<TarifWilayahItem> Items);
+
+// ---- Tunjangan Luar Daerah (TJ_LUAR): dihitung (preview) dari wilayah kerja + Band
+// pegawai saat ini (BUKAN dari kejadian/pengajuan spt UMDL/SPPD - tunjangan tetap
+// selama pegawai bertugas di wilayah itu). ----
+public record LuarDaerahFormulaDto(
+    string Nik, string Nama, int Tahun, int Bulan, string? Wilayah, int? Band,
+    decimal Nominal, string? Peringatan);
+
+// ---- Potongan BPJS Kesehatan (POT_BPJS_KES): base 1% dari Pendapatan Dasar (capped)
+// SELALU dibebankan ke karyawan. Tambahan 1% per anggota keluarga lain yang
+// diikutsertakan (karyawan MENDAFTARKAN SENDIRI, My Personal > Profil,
+// gaji.tanggungan_lebih) - tanpa batas gratis. Basis = MIN(Pendapatan Dasar, batas
+// yg sama dgn TJ_BPJS_KES). Total dibayar ke BPJS Kes = 5% (4% perusahaan + 1% karyawan)
+// + 1%/tanggungan kalau ada. ----
+public record BpjsKesPotonganDto(
+    string Nik, string Nama, int Tahun, int Bulan,
+    int JumlahTanggungan, decimal PersenTotal,
+    decimal BasisPerhitungan, decimal Nominal, string? Peringatan);
+
+// ---- Pendaftaran mandiri anggota keluarga lain utk BPJS Kesehatan (My Personal > Profil). ----
+public record TanggunganBpjsDto(
+    int? JumlahTanggungan, string? Keterangan, DateTime? DibuatPada, DateTime? DiubahPada);
+
+public record SimpanTanggunganBpjsRequest(int JumlahTanggungan, string? Keterangan);

@@ -284,6 +284,101 @@ function TarifSppdSection({ tahun }) {
   )
 }
 
+// Tarif Tunjangan Luar Daerah per Wilayah x Band - dua dimensi (beda dari tarif satu
+// dimensi Band/JG/PG di atas). Cakupan saat ini: Medan/Lampung/Makassar x Band III-VI
+// (dikonfirmasi user; wilayah/band lain bisa ditambah lewat backend tanpa ubah UI ini).
+function TarifWilayahSection({ tahun }) {
+  const [data, setData] = useState(null)
+  const [nominal, setNominal] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setMsg(null)
+    try {
+      const d = await api.getTarifWilayah(tahun)
+      setData(d)
+      const map = {}
+      d.nilai.forEach((n) => { map[`${n.wilayah}:${n.band}`] = n.nominal ? String(n.nominal) : '' })
+      setNominal(map)
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal memuat tarif luar daerah.' })
+    } finally { setLoading(false) }
+  }, [tahun])
+
+  useEffect(() => { load() }, [load])
+
+  async function save() {
+    if (!data) return
+    setSaving(true); setMsg(null)
+    try {
+      const items = data.nilai.map((n) => ({
+        wilayah: n.wilayah, band: n.band, nominal: Number(nominal[`${n.wilayah}:${n.band}`] || 0),
+      }))
+      await api.simpanTarifWilayah({ tahun, items })
+      setMsg({ type: 'ok', text: `Tarif Luar Daerah tahun ${tahun} tersimpan.` })
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menyimpan.' })
+    } finally { setSaving(false) }
+  }
+
+  if (loading && !data) return <div className="agt__loading"><Loader2 className="agt__spin" size={20} /> Memuat…</div>
+  if (!data || data.wilayahList.length === 0) return null
+
+  const bandLabelOf = (band) => data.nilai.find((n) => n.band === band)?.bandLabel ?? `Band ${band}`
+
+  return (
+    <section className="agt__pd">
+      <div className="agt__pd-head">
+        <h3>Tarif Tunjangan Luar Daerah per Wilayah × Band</h3>
+        <p>
+          Nominal tunjangan pegawai yang bertugas di wilayah ini, sesuai Band-nya. Cakupan saat
+          ini: {data.wilayahList.join(', ')} × {data.bandList.map(bandLabelOf).join(', ')}.
+        </p>
+      </div>
+      {msg && <div className={`agt__msg agt__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
+      <div style={{ overflowX: 'auto' }}>
+        <table className="agt__presensi-table">
+          <thead>
+            <tr>
+              <th>Wilayah</th>
+              {data.bandList.map((b) => <th key={b}>{bandLabelOf(b)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {data.wilayahList.map((w) => (
+              <tr key={w}>
+                <td>{w}</td>
+                {data.bandList.map((b) => (
+                  <td key={b}>
+                    <div className="agt__input-wrap" style={{ width: 140 }}>
+                      <span className="agt__rp">Rp</span>
+                      <input
+                        type="number" min="0" step="1000" inputMode="numeric"
+                        value={nominal[`${w}:${b}`] ?? ''}
+                        placeholder="0"
+                        onChange={(e) => setNominal((m) => ({ ...m, [`${w}:${b}`]: e.target.value }))}
+                      />
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="agt__foot">
+        <button type="button" className="agt__save agt__save--sm" onClick={save} disabled={saving}>
+          {saving ? <Loader2 size={15} className="agt__spin" /> : <Save size={15} />}
+          Simpan Tarif Luar Daerah
+        </button>
+      </div>
+    </section>
+  )
+}
+
 // Komponen basis 'Flat': satu nominal, SAMA untuk semua karyawan (mis. Iuran IKGCS,
 // Simpanan Wajib KKCS/K3PG) - bukan per Band/JG/PG, bukan per karyawan/periode.
 function FlatSection() {
@@ -522,6 +617,7 @@ export default function PayrollFormulaPage() {
         savedMsg={(t) => `Potongan per Band/JG/PG tahun ${t} tersimpan.`}
       />
       <TarifSppdSection tahun={tahun} />
+      <TarifWilayahSection tahun={tahun} />
       <FormulaSection />
       <FlatSection />
       <MatriksJgPgSection tahun={tahun} />

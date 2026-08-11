@@ -46,6 +46,42 @@ public class GajiController : ControllerBase
         return Ok(await _gaji.GetSlipAsync(nik, nama, th, bl));
     }
 
+    // --- Pendaftaran mandiri tanggungan BPJS Kesehatan >3 (My Personal > Profil) - milik
+    //     sendiri, TANPA persetujuan atasan (self-declared, dampaknya menambah potongan
+    //     milik sendiri). Beda dari admin/* di bawah: endpoint ini milik SEMUA pegawai. ---
+
+    [HttpGet("tanggungan-bpjs")]
+    public async Task<ActionResult<TanggunganBpjsDto>> TanggunganBpjs()
+    {
+        var nik = await ResolveOwnNikAsync();
+        if (nik is null) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+        return Ok(await _gaji.GetTanggunganBpjsAsync(nik));
+    }
+
+    [HttpPut("tanggungan-bpjs")]
+    public async Task<IActionResult> SimpanTanggunganBpjs([FromBody] SimpanTanggunganBpjsRequest req)
+    {
+        var nik = await ResolveOwnNikAsync();
+        if (nik is null) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+        var (ok, error) = await _gaji.SimpanTanggunganBpjsAsync(nik, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    [HttpDelete("tanggungan-bpjs")]
+    public async Task<IActionResult> HapusTanggunganBpjs()
+    {
+        var nik = await ResolveOwnNikAsync();
+        if (nik is null) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
+        await _gaji.HapusTanggunganBpjsAsync(nik);
+        return NoContent();
+    }
+
+    private async Task<string?> ResolveOwnNikAsync()
+    {
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
+        return pegawai?.ID_KARYAWAN ?? user?.Nik;
+    }
+
     // --- Konfigurasi tarif (khusus Admin Modul SDM: Kabag SDM ke atas s/d GM SKP) ---
 
     // Pilihan JG & PG untuk pengisian tarif.
@@ -257,6 +293,53 @@ public class GajiController : ControllerBase
         if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
         if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
         var (ok, error, data) = await _gaji.HitungSppdAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Tarif Tunjangan Luar Daerah per Wilayah x Band (Medan/Lampung/Makassar x Band
+    //     III-VI saat ini). Endpoint SENDIRI (dua dimensi, beda dari tarif_tunggal). ---
+
+    [HttpGet("admin/tarif-wilayah")]
+    public async Task<ActionResult<TarifWilayahDto>> TarifWilayah([FromQuery] int tahun)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        return Ok(await _gaji.GetTarifWilayahAsync(tahun));
+    }
+
+    [HttpPut("admin/tarif-wilayah")]
+    public async Task<IActionResult> SimpanTarifWilayah([FromBody] SimpanTarifWilayahRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (req.Tahun < 2000) return BadRequest(new { message = "Tahun tidak valid." });
+        var (ok, error) = await _gaji.SimpanTarifWilayahAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Tunjangan Luar Daerah (TJ_LUAR): preview hitung otomatis dari wilayah kerja +
+    //     Band pegawai saat ini. TIDAK menyimpan. ---
+
+    [HttpGet("admin/luar-daerah-formula")]
+    public async Task<IActionResult> LuarDaerahFormula([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungLuarDaerahAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
+    // --- Potongan BPJS Kesehatan (POT_BPJS_KES): preview hitung otomatis dari status
+    //     tanggungan pegawai saat ini (default 0, tanggungan >3 = tambahan 1%/orang dari
+    //     Pendapatan Dasar). TIDAK menyimpan. ---
+
+    [HttpGet("admin/bpjs-kes-formula")]
+    public async Task<IActionResult> BpjsKesFormula([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungBpjsKesPotonganAsync(nik, tahun, bulan);
         return ok ? Ok(data) : NotFound(new { message = error });
     }
 

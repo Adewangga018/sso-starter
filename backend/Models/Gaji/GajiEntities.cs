@@ -58,6 +58,31 @@ public class GajiTarifTunggal
     public decimal Nominal { get; set; }
 }
 
+// Tarif DUA DIMENSI (wilayah x Band) per (komponen, tahun). Dipakai Tunjangan Luar
+// Daerah (TJ_LUAR) - beda dari GajiTarifTunggal yang cuma satu dimensi.
+public class GajiTarifWilayah
+{
+    public int Id { get; set; }
+    public int IdKomponen { get; set; }
+    public string Wilayah { get; set; } = string.Empty;
+    public short Band { get; set; }
+    public short TahunBerlaku { get; set; }
+    public decimal Nominal { get; set; }
+}
+
+// Pendaftaran mandiri karyawan (My Personal > Profil) - tanggungan BPJS Kesehatan LEBIH
+// DARI 3 (di luar diri sendiri). Kalau tidak ada baris utk karyawan, potongan BPJS
+// Kesehatan default 0 (ditanggung penuh s/d 3 tanggungan) - lihat GajiService.
+public class GajiTanggunganLebih
+{
+    public long Id { get; set; }
+    public string IdKaryawan { get; set; } = string.Empty;
+    public int JumlahTanggungan { get; set; }
+    public string? Keterangan { get; set; }
+    public DateTime DibuatPada { get; set; }
+    public DateTime? DiubahPada { get; set; }
+}
+
 // Periode (bulan) gaji.
 public class GajiPeriode
 {

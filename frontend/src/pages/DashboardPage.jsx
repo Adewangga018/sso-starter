@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Lock,
   Mail,
+  Network,
   Search,
   ShieldCheck,
   Sparkles,
@@ -40,6 +41,7 @@ const ICONS = {
   'trending-up': TrendingUp,
   'users-round': Users2,
   wallet: Wallet,
+  network: Network,
 }
 
 const MODULE_ROUTES = {
@@ -52,6 +54,7 @@ const MODULE_ROUTES = {
   'my-progress': '/my-progress',
   'my-asset': '/my-asset',
   payroll: '/payroll',
+  org: '/org',
 }
 
 const MODULE_LOGOS = {

@@ -100,6 +100,9 @@ public class DashboardController : ControllerBase
         if (isAdminModulSdm)
         {
             modules = modules.Append(new ModuleTileDto("payroll", "Payroll", "GAJI & TARIF", "wallet", true)).ToList();
+            // Modul "Struktur Organisasi" - sama pola dengan Payroll di atas (khusus Admin
+            // Modul SDM, kartu jadi penjaga rute /org lewat RequireModule).
+            modules = modules.Append(new ModuleTileDto("org", "Struktur Organisasi", "UNIT & JABATAN", "network", true)).ToList();
         }
 
         var lockedFeatures = await _features.GetLockedKeysAsync();

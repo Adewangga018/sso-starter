@@ -326,6 +326,42 @@ export const api = {
   // SPPD: preview hitung otomatis dari SPPD disetujui (TIDAK menyimpan)
   hitungSppdFormula: (nik, tahun, bulan) =>
     apiFetch(`/api/personal/gaji/admin/sppd-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Tarif Tunjangan Luar Daerah per Wilayah x Band (Medan/Lampung/Makassar x Band III-VI)
+  getTarifWilayah: (tahun) => apiFetch(`/api/personal/gaji/admin/tarif-wilayah?tahun=${tahun}`),
+  simpanTarifWilayah: (payload) => apiFetch('/api/personal/gaji/admin/tarif-wilayah', { method: 'PUT', body: JSON.stringify(payload) }),
+  // Tunjangan Luar Daerah: preview hitung otomatis dari wilayah kerja + Band pegawai (TIDAK menyimpan)
+  hitungLuarDaerahFormula: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/luar-daerah-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Potongan BPJS Kesehatan: preview hitung otomatis dari pendaftaran tanggungan >3 (TIDAK menyimpan)
+  hitungBpjsKesFormula: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/bpjs-kes-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+  // Pendaftaran mandiri tanggungan BPJS Kesehatan >3 (My Personal > Profil, milik sendiri)
+  getTanggunganBpjs: () => apiFetch('/api/personal/gaji/tanggungan-bpjs'),
+  simpanTanggunganBpjs: (payload) => apiFetch('/api/personal/gaji/tanggungan-bpjs', { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusTanggunganBpjs: () => apiFetch('/api/personal/gaji/tanggungan-bpjs', { method: 'DELETE' }),
+
+  // Struktur Organisasi (Admin Modul SDM) - grading.unit_organisasi/jabatan/penempatan.
+  getOrgUnit: () => apiFetch('/api/org/unit'),
+  buatOrgUnit: (payload) => apiFetch('/api/org/unit', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahOrgUnit: (id, payload) => apiFetch(`/api/org/unit/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusOrgUnit: (id) => apiFetch(`/api/org/unit/${id}`, { method: 'DELETE' }),
+
+  getOrgBand: () => apiFetch('/api/org/band'),
+  getOrgJabatan: (idUnit) => apiFetch(`/api/org/jabatan${idUnit ? `?idUnit=${idUnit}` : ''}`),
+  buatOrgJabatan: (payload) => apiFetch('/api/org/jabatan', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahOrgJabatan: (id, payload) => apiFetch(`/api/org/jabatan/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusOrgJabatan: (id) => apiFetch(`/api/org/jabatan/${id}`, { method: 'DELETE' }),
+
+  getOrgPenempatan: (params = {}) => {
+    const q = new URLSearchParams()
+    if (params.idJabatan) q.set('idJabatan', params.idJabatan)
+    if (params.idKaryawan) q.set('idKaryawan', params.idKaryawan)
+    if (params.hanyaAktif === false) q.set('hanyaAktif', 'false')
+    const qs = q.toString()
+    return apiFetch(`/api/org/penempatan${qs ? `?${qs}` : ''}`)
+  },
+  tempatkanKaryawan: (payload) => apiFetch('/api/org/penempatan', { method: 'POST', body: JSON.stringify(payload) }),
+  akhiriPenempatan: (id, payload) => apiFetch(`/api/org/penempatan/${id}/akhiri`, { method: 'POST', body: JSON.stringify(payload ?? {}) }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>

@@ -1744,5 +1744,183 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [11] GAJI TARIF WILAYAH (Tunjangan Luar Daerah per Wilayah x Band) ################';
+GO
+/* ============================================================================
+   gaji.tarif_wilayah - tarif Tunjangan Luar Daerah (komponen TJ_LUAR, sudah ada
+   sejak schema gaji awal) per (wilayah, Band, tahun). Dua dimensi (beda dari
+   gaji.tarif_tunggal yg cuma satu dimensi Band/JG/PG) - butuh tabel sendiri.
+   Cakupan SAAT INI: 3 wilayah (Medan, Lampung, Makassar - dari
+   PEGAWAI_SDM.WILAYAH) x Band III-VI. Seed awal dari tabel Nota Dinas (tahun
+   2026) - boleh ditambah/diubah admin SDM lewat panel Formula & Generalisasi.
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('gaji.tarif_wilayah', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.tarif_wilayah (
+        id            INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_tarif_wilayah PRIMARY KEY,
+        id_komponen   INT           NOT NULL,
+        wilayah       NVARCHAR(50)  NOT NULL,
+        band          SMALLINT      NOT NULL,
+        tahun_berlaku SMALLINT      NOT NULL,
+        nominal       DECIMAL(18,2) NOT NULL CONSTRAINT df_tarif_wilayah_nominal DEFAULT (0),
+        CONSTRAINT uq_tarif_wilayah UNIQUE (id_komponen, wilayah, band, tahun_berlaku),
+        CONSTRAINT fk_tarif_wilayah_komponen FOREIGN KEY (id_komponen) REFERENCES gaji.komponen (id_komponen)
+    );
+    PRINT 'gaji.tarif_wilayah dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.tarif_wilayah sudah ada.';
+GO
+
+DECLARE @idTjLuar INT = (SELECT id_komponen FROM gaji.komponen WHERE kode = 'TJ_LUAR');
+
+IF @idTjLuar IS NOT NULL AND NOT EXISTS (SELECT 1 FROM gaji.tarif_wilayah WHERE id_komponen = @idTjLuar)
+BEGIN
+    INSERT INTO gaji.tarif_wilayah (id_komponen, wilayah, band, tahun_berlaku, nominal) VALUES
+    (@idTjLuar, N'Medan',    3, 2026, 1550000),
+    (@idTjLuar, N'Medan',    4, 2026, 1400000),
+    (@idTjLuar, N'Medan',    5, 2026, 1200000),
+    (@idTjLuar, N'Medan',    6, 2026, 1050000),
+    (@idTjLuar, N'Lampung',  3, 2026, 1450000),
+    (@idTjLuar, N'Lampung',  4, 2026, 1300000),
+    (@idTjLuar, N'Lampung',  5, 2026, 1150000),
+    (@idTjLuar, N'Lampung',  6, 2026, 1000000),
+    (@idTjLuar, N'Makassar', 3, 2026, 1450000),
+    (@idTjLuar, N'Makassar', 4, 2026, 1300000),
+    (@idTjLuar, N'Makassar', 5, 2026, 1150000),
+    (@idTjLuar, N'Makassar', 6, 2026, 1000000);
+    PRINT 'Tarif Luar Daerah 2026 (Medan/Lampung/Makassar x Band III-VI) diisi dari Nota Dinas.';
+END
+ELSE PRINT 'LEWATI: seed tarif wilayah (komponen TJ_LUAR belum ada atau tarif sudah pernah diisi).';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [12] GAJI POTONGAN BPJS KESEHATAN (tanggungan >3) ################';
+GO
+/* ============================================================================
+   Potongan BPJS Kesehatan (POT_BPJS_KES): basis JG_PG -> Karyawan_Periode.
+   Default = 0 (BPJS Kesehatan perusahaan menanggung karyawan + maks 3 tanggungan
+   di luar diri sendiri - anak dan/atau pasangan, dibaca dari MST_PEGAWAI.STATUS_NIKAH
+   + MST_ANAK_PEGAWAI). Special case: tanggungan > 3 -> potongan tambahan 1% dari
+   Pendapatan Dasar PER ORANG kelebihan, dihitung via kalkulator "Hitung dari
+   Tanggungan" (GajiService.HitungBpjsKesPotonganAsync) - TIDAK otomatis penuh,
+   admin tetap review & Simpan lewat admin/manual biasa.
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.komponen','U') IS NULL
+BEGIN RAISERROR('gaji.komponen belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+UPDATE gaji.komponen
+SET basis = 'Karyawan_Periode',
+    keterangan = N'Default 0 - BPJS Kesehatan perusahaan menanggung karyawan + maks 3 tanggungan (anak/pasangan). Kalau tanggungan >3, tambahan 1% dari Pendapatan Dasar per orang kelebihan (Hitung dari Tanggungan).'
+WHERE kode = 'POT_BPJS_KES';
+
+DELETE t FROM gaji.tarif t
+    JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+    WHERE k.kode = 'POT_BPJS_KES';
+
+PRINT 'Potongan BPJS Kesehatan kini basis Karyawan_Periode (default 0, kelebihan tanggungan via kalkulator).';
+GO
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [13] GAJI TANGGUNGAN LEBIH (pendaftaran mandiri BPJS Kesehatan >3) ################';
+GO
+/* ============================================================================
+   gaji.tanggungan_lebih - pendaftaran mandiri karyawan (My Personal > Profil)
+   utk kasus tanggungan BPJS Kesehatan LEBIH DARI 3 (di luar diri sendiri).
+   Kalau tidak ada baris, potongan BPJS Kesehatan tetap default 0 (ditanggung
+   penuh s/d 3 tanggungan). Dipakai GajiService.HitungBpjsKesPotonganAsync.
+   TIDAK butuh persetujuan atasan (self-declared, dampaknya menambah potongan
+   milik sendiri - tidak ada insentif klaim berlebihan).
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF SCHEMA_ID('gaji') IS NULL
+BEGIN RAISERROR('schema gaji belum ada - jalankan gaji-schema.sql dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('gaji.tanggungan_lebih', 'U') IS NULL
+BEGIN
+    CREATE TABLE gaji.tanggungan_lebih (
+        id                BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_tanggungan_lebih PRIMARY KEY,
+        id_karyawan       NVARCHAR(50)  NOT NULL,
+        jumlah_tanggungan INT           NOT NULL,
+        keterangan        NVARCHAR(500) NULL,
+        dibuat_pada       DATETIME2     NOT NULL CONSTRAINT df_tanggungan_lebih_dibuat DEFAULT SYSUTCDATETIME(),
+        diubah_pada       DATETIME2     NULL,
+        CONSTRAINT uq_tanggungan_lebih_karyawan UNIQUE (id_karyawan),
+        CONSTRAINT ck_tanggungan_lebih_jumlah CHECK (jumlah_tanggungan > 3)
+    );
+    PRINT 'gaji.tanggungan_lebih dibuat.';
+END
+ELSE PRINT 'LEWATI: gaji.tanggungan_lebih sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [14] GAJI TANGGUNGAN LEBIH - longgarkan CHECK (>3 -> >0) ################';
+GO
+/* ============================================================================
+   Koreksi formula Potongan BPJS Kesehatan (2026-08-11): base 1% dari Pendapatan
+   Dasar SELALU dibebankan ke karyawan (bukan lagi default 0), + 1% per anggota
+   keluarga lain yang diikutsertakan - TANPA batas gratis 3 lagi. jumlah_tanggungan
+   di gaji.tanggungan_lebih sekarang berarti "jumlah anggota keluarga lain yang
+   diikutsertakan" (mulai dari 1), bukan "total tanggungan >3". Longgarkan CHECK
+   constraint supaya karyawan bisa mendaftarkan 1 atau 2 anggota keluarga lain.
+   NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF OBJECT_ID('gaji.tanggungan_lebih', 'U') IS NULL
+BEGIN RAISERROR('gaji.tanggungan_lebih belum ada - jalankan blok [13] dulu.',16,1); SET NOEXEC ON; END
+GO
+
+IF EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'ck_tanggungan_lebih_jumlah'
+      AND parent_object_id = OBJECT_ID('gaji.tanggungan_lebih')
+      AND definition NOT LIKE '%>(0)%'
+)
+BEGIN
+    ALTER TABLE gaji.tanggungan_lebih DROP CONSTRAINT ck_tanggungan_lebih_jumlah;
+    ALTER TABLE gaji.tanggungan_lebih ADD CONSTRAINT ck_tanggungan_lebih_jumlah CHECK (jumlah_tanggungan > 0);
+    PRINT 'ck_tanggungan_lebih_jumlah dilonggarkan jadi > 0.';
+END
+ELSE PRINT 'LEWATI: ck_tanggungan_lebih_jumlah sudah > 0.';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO
