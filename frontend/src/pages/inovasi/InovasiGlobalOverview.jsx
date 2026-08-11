@@ -7,6 +7,26 @@ import { METODOLOGI, cocokCari } from './rekapUtils'
 import { BatangHorizontal } from './InvCharts'
 import './inovasi.css'
 
+const NAMA_BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
+
+function matchPeriode(createdAt, targetTahun, targetBulan) {
+  if (!targetTahun && !targetBulan) return true
+  if (!createdAt) return false
+  const d = new Date(createdAt)
+  if (isNaN(d.getTime())) return false
+
+  if (targetTahun && String(d.getFullYear()) !== String(targetTahun)) {
+    return false
+  }
+  if (targetBulan && String(d.getMonth() + 1) !== String(targetBulan)) {
+    return false
+  }
+  return true
+}
+
 // Ringkasan Seluruh Perusahaan - menu tambahan khusus Kepala Bagian
 // Sekretariat/Umum & Kepala Bagian Administrasi/Pengembangan SDM dan Inovasi
 // (id_jabatan 38/39, lihat OrgResolver.IsGlobalInovasiViewerAsync). Berbeda
@@ -22,9 +42,11 @@ export default function InovasiGlobalOverview() {
   const [inovasi, setInovasi] = useState(null)
   const [err, setErr] = useState('')
 
-  // Filter Departemen & Kompartemen berlaku global (statistik, grafik, dan
+  // Filter Bulan, Tahun, Departemen & Kompartemen berlaku global (statistik, grafik, dan
   // kedua tabel di bawah mengikutinya), di luar filter status/metodologi/pencarian
   // yang sudah ada per tabel.
+  const [filterBulan, setFilterBulan] = useState('')
+  const [filterTahun, setFilterTahun] = useState('')
   const [filterDept, setFilterDept] = useState('')
   const [filterKomp, setFilterKomp] = useState('')
   const [searchGagasan, setSearchGagasan] = useState('')
@@ -46,6 +68,23 @@ export default function InovasiGlobalOverview() {
       })
   }, [])
 
+  const tahunOpsi = useMemo(() => {
+    const years = new Set()
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear)
+
+    const parseYear = (createdAt) => {
+      if (!createdAt) return
+      const d = new Date(createdAt)
+      if (!isNaN(d.getTime())) years.add(d.getFullYear())
+    }
+
+    ;(gagasan ?? []).forEach((r) => parseYear(r.createdAt))
+    ;(inovasi ?? []).forEach((r) => parseYear(r.createdAt))
+
+    return [...years].sort((a, b) => b - a)
+  }, [gagasan, inovasi])
+
   const departemenSet = useMemo(() => {
     const s = new Set()
     ;(gagasan ?? []).forEach((r) => { if (r.namaDepartemenAsal) s.add(r.namaDepartemenAsal) })
@@ -66,17 +105,19 @@ export default function InovasiGlobalOverview() {
   const statusGagasanOpsi = useMemo(() => [...new Set((gagasan ?? []).map((r) => r.status).filter(Boolean))].sort(), [gagasan])
   const statusInovasiOpsi = useMemo(() => [...new Set((inovasi ?? []).map((r) => r.status).filter(Boolean))].sort(), [inovasi])
 
-  // Filter Departemen/Kompartemen diterapkan lebih dulu - statistik, grafik,
+  // Filter Bulan/Tahun/Departemen/Kompartemen diterapkan lebih dulu - statistik, grafik,
   // dan kedua tabel di bawah semuanya menurunkan dari sini.
   const gagasanCakupan = useMemo(() => (gagasan ?? []).filter((r) =>
     (!filterDept || r.namaDepartemenAsal === filterDept) &&
-    (!filterKomp || r.namaKompartemenAsal === filterKomp)
-  ), [gagasan, filterDept, filterKomp])
+    (!filterKomp || r.namaKompartemenAsal === filterKomp) &&
+    matchPeriode(r.createdAt, filterTahun, filterBulan)
+  ), [gagasan, filterDept, filterKomp, filterTahun, filterBulan])
 
   const inovasiCakupan = useMemo(() => (inovasi ?? []).filter((r) =>
     (!filterDept || r.namaDepartemen === filterDept) &&
-    (!filterKomp || r.namaKompartemen === filterKomp)
-  ), [inovasi, filterDept, filterKomp])
+    (!filterKomp || r.namaKompartemen === filterKomp) &&
+    matchPeriode(r.createdAt, filterTahun, filterBulan)
+  ), [inovasi, filterDept, filterKomp, filterTahun, filterBulan])
 
   const perMetodologi = useMemo(() => {
     const dasar = inovasiCakupan.filter((r) => (!statusInovasi || r.status === statusInovasi) && cocokCari(r, ['noRegistrasi', 'namaGugus', 'judul', 'ketuaNama', 'namaDepartemen', 'namaKompartemen'], searchInovasi))
@@ -139,6 +180,14 @@ export default function InovasiGlobalOverview() {
         <>
           <div className="inv__toolbar">
             <div className="inv__filters">
+              <select className="inv__select" value={filterBulan} onChange={(e) => setFilterBulan(e.target.value)}>
+                <option value="">Semua Bulan</option>
+                {NAMA_BULAN.map((b, i) => <option key={b} value={String(i + 1)}>{b}</option>)}
+              </select>
+              <select className="inv__select" value={filterTahun} onChange={(e) => setFilterTahun(e.target.value)}>
+                <option value="">Semua Tahun</option>
+                {tahunOpsi.map((t) => <option key={t} value={String(t)}>Tahun {t}</option>)}
+              </select>
               <select className="inv__select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
                 <option value="">Semua Departemen</option>
                 {departemenOpsi.map((d) => <option key={d} value={d}>{d}</option>)}
