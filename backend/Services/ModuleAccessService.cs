@@ -41,6 +41,10 @@ public class ModuleAccessService
 
     public Task<bool> IsSdmAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen SDM");
 
+    // Admin Aset = Departemen Kepatuhan; Admin IT juga otomatis lolos di sini (bypass
+    // generik sudah ada di IsDeptAdminAsync) - supaya bisa input/uji coba data My Asset
+    // (Inventaris, Maintenance, Aset Tidak Produktif, Aktivitas) tanpa perlu jabatan di
+    // Departemen Kepatuhan.
     public Task<bool> IsAsetAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");
 
     // Admin My Prosedur (SOP/Kebijakan) = fungsi Tata Kelola di Departemen Kepatuhan.

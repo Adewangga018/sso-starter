@@ -16,8 +16,10 @@ import './TopBar.css'
  * @param {boolean} dark        - varian hijau tua (Dashboard); selain itu putih.
  * @param {function} onMenuClick - membuka sidebar di layar kecil.
  * @param {function} onLogout   - dipanggil dari menu profil.
+ * @param {boolean} hideAdminLinks - sembunyikan "Panel Juri"/"Panel Admin" di modul ini
+ *                                    walau pengguna punya hak tersebut (mis. My Asset).
  */
-export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout }) {
+export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout, hideAdminLinks = false }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const { isAdmin, isPengelolaJuri, summary } = useAuth()
   const { unread, toggle: toggleChat } = useChat()
@@ -77,6 +79,22 @@ export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark
       </div>
 
       <div className="topbar__actions" ref={actionsRef}>
+        {/* Panel Juri berdiri sendiri (bukan sub-menu Admin): pengelola stream
+            juri belum tentu Admin IT. Untuk Admin yang juga pengelola, tampil
+            berdampingan dengan Panel Admin. */}
+        {/* Label dibungkus span supaya di ponsel bisa disembunyikan lewat CSS
+            dan pranala menyusut jadi ikon saja - dua pranala berlabel penuh
+            tidak muat berdampingan dengan judul modul di layar 360px. */}
+        {!hideAdminLinks && isPengelolaJuri && (
+          <Link to="/juri" className="topbar__admin-link topbar__admin-link--juri" title="Panel Juri & Penilaian Inovasi">
+            <Gavel size={16} /> <span className="topbar__admin-link-text">Panel Juri</span>
+          </Link>
+        )}
+        {!hideAdminLinks && isAdmin && (
+          <Link to="/admin" className="topbar__admin-link" title="Panel Admin IT">
+            <ShieldCheck size={16} /> <span className="topbar__admin-link-text">Panel Admin</span>
+          </Link>
+        )}
 
         {chatOn && (
           <button

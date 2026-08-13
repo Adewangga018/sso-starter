@@ -22,6 +22,31 @@ public record AsetDto(
 // Daftar aset + flag apakah pemakai adalah Admin Aset (pengelola).
 public record AsetListDto(IReadOnlyList<AsetDto> Items, bool IsAdminAset);
 
+// ---- Inventaris: sumber datanya GCS.dbo.assets (ERP Aktiva Tetap), read-only.
+// Lihat catatan arsitektur di Models/Gcs/AsetErp.cs - db_mygcs TIDAK menyimpan
+// salinan data induk aset lagi, supaya nilai/lokasi selalu mengikuti ERP.
+public record AsetErpDto(
+    string ObjectId,
+    string? NomorAset,     // nomor aset internal buatan tim Aset (aset.nomor_internal) - TERPISAH dari OBJECTID ERP
+    string? Nama,
+    string? Kategori,      // nama GROUP_ASSET, mis. "Bangunan & Instalasi Listrik"
+    string? KategoriKode,  // kode GROUP_ASSET mentah (A01-A06) - dipakai filter Jenis Aktivitas
+    string? Kelompok,      // nama KELOMPOK, mis. "Bangunan & Pabrik Petroganik Lampung"
+    string? Lokasi,
+    string? NoPol,
+    string? Status,
+    string? Aktif,         // 'Y' | 'T'
+    decimal? Qty,
+    string? Satuan,
+    decimal? NilaiPerolehan,
+    decimal? NilaiBuku,
+    DateOnly? TglPerolehan,
+    decimal? MasaManfaatBulan, // dbo.assets.MASA, satuan bulan
+    string? PicSaatIni,    // nama PIC aktif (orang atau bagian) dari aset.pic_assignment, buat filter
+    string? Catatan);
+
+public record AsetErpListDto(IReadOnlyList<AsetErpDto> Items, int Total);
+
 public record AsetMaintenanceDto(
     long Id,
     long IdAset,
@@ -77,3 +102,86 @@ public record SimpanMaintenanceRequest(
     string? Pelaksana,
     decimal? Biaya,
     string? Catatan);
+
+// ---- aset tidak produktif ----
+public record AsetTidakProduktifDto(
+    long Id,
+    string Jenis,
+    string? Nama,
+    string? SertifikatHak,
+    DateOnly? SertifikatJangkaWaktu,
+    string? SertifikatNo,
+    int? SertifikatTahun,
+    string? SertifikatKeterangan,
+    string? Lokasi,
+    decimal? Qty,
+    string Satuan,
+    string? StatusJaminan,
+    decimal? HargaPasar,
+    decimal? AppraisalHarga,
+    string? AppraisalKjpp,
+    int? AppraisalTahun,
+    string? AppraisalNo,
+    string? PbbNop,
+    decimal? PbbNominal,
+    DateOnly? PbbTglPembayaran,
+    string? CatatanAkt,
+    string? PerijinanPemegangSaham,
+    DateTime TglDibuat,
+    DateTime? TglDiubah);
+
+public record AsetTidakProduktifListDto(IReadOnlyList<AsetTidakProduktifDto> Items, bool IsAdminAset);
+
+public record SimpanAsetTidakProduktifRequest(
+    string Jenis,
+    string? Nama,
+    string? SertifikatHak,
+    DateOnly? SertifikatJangkaWaktu,
+    string? SertifikatNo,
+    int? SertifikatTahun,
+    string? SertifikatKeterangan,
+    string? Lokasi,
+    decimal? Qty,
+    string? Satuan,
+    string? StatusJaminan,
+    decimal? HargaPasar,
+    decimal? AppraisalHarga,
+    string? AppraisalKjpp,
+    int? AppraisalTahun,
+    string? AppraisalNo,
+    string? PbbNop,
+    decimal? PbbNominal,
+    DateOnly? PbbTglPembayaran,
+    string? CatatanAkt,
+    string? PerijinanPemegangSaham);
+
+// ---- aktivitas aset tidak produktif ----
+// AsetLabel: ringkasan identitas aset (jenis + lokasi/no sertifikat) untuk ditampilkan
+// di daftar aktivitas tanpa perlu join manual di frontend.
+public record AsetTidakProduktifAktivitasDto(
+    long Id,
+    long IdAset,
+    string AsetLabel,
+    string Jenis,
+    DateOnly TglAktivitas,
+    string? Deskripsi,
+    string? PihakTerkait,
+    decimal? NilaiNego,
+    DateTime TglDibuat,
+    DateTime? TglDiubah);
+
+public record AsetTidakProduktifAktivitasListDto(
+    IReadOnlyList<AsetTidakProduktifAktivitasDto> Items,
+    IReadOnlyList<AsetPilihanDto> DaftarAset,
+    bool IsAdminAset);
+
+// Untuk dropdown pilih aset saat mencatat aktivitas baru.
+public record AsetPilihanDto(long Id, string Label);
+
+public record SimpanAktivitasRequest(
+    long IdAset,
+    string Jenis,
+    DateOnly TglAktivitas,
+    string? Deskripsi,
+    string? PihakTerkait,
+    decimal? NilaiNego);

@@ -53,7 +53,16 @@ import KpiTim from './pages/progress/KpiTim'
 import KpiPerusahaan from './pages/progress/KpiPerusahaan'
 import MyAssetLayout from './layouts/MyAssetLayout'
 import Inventaris from './pages/aset/Inventaris'
-import Maintenance from './pages/aset/Maintenance'
+import AsetTidakProduktif from './pages/aset/AsetTidakProduktif'
+import AsetAktivitas from './pages/aset/AsetAktivitas'
+import AsetDetail from './pages/aset/AsetDetail'
+import AsetNomorInternal from './pages/aset/AsetNomorInternal'
+import AsetClearance from './pages/aset/AsetClearance'
+import AsetQrCetak from './pages/aset/AsetQrCetak'
+import AsetDokumenJatuhTempo from './pages/aset/AsetDokumenJatuhTempo'
+import AsetOpname from './pages/aset/AsetOpname'
+import AsetOpnameDetail from './pages/aset/AsetOpnameDetail'
+import AsetPicRiwayat from './pages/aset/AsetPicRiwayat'
 import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
@@ -151,7 +160,15 @@ export default function App() {
 <Route element={<RequireModule moduleKey="my-asset" />}>
               <Route path="/my-asset" element={<MyAssetLayout />}>
                 <Route index element={<Inventaris />} />
-                <Route path="maintenance" element={<Maintenance />} />
+                <Route path="detail/:objectId" element={<AsetDetail />} />
+                <Route path="nomor-internal" element={<AsetNomorInternal />} />
+                <Route path="clearance" element={<AsetClearance />} />
+                <Route path="tidak-produktif" element={<AsetTidakProduktif />} />
+                <Route path="tidak-produktif/aktivitas" element={<AsetAktivitas />} />
+                <Route path="dokumen-jatuh-tempo" element={<AsetDokumenJatuhTempo />} />
+                <Route path="opname" element={<AsetOpname />} />
+                <Route path="opname/:id" element={<AsetOpnameDetail />} />
+                <Route path="pic/riwayat" element={<AsetPicRiwayat />} />
               </Route>
             </Route>
 
@@ -230,6 +247,7 @@ export default function App() {
 
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,
                 with no sidebar or header bleeding into the print output. */}
+            <Route path="/cetak/aset-qr" element={<AsetQrCetak />} />
             <Route path="/cetak/izin/:id" element={<IzinCetakPage />} />
             <Route path="/cetak/sppd/:id" element={<SppdCetakPage />} />
             <Route path="/cetak/tiket/:id" element={<TiketCetakPage />} />

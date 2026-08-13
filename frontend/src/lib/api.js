@@ -29,7 +29,15 @@ async function apiFetch(path, options = {}) {
 
   // credentials:'include' so cookie-based endpoints (login, 2FA step) send/receive
   // the Identity session cookie; same-origin so no CORS concern.
-  const res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include', ...options, headers })
+  let res
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { credentials: 'include', ...options, headers })
+  } catch {
+    // fetch() itself throws (not an HTTP response) when the connection is dropped mid-upload -
+    // mis. server/proxy menolak body yang kelewat besar sebelum sempat balas JSON. Tanpa ini,
+    // pemakai cuma lihat "TypeError: Failed to fetch" / "NetworkError" mentah dari browser.
+    throw new ApiError(0, 'Gagal terhubung ke server. Kalau ini terjadi saat unggah berkas, coba periksa ukuran berkasnya lalu ulangi.')
+  }
 
   if (!res.ok) {
     let message = `Terjadi kesalahan (${res.status}).`
@@ -256,16 +264,67 @@ export const api = {
   downloadCoachingRuang: (ownerNik) => apiDownload(`/api/coaching/ruang/${encodeURIComponent(ownerNik)}/download`, `coaching-ruang-${ownerNik}.pdf`),
   getCoachingAdminSemua: () => apiFetch('/api/coaching/admin/semua'),
 
-  // My Asset
+  // My Asset > Inventaris - sumber datanya GCS.dbo.assets (ERP Aktiva Tetap), read-only.
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  getAsetDetail: (id) => apiFetch(`/api/aset/${id}`),
-  buatAset: (payload) => apiFetch('/api/aset', { method: 'POST', body: JSON.stringify(payload) }),
-  ubahAset: (id, payload) => apiFetch(`/api/aset/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-  hapusAset: (id) => apiFetch(`/api/aset/${id}`, { method: 'DELETE' }),
-  getMaintenanceList: () => apiFetch('/api/aset/maintenance'),
-  tambahMaintenance: (idAset, payload) => apiFetch(`/api/aset/${idAset}/maintenance`, { method: 'POST', body: JSON.stringify(payload) }),
-  ubahMaintenance: (mid, payload) => apiFetch(`/api/aset/maintenance/${mid}`, { method: 'PUT', body: JSON.stringify(payload) }),
-  hapusMaintenance: (mid) => apiFetch(`/api/aset/maintenance/${mid}`, { method: 'DELETE' }),
+  getAsetDetail: (objectId) => apiFetch(`/api/aset/${objectId}`),
+  getAsetTidakProduktifList: () => apiFetch('/api/aset/tidak-produktif'),
+  buatAsetTidakProduktif: (payload) => apiFetch('/api/aset/tidak-produktif', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahAsetTidakProduktif: (id, payload) => apiFetch(`/api/aset/tidak-produktif/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  getAktivitasList: (idAset) => apiFetch(`/api/aset/tidak-produktif/aktivitas${idAset ? `?idAset=${idAset}` : ''}`),
+  buatAktivitas: (payload) => apiFetch('/api/aset/tidak-produktif/aktivitas', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahAktivitas: (id, payload) => apiFetch(`/api/aset/tidak-produktif/aktivitas/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusAktivitas: (id) => apiFetch(`/api/aset/tidak-produktif/aktivitas/${id}`, { method: 'DELETE' }),
+  hapusAsetTidakProduktif: (id) => apiFetch(`/api/aset/tidak-produktif/${id}`, { method: 'DELETE' }),
+  // My Asset > overlay (kondisi/PIC/aktivitas umum/clearance) - lihat AsetOverlayService.
+  getAsetAdminStatus: () => apiFetch('/api/aset/admin-status'),
+  cariPegawaiAset: (q) => apiFetch(`/api/aset/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  listBagianAset: () => apiFetch('/api/aset/bagian'),
+  listJenisAktivitasAset: () => apiFetch('/api/aset/jenis-aktivitas'),
+  getAsetOverlay: (objectId) => apiFetch(`/api/aset/${objectId}/overlay`),
+  setAsetKondisi: (objectId, payload) => apiFetch(`/api/aset/${objectId}/kondisi`, { method: 'POST', body: JSON.stringify(payload) }),
+  setAsetNomorInternal: (objectId, payload) => apiFetch(`/api/aset/${objectId}/nomor`, { method: 'PUT', body: JSON.stringify(payload) }),
+  assignAsetPic: (objectId, payload) => apiFetch(`/api/aset/${objectId}/pic`, { method: 'POST', body: JSON.stringify(payload) }),
+  kembalikanAsetPic: (id) => apiFetch(`/api/aset/pic/${id}/kembalikan`, { method: 'POST' }),
+  buatAsetAktivitas: (objectId, payload) => apiFetch(`/api/aset/${objectId}/aktivitas`, { method: 'POST', body: JSON.stringify(payload) }),
+  ubahAsetAktivitas: (id, payload) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusAsetAktivitas: (id) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'DELETE' }),
+  getAsetClearance: (nik) => apiFetch(`/api/aset/clearance?nik=${encodeURIComponent(nik)}`),
+  // My Asset > Riwayat PIC lintas-aset (read-only, filter opsional).
+  getAsetRiwayatPic: ({ nik, idUnit, dari, sampai } = {}) => {
+    const p = new URLSearchParams()
+    if (nik) p.set('nik', nik)
+    if (idUnit) p.set('idUnit', idUnit)
+    if (dari) p.set('dari', dari)
+    if (sampai) p.set('sampai', sampai)
+    const qs = p.toString()
+    return apiFetch(`/api/aset/pic/riwayat${qs ? `?${qs}` : ''}`)
+  },
+  // My Asset > Dokumen (sertifikat/BPKB/STNK/IMB/polis) + reminder jatuh tempo.
+  uploadAsetDokumen: (objectId, fields, file) => {
+    const body = new FormData()
+    Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== '') body.append(k, v) })
+    if (file) body.append('file', file)
+    return apiFetch(`/api/aset/${objectId}/dokumen`, { method: 'POST', body })
+  },
+  ubahAsetDokumen: (id, payload) => apiFetch(`/api/aset/dokumen/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusAsetDokumen: (id) => apiFetch(`/api/aset/dokumen/${id}`, { method: 'DELETE' }),
+  getAsetDokumenJatuhTempo: (hari) => apiFetch(`/api/aset/dokumen/jatuh-tempo${hari ? `?hari=${hari}` : ''}`),
+  // Return { url, contentType } - blob object URL; revoke saat viewer ditutup. <a href> polos
+  // tidak bisa dipakai karena endpoint ini butuh header Authorization Bearer.
+  getAsetDokumenFile: (id) => apiBlob(`/api/aset/dokumen/${id}/file`),
+  cariRekananAset: (q) => apiFetch(`/api/aset/rekanan?q=${encodeURIComponent(q ?? '')}`),
+  listLokasiAset: () => apiFetch('/api/aset/lokasi'),
+  // My Asset > Stock Opname (scan QR)
+  getAsetOpnameSesiList: () => apiFetch('/api/aset/opname-sesi'),
+  buatAsetOpnameSesi: (payload) => apiFetch('/api/aset/opname-sesi', { method: 'POST', body: JSON.stringify(payload) }),
+  getAsetOpnameSesiDetail: (id) => apiFetch(`/api/aset/opname-sesi/${id}`),
+  selesaikanAsetOpnameSesi: (id) => apiFetch(`/api/aset/opname-sesi/${id}/selesai`, { method: 'POST' }),
+  submitAsetOpnameScan: (idSesi, fields, foto) => {
+    const body = new FormData()
+    Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== '') body.append(k, v) })
+    if (foto) body.append('foto', foto)
+    return apiFetch(`/api/aset/opname-sesi/${idSesi}/scan`, { method: 'POST', body })
+  },
 
   // My Progress (KPI)
   getKpiSaya: () => apiFetch('/api/progress'),

@@ -76,6 +76,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Aset> Aset => Set<Aset>();
     public DbSet<AsetMaintenance> AsetMaintenance => Set<AsetMaintenance>();
+    public DbSet<AsetTidakProduktif> AsetTidakProduktif => Set<AsetTidakProduktif>();
+    public DbSet<AsetTidakProduktifAktivitas> AsetTidakProduktifAktivitas => Set<AsetTidakProduktifAktivitas>();
+    public DbSet<AsetKondisi> AsetKondisi => Set<AsetKondisi>();
+    public DbSet<AsetNomorInternal> AsetNomorInternal => Set<AsetNomorInternal>();
+    public DbSet<AsetPicAssignment> AsetPicAssignment => Set<AsetPicAssignment>();
+    public DbSet<AsetAktivitas> AsetAktivitas => Set<AsetAktivitas>();
+    public DbSet<AsetJenisAktivitas> AsetJenisAktivitas => Set<AsetJenisAktivitas>();
+    public DbSet<AsetJenisAktivitasKategori> AsetJenisAktivitasKategori => Set<AsetJenisAktivitasKategori>();
+    public DbSet<AsetDokumen> AsetDokumen => Set<AsetDokumen>();
+    public DbSet<AsetOpnameSesi> AsetOpnameSesi => Set<AsetOpnameSesi>();
+    public DbSet<AsetOpnameScan> AsetOpnameScan => Set<AsetOpnameScan>();
     // Coaching My Team (schema coaching) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<CoachingSesi> CoachingSesi => Set<CoachingSesi>();
     public DbSet<CoachingPesan> CoachingPesan => Set<CoachingPesan>();
@@ -699,6 +710,191 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
             e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetTidakProduktif>(e =>
+        {
+            e.ToTable("tidak_produktif", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.SertifikatHak).HasColumnName("sertifikat_hak");
+            e.Property(x => x.SertifikatJangkaWaktu).HasColumnName("sertifikat_jangka_waktu");
+            e.Property(x => x.SertifikatNo).HasColumnName("sertifikat_no");
+            e.Property(x => x.SertifikatTahun).HasColumnName("sertifikat_tahun");
+            e.Property(x => x.SertifikatKeterangan).HasColumnName("sertifikat_keterangan");
+            e.Property(x => x.Lokasi).HasColumnName("lokasi");
+            e.Property(x => x.Qty).HasColumnName("qty").HasPrecision(18, 2);
+            e.Property(x => x.Satuan).HasColumnName("satuan");
+            e.Property(x => x.StatusJaminan).HasColumnName("status_jaminan");
+            e.Property(x => x.HargaPasar).HasColumnName("harga_pasar").HasPrecision(18, 2);
+            e.Property(x => x.AppraisalHarga).HasColumnName("appraisal_harga").HasPrecision(18, 2);
+            e.Property(x => x.AppraisalKjpp).HasColumnName("appraisal_kjpp");
+            e.Property(x => x.AppraisalTahun).HasColumnName("appraisal_tahun");
+            e.Property(x => x.AppraisalNo).HasColumnName("appraisal_no");
+            e.Property(x => x.PbbNop).HasColumnName("pbb_nop");
+            e.Property(x => x.PbbNominal).HasColumnName("pbb_nominal").HasPrecision(18, 2);
+            e.Property(x => x.PbbTglPembayaran).HasColumnName("pbb_tgl_pembayaran");
+            e.Property(x => x.CatatanAkt).HasColumnName("catatan_akt");
+            e.Property(x => x.PerijinanPemegangSaham).HasColumnName("perijinan_pemegang_saham");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetTidakProduktifAktivitas>(e =>
+        {
+            e.ToTable("tidak_produktif_aktivitas", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdAset).HasColumnName("id_aset");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.TglAktivitas).HasColumnName("tgl_aktivitas");
+            e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.PihakTerkait).HasColumnName("pihak_terkait");
+            e.Property(x => x.NilaiNego).HasColumnName("nilai_nego").HasPrecision(18, 2);
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetKondisi>(e =>
+        {
+            e.ToTable("kondisi", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.Kondisi).HasColumnName("kondisi");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+        });
+
+        builder.Entity<AsetNomorInternal>(e =>
+        {
+            e.ToTable("nomor_internal", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.ObjectId);
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.NomorAset).HasColumnName("nomor_aset");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetPicAssignment>(e =>
+        {
+            e.ToTable("pic_assignment", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.JenisPic).HasColumnName("jenis_pic");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.NamaPic).HasColumnName("nama_pic");
+            e.Property(x => x.Departemen).HasColumnName("departemen");
+            e.Property(x => x.IdUnit).HasColumnName("id_unit");
+            e.Property(x => x.NamaUnit).HasColumnName("nama_unit");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+        });
+
+        builder.Entity<AsetAktivitas>(e =>
+        {
+            e.ToTable("aktivitas", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.TglAktivitas).HasColumnName("tgl_aktivitas");
+            e.Property(x => x.Deskripsi).HasColumnName("deskripsi");
+            e.Property(x => x.VendorPelaksana).HasColumnName("vendor_pelaksana");
+            e.Property(x => x.Biaya).HasColumnName("biaya").HasPrecision(18, 2);
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetJenisAktivitas>(e =>
+        {
+            e.ToTable("jenis_aktivitas", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.Urutan).HasColumnName("urutan");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetJenisAktivitasKategori>(e =>
+        {
+            e.ToTable("jenis_aktivitas_kategori", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => new { x.IdJenisAktivitas, x.GroupAsset });
+            e.Property(x => x.IdJenisAktivitas).HasColumnName("id_jenis_aktivitas");
+            e.Property(x => x.GroupAsset).HasColumnName("group_asset");
+        });
+
+        builder.Entity<AsetDokumen>(e =>
+        {
+            e.ToTable("dokumen", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.JenisDokumen).HasColumnName("jenis_dokumen");
+            e.Property(x => x.NomorDokumen).HasColumnName("nomor_dokumen");
+            e.Property(x => x.TglTerbit).HasColumnName("tgl_terbit");
+            e.Property(x => x.TglJatuhTempo).HasColumnName("tgl_jatuh_tempo");
+            e.Property(x => x.FilePath).HasColumnName("file_path");
+            e.Property(x => x.FileNamaAsli).HasColumnName("file_nama_asli");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetOpnameSesi>(e =>
+        {
+            e.ToTable("opname_sesi", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.NamaSesi).HasColumnName("nama_sesi");
+            e.Property(x => x.TglMulai).HasColumnName("tgl_mulai");
+            e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.LingkupKategori).HasColumnName("lingkup_kategori");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
+        builder.Entity<AsetOpnameScan>(e =>
+        {
+            e.ToTable("opname_scan", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdSesi).HasColumnName("id_sesi");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.LokasiAktual).HasColumnName("lokasi_aktual");
+            e.Property(x => x.KondisiAktual).HasColumnName("kondisi_aktual");
+            e.Property(x => x.FotoPath).HasColumnName("foto_path");
+            e.Property(x => x.FotoNamaAsli).HasColumnName("foto_nama_asli");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.NikPemindai).HasColumnName("nik_pemindai");
+            e.Property(x => x.TglScan).HasColumnName("tgl_scan");
         });
 
         builder.Entity<AsetMaintenance>(e =>
