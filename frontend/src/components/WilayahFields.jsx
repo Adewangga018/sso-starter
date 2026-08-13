@@ -117,14 +117,6 @@ export default function WilayahFields({ profile, form, setForm, editing, require
     return (
       <>
         <div className="info-row">
-          <div className="info-row__label">Provinsi</div>
-          <div className="info-row__value">{profile.alamat?.provinsi ?? '-'}</div>
-        </div>
-        <div className="info-row">
-          <div className="info-row__label">Kota/Kabupaten</div>
-          <div className="info-row__value">{profile.alamat?.kabupaten ?? '-'}</div>
-        </div>
-        <div className="info-row">
           <div className="info-row__label">Kecamatan</div>
           <div className="info-row__value">{profile.alamat?.kecamatan ?? '-'}</div>
         </div>
@@ -132,31 +124,20 @@ export default function WilayahFields({ profile, form, setForm, editing, require
           <div className="info-row__label">Desa/Kelurahan</div>
           <div className="info-row__value">{profile.alamat?.desa ?? '-'}</div>
         </div>
+        <div className="info-row span-2">
+          <div className="info-row__label">Kota/Kabupaten</div>
+          <div className="info-row__value">{profile.alamat?.kabupaten ?? '-'}</div>
+        </div>
+        <div className="info-row span-2">
+          <div className="info-row__label">Provinsi</div>
+          <div className="info-row__value">{profile.alamat?.provinsi ?? '-'}</div>
+        </div>
       </>
     )
   }
 
   return (
     <>
-      <div className="info-row">
-        <div className="info-row__label">Provinsi{mark}</div>
-        <select className="profil__input" value={provinceId} onChange={(e) => onProvinceChange(e.target.value)}>
-          <option value="">— Pilih Provinsi —</option>
-          {provinces.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
-      <div className="info-row">
-        <div className="info-row__label">Kota/Kabupaten{mark}</div>
-        <select
-          className="profil__input"
-          value={regencyId}
-          onChange={(e) => onRegencyChange(e.target.value)}
-          disabled={!provinceId}
-        >
-          <option value="">{provinceId ? '— Pilih Kota/Kabupaten —' : '— Pilih Provinsi dahulu —'}</option>
-          {regencies.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-        </select>
-      </div>
       <div className="info-row">
         <div className="info-row__label">Kecamatan{mark}</div>
         <select
@@ -179,6 +160,25 @@ export default function WilayahFields({ profile, form, setForm, editing, require
         >
           <option value="">{districtId ? '— Pilih Desa/Kelurahan —' : '— Pilih Kecamatan dahulu —'}</option>
           {villages.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+        </select>
+      </div>
+      <div className="info-row span-2">
+        <div className="info-row__label">Kota/Kabupaten{mark}</div>
+        <select
+          className="profil__input"
+          value={regencyId}
+          onChange={(e) => onRegencyChange(e.target.value)}
+          disabled={!provinceId}
+        >
+          <option value="">{provinceId ? '— Pilih Kota/Kabupaten —' : '— Pilih Provinsi dahulu —'}</option>
+          {regencies.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      </div>
+      <div className="info-row span-2">
+        <div className="info-row__label">Provinsi{mark}</div>
+        <select className="profil__input" value={provinceId} onChange={(e) => onProvinceChange(e.target.value)}>
+          <option value="">— Pilih Provinsi —</option>
+          {provinces.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
     </>

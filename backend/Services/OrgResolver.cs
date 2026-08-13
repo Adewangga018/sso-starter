@@ -168,11 +168,20 @@ public class OrgResolver
     // di luar peran GM/Manager/Karyawan yang sudah ada.
     private static readonly int[] JabatanGlobalViewerInovasi = [38, 39];
 
+    // Band 0 (Direksi - Direktur Utama & Direktur) - lihat semua inovasi (Sumbang
+    // Gagasan & SS/5R/GIO) lintas kompartemen/departemen, read-only, sama pola dgn
+    // JabatanGlobalViewerInovasi di atas (2026-08-11, diminta user).
+    private const byte BandGlobalViewerInovasi = 0;
+
     public async Task<bool> IsGlobalInovasiViewerAsync(string? nik)
     {
         if (string.IsNullOrWhiteSpace(nik)) return false;
-        return await _db.Penempatan.AsNoTracking()
-            .AnyAsync(p => p.IdKaryawan == nik && p.Status == "Aktif" && JabatanGlobalViewerInovasi.Contains(p.IdJabatan));
+        return await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where p.IdKaryawan == nik && p.Status == "Aktif"
+                  && (JabatanGlobalViewerInovasi.Contains(p.IdJabatan) || j.IdBand == BandGlobalViewerInovasi)
+            select p.IdKaryawan).AnyAsync();
     }
 
     // Verifikator Sumbang Gagasan khusus Departemen SDM bergilir tiap kuartal

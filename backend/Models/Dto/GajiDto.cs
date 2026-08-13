@@ -114,7 +114,7 @@ public record PotonganPresensiDto(
     string Nik, string Nama, int Tahun, int Bulan,
     decimal PersenTpTotal, decimal PersenTaTotal,
     decimal NominalTp, decimal NominalTa, decimal Total,
-    IReadOnlyList<PresensiKejadianDto> Kejadian);
+    IReadOnlyList<PresensiKejadianDto> Kejadian, string? Peringatan);
 
 // ---- Lembur Biasa: dihitung (preview, TIDAK disimpan otomatis) dari SPL "Biasa" yang
 // sudah disetujui. Khusus Band V/VI - band lain tidak dihitung (Peringatan terisi). ----
@@ -182,6 +182,16 @@ public record SimpanTarifWilayahRequest(int Tahun, IReadOnlyList<TarifWilayahIte
 // selama pegawai bertugas di wilayah itu). ----
 public record LuarDaerahFormulaDto(
     string Nik, string Nama, int Tahun, int Bulan, string? Wilayah, int? Band,
+    decimal Nominal, string? Peringatan);
+
+// ---- Tunjangan PTS (TJ_PTS): karyawan MENGGANTIKAN SEMENTARA formasi atasannya yang
+// kosong (ditandai admin di Struktur Organisasi, grading.pejabat_sementara). Nominal =
+// TJ_JABATAN jabatan asli + 80% x selisih TJ_JABATAN thd jabatan pengganti - HANYA
+// berlaku bila jabatan pengganti persis 1 band di atas jabatan asli. ----
+public record PtsFormulaDto(
+    string Nik, string Nama, int Tahun, int Bulan,
+    string? JabatanAsli, string? JabatanPengganti,
+    decimal TjJabatanAwal, decimal TjJabatanPengganti, decimal Selisih80Persen,
     decimal Nominal, string? Peringatan);
 
 // ---- Potongan BPJS Kesehatan (POT_BPJS_KES): base 1% dari Pendapatan Dasar (capped)

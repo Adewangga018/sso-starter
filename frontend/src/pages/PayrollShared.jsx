@@ -26,17 +26,26 @@ export function kelompokkan(list) {
   return entries
 }
 
-export function Field({ it, nominal, setNominal }) {
+// mirrorId (opsional): kalau diisi, mengetik di field ini juga menulis nilai yang
+// SAMA ke komponen lain (mis. TJ_PAJAK <-> POT_PAJAK, TJ_PREMI <-> POT_PREMI -
+// nilainya sudah pasti sama, jadi tak perlu diketik dua kali/bisa beda sendiri).
+export function Field({ it, nominal, setNominal, mirrorId, mirrorNama }) {
   return (
     <label className="agt__field">
-      <span className={`agt__k-nama agt__k-nama--${it.tipe === 'Potongan' ? 'out' : 'in'}`}>{it.nama}</span>
+      <span className={`agt__k-nama agt__k-nama--${it.tipe === 'Potongan' ? 'out' : 'in'}`}>
+        {it.nama}
+        {mirrorId && <span className="agt__k-mirror" title={`Otomatis sama dengan ${mirrorNama ?? 'komponen pasangannya'}`}>= {mirrorNama}</span>}
+      </span>
       <div className="agt__input-wrap">
         <span className="agt__rp">Rp</span>
         <input
           type="number" min="0" step="1000" inputMode="numeric"
           value={nominal[it.idKomponen] ?? ''}
           placeholder="0"
-          onChange={(e) => setNominal((m) => ({ ...m, [it.idKomponen]: e.target.value }))}
+          onChange={(e) => {
+            const val = e.target.value
+            setNominal((m) => (mirrorId ? { ...m, [it.idKomponen]: val, [mirrorId]: val } : { ...m, [it.idKomponen]: val }))
+          }}
         />
       </div>
       <span className="agt__preview">{rupiah(Number(nominal[it.idKomponen] || 0))}</span>

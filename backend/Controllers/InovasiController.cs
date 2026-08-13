@@ -26,17 +26,19 @@ public class InovasiController : ControllerBase
     private readonly GcsDbContext _gcs;
     private readonly CurrentUserContext _currentUser;
     private readonly OrgResolver _org;
+    private readonly PosisiResolver _posisi;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
 
     public InovasiController(
         InovasiDbContext db, GcsDbContext gcs, CurrentUserContext currentUser,
-        OrgResolver org, IConfiguration config, IWebHostEnvironment env)
+        OrgResolver org, PosisiResolver posisi, IConfiguration config, IWebHostEnvironment env)
     {
         _db = db;
         _gcs = gcs;
         _currentUser = currentUser;
         _org = org;
+        _posisi = posisi;
         _config = config;
         _env = env;
     }
@@ -114,7 +116,8 @@ public class InovasiController : ControllerBase
 
     // ---- list global: seluruh risalah lintas kompartemen & departemen, khusus
     //      Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/SDM
-    //      Inovasi (id_jabatan 38/39) ----
+    //      Inovasi (id_jabatan 38/39) serta Direksi (Band 0), lihat
+    //      OrgResolver.IsGlobalInovasiViewerAsync ----
     [HttpGet("gugus/global")]
     public async Task<ActionResult<GugusListDto>> ListGlobal()
     {
@@ -683,12 +686,17 @@ public class InovasiController : ControllerBase
         // kompartemen) agar pengguna tidak harus mengetik lebih dulu.
         if (term.Length < 2) return Ok(await DefaultPegawaiAsync(gugusId));
 
-        var rows = await _gcs.PegawaiSdm
+        var raw = await _gcs.PegawaiSdm
             .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama)
             .Take(50)
-            .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+            .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
             .ToListAsync();
+        var posisiMap = await _posisi.ResolveManyAsync(raw.Select(r => r.Nik).ToList());
+        var rows = raw.Select(r => new InovasiPegawaiDto(
+            r.Nik, r.nama ?? r.Nik,
+            PosisiResolver.NamaJabatanTerbaik(posisiMap.GetValueOrDefault(r.Nik), r.nm_jabatan),
+            r.Unit)).ToList();
 
         if (gugusId is int gid)
         {
@@ -751,6 +759,7 @@ public class InovasiController : ControllerBase
         var bagianFallback = await _org.ResolveManyByDepartemenNamaAsync(
             roster.Where(r => !orgMap.ContainsKey(r.Nik) || orgMap[r.Nik].NamaDepartemen is null)
                 .Select(r => r.BAGIAN!).ToList());
+        var posisiMap = await _posisi.ResolveManyAsync(roster.Select(r => r.Nik).ToList());
 
         var items = roster.Select(r =>
         {
@@ -762,7 +771,8 @@ public class InovasiController : ControllerBase
                 namaDept = fb.NamaDepartemen;
                 namaKomp = fb.NamaKompartemen;
             }
-            return new InovasiPegawaiDirektoriDto(r.Nik, r.Nama ?? r.Nik, r.Jabatan, r.Unit, namaDept, namaKomp);
+            var jabatan = PosisiResolver.NamaJabatanTerbaik(posisiMap.GetValueOrDefault(r.Nik), r.Jabatan);
+            return new InovasiPegawaiDirektoriDto(r.Nik, r.Nama ?? r.Nik, jabatan, r.Unit, namaDept, namaKomp);
         }).ToList();
 
         return Ok(items);
@@ -810,25 +820,37 @@ public class InovasiController : ControllerBase
             if (niks.Count > 0)
             {
                 var nikArr = niks.ToArray();
-                var scoped = await _gcs.PegawaiSdm
+                var scopedRaw = await _gcs.PegawaiSdm
                     .Where(p => p.data_aktif == "Aktif" && nikArr.Contains(p.Nik))
                     .OrderBy(p => p.nama)
                     .Take(100)
-                    .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+                    .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
                     .ToListAsync();
-                if (scoped.Count > 0) return scoped;
+                if (scopedRaw.Count > 0)
+                {
+                    var posisiScoped = await _posisi.ResolveManyAsync(scopedRaw.Select(r => r.Nik).ToList());
+                    return scopedRaw.Select(r => new InovasiPegawaiDto(
+                        r.Nik, r.nama ?? r.Nik,
+                        PosisiResolver.NamaJabatanTerbaik(posisiScoped.GetValueOrDefault(r.Nik), r.nm_jabatan),
+                        r.Unit)).ToList();
+                }
             }
             // Cakupan ketat tetap terbatas: kembalikan kosong bila tak ada kandidat.
             if (strict) return Array.Empty<InovasiPegawaiDto>();
         }
 
         // Fallback: pegawai aktif umum (akun tak tertaut grading / cakupan kosong).
-        return await _gcs.PegawaiSdm
+        var fallbackRaw = await _gcs.PegawaiSdm
             .Where(p => p.data_aktif == "Aktif")
             .OrderBy(p => p.nama)
             .Take(100)
-            .Select(p => new InovasiPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+            .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
             .ToListAsync();
+        var posisiFallback = await _posisi.ResolveManyAsync(fallbackRaw.Select(r => r.Nik).ToList());
+        return fallbackRaw.Select(r => new InovasiPegawaiDto(
+            r.Nik, r.nama ?? r.Nik,
+            PosisiResolver.NamaJabatanTerbaik(posisiFallback.GetValueOrDefault(r.Nik), r.nm_jabatan),
+            r.Unit)).ToList();
     }
 
     // =======================================================================
@@ -901,7 +923,7 @@ public class InovasiController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         if (band == 2 && g.IdDepartemen != null && g.IdDepartemen == org.IdDepartemen) return true;
         if (band == 1 && g.IdKompartemen != null && g.IdKompartemen == org.IdKompartemen) return true;
-        // Global viewer (id_jabatan 38/39) boleh melihat risalah apa pun (read-only).
+        // Global viewer (id_jabatan 38/39 atau Band 0/Direksi) boleh melihat risalah apa pun (read-only).
         if (await _org.IsGlobalInovasiViewerAsync(nik)) return true;
         // Juri yang ditugaskan menilai gugus ini boleh melihat risalah (read-only).
         var juri = await (
@@ -958,12 +980,9 @@ public class InovasiController : ControllerBase
 
     private async Task<string?> JabatanNamaAsync(string nik)
     {
-        return await (
-            from p in _db.Penempatan
-            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
-            where p.IdKaryawan == nik && p.Status == "Aktif"
-            select j.NamaJabatan).FirstOrDefaultAsync()
-            ?? await _gcs.PegawaiSdm.Where(x => x.Nik == nik).Select(x => x.nm_jabatan).FirstOrDefaultAsync();
+        var posisi = await _posisi.ResolveAsync(nik);
+        var legacy = await _gcs.PegawaiSdm.Where(x => x.Nik == nik).Select(x => x.nm_jabatan).FirstOrDefaultAsync();
+        return PosisiResolver.NamaJabatanTerbaik(posisi, legacy);
     }
 
     private string UploadRoot()

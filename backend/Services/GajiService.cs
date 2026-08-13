@@ -14,11 +14,13 @@ public class GajiService
 {
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
+    private readonly PosisiResolver _posisi;
 
-    public GajiService(ApplicationDbContext db, GcsDbContext gcs)
+    public GajiService(ApplicationDbContext db, GcsDbContext gcs, PosisiResolver posisi)
     {
         _db = db;
         _gcs = gcs;
+        _posisi = posisi;
     }
 
     private static readonly string[] BulanId =
@@ -466,16 +468,27 @@ public class GajiService
     // diinput manual per (karyawan, tahun, bulan). Ini yang membuat gaji.periode/gaji.slip/
     // gaji.slip_detail terisi (dibuat otomatis di sini bila belum ada).
 
+    // q kosong/1 huruf -> daftar default (100 pegawai aktif pertama, urut nama) supaya
+    // halaman Manual per Karyawan sudah menampilkan pegawai TANPA harus mengetik cari
+    // dulu; q >=2 huruf -> filter nama/NIK spt biasa.
     public async Task<IReadOnlyList<GajiPegawaiPickerDto>> CariPegawaiAsync(string? q)
     {
         var term = (q ?? string.Empty).Trim();
-        if (term.Length < 2) return Array.Empty<GajiPegawaiPickerDto>();
-        return await _gcs.PegawaiSdm.AsNoTracking()
-            .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
+        var query = _gcs.PegawaiSdm.AsNoTracking().Where(p => p.data_aktif == "Aktif");
+        if (term.Length >= 2) query = query.Where(p => p.nama!.Contains(term) || p.Nik.Contains(term));
+        var rows = await query
             .OrderBy(p => p.nama)
-            .Take(20)
-            .Select(p => new GajiPegawaiPickerDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+            .Take(100)
+            .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
             .ToListAsync();
+
+        // Jabatan struktural (grading) kalau ada, jatuh ke legacy dibersihkan - sama
+        // sumber kebenaran dgn yg tampil di header (lihat PosisiResolver.NamaJabatanTerbaik).
+        var posisi = await _posisi.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
+        return rows.Select(r => new GajiPegawaiPickerDto(
+            r.Nik, r.nama ?? r.Nik,
+            PosisiResolver.NamaJabatanTerbaik(posisi.GetValueOrDefault(r.Nik), r.nm_jabatan),
+            r.Unit)).ToList();
     }
 
     public async Task<(bool Ok, string? Error, GajiManualDto? Data)> GetManualAsync(string nik, int tahun, int bulan)
@@ -595,6 +608,18 @@ public class GajiService
         var awalDt = awal.ToDateTime(TimeOnly.MinValue);
         var akhirDt = akhir.ToDateTime(TimeOnly.MaxValue);
 
+        // Jangan pindai tanggal yang BELUM TERJADI (hari ini WIB dst.) sebagai "Tidak Masuk
+        // Kerja" - absensinya memang belum ada krn harinya belum berlangsung, bukan pelanggaran.
+        // Hanya relevan utk periode BERJALAN (bulan ini); periode yg sudah lewat tak terpengaruh
+        // krn akhir bulan itu otomatis <= hari ini.
+        var todayWib = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        var batasPindai = akhir < todayWib ? akhir : todayWib;
+        string? peringatanPeriode = awal > todayWib
+            ? "Periode ini belum dimulai - belum ada data absensi utk dihitung."
+            : batasPindai < akhir
+                ? $"Periode masih berjalan - dihitung s/d {batasPindai:dd-MM-yyyy} (hari ini), belum sampai akhir bulan."
+                : null;
+
         // Nominal Tunjangan Pangan/Angkutan (Band pegawai, tahun periode) - dasar Rupiah
         // dari persentase yang dihitung nanti.
         var idPangan = await _db.GajiKomponen.AsNoTracking()
@@ -685,7 +710,7 @@ public class GajiService
         var kejadian = new List<PresensiKejadianDto>();
         decimal persenTp = 0, persenTa = 0;
 
-        for (var d = awal; d <= akhir; d = d.AddDays(1))
+        for (var d = awal; d <= batasPindai; d = d.AddDays(1))
         {
             if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
             if (liburSet.Contains(d) || cutiSet.Contains(d) || sppdSet.Contains(d)) continue;
@@ -748,7 +773,7 @@ public class GajiService
         return (true, null, new PotonganPresensiDto(
             nik, pegawai.nama ?? nik, tahun, bulan,
             persenTp, persenTa, nominalTp, nominalTa, nominalTp + nominalTa,
-            kejadian));
+            kejadian, peringatanPeriode));
     }
 
     // Tabel persentase Nota Dinas 0188/08/ND 2018 (TP=Tunjangan Pangan, TA=Tunjangan Angkutan).
@@ -1286,6 +1311,75 @@ public class GajiService
             : 0m;
 
         return (true, null, new LuarDaerahFormulaDto(nik, pegawai.nama ?? nik, tahun, bulan, wilayah, bandValue, nominal, null));
+    }
+
+    // ===================== Tunjangan PTS (TJ_PTS) =====================
+    // Karyawan menggantikan SEMENTARA formasi atasannya yang kosong - ditandai admin
+    // di panel Struktur Organisasi (grading.pejabat_sementara), BUKAN dihitung otomatis
+    // dari struktur. Nominal = TJ_JABATAN jabatan asli + 80% x selisih TJ_JABATAN thd
+    // jabatan pengganti - HANYA berlaku bila jabatan pengganti PERSIS 1 band di atas
+    // jabatan asli (band lebih kecil = lebih tinggi, band 0=Direksi).
+    public async Task<(bool Ok, string? Error, PtsFormulaDto? Data)> HitungTunjanganPtsAsync(string nik, int tahun, int bulan)
+    {
+        var pegawai = await _gcs.MstPegawai.AsNoTracking().FirstOrDefaultAsync(p => p.ID_KARYAWAN == nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.", null);
+        var nama = pegawai.NAMA_LENGKAP ?? nik;
+
+        var pts = await _db.GradingPejabatSementara.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IdKaryawan == nik && x.Status == "Aktif");
+        if (pts is null)
+        {
+            return (true, null, new PtsFormulaDto(
+                nik, nama, tahun, bulan, null, null, 0m, 0m, 0m, 0m,
+                "Belum ditandai sebagai Pemangku Tugas Sementara (PTS) di Struktur Organisasi."));
+        }
+
+        var (jgAsli, bandAsli, jabatanAsli) = await ResolveJabatanAsync(nik);
+        var pengganti = await _db.GradingJabatan.AsNoTracking()
+            .FirstOrDefaultAsync(j => j.IdJabatan == pts.IdJabatanPengganti);
+        if (pengganti is null)
+        {
+            return (true, null, new PtsFormulaDto(
+                nik, nama, tahun, bulan, jabatanAsli, null, 0m, 0m, 0m, 0m,
+                "Jabatan pengganti pada penandaan PTS tidak ditemukan."));
+        }
+
+        if (bandAsli is not int bandAsliValue || jgAsli is not int jgAsliValue)
+        {
+            return (true, null, new PtsFormulaDto(
+                nik, nama, tahun, bulan, jabatanAsli, pengganti.NamaJabatan, 0m, 0m, 0m, 0m,
+                "Jabatan asli pegawai belum ditempatkan/di luar skala JG - tidak bisa menghitung Tunjangan PTS."));
+        }
+        if (pengganti.Jg is null)
+        {
+            return (true, null, new PtsFormulaDto(
+                nik, nama, tahun, bulan, jabatanAsli, pengganti.NamaJabatan, 0m, 0m, 0m, 0m,
+                "Jabatan pengganti di luar skala JG (Direksi) - tidak bisa dihitung otomatis."));
+        }
+        if (bandAsliValue - pengganti.IdBand != 1)
+        {
+            return (true, null, new PtsFormulaDto(
+                nik, nama, tahun, bulan, jabatanAsli, pengganti.NamaJabatan, 0m, 0m, 0m, 0m,
+                $"Jabatan pengganti ({pengganti.NamaJabatan}, Band {pengganti.IdBand}) bukan persis 1 tingkat di atas jabatan asli (Band {bandAsliValue}) - Tunjangan PTS tidak berlaku."));
+        }
+
+        var idTjJabatan = await _db.GajiKomponen.AsNoTracking()
+            .Where(k => k.Kode == "TJ_JABATAN").Select(k => (int?)k.IdKomponen).FirstOrDefaultAsync();
+        short th = (short)tahun;
+        var tarif = idTjJabatan is int idtj
+            ? await _db.GajiTarifTunggal.AsNoTracking()
+                .Where(t => t.IdKomponen == idtj && t.TahunBerlaku == th && (t.Nilai == jgAsliValue || t.Nilai == pengganti.Jg))
+                .ToListAsync()
+            : new List<Models.Gaji.GajiTarifTunggal>();
+        var tjAwal = tarif.FirstOrDefault(t => t.Nilai == jgAsliValue)?.Nominal ?? 0m;
+        var tjPengganti = tarif.FirstOrDefault(t => t.Nilai == pengganti.Jg)?.Nominal ?? 0m;
+
+        var selisih80 = Math.Round(0.8m * (tjPengganti - tjAwal), 0, MidpointRounding.AwayFromZero);
+        var nominal = tjAwal + selisih80;
+
+        return (true, null, new PtsFormulaDto(
+            nik, nama, tahun, bulan, jabatanAsli, pengganti.NamaJabatan,
+            tjAwal, tjPengganti, selisih80, nominal, null));
     }
 
     // ===================== Potongan BPJS Kesehatan (POT_BPJS_KES) =====================

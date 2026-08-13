@@ -114,9 +114,9 @@ function buildPayload(form) {
   }
 }
 
-function Row({ label, editing, locked, required, display, children }) {
+function Row({ label, editing, locked, required, display, className = '', children }) {
   return (
-    <div className="info-row">
+    <div className={`info-row${className ? ` ${className}` : ''}`}>
       <div className="info-row__label">
         {label}
         {required && editing && <span className="profil__required">*</span>}
@@ -642,6 +642,7 @@ export default function ProfilPage() {
       )}
 
       {/* Card 1: Informasi Pribadi */}
+      {/* Card 1: Informasi Pribadi */}
       <div className="profil__card" id="info-pribadi">
         <div className="profil__section-title">
           <div className="section-title-icon"><User size={16} /></div>
@@ -649,7 +650,7 @@ export default function ProfilPage() {
         </div>
         <div className="profil__grid">
           <Row label="ID Karyawan" locked display={profile.idKaryawan} />
-          <Row label="Nama Lengkap" editing={editing} required={requiredNow} display={profile.namaLengkap}>
+          <Row label="Nama Lengkap" editing={editing} required={requiredNow} display={profile.namaLengkap} className="span-2">
             <TextField form={form} setForm={setForm} name="namaLengkap" />
           </Row>
           <Row label="NIK" editing={editing} required={requiredNow} display={profile.nik}>
@@ -657,12 +658,6 @@ export default function ProfilPage() {
           </Row>
           <Row label="Status Karyawan" editing={editing} required={requiredNow} display={profile.statusKaryawan}>
             <SelectField form={form} setForm={setForm} name="statusKaryawan" options={STATUS_KARYAWAN_OPTIONS} />
-          </Row>
-          <Row label="Tempat Lahir" editing={editing} required={requiredNow} display={profile.tempatLahir}>
-            <TextField form={form} setForm={setForm} name="tempatLahir" />
-          </Row>
-          <Row label="Tanggal Lahir" editing={editing} required={requiredNow} display={formatTanggal(profile.tglLahir)}>
-            <TextField form={form} setForm={setForm} name="tglLahir" type="date" />
           </Row>
           <Row label="Jenis Kelamin" editing={editing} required={requiredNow} display={profile.jenisKelamin}>
             <SelectField form={form} setForm={setForm} name="jenisKelamin" options={GENDER_OPTIONS} />
@@ -672,6 +667,12 @@ export default function ProfilPage() {
           </Row>
           <Row label="Pendidikan" editing={editing} required={requiredNow} display={profile.pendidikan}>
             <SelectField form={form} setForm={setForm} name="pendidikan" options={PENDIDIKAN_OPTIONS} />
+          </Row>
+          <Row label="Tempat Lahir" editing={editing} required={requiredNow} display={profile.tempatLahir}>
+            <TextField form={form} setForm={setForm} name="tempatLahir" />
+          </Row>
+          <Row label="Tanggal Lahir" editing={editing} required={requiredNow} display={formatTanggal(profile.tglLahir)}>
+            <TextField form={form} setForm={setForm} name="tglLahir" type="date" />
           </Row>
           <Row label="Status Pernikahan" editing={editing} required={requiredNow} display={
             profile.isMarried ? (
@@ -693,12 +694,15 @@ export default function ProfilPage() {
           <span>Kontak &amp; Alamat Domisili</span>
         </div>
         <div className="profil__grid">
-          <Row label="No. HP" editing={editing} required={requiredNow} display={profile.noHp}>
+          <Row label="No. HP" editing={editing} required={requiredNow} display={profile.noHp} className="span-2">
             <TextField form={form} setForm={setForm} name="noHp" placeholder="08xxxxxxxxxx" />
           </Row>
-          <Row label="Email Corporate" locked display={profile.email} />
-          <Row label="Alamat Lengkap" editing={editing} required={requiredNow} display={profile.alamat?.alamat}>
+          <Row label="Email Corporate" locked display={profile.email} className="span-2" />
+          <Row label="Alamat Lengkap" editing={editing} required={requiredNow} display={profile.alamat?.alamat} className="span-3">
             <TextField form={form} setForm={setForm} name="alamat" placeholder="Jalan, No. Rumah, Komplek" />
+          </Row>
+          <Row label="Kode Pos" editing={editing} required={requiredNow} display={profile.alamat?.kodePos}>
+            <TextField form={form} setForm={setForm} name="kodePos" placeholder="60xxx" />
           </Row>
           <Row label="RT" editing={editing} required={requiredNow} display={profile.alamat?.rt}>
             <TextField form={form} setForm={setForm} name="rt" placeholder="001" />
@@ -707,9 +711,6 @@ export default function ProfilPage() {
             <TextField form={form} setForm={setForm} name="rw" placeholder="002" />
           </Row>
           <WilayahFields profile={profile} form={form} setForm={setForm} editing={editing} required={requiredNow} />
-          <Row label="Kode Pos" editing={editing} required={requiredNow} display={profile.alamat?.kodePos}>
-            <TextField form={form} setForm={setForm} name="kodePos" placeholder="60xxx" />
-          </Row>
         </div>
       </div>
 
@@ -720,7 +721,7 @@ export default function ProfilPage() {
           <span>Kesehatan &amp; Kontak Darurat</span>
         </div>
         <div className="profil__grid">
-          <Row label="Riwayat Kesehatan / Alergi" editing={editing} display={profile.riwayatKesehatan}>
+          <Row label="Riwayat Kesehatan / Alergi" editing={editing} display={profile.riwayatKesehatan} className="span-2">
             <TextField form={form} setForm={setForm} name="riwayatKesehatan" placeholder="Riwayat penyakit / alergi obat (opsional)" />
           </Row>
           <Row label="Nama Kontak Darurat" editing={editing} required={requiredNow} display={profile.namaDarurat}>
@@ -741,12 +742,23 @@ export default function ProfilPage() {
           </div>
 
           <div className="profil__subsection">
-            <BerkasFileRow
-              label="Kartu Keluarga (KK)"
-              available={kkDoc?.available}
-              onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}
-              uploadSlot={renderUploadSlot('kk', 'Kartu Keluarga', kkDoc?.available)}
-            />
+            <div className="profil__subsection-title">Dokumen Kelompok Keluarga</div>
+            <div className="profil__berkas-grid-2">
+              <BerkasFileRow
+                label="Kartu Keluarga (KK)"
+                available={kkDoc?.available}
+                onClick={() => openDocumentModal('kk', 'Kartu Keluarga')}
+                uploadSlot={renderUploadSlot('kk', 'Kartu Keluarga', kkDoc?.available)}
+              />
+              {marriedNow && (
+                <BerkasFileRow
+                  label="Buku Nikah / Akta Nikah"
+                  available={bukuNikahDoc?.available}
+                  onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}
+                  uploadSlot={renderUploadSlot('buku-nikah', 'Buku Nikah', bukuNikahDoc?.available)}
+                />
+              )}
+            </div>
           </div>
 
           {marriedNow && (
@@ -754,7 +766,7 @@ export default function ProfilPage() {
               <div className="profil__subsection">
                 <div className="profil__subsection-title">Data Pasangan (Suami/Istri)</div>
                 <div className="profil__grid">
-                  <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama}>
+                  <Row label="Nama Pasangan" editing={editing} display={profile.pasangan?.nama} className="span-2">
                     <TextField form={form} setForm={setForm} name="namaPasangan" />
                   </Row>
                   <Row label="Tempat Lahir Pasangan" editing={editing} display={profile.pasangan?.tempatLahir}>
@@ -764,12 +776,6 @@ export default function ProfilPage() {
                     <TextField form={form} setForm={setForm} name="tglLahirPasangan" type="date" />
                   </Row>
                 </div>
-                <BerkasFileRow
-                  label="Buku Nikah / Akta Nikah"
-                  available={bukuNikahDoc?.available}
-                  onClick={() => openDocumentModal('buku-nikah', 'Buku Nikah')}
-                  uploadSlot={renderUploadSlot('buku-nikah', 'Buku Nikah', bukuNikahDoc?.available)}
-                />
               </div>
 
               <div className="profil__subsection">
@@ -789,8 +795,11 @@ export default function ProfilPage() {
         <div className="profil__card" id="berkas-pribadi">
           <div className="profil__section-title">
             <div className="section-title-icon"><Folder size={16} /></div>
-            <span>Berkas &amp; Dokumen Pribadi</span>
+            <span>Berkas &amp; Dokumen Pribadi Karyawan</span>
           </div>
+          <p className="profil__hint">
+            Kelola dokumen kepegawaian Anda (PDF, PNG, JPG, maks. 10MB per berkas). Klik pada kartu dokumen yang tersedia untuk pratinjau.
+          </p>
           {uploadMsg && (
             <div className={`profil__alert profil__alert--${uploadMsg.type === 'ok' ? 'ok' : 'err'}`}>
               <AlertCircle size={15} />

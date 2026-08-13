@@ -329,6 +329,16 @@ public class GajiController : ControllerBase
         return ok ? Ok(data) : NotFound(new { message = error });
     }
 
+    [HttpGet("admin/pts-formula")]
+    public async Task<IActionResult> PtsFormula([FromQuery] string nik, [FromQuery] int tahun, [FromQuery] int bulan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
+        if (bulan < 1 || bulan > 12) return BadRequest(new { message = "Bulan tidak valid." });
+        var (ok, error, data) = await _gaji.HitungTunjanganPtsAsync(nik, tahun, bulan);
+        return ok ? Ok(data) : NotFound(new { message = error });
+    }
+
     // --- Potongan BPJS Kesehatan (POT_BPJS_KES): preview hitung otomatis dari status
     //     tanggungan pegawai saat ini (default 0, tanggungan >3 = tambahan 1%/orang dari
     //     Pendapatan Dasar). TIDAK menyimpan. ---

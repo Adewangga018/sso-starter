@@ -286,9 +286,6 @@ export const api = {
     return apiFetch(`/api/personal/gaji${q ? `?${q}` : ''}`)
   },
   // Admin Modul SDM: konfigurasi tarif gaji (matriks JG x PG).
-  getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
-  getGajiTarif: (tahun, jg, pg) => apiFetch(`/api/personal/gaji/admin/tarif?tahun=${tahun}&jg=${jg}&pg=${pg}`),
-  simpanGajiTarif: (payload) => apiFetch('/api/personal/gaji/admin/tarif', { method: 'PUT', body: JSON.stringify(payload) }),
   // Pendapatan Dasar: tarif satu dimensi (Band/JG/PG) - Gaji Pokok, Tunjangan Jabatan/Perumahan/Pangan/Angkutan
   getPendapatanDasar: (tahun) => apiFetch(`/api/personal/gaji/admin/pendapatan-dasar?tahun=${tahun}`),
   simpanPendapatanDasar: (payload) => apiFetch('/api/personal/gaji/admin/pendapatan-dasar', { method: 'PUT', body: JSON.stringify(payload) }),
@@ -302,7 +299,7 @@ export const api = {
   getGajiFlat: () => apiFetch('/api/personal/gaji/admin/flat'),
   simpanGajiFlat: (payload) => apiFetch('/api/personal/gaji/admin/flat', { method: 'PUT', body: JSON.stringify(payload) }),
   // Nominal manual per karyawan (basis Karyawan_Periode: Lembur, RIT, Potongan Presensi, dst)
-  cariPegawaiGaji: (q) => apiFetch(`/api/personal/gaji/admin/pegawai?q=${encodeURIComponent(q)}`),
+  cariPegawaiGaji: (q) => apiFetch(`/api/personal/gaji/admin/pegawai?q=${encodeURIComponent(q ?? '')}`),
   getGajiManual: (nik, tahun, bulan) => apiFetch(`/api/personal/gaji/admin/manual?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
   simpanGajiManual: (payload) => apiFetch('/api/personal/gaji/admin/manual', { method: 'PUT', body: JSON.stringify(payload) }),
   // Potongan Presensi: preview hitung otomatis dari Absensi + Surat Ijin disetujui (TIDAK menyimpan)
@@ -332,6 +329,9 @@ export const api = {
   // Tunjangan Luar Daerah: preview hitung otomatis dari wilayah kerja + Band pegawai (TIDAK menyimpan)
   hitungLuarDaerahFormula: (nik, tahun, bulan) =>
     apiFetch(`/api/personal/gaji/admin/luar-daerah-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
+
+  hitungPtsFormula: (nik, tahun, bulan) =>
+    apiFetch(`/api/personal/gaji/admin/pts-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
   // Potongan BPJS Kesehatan: preview hitung otomatis dari pendaftaran tanggungan >3 (TIDAK menyimpan)
   hitungBpjsKesFormula: (nik, tahun, bulan) =>
     apiFetch(`/api/personal/gaji/admin/bpjs-kes-formula?nik=${encodeURIComponent(nik)}&tahun=${tahun}&bulan=${bulan}`),
@@ -362,6 +362,10 @@ export const api = {
   },
   tempatkanKaryawan: (payload) => apiFetch('/api/org/penempatan', { method: 'POST', body: JSON.stringify(payload) }),
   akhiriPenempatan: (id, payload) => apiFetch(`/api/org/penempatan/${id}/akhiri`, { method: 'POST', body: JSON.stringify(payload ?? {}) }),
+
+  getOrgPts: () => apiFetch('/api/org/pts'),
+  tandaiPts: (payload) => apiFetch('/api/org/pts', { method: 'POST', body: JSON.stringify(payload) }),
+  akhiriPts: (id, payload) => apiFetch(`/api/org/pts/${id}/akhiri`, { method: 'POST', body: JSON.stringify(payload ?? {}) }),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>

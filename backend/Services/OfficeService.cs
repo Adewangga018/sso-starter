@@ -19,12 +19,14 @@ public class OfficeService
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
     private readonly InovasiDbContext _grading;   // schema grading: penempatan/jabatan/unit/pegawai_tkno
+    private readonly PosisiResolver _posisi;
 
-    public OfficeService(ApplicationDbContext db, GcsDbContext gcs, InovasiDbContext grading)
+    public OfficeService(ApplicationDbContext db, GcsDbContext gcs, InovasiDbContext grading, PosisiResolver posisi)
     {
         _db = db;
         _gcs = gcs;
         _grading = grading;
+        _posisi = posisi;
     }
 
     // ---- Master kode surat ----
@@ -152,12 +154,18 @@ public class OfficeService
         {
             return [];
         }
-        return await _gcs.PegawaiSdm
+        var rows = await _gcs.PegawaiSdm
             .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama)
             .Take(20)
-            .Select(p => new OfficePegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
+            .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
             .ToListAsync();
+
+        var posisi = await _posisi.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
+        return rows.Select(r => new OfficePegawaiDto(
+            r.Nik, r.nama ?? r.Nik,
+            PosisiResolver.NamaJabatanTerbaik(posisi.GetValueOrDefault(r.Nik), r.nm_jabatan),
+            r.Unit)).ToList();
     }
 
     public async Task<(bool Ok, string? Error, long Id)> CreateAsync(string nik, string? nama, CreateSuratRequest req)
@@ -512,8 +520,10 @@ public class OfficeService
         {
             return null;
         }
-        return await _gcs.PegawaiSdm.AsNoTracking()
+        var posisi = await _posisi.ResolveAsync(nik);
+        var legacy = await _gcs.PegawaiSdm.AsNoTracking()
             .Where(p => p.Nik == nik).Select(p => p.nm_jabatan).FirstOrDefaultAsync();
+        return PosisiResolver.NamaJabatanTerbaik(posisi, legacy);
     }
 
     private void AntreNotifikasi(

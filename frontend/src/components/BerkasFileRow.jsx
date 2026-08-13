@@ -1,24 +1,38 @@
-import { CheckCircle2, ChevronRight, FileWarning } from 'lucide-react'
+import { CheckCircle2, ChevronRight, FileCheck, FileWarning } from 'lucide-react'
 
-// Single-document "berkas" row: same look as an item in the "Berkas Pribadi" grid, reused
-// wherever a document stands alone (Kartu Keluarga, Buku Nikah, akta anak) instead of living
-// in that grid. `uploadSlot` renders whatever upload control the caller needs (or nothing, for
-// a view-only file) to the right of the view button.
+// Single-document "berkas" card tile for employee documents
 export default function BerkasFileRow({ label, available, onClick, uploadSlot }) {
   return (
-    <div className="profil__berkas-item">
-      <button type="button" className="profil__berkas-view" disabled={!available} onClick={onClick}>
-        {available ? (
-          <CheckCircle2 size={18} className="profil__berkas-icon profil__berkas-icon--available" />
-        ) : (
-          <FileWarning size={18} className="profil__berkas-icon" />
-        )}
+    <div className={`profil__berkas-item${available ? ' is-available' : ' is-empty'}`}>
+      <button
+        type="button"
+        className="profil__berkas-view"
+        disabled={!available}
+        onClick={onClick}
+        title={available ? `Lihat ${label}` : `${label} belum diunggah`}
+      >
+        <div className={`profil__berkas-icon${available ? ' profil__berkas-icon--available' : ''}`}>
+          {available ? <FileCheck size={20} /> : <FileWarning size={20} />}
+        </div>
+
         <div className="profil__berkas-text">
           <div className="profil__berkas-label">{label}</div>
-          <div className="profil__berkas-sub">{available ? 'Tersedia · klik untuk lihat' : 'Belum tersedia'}</div>
+          <div className="profil__berkas-sub">
+            {available ? (
+              <span className="profil__berkas-badge profil__berkas-badge--ok">
+                <CheckCircle2 size={12} /> Tersedia
+              </span>
+            ) : (
+              <span className="profil__berkas-badge profil__berkas-badge--muted">
+                Belum diunggah
+              </span>
+            )}
+          </div>
         </div>
-        {available && <ChevronRight size={16} className="profil__anak-chevron" />}
+
+        {available && <ChevronRight size={16} className="profil__berkas-chevron" />}
       </button>
+
       {uploadSlot}
     </div>
   )

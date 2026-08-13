@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, Save, Sliders, ShieldAlert } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { kelompokkan, Field, SubGrup } from './PayrollShared'
 import './PayrollShared.css'
 
 // Tarif satu dimensi (Band/JG/PG): satu nominal per nilai — bukan matriks JG × PG.
@@ -457,109 +456,6 @@ function FlatSection() {
   )
 }
 
-// Komponen JG_PG lain (belum digeneralisasi ke Band/JG/PG tunggal): matriks per sel.
-// Punya selektor JG/PG SENDIRI, di-scope ke sub-bagian ini saja.
-function MatriksJgPgSection({ tahun }) {
-  const [opsi, setOpsi] = useState(null)
-  const [jg, setJg] = useState(null)
-  const [pg, setPg] = useState(null)
-  const [items, setItems] = useState([])
-  const [nominal, setNominal] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState(null)
-
-  useEffect(() => {
-    api.getGajiGradeOpsi()
-      .then((o) => { setOpsi(o); if (o.jg?.length) setJg(o.jg[0]); if (o.pg?.length) setPg(o.pg[0]) })
-      .catch(() => setMsg({ type: 'err', text: 'Gagal memuat pilihan JG/PG.' }))
-  }, [])
-
-  const loadSel = useCallback(async () => {
-    if (!jg || !pg) return
-    setLoading(true); setMsg(null)
-    try {
-      const sel = await api.getGajiTarif(tahun, jg, pg)
-      setItems(sel.items)
-      const map = {}
-      sel.items.forEach((it) => { map[it.idKomponen] = it.nominal ? String(it.nominal) : '' })
-      setNominal(map)
-    } catch (err) {
-      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal memuat tarif.' })
-    } finally { setLoading(false) }
-  }, [tahun, jg, pg])
-
-  useEffect(() => { loadSel() }, [loadSel])
-
-  const grup = useMemo(() => {
-    const byKat = {}
-    for (const it of items) (byKat[it.kategori] ??= []).push(it)
-    return Object.entries(byKat)
-  }, [items])
-
-  async function save() {
-    setSaving(true); setMsg(null)
-    try {
-      await api.simpanGajiTarif({
-        tahun, jg, pg,
-        items: items.map((it) => ({ idKomponen: it.idKomponen, nominal: Number(nominal[it.idKomponen] || 0) })),
-      })
-      setMsg({ type: 'ok', text: `Tarif JG ${jg} / PG ${pg} tahun ${tahun} tersimpan.` })
-    } catch (err) {
-      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menyimpan.' })
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <section className="agt__pd">
-      <div className="agt__pd-head">
-        <h3>Komponen Lain (per sel Job Grade × Person Grade)</h3>
-        <p>Komponen yang belum digeneralisasi ke Band/JG/PG tunggal — nominal tetap diisi per sel JG × PG.</p>
-      </div>
-
-      <div className="agt__sel agt__sel--inline">
-        <label>Job Grade (JG)
-          <select value={jg ?? ''} onChange={(e) => setJg(Number(e.target.value))}>
-            {opsi?.jg?.map((v) => <option key={v} value={v}>JG {v}</option>)}
-          </select>
-        </label>
-        <label>Person Grade (PG)
-          <select value={pg ?? ''} onChange={(e) => setPg(Number(e.target.value))}>
-            {opsi?.pg?.map((v) => <option key={v} value={v}>PG {v}</option>)}
-          </select>
-        </label>
-      </div>
-
-      {msg && <div className={`agt__msg agt__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
-
-      {loading ? (
-        <div className="agt__loading"><Loader2 className="agt__spin" size={20} /> Memuat…</div>
-      ) : items.length === 0 ? (
-        <div className="agt__empty">Tidak ada komponen berbasis JG/PG.</div>
-      ) : (
-        <>
-          <div className="agt__grid">
-            {grup.map(([kat, list]) => (
-              <div className="agt__kat" key={kat}>
-                <div className="agt__kat-head">{kat}</div>
-                {kelompokkan(list).map((en) => en.type === 'sub'
-                  ? <SubGrup key={en.grupKode} sub={en} nominal={nominal} setNominal={setNominal} />
-                  : <Field key={en.item.idKomponen} it={en.item} nominal={nominal} setNominal={setNominal} />)}
-              </div>
-            ))}
-          </div>
-          <div className="agt__foot">
-            <button type="button" className="agt__save agt__save--sm" onClick={save} disabled={saving}>
-              {saving ? <Loader2 size={15} className="agt__spin" /> : <Save size={15} />}
-              Simpan JG {jg} / PG {pg}
-            </button>
-          </div>
-        </>
-      )}
-    </section>
-  )
-}
-
 export default function PayrollFormulaPage() {
   const { isAdminModulSdm, summary } = useAuth()
   const nowYear = new Date().getFullYear()
@@ -620,7 +516,6 @@ export default function PayrollFormulaPage() {
       <TarifWilayahSection tahun={tahun} />
       <FormulaSection />
       <FlatSection />
-      <MatriksJgPgSection tahun={tahun} />
     </div>
   )
 }

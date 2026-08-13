@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, Save, UserCog, ShieldAlert, Search, X, Wand2, ChevronDown, ChevronRight } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
@@ -8,36 +8,29 @@ import './PayrollShared.css'
 
 // Komponen standalone (tanpa grup_kode) yg punya panel kalkulator sendiri (di atas grid) -
 // jangan dobel tampil di grid biasa.
-const KODE_KALKULATOR_SENDIRI = ['POT_PRESENSI', 'MAKAN_DINAS', 'TJ_SPPD', 'TJ_LUAR', 'POT_BPJS_KES']
+const KODE_KALKULATOR_SENDIRI = ['POT_PRESENSI', 'MAKAN_DINAS', 'TJ_SPPD', 'TJ_LUAR', 'POT_BPJS_KES', 'TJ_PTS']
 
 const BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
 
-// Autocomplete pegawai seluruh perusahaan (bukan per-departemen — admin payroll
-// mengelola seluruh karyawan). Debounce 250ms, min 2 karakter.
+// Daftar pegawai seluruh perusahaan (bukan per-departemen — admin payroll mengelola
+// seluruh karyawan). Halaman langsung menampilkan daftar pegawai (100 pertama, urut
+// nama) begitu dibuka - TIDAK perlu mengetik cari dulu; kotak cari cuma MENYARING
+// daftar yang sudah tampil (debounce 250ms begitu diketik >=2 karakter).
 function PegawaiSearch({ selected, onSelect }) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState([])
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const boxRef = useRef(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (q.trim().length < 2) { setItems([]); return }
     setLoading(true)
     const t = setTimeout(() => {
       api.cariPegawaiGaji(q).then((res) => setItems(res)).catch(() => setItems([])).finally(() => setLoading(false))
-    }, 250)
+    }, q ? 250 : 0)
     return () => clearTimeout(t)
   }, [q])
-
-  useEffect(() => {
-    function onDown(e) { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
 
   if (selected) {
     return (
@@ -52,30 +45,30 @@ function PegawaiSearch({ selected, onSelect }) {
   }
 
   return (
-    <div className="agt__pegawai-search" ref={boxRef}>
+    <div className="agt__pegawai-search">
       <div className="agt__input-wrap">
         <Search size={15} />
         <input
-          type="text" placeholder="Cari nama atau NIK…"
+          type="text" placeholder="Cari nama atau NIK… (opsional - daftar di bawah sudah tampil)"
           value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
+          onChange={(e) => setQ(e.target.value)}
         />
         {loading && <Loader2 size={15} className="agt__spin" />}
       </div>
-      {open && items.length > 0 && (
-        <div className="agt__pegawai-list">
-          {items.map((p) => (
-            <button
-              type="button" key={p.nik} className="agt__pegawai-item"
-              onClick={() => { onSelect(p); setOpen(false); setQ('') }}
-            >
-              <span className="agt__pegawai-nama">{p.nama}</span>
-              <span className="agt__pegawai-sub">{p.nik}{p.jabatan ? ` · ${p.jabatan}` : ''}{p.unit ? ` · ${p.unit}` : ''}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="agt__pegawai-list agt__pegawai-list--static">
+        {items.map((p) => (
+          <button
+            type="button" key={p.nik} className="agt__pegawai-item"
+            onClick={() => { onSelect(p); setQ('') }}
+          >
+            <span className="agt__pegawai-nama">{p.nama}</span>
+            <span className="agt__pegawai-sub">{p.nik}{p.jabatan ? ` · ${p.jabatan}` : ''}{p.unit ? ` · ${p.unit}` : ''}</span>
+          </button>
+        ))}
+        {!loading && items.length === 0 && (
+          <div className="agt__empty">Tidak ada pegawai yang cocok.</div>
+        )}
+      </div>
     </div>
   )
 }
@@ -119,6 +112,8 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
 
       {error && <div className="agt__msg agt__msg--err">{error}</div>}
 
+      {hasil && hasil.peringatan && <div className="agt__msg agt__msg--err">{hasil.peringatan}</div>}
+
       {hasil && (
         <div className="agt__presensi-hasil">
           <button type="button" className="agt__subgrup-head" onClick={() => setOpen((v) => !v)}>
@@ -127,6 +122,13 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
             <span className="agt__subgrup-count">TP {hasil.persenTpTotal}% · TA {hasil.persenTaTotal}%</span>
             <span className="agt__subgrup-total">{rupiah(hasil.total)}</span>
           </button>
+          <p className="agt__pd-note">
+            Potongan Tunjangan Pangan ({hasil.persenTpTotal}%): <strong>{rupiah(hasil.nominalTp)}</strong>
+            {' · '}
+            Potongan Tunjangan Angkutan ({hasil.persenTaTotal}%): <strong>{rupiah(hasil.nominalTa)}</strong>
+            {' · '}
+            Total: <strong>{rupiah(hasil.total)}</strong>
+          </p>
           {open && (
             <div className="agt__subgrup-body">
               {hasil.kejadian.length === 0 ? (
@@ -538,6 +540,53 @@ function LuarDaerahCalculator({ pegawai, tahun, bulan, komponen, nominal, setNom
   )
 }
 
+// Menghitung Tunjangan PTS (Pemangku Tugas Sementara): karyawan yang ditandai admin di
+// Struktur Organisasi sedang menggantikan sementara formasi atasannya yang kosong.
+// Nominal = TJ_JABATAN jabatan asli + 80% x selisih TJ_JABATAN thd jabatan pengganti -
+// HANYA berlaku bila jabatan pengganti persis 1 band di atas jabatan asli. Preview
+// saja - mengisi field TJ_PTS (standalone).
+function PtsCalculator({ pegawai, tahun, bulan, komponen, nominal, setNominal, onHasil }) {
+  const [loading, setLoading] = useState(false)
+  const [hasil, setHasil] = useState(null)
+  const [error, setError] = useState(null)
+
+  async function hitung() {
+    setLoading(true); setError(null)
+    try {
+      const r = await api.hitungPtsFormula(pegawai.nik, tahun, bulan)
+      setHasil(r)
+      if (!r.peringatan) onHasil(komponen.idKomponen, r.nominal)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal menghitung Tunjangan PTS.')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="agt__presensi">
+      <div className="agt__presensi-head">
+        <div>
+          <span className="agt__presensi-nama">{komponen.nama}</span>
+          <span className="agt__presensi-note">Dihitung dari penandaan PTS di Struktur Organisasi &gt; Penempatan Karyawan. Boleh dikoreksi manual di kolom nominal.</span>
+        </div>
+        <button type="button" className="agt__save agt__save--sm" onClick={hitung} disabled={loading}>
+          {loading ? <Loader2 size={14} className="agt__spin" /> : <Wand2 size={14} />}
+          Hitung dari Penandaan PTS
+        </button>
+      </div>
+
+      <Field it={komponen} nominal={nominal} setNominal={setNominal} />
+
+      {error && <div className="agt__msg agt__msg--err">{error}</div>}
+      {hasil && hasil.peringatan && <div className="agt__msg agt__msg--err">{hasil.peringatan}</div>}
+      {hasil && !hasil.peringatan && (
+        <div className="agt__msg agt__msg--ok">
+          {`${hasil.jabatanAsli} → ${hasil.jabatanPengganti}: ${rupiah(hasil.tjJabatanAwal)} + 80% × ${rupiah(hasil.tjJabatanPengganti - hasil.tjJabatanAwal)} = ${rupiah(hasil.nominal)}`}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Menghitung Potongan BPJS Kesehatan: base 1% dari Pendapatan Dasar (capped) SELALU
 // dibebankan, + 1% per anggota keluarga lain yang didaftarkan mandiri (My Personal >
 // Profil, gaji.tanggungan_lebih) - tanpa batas gratis. Preview saja - mengisi field
@@ -643,6 +692,10 @@ export default function PayrollManualPage() {
     () => data?.komponen.find((k) => k.kode === 'POT_BPJS_KES') ?? null,
     [data],
   )
+  const ptsKomponen = useMemo(
+    () => data?.komponen.find((k) => k.kode === 'TJ_PTS') ?? null,
+    [data],
+  )
 
   const grup = useMemo(() => {
     if (!data) return []
@@ -653,6 +706,26 @@ export default function PayrollManualPage() {
     }
     return Object.entries(byKat)
   }, [data])
+
+  // Pasangan komponen yang nilainya SUDAH PASTI SAMA (Tunjangan Pajak = Potongan
+  // Pajak, Premi Asuransi tunjangan = Premi Asuransi potongan) - mengetik di salah
+  // satu otomatis mengisi pasangannya jg (lihat prop mirrorId di Field).
+  const pairMap = useMemo(() => {
+    if (!data) return {}
+    const byKode = Object.fromEntries(data.komponen.map((k) => [k.kode, k]))
+    const map = {}
+    for (const [a, b] of [['TJ_PAJAK', 'POT_PAJAK'], ['TJ_PREMI', 'POT_PREMI']]) {
+      if (byKode[a] && byKode[b]) {
+        map[byKode[a].idKomponen] = byKode[b].idKomponen
+        map[byKode[b].idKomponen] = byKode[a].idKomponen
+      }
+    }
+    return map
+  }, [data])
+  const namaKomponenById = useMemo(
+    () => Object.fromEntries((data?.komponen ?? []).map((k) => [k.idKomponen, k.nama])),
+    [data],
+  )
 
   async function save() {
     if (!data || !pegawai) return
@@ -772,6 +845,14 @@ export default function PayrollManualPage() {
         />
       )}
 
+      {pegawai && ptsKomponen && (
+        <PtsCalculator
+          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={ptsKomponen}
+          nominal={nominal} setNominal={setNominal}
+          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+        />
+      )}
+
       {!pegawai ? (
         <div className="agt__empty">Pilih pegawai terlebih dahulu.</div>
       ) : loading ? (
@@ -786,7 +867,13 @@ export default function PayrollManualPage() {
                 <div className="agt__kat-head">{kat}</div>
                 {kelompokkan(list).map((en) => en.type === 'sub'
                   ? <SubGrup key={en.grupKode} sub={en} nominal={nominal} setNominal={setNominal} />
-                  : <Field key={en.item.idKomponen} it={en.item} nominal={nominal} setNominal={setNominal} />)}
+                  : (
+                    <Field
+                      key={en.item.idKomponen} it={en.item} nominal={nominal} setNominal={setNominal}
+                      mirrorId={pairMap[en.item.idKomponen]}
+                      mirrorNama={namaKomponenById[pairMap[en.item.idKomponen]]}
+                    />
+                  ))}
               </div>
             ))}
           </div>

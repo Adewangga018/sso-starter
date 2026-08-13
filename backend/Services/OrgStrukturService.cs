@@ -291,4 +291,72 @@ public class OrgStrukturService
         await _db.SaveChangesAsync();
         return (true, null);
     }
+
+    // ===================== Pemangku Tugas Sementara (PTS) =====================
+    // Karyawan menggantikan sementara formasi atasannya yang kosong - ditandai admin
+    // di sini, dibaca GajiService (formula TJ_PTS).
+
+    public async Task<IReadOnlyList<PtsDto>> ListPtsAsync()
+    {
+        var rows = await _db.GradingPejabatSementara.AsNoTracking()
+            .Where(x => x.Status == "Aktif").OrderByDescending(x => x.DibuatPada).ToListAsync();
+        if (rows.Count == 0) return Array.Empty<PtsDto>();
+
+        var jabatanById = (await _db.GradingJabatan.AsNoTracking().ToListAsync()).ToDictionary(j => j.IdJabatan);
+        var niks = rows.Select(r => r.IdKaryawan).Distinct().ToList();
+        var nama = await _gcs.MstPegawai.AsNoTracking()
+            .Where(p => niks.Contains(p.ID_KARYAWAN))
+            .ToDictionaryAsync(p => p.ID_KARYAWAN, p => p.NAMA_LENGKAP ?? p.ID_KARYAWAN);
+        var jabatanAsli = await _db.GradingPenempatan.AsNoTracking()
+            .Where(p => niks.Contains(p.IdKaryawan) && p.Status == "Aktif")
+            .ToDictionaryAsync(p => p.IdKaryawan, p => p.IdJabatan);
+
+        return rows.Select(r => new PtsDto(
+            r.Id, r.IdKaryawan, nama.GetValueOrDefault(r.IdKaryawan, r.IdKaryawan),
+            jabatanAsli.TryGetValue(r.IdKaryawan, out var jaId) && jabatanById.TryGetValue(jaId, out var ja) ? ja.NamaJabatan : null,
+            r.IdJabatanPengganti, jabatanById.TryGetValue(r.IdJabatanPengganti, out var jp) ? jp.NamaJabatan : "?",
+            r.Tmt, r.TanggalSelesai, r.Status, r.Catatan)).ToList();
+    }
+
+    public async Task<(bool Ok, string? Error, int? Id)> TandaiPtsAsync(TandaiPtsRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.IdKaryawan)) return (false, "Karyawan wajib dipilih.", null);
+        var pegawai = await _gcs.MstPegawai.AsNoTracking().FirstOrDefaultAsync(p => p.ID_KARYAWAN == req.IdKaryawan);
+        if (pegawai is null) return (false, "Karyawan tidak ditemukan.", null);
+        if (!await _db.GradingJabatan.AnyAsync(j => j.IdJabatan == req.IdJabatanPengganti))
+            return (false, "Jabatan pengganti tidak ditemukan.", null);
+
+        var lama = await _db.GradingPejabatSementara.FirstOrDefaultAsync(x => x.IdKaryawan == req.IdKaryawan && x.Status == "Aktif");
+        if (lama is not null)
+        {
+            lama.Status = "Selesai";
+            lama.TanggalSelesai = req.Tmt ?? DateTime.UtcNow.Date;
+        }
+
+        var baru = new GradingPejabatSementara
+        {
+            IdKaryawan = req.IdKaryawan,
+            IdJabatanPengganti = req.IdJabatanPengganti,
+            Tmt = req.Tmt,
+            Status = "Aktif",
+            Catatan = string.IsNullOrWhiteSpace(req.Catatan) ? null : req.Catatan.Trim(),
+            DibuatPada = DateTime.UtcNow,
+        };
+        _db.GradingPejabatSementara.Add(baru);
+        await _db.SaveChangesAsync();
+        return (true, null, baru.Id);
+    }
+
+    public async Task<(bool Ok, string? Error)> AkhiriPtsAsync(int id, AkhiriPtsRequest req)
+    {
+        var row = await _db.GradingPejabatSementara.FirstOrDefaultAsync(x => x.Id == id);
+        if (row is null) return (false, "Penandaan PTS tidak ditemukan.");
+        if (row.Status != "Aktif") return (false, "Penandaan PTS ini sudah tidak aktif.");
+
+        row.Status = "Selesai";
+        row.TanggalSelesai = req.TanggalSelesai ?? DateTime.UtcNow.Date;
+        if (!string.IsNullOrWhiteSpace(req.Catatan)) row.Catatan = req.Catatan.Trim();
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
 }

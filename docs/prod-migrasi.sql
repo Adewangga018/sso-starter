@@ -1922,5 +1922,115 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [15] GRADING PEJABAT SEMENTARA (formula TJ_PTS) ################';
+GO
+/* ============================================================================
+   grading.pejabat_sementara - penandaan PTS (Pemangku Tugas Sementara): karyawan yang
+   MENGGANTIKAN SEMENTARA formasi atasannya yang kosong, ditandai admin lewat
+   panel Struktur Organisasi. Dipakai GajiService.HitungTunjanganPtsAsync
+   (formula TJ_PTS = Tunjangan Jabatan awal + 80% x selisih Tunjangan Jabatan
+   thd jabatan pengganti, HANYA berlaku bila jabatan pengganti persis 1 band di
+   atas jabatan asli karyawan). NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+IF SCHEMA_ID('grading') IS NULL
+BEGIN RAISERROR('schema grading belum ada.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('grading.pejabat_sementara', 'U') IS NULL
+BEGIN
+    CREATE TABLE grading.pejabat_sementara (
+        id                    INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_pejabat_sementara PRIMARY KEY,
+        id_karyawan           NVARCHAR(20)  NOT NULL,
+        id_jabatan_pengganti  INT           NOT NULL,
+        tmt                   DATE          NULL,
+        tanggal_selesai       DATE          NULL,
+        status                NVARCHAR(20)  NOT NULL CONSTRAINT df_pejabat_sementara_status DEFAULT ('Aktif'),
+        catatan               NVARCHAR(400) NULL,
+        dibuat_pada           DATETIME2     NOT NULL CONSTRAINT df_pejabat_sementara_dibuat DEFAULT (SYSDATETIME()),
+        CONSTRAINT fk_pejabat_sementara_jabatan FOREIGN KEY (id_jabatan_pengganti) REFERENCES grading.jabatan (id_jabatan),
+        CONSTRAINT ck_pejabat_sementara_status CHECK (status IN ('Aktif','Selesai'))
+    );
+    CREATE UNIQUE INDEX uq_pejabat_sementara_karyawan_aktif
+        ON grading.pejabat_sementara (id_karyawan)
+        WHERE status = 'Aktif';
+    CREATE INDEX ix_pejabat_sementara_jabatan ON grading.pejabat_sementara (id_jabatan_pengganti);
+    PRINT 'grading.pejabat_sementara dibuat.';
+END
+ELSE PRINT 'LEWATI: grading.pejabat_sementara sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [16] KOREKSI ISTILAH: Pejabat Sementara -> Pemangku Tugas Sementara ################';
+GO
+/* ============================================================================
+   Koreksi istilah PTS (2026-08-11, diminta user): "Pejabat Sementara" ->
+   "Pemangku Tugas Sementara". Cuma ganti label tampilan gaji.komponen.nama utk
+   TJ_PTS - kode/kolom/tabel TIDAK berubah. NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+UPDATE gaji.komponen
+SET nama = N'Tunjangan PTS (Pemangku Tugas Sementara)',
+    keterangan = N'Untuk pemangku tugas sementara; per karyawan & periode'
+WHERE kode = 'TJ_PTS' AND nama <> N'Tunjangan PTS (Pemangku Tugas Sementara)';
+PRINT 'gaji.komponen.nama TJ_PTS dikoreksi jadi Pemangku Tugas Sementara (' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' baris).';
+GO
+
+SET NOEXEC OFF;
+GO
+
+PRINT '################ [17] TJ_PAJAK/TJ_SHIFT/TJ_PREMI/POT_PREMI/POT_PAJAK -> Manual per Karyawan ################';
+GO
+/* ============================================================================
+   Tunjangan Pajak, Tunjangan Shift, Premi Asuransi (tunjangan & potongan), Pajak
+   (potongan) - dipindah dari basis 'JG_PG' (matriks Formula & Generalisasi) ke
+   'Karyawan_Periode' (Manual per Karyawan), sesuai permintaan user 2026-08-11:
+   nilainya beda-beda tiap karyawan, bukan mengikuti matriks JG x PG umum.
+     - TJ_PAJAK  = POT_PAJAK  (dikonfirmasi user selalu sama - di-mirror frontend)
+     - TJ_PREMI  = POT_PREMI  (dikonfirmasi user selalu sama - di-mirror frontend)
+     - TJ_SHIFT  = manual independen, beda tiap karyawan
+   Kelima komponen ini belum pernah dikonfigurasi (gaji.tarif kosong), aman
+   dipindah tanpa kehilangan data. NON-DESTRUKTIF & idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+DECLARE @kode TABLE (kode NVARCHAR(30));
+INSERT INTO @kode VALUES ('TJ_PAJAK'), ('TJ_SHIFT'), ('TJ_PREMI'), ('POT_PREMI'), ('POT_PAJAK');
+
+UPDATE k
+SET k.basis = 'Karyawan_Periode'
+FROM gaji.komponen k
+JOIN @kode x ON x.kode = k.kode
+WHERE k.basis <> 'Karyawan_Periode';
+PRINT 'gaji.komponen.basis TJ_PAJAK/TJ_SHIFT/TJ_PREMI/POT_PREMI/POT_PAJAK dipindah ke Karyawan_Periode (' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' baris).';
+
+DELETE t
+FROM gaji.tarif t
+JOIN gaji.komponen k ON k.id_komponen = t.id_komponen
+JOIN @kode x ON x.kode = k.kode;
+PRINT 'Sisa gaji.tarif (matriks JG x PG lama, kalau ada) utk kelima komponen dibersihkan (' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' baris).';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

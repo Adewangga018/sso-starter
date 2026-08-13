@@ -35,3 +35,14 @@ public record PenempatanDto(
 public record TempatkanKaryawanRequest(int IdJabatan, string IdKaryawan, DateTime? Tmt, string? Catatan);
 
 public record AkhiriPenempatanRequest(DateTime? TanggalSelesai, string? Catatan);
+
+// ---- Pemangku Tugas Sementara (PTS) - karyawan menggantikan sementara formasi atasannya
+// yang kosong. Dipakai formula TJ_PTS (lihat GajiService.HitungTunjanganPtsAsync). ----
+public record PtsDto(
+    int Id, string IdKaryawan, string NamaKaryawan, string? JabatanAsli,
+    int IdJabatanPengganti, string NamaJabatanPengganti,
+    DateTime? Tmt, DateTime? TanggalSelesai, string Status, string? Catatan);
+
+public record TandaiPtsRequest(string IdKaryawan, int IdJabatanPengganti, DateTime? Tmt, string? Catatan);
+
+public record AkhiriPtsRequest(DateTime? TanggalSelesai, string? Catatan);

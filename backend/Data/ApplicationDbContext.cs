@@ -70,6 +70,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GradingJabatan> GradingJabatan => Set<GradingJabatan>();
     public DbSet<GradingPenempatan> GradingPenempatan => Set<GradingPenempatan>();
     public DbSet<GradingBand> GradingBand => Set<GradingBand>();
+    public DbSet<GradingPejabatSementara> GradingPejabatSementara => Set<GradingPejabatSementara>();
     // My Progress (schema kpi) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Kpi> Kpi => Set<Kpi>();
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -637,6 +638,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Kode).HasColumnName("kode");
             e.Property(x => x.Nama).HasColumnName("nama");
             e.Property(x => x.Urutan).HasColumnName("urutan");
+        });
+
+        builder.Entity<GradingPejabatSementara>(e =>
+        {
+            e.ToTable("pejabat_sementara", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.IdJabatanPengganti).HasColumnName("id_jabatan_pengganti");
+            e.Property(x => x.Tmt).HasColumnName("tmt");
+            e.Property(x => x.TanggalSelesai).HasColumnName("tanggal_selesai");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 
         builder.Entity<Kpi>(e =>

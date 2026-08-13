@@ -125,6 +125,31 @@ public class OrgStrukturController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
+    // --- Pemangku Tugas Sementara (PTS) ---
+
+    [HttpGet("pts")]
+    public async Task<ActionResult<IReadOnlyList<PtsDto>>> ListPts()
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _org.ListPtsAsync());
+    }
+
+    [HttpPost("pts")]
+    public async Task<IActionResult> TandaiPts([FromBody] TandaiPtsRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error, id) = await _org.TandaiPtsAsync(req);
+        return ok ? Ok(new { id }) : BadRequest(new { message = error });
+    }
+
+    [HttpPost("pts/{id:int}/akhiri")]
+    public async Task<IActionResult> AkhiriPts(int id, [FromBody] AkhiriPtsRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _org.AkhiriPtsAsync(id, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
     private async Task<bool> IsSdmAdminAsync()
     {
         var (user, pegawai) = await _currentUser.ResolveAsync(User);

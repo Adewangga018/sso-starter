@@ -1,13 +1,19 @@
 using System.Data;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
 
 namespace SsoBackend.Services;
 
-// Hak "Admin Modul" berbasis grading (BUKAN role Identity/Admin IT). Pola umum:
-// jajaran sebuah Departemen level Kepala Bagian ke atas (band urutan <= 3) + GM
-// Kompartemen "SDM, Kepatuhan dan Pengembangan" (SKP, band urutan <= 1) yang
-// membawahi ketiga departemen. Departemen sibling lain TIDAK termasuk.
+// Hak "Admin Modul" berbasis grading, DITAMBAH bypass Admin IT (role Identity
+// "Admin") - Admin IT punya hak akses TERTINGGI, di atas Admin SDM/Admin Kepatuhan,
+// jadi otomatis lolos semua pengecekan admin-modul di bawah ini (Payroll, Struktur
+// Organisasi, My Prosedur, My Health, My Asset, dst - 2026-08-11, diminta user
+// eksplisit). Pola grading (tanpa bypass): jajaran sebuah Departemen level Kepala
+// Bagian ke atas (band urutan <= 3) + GM Kompartemen "SDM, Kepatuhan dan
+// Pengembangan" (SKP, band urutan <= 1) yang membawahi ketiga departemen.
+// Departemen sibling lain TIDAK termasuk.
 //   - Admin Modul SDM  -> Departemen SDM (mis. tarif gaji JG x PG).
 //   - Admin Aset       -> Departemen Kepatuhan (kelola inventaris & maintenance aset).
 //
@@ -15,9 +21,23 @@ namespace SsoBackend.Services;
 // mana yang aktif & boleh dibuka siapa (Panel Admin IT > Akses Modul).
 public class ModuleAccessService
 {
-    private readonly ApplicationDbContext _db;
+    private const string AdminRole = "Admin";
 
-    public ModuleAccessService(ApplicationDbContext db) => _db = db;
+    private readonly ApplicationDbContext _db;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public ModuleAccessService(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor)
+    {
+        _db = db;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private bool IsAdminIt()
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        return user?.Identity?.IsAuthenticated == true
+            && user.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
+    }
 
     public Task<bool> IsSdmAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen SDM");
 
@@ -35,6 +55,7 @@ public class ModuleAccessService
     // Kepatuhan). BUKAN role Admin IT - itu ditangani terpisah di ModuleGateFilter.
     public async Task<bool> IsModuleAdminAsync(string? moduleKey, string? nik)
     {
+        if (IsAdminIt()) return true;
         if (string.IsNullOrWhiteSpace(nik)) return false;
         return (moduleKey ?? string.Empty).ToLowerInvariant() switch
         {
@@ -48,6 +69,7 @@ public class ModuleAccessService
     // urutan <= 3, ATAU GM Kompartemen SKP (band urutan <= 1).
     private async Task<bool> IsDeptAdminAsync(string? nik, string deptName)
     {
+        if (IsAdminIt()) return true;
         if (string.IsNullOrWhiteSpace(nik)) return false;
 
         var conn = _db.Database.GetDbConnection();

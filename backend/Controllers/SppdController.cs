@@ -43,12 +43,16 @@ public class SppdController : ControllerBase
     private readonly CurrentUserContext _currentUser;
     private readonly ApprovalService _approval;
     private readonly DinasBuktiService _bukti;
+    private readonly PosisiResolver _posisi;
 
-    public SppdController(GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval, DinasBuktiService bukti)
+    public SppdController(
+        GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval, DinasBuktiService bukti,
+        PosisiResolver posisi)
     {
         _db = db;
         _currentUser = currentUser;
         _approval = approval;
+        _posisi = posisi;
         _bukti = bukti;
     }
 
@@ -316,14 +320,18 @@ public class SppdController : ControllerBase
         }
 
         // Jabatan/golongan/struktur are snapshotted, not joined at print time, so the letter
-        // keeps reflecting the traveller's position on the day the trip was ordered.
+        // keeps reflecting the traveller's position on the day the trip was ordered. Jabatan
+        // prefers the structural grading name (same source as the app header); falls back to
+        // the legacy SDM label cleaned of "Pjs"/"Plt" prefixes if the traveller has no active
+        // grading placement.
+        var posisi = await _posisi.ResolveAsync(orang.Nik);
         var detail = new WebSdmSppdDetail
         {
             id = id,
             id_user = orang.Nik,
             struktur = orang.struktur?.Trim(),
             golongan = orang.GOL?.Trim(),
-            jabatan = orang.nm_jabatan?.Trim(),
+            jabatan = PosisiResolver.NamaJabatanTerbaik(posisi, orang.nm_jabatan)?.Trim(),
             tugas = request.Tugas.Trim(),
             posisi = request.Posisi,
             id_golongan = orang.id_golongan,

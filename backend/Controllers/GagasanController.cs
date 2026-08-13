@@ -67,7 +67,8 @@ public class GagasanController : ControllerBase
 
     // ---- list global: seluruh gagasan lintas kompartemen & departemen, khusus
     //      Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/SDM
-    //      Inovasi (id_jabatan 38/39) ----
+    //      Inovasi (id_jabatan 38/39) serta Direksi (Band 0), lihat
+    //      OrgResolver.IsGlobalInovasiViewerAsync ----
     [HttpGet("global")]
     public async Task<ActionResult<GagasanListDto>> ListGlobal()
     {

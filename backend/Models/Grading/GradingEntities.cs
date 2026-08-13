@@ -54,3 +54,18 @@ public class GradingBand
     public string Nama { get; set; } = string.Empty;
     public byte Urutan { get; set; }
 }
+
+// Penandaan PTS (Pemangku Tugas Sementara): karyawan yang menggantikan sementara formasi
+// atasannya yang kosong. Dipakai GajiService (formula TJ_PTS) & OrgStrukturService
+// (CRUD, panel Struktur Organisasi).
+public class GradingPejabatSementara
+{
+    public int Id { get; set; }
+    public string IdKaryawan { get; set; } = string.Empty;   // jabatan ASLI dibaca dari grading.penempatan aktif
+    public int IdJabatanPengganti { get; set; }               // jabatan atasan yang kosong, digantikan sementara
+    public DateTime? Tmt { get; set; }
+    public DateTime? TanggalSelesai { get; set; }
+    public string Status { get; set; } = "Aktif";
+    public string? Catatan { get; set; }
+    public DateTime DibuatPada { get; set; }
+}

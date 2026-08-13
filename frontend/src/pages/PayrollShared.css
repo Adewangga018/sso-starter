@@ -20,9 +20,13 @@
 .agt__manual-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .agt__manual-bar label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
 .agt__manual-bar select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 12px; font: inherit; font-size: 0.9rem; background: var(--gcs-white); color: var(--gcs-ink); cursor: pointer; }
-.agt__pegawai-search { position: relative; flex: 1 1 260px; min-width: 220px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 0 12px; background: var(--gcs-white); color: var(--gcs-text-muted); }
+.agt__pegawai-search { position: relative; flex: 1 1 100%; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.agt__pegawai-search .agt__input-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 0 12px; background: var(--gcs-white); color: var(--gcs-text-muted); }
 .agt__pegawai-search input { flex: 1; border: none; outline: none; padding: 10px 0; font: inherit; font-size: 0.9rem; background: none; color: var(--gcs-ink); }
 .agt__pegawai-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 10px; box-shadow: 0 12px 30px -12px rgba(15,38,31,0.35); max-height: 280px; overflow-y: auto; }
+/* Daftar pegawai statis (Manual per Karyawan) - selalu tampil di alur normal, BUKAN
+   overlay dropdown, supaya halaman langsung menampilkan daftar tanpa perlu klik/cari. */
+.agt__pegawai-list--static { position: static; max-height: 320px; box-shadow: none; border-radius: 9px; }
 .agt__pegawai-item { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; border: none; background: none; cursor: pointer; padding: 9px 12px; }
 .agt__pegawai-item:hover { background: var(--gcs-bg); }
 .agt__pegawai-item .agt__pegawai-nama { font-size: 0.86rem; font-weight: 600; color: var(--gcs-ink); }
@@ -66,6 +70,18 @@
 .agt__k-nama { font-size: 0.86rem; }
 .agt__k-nama--out { color: #b03636; }
 .agt__k-nama--in { color: var(--gcs-ink); }
+.agt__k-mirror {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--gcs-text-muted);
+  background: var(--gcs-bg);
+  border: 1px solid var(--gcs-border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  vertical-align: middle;
+}
 .agt__input-wrap { display: flex; align-items: center; border: 1px solid var(--gcs-border); border-radius: 9px; overflow: hidden; }
 .agt__input-wrap:focus-within { border-color: var(--gcs-gold-500); }
 .agt__rp { padding: 0 8px; font-size: 0.8rem; color: var(--gcs-text-muted); background: var(--gcs-bg); align-self: stretch; display: flex; align-items: center; }

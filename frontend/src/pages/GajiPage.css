@@ -1,105 +1,726 @@
-.gaji { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-
-.gaji__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.gaji__title { display: flex; align-items: center; gap: 8px; font-size: 1.4rem; color: var(--gcs-green-900); margin: 0 0 2px; }
-.gaji__title svg { color: var(--gcs-green-600); }
-.gaji__sub { color: var(--gcs-text-muted); font-size: 0.9rem; margin: 0; }
-.gaji__periode { display: flex; gap: 8px; align-items: center; }
-.gaji__konfig { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: var(--gcs-green-700); text-decoration: none; background: var(--gcs-white); }
-.gaji__konfig:hover { border-color: var(--gcs-green-500); }
-.gaji__periode select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 0.86rem; background: var(--gcs-white); color: var(--gcs-ink); cursor: pointer; }
-.gaji__periode select:focus { outline: none; border-color: var(--gcs-gold-500); }
-
-.gaji__loading { display: flex; align-items: center; gap: 10px; padding: 40px; color: var(--gcs-text-muted); }
-.gaji__spin { animation: gaji-spin 0.8s linear infinite; color: var(--gcs-green-600); }
-@keyframes gaji-spin { to { transform: rotate(360deg); } }
-.gaji__alert { background: rgba(192,57,43,0.1); color: #c0392b; border-radius: 10px; padding: 12px 16px; font-size: 0.9rem; }
-.gaji__empty { color: var(--gcs-text-muted); font-size: 0.9rem; padding: 24px; text-align: center; }
-
-.gaji__card { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 16px; padding: 16px; }
-
-/* Identitas */
-.gaji__ident { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
-.gaji__ident-nama { font-size: 1.05rem; font-weight: 700; color: var(--gcs-green-900); }
-.gaji__ident-jabatan { font-size: 0.88rem; color: var(--gcs-ink); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.gaji__chip { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; padding: 2px 8px; border-radius: 999px; background: rgba(244,174,70,0.18); color: var(--gcs-gold-700); }
-.gaji__ident-grade { display: flex; gap: 20px; }
-.gaji__ident-grade > div { display: flex; flex-direction: column; gap: 2px; }
-.gaji__ident-grade span { font-size: 0.68rem; color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.gaji__ident-grade b { font-size: 0.95rem; color: var(--gcs-ink); }
-
-.gaji__banner { display: flex; align-items: flex-start; gap: 10px; background: rgba(244,174,70,0.12); border: 1px solid rgba(244,174,70,0.35); color: var(--gcs-gold-700); border-radius: 12px; padding: 11px 14px; font-size: 0.84rem; }
-.gaji__banner svg { flex-shrink: 0; margin-top: 1px; }
-
-/* Kolom pendapatan / potongan */
-.gaji__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 720px) { .gaji__cols { grid-template-columns: 1fr; } }
-.gaji__col { padding: 0; overflow: hidden; }
-.gaji__col-title { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--gcs-border); }
-.gaji__col-title--in { color: var(--gcs-green-700); background: rgba(47,108,63,0.06); }
-.gaji__col-title--out { color: #b03636; background: rgba(176,54,54,0.06); }
-
-.gaji__grup { padding: 6px 0; border-bottom: 1px dashed var(--gcs-border); }
-.gaji__grup:last-of-type { border-bottom: none; }
-.gaji__grup-head { display: flex; justify-content: space-between; padding: 6px 16px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
-.gaji__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 16px; font-size: 0.86rem; }
-.gaji__row-label { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
-.gaji__row-nama { color: var(--gcs-ink); }
-.gaji__row-nominal { font-variant-numeric: tabular-nums; color: var(--gcs-ink); white-space: nowrap; }
-.gaji__row--terlambat .gaji__row-nama { color: #b03636; }
-.gaji__tag { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
-.gaji__tag--opsional { background: var(--gcs-bg); color: var(--gcs-text-muted); border: 1px solid var(--gcs-border); }
-.gaji__tag--terlambat { background: rgba(176,54,54,0.1); color: #b03636; }
-.gaji__tag--info { background: rgba(244,174,70,0.14); color: var(--gcs-gold-700); }
-
-/* Sub-komponen (dropdown/accordion): Lembur, BPJS Ketenagakerjaan, dll. */
-.gaji__subgrup { border-top: 1px dashed var(--gcs-border); }
-.gaji__subgrup:first-child { border-top: none; }
-.gaji__subgrup-head {
-  display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none;
-  cursor: pointer; padding: 7px 16px; font: inherit; font-size: 0.86rem; text-align: left; color: var(--gcs-ink);
-}
-.gaji__subgrup-head:hover { background: var(--gcs-bg); }
-.gaji__subgrup-head svg { flex-shrink: 0; color: var(--gcs-text-muted); }
-.gaji__subgrup-label { font-weight: 600; }
-.gaji__subgrup-count { font-size: 0.72rem; color: var(--gcs-text-muted); }
-.gaji__subgrup-total { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--gcs-ink); white-space: nowrap; }
-.gaji__subgrup.is-open .gaji__subgrup-head { color: var(--gcs-green-700); }
-.gaji__subgrup-body { background: var(--gcs-bg); padding-bottom: 2px; }
-.gaji__subgrup-body .gaji__row { padding-left: 38px; font-size: 0.82rem; }
-
-.gaji__col-total { display: flex; justify-content: space-between; padding: 12px 16px; margin-top: 4px; border-top: 1px solid var(--gcs-border); font-weight: 700; font-size: 0.9rem; color: var(--gcs-green-900); font-variant-numeric: tabular-nums; }
-
-.gaji__bersih { display: flex; align-items: center; justify-content: space-between; background: var(--gcs-green-900); color: #fff; }
-.gaji__bersih span { font-size: 0.92rem; font-weight: 600; }
-.gaji__bersih b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
-
-.gaji__catatan { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--gcs-text-muted); margin: 0; }
-
 /* ===========================================================================
-   Responsif (pelengkap media query 720px di atas)
+   My Personal - Gaji / Payslip Page Styles (Clean & Premium Box Theme)
    =========================================================================== */
-@media (max-width: 640px) {
-  .gaji { gap: 12px; }
-  .gaji__title { font-size: 1.2rem; }
-  .gaji__card { padding: 12px; }
 
-  /* Pemilih periode + pranala konfigurasi: selebar layar di bawah judul. */
-  .gaji__periode { width: 100%; }
-  .gaji__periode select { flex: 1; min-width: 0; }
+.gaji {
+  max-width: 1050px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-  /* Identitas: nama di atas, Grade/Level di bawahnya. */
-  .gaji__ident { align-items: flex-start; gap: 12px; }
-  .gaji__ident-grade { gap: 16px; }
+/* ---------------------------------------------------------------------------
+   1. Page Header & Actions
+   --------------------------------------------------------------------------- */
+.gaji__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
-  /* Baris komponen gaji: nama dan nominal tetap sebaris (nominal rata kanan),
-     hanya tepinya dirapatkan supaya angka tidak terpotong. */
-  .gaji__row,
-  .gaji__grup-head,
-  .gaji__col-total,
-  .gaji__col-title { padding-left: 12px; padding-right: 12px; }
+.gaji__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0 0 2px;
+}
 
-  .gaji__row { font-size: 0.83rem; gap: 8px; }
+.gaji__title svg {
+  color: var(--gcs-green-600);
+}
 
-  .gaji__bersih b { font-size: 1.1rem; }
+.gaji__sub {
+  color: var(--gcs-text-muted);
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+.gaji__head-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gaji__btn-privacy,
+.gaji__btn-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.gaji__btn-privacy {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  color: var(--gcs-ink);
+}
+
+.gaji__btn-privacy:hover {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-900);
+  background: rgba(60, 138, 81, 0.04);
+}
+
+.gaji__btn-privacy.is-active {
+  background: rgba(244, 174, 70, 0.15);
+  border-color: var(--gcs-gold-500);
+  color: var(--gcs-gold-700);
+}
+
+.gaji__btn-print {
+  background: var(--gcs-green-900);
+  border: 1px solid var(--gcs-green-900);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 38, 31, 0.15);
+}
+
+.gaji__btn-print:hover {
+  background: #153e30;
+  border-color: #153e30;
+  transform: translateY(-1px);
+}
+
+.gaji__periode {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.gaji__periode select {
+  border: 1px solid var(--gcs-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--gcs-white);
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.gaji__periode select:focus {
+  outline: none;
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.2);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Empty & Loading States
+   --------------------------------------------------------------------------- */
+.gaji__loading-card,
+.gaji__empty-card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--gcs-text-muted);
+}
+
+.gaji__empty-icon {
+  color: var(--gcs-gold-500);
+}
+
+.gaji__empty-card h3 {
+  margin: 0;
+  color: var(--gcs-green-900);
+  font-size: 1.15rem;
+}
+
+.gaji__empty-card p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.gaji__spin {
+  animation: gaji-spin 0.8s linear infinite;
+  color: var(--gcs-green-600);
+}
+
+@keyframes gaji-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gaji__alert {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.gaji__printable-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gaji__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.03);
+}
+
+/* ---------------------------------------------------------------------------
+   3. Identitas Pegawai Box (Polished Card Box)
+   --------------------------------------------------------------------------- */
+.gaji__ident {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--gcs-white) 0%, #fcfdfe 100%);
+  border-left: 4px solid var(--gcs-green-600);
+}
+
+.gaji__ident-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gaji__avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  color: var(--gcs-green-900);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.gaji__ident-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gaji__ident-nama {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+}
+
+.gaji__ident-jabatan {
+  font-size: 0.86rem;
+  color: var(--gcs-ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gaji__chip {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(244, 174, 70, 0.2);
+  color: var(--gcs-gold-700);
+}
+
+.gaji__ident-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.gaji__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gaji__meta-label {
+  font-size: 10px;
+  color: var(--gcs-text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.gaji__meta-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--gcs-ink);
+}
+
+.gaji__banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(244, 174, 70, 0.12);
+  border: 1px solid rgba(244, 174, 70, 0.35);
+  color: var(--gcs-gold-700);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.gaji__banner-icon {
+  color: var(--gcs-gold-700);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   4. Breakdown Columns (Earnings & Deductions Boxes)
+   --------------------------------------------------------------------------- */
+.gaji__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.gaji__col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.gaji__col-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--gcs-border);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.gaji__col-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gaji__col-title--in {
+  color: var(--gcs-green-900);
+  background: rgba(60, 138, 81, 0.07);
+}
+
+.gaji__col-title--out {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.gaji__col-badge {
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 3px 99px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gaji__col-badge--in {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.gaji__col-badge--out {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+.gaji__col-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gaji__grup {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--gcs-border);
+}
+
+.gaji__grup:last-of-type {
+  border-bottom: none;
+}
+
+.gaji__grup-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 18px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-muted);
+}
+
+.gaji__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px 8px 34px;
+  font-size: 0.86rem;
+  transition: background 0.18s ease;
+}
+
+.gaji__row:hover {
+  background: var(--gcs-bg);
+}
+
+.gaji__row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.gaji__row-nama {
+  color: var(--gcs-ink);
+  font-weight: 600;
+}
+
+.gaji__row-nominal {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  white-space: nowrap;
+}
+
+.gaji__row--terlambat .gaji__row-nama {
+  color: #b91c1c;
+}
+
+.gaji__tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.gaji__tag--terlambat {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.gaji__tag--info {
+  background: rgba(244, 174, 70, 0.16);
+  color: var(--gcs-gold-700);
+}
+
+/* Accordion Sub-Grup */
+.gaji__subgrup {
+  border-top: 1px dashed var(--gcs-border);
+}
+
+.gaji__subgrup:first-child {
+  border-top: none;
+}
+
+.gaji__subgrup-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 8px 18px 8px 34px;
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  color: var(--gcs-ink);
+  transition: background 0.18s ease;
+}
+
+.gaji__subgrup-head:hover {
+  background: rgba(60, 138, 81, 0.04);
+}
+
+/* Caret ditempatkan di gutter kiri (absolute), TIDAK ikut alur flex - supaya teks nama
+   komponen tetap mulai di posisi x yang SAMA dengan baris tanpa sub-komponen (.gaji__row),
+   bukan tergeser ke kanan oleh lebar ikon. */
+.gaji__subgrup-head svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+  color: var(--gcs-text-muted);
+  transition: transform 0.18s ease;
+}
+
+.gaji__subgrup-label {
+  font-weight: 700;
+}
+
+.gaji__subgrup-count {
+  font-size: 0.72rem;
+  color: var(--gcs-text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.gaji__subgrup-total {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  white-space: nowrap;
+}
+
+.gaji__subgrup.is-open .gaji__subgrup-head {
+  color: var(--gcs-green-900);
+  background: rgba(60, 138, 81, 0.06);
+}
+
+.gaji__subgrup-body {
+  background: #fbfbfb;
+  padding-bottom: 4px;
+}
+
+.gaji__subgrup-body .gaji__row {
+  padding-left: 56px;
+  font-size: 0.83rem;
+}
+
+.gaji__col-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--gcs-border);
+  font-weight: 800;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gaji__col-total--in {
+  color: var(--gcs-green-900);
+  background: rgba(60, 138, 81, 0.05);
+}
+
+.gaji__col-total--out {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* ---------------------------------------------------------------------------
+   5. Gaji Bersih (Take Home Pay) Highlight Card
+   --------------------------------------------------------------------------- */
+.gaji__bersih-card {
+  background: linear-gradient(135deg, var(--gcs-green-900), #153e30);
+  color: #ffffff;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  box-shadow: 0 6px 20px -6px rgba(15, 38, 31, 0.2);
+}
+
+.gaji__bersih-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gaji__bersih-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--gcs-gold-500), var(--gcs-gold-700));
+  color: var(--gcs-green-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gaji__bersih-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gaji__bersih-sub {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gaji__bersih-val {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gcs-gold-500);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.gaji__bersih-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.gaji__catatan-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--gcs-white);
+  border: 1px dashed var(--gcs-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  color: var(--gcs-text-muted);
+  line-height: 1.45;
+}
+
+.gaji__catatan-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   6. Responsif Breakpoints & Print Styles
+   --------------------------------------------------------------------------- */
+@media (max-width: 860px) {
+  .gaji__cols {
+    grid-template-columns: 1fr;
+  }
+
+  .gaji__bersih-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .gaji__bersih-stamp {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .gaji__head-controls {
+    width: 100%;
+  }
+
+  .gaji__periode {
+    width: 100%;
+  }
+
+  .gaji__periode select {
+    flex: 1;
+  }
+
+  .gaji__btn-privacy,
+  .gaji__btn-print {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .gaji__ident {
+    padding: 16px;
+  }
+
+  .gaji__ident-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gaji__bersih-val {
+    font-size: 1.3rem;
+  }
+}
+
+/* Print Styles for A4 Paper Export - HANYA isi slip (.gaji__printable-area) yang
+   dicetak, bukan seluruh layar. Dipaksa lewat trik visibility (sembunyikan semua,
+   tampakkan cuma area cetak) - lebih tahan banting drpd mendaftar satu-satu elemen
+   chrome (header/sidebar/tombol/judul halaman) yang harus disembunyikan. */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .gaji__printable-area,
+  .gaji__printable-area * {
+    visibility: visible;
+  }
+
+  .gaji__printable-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 12px !important;
+  }
+
+  .gaji__bersih-card {
+    background: #0f261f !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .gaji__col-title--in, .gaji__col-total--in {
+    background: rgba(60, 138, 81, 0.1) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .gaji__col-title--out, .gaji__col-total--out {
+    background: rgba(239, 68, 68, 0.1) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

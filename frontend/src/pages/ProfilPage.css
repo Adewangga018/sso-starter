@@ -609,8 +609,12 @@
 }
 
 /* ---------------------------------------------------------------------------
-   5. Data Keluarga & Dense Berkas Grid
+   5. Grid Utilities, Data Keluarga & Dense Berkas Grid
    --------------------------------------------------------------------------- */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
 .profil__subsection + .profil__subsection {
   margin-top: 18px;
   padding-top: 16px;
@@ -633,11 +637,147 @@
   margin: 0 0 12px;
 }
 
+/* 2-Column Berkas Grid (Family Documents) */
+.profil__berkas-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
 /* 3-Column Berkas Grid on Desktop for Tight Packing */
 .profil__berkas-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Berkas Card Tile Component Styles
+   --------------------------------------------------------------------------- */
+.profil__berkas-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.03);
+  transition: all 0.2s ease;
+  min-height: 64px;
+}
+
+.profil__berkas-item:hover {
+  border-color: rgba(60, 138, 81, 0.35);
+  box-shadow: 0 4px 14px rgba(15, 38, 31, 0.08);
+  transform: translateY(-1px);
+}
+
+.profil__berkas-item.is-available {
+  border-left: 3.5px solid var(--gcs-green-600);
+}
+
+.profil__berkas-item.is-empty {
+  background: #fbfbfb;
+  border-left: 3.5px solid var(--gcs-border);
+}
+
+.profil__berkas-view {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+  transition: background 0.18s ease;
+}
+
+.profil__berkas-view:hover:not(:disabled) {
+  background: rgba(60, 138, 81, 0.04);
+}
+
+.profil__berkas-view:disabled {
+  cursor: default;
+}
+
+.profil__berkas-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.profil__berkas-icon--available {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.profil__berkas-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profil__berkas-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profil__berkas-sub {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.profil__berkas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.profil__berkas-badge--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.profil__berkas-badge--muted {
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+.profil__berkas-chevron {
+  color: var(--gcs-text-muted);
+  flex-shrink: 0;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.profil__berkas-view:hover:not(:disabled) .profil__berkas-chevron {
+  color: var(--gcs-green-600);
+  transform: translateX(2px);
 }
 
 .profil__upload {
@@ -645,22 +785,28 @@
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
-  padding: 0 12px;
-  border-left: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
+  padding: 8px 12px;
+  margin-right: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(60, 138, 81, 0.25);
+  background: rgba(60, 138, 81, 0.06);
   color: var(--gcs-green-900);
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.18s ease;
+  transition: all 0.18s ease;
 }
 
-.profil__upload:hover {
-  background: rgba(60, 138, 81, 0.08);
+.profil__upload:hover:not(.is-disabled) {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  border-color: var(--gcs-green-900);
 }
 
 .profil__upload.is-disabled {
   color: var(--gcs-text-muted);
+  border-color: var(--gcs-border);
+  background: transparent;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -674,6 +820,118 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Children & Subsections Styling
+   --------------------------------------------------------------------------- */
+.profil__anak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profil__anak-item {
+  background: #fcfcfc;
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: border-color 0.18s ease;
+}
+
+.profil__anak-item:hover {
+  border-color: rgba(60, 138, 81, 0.25);
+}
+
+.profil__anak-item--editing {
+  background: var(--gcs-white);
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
+.profil__anak-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.profil__anak-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.profil__anak-form-actions {
+  grid-column: span 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.profil__iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.profil__iconbtn:hover:not(:disabled) {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  border-color: var(--gcs-green-900);
+}
+
+.profil__iconbtn--danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.profil__iconbtn--danger:hover:not(:disabled) {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+.profil__addbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--gcs-green-600);
+  background: rgba(60, 138, 81, 0.06);
+  color: var(--gcs-green-900);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.18s ease;
+}
+
+.profil__addbtn:hover {
+  background: rgba(60, 138, 81, 0.14);
+  border-style: solid;
+}
+
+.profil__empty-inline {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+  font-style: italic;
+  padding: 6px 0;
+}
+
+/* ---------------------------------------------------------------------------
    6. Responsif Breakpoints (Tablet & Mobile)
    --------------------------------------------------------------------------- */
 @media (max-width: 1080px) {
@@ -683,6 +941,10 @@
 
   .profil__berkas-list {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .span-3, .span-4 {
+    grid-column: span 3;
   }
 }
 
@@ -707,6 +969,14 @@
 
   .profil__grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profil__berkas-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .span-2, .span-3, .span-4 {
+    grid-column: span 2;
   }
 }
 
@@ -747,13 +1017,27 @@
   .profil__berkas-list {
     grid-template-columns: 1fr;
   }
+
+  .span-2, .span-3, .span-4 {
+    grid-column: span 1;
+  }
+
+  .profil__anak-form {
+    grid-template-columns: 1fr;
+  }
+
+  .profil__anak-form-actions {
+    grid-column: span 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profil__edit-btn,
   .profil__btn,
   .profil__nav-pill,
-  .profil__avatar-edit {
+  .profil__avatar-edit,
+  .profil__berkas-item,
+  .profil__iconbtn {
     transition: none;
   }
 }

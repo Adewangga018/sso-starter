@@ -72,4 +72,35 @@ public class PosisiResolver
         int band = row.IdBand;
         return new Posisi(band, TingkatanDariBand(band), row.NamaJabatan);
     }
+
+    // Versi banyak-NIK sekaligus (satu query) - dipakai daftar/picker pegawai supaya
+    // tak N+1 query per baris. NIK tanpa penempatan grading aktif (mis. TKNO) tidak
+    // muncul di hasil; caller jatuh ke NamaJabatanTerbaik (fallback legacy dibersihkan).
+    public async Task<Dictionary<string, Posisi>> ResolveManyAsync(IReadOnlyCollection<string> niks)
+    {
+        var result = new Dictionary<string, Posisi>();
+        if (niks is null || niks.Count == 0) return result;
+        var distinct = niks.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+        if (distinct.Count == 0) return result;
+
+        var rows = await (
+            from p in _db.Penempatan
+            join j in _db.Jabatan on p.IdJabatan equals j.IdJabatan
+            where distinct.Contains(p.IdKaryawan) && p.Status == "Aktif"
+            select new { p.IdKaryawan, j.IdBand, j.NamaJabatan }).ToListAsync();
+
+        foreach (var r in rows)
+        {
+            if (!result.ContainsKey(r.IdKaryawan))
+                result[r.IdKaryawan] = new Posisi(r.IdBand, TingkatanDariBand(r.IdBand), r.NamaJabatan);
+        }
+        return result;
+    }
+
+    // Nama jabatan TERBAIK utk ditampilkan: struktural (grading) kalau ada, kalau
+    // tidak jatuh ke label legacy SDM yang sudah dibersihkan ("Pjs"/"Plt"/"Lakma" dst
+    // dibuang) - SATU titik dipakai semua picker/daftar pegawai di seluruh app supaya
+    // konsisten dengan yang tampil di header (DashboardController).
+    public static string? NamaJabatanTerbaik(Posisi? posisi, string? legacy) =>
+        posisi?.Jabatan ?? BersihkanJabatanLegacy(legacy);
 }

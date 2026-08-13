@@ -85,7 +85,9 @@ public class DashboardController : ControllerBase
         var nama = !string.IsNullOrWhiteSpace(pegawai?.NAMA_LENGKAP) ? pegawai!.NAMA_LENGKAP.Trim() : user.Name;
 
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
-        var isAdminModulSdm = pegawai is not null && await _access.IsSdmAdminAsync(pegawai.ID_KARYAWAN);
+        // IsSdmAdminAsync kini otomatis true utk Admin IT jg (bypass di ModuleAccessService,
+        // tak lagi bergantung pegawai != null - Admin IT bisa saja tak tertaut NIK).
+        var isAdminModulSdm = await _access.IsSdmAdminAsync(pegawai?.ID_KARYAWAN);
 
         // Kartu modul mengikuti Panel Admin IT > Akses Modul. Daftarnya selalu lengkap;
         // modul yang dikunci ke Admin IT dikirim sebagai kartu terkunci ("Coming Soon"),
