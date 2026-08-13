@@ -1,4 +1,5 @@
 using System.Data;
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
 
@@ -16,12 +17,25 @@ namespace SsoBackend.Services;
 public class ModuleAccessService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IHttpContextAccessor _http;
 
-    public ModuleAccessService(ApplicationDbContext db) => _db = db;
+    public ModuleAccessService(ApplicationDbContext db, IHttpContextAccessor http)
+    {
+        _db = db;
+        _http = http;
+    }
 
     public Task<bool> IsSdmAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen SDM");
 
-    public Task<bool> IsAsetAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");
+    // Admin IT juga otomatis dianggap Admin Aset di seluruh fitur My Asset (Inventaris,
+    // Maintenance, Aset Tidak Produktif, Aktivitas) - supaya bisa input/uji coba data tanpa
+    // perlu jabatan di Departemen Kepatuhan. Pengecualian ini SENGAJA hanya di sini, bukan
+    // di IsDeptAdminAsync, supaya tidak ikut membuka My Prosedur/My Health untuk Admin IT.
+    public async Task<bool> IsAsetAdminAsync(string? nik) =>
+        IsAdminIt() || await IsDeptAdminAsync(nik, "Departemen Kepatuhan");
+
+    private bool IsAdminIt() =>
+        _http.HttpContext?.User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == "Admin") ?? false;
 
     // Admin My Prosedur (SOP/Kebijakan) = fungsi Tata Kelola di Departemen Kepatuhan.
     public Task<bool> IsProsedurAdminAsync(string? nik) => IsDeptAdminAsync(nik, "Departemen Kepatuhan");

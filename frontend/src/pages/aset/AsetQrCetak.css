@@ -1,0 +1,41 @@
+/* Halaml cetak label QR aset. Layout meniru label fisik aset (mis. tag Glico
+   Wings): kiri = logo + kode besar + nama + "Property of...", kanan = QR besar,
+   dipisah garis vertikal, dibingkai seperti stiker/plakat siap tempel. */
+
+.qrcetak { background: #e9eaea; min-height: 100vh; padding: 24px 16px 48px; font-family: system-ui, sans-serif; }
+.qrcetak__state { padding: 48px; text-align: center; color: #555; font-family: system-ui, sans-serif; }
+
+.qrcetak__toolbar { max-width: 210mm; margin: 0 auto 16px; display: flex; justify-content: flex-end; }
+.qrcetak__toolbar button { background: var(--gcs-green-600, #2f6c3f); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+.qrcetak__sheet {
+  width: 210mm; margin: 0 auto; background: #fff; padding: 10mm;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6mm;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+}
+
+.qrcetak__label {
+  display: flex; align-items: stretch; gap: 4mm;
+  border: 1.5pt solid #1a1a1a; border-radius: 3mm; padding: 4mm 5mm;
+  background: #fff; break-inside: avoid;
+}
+.qrcetak__left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+.qrcetak__logo { height: 8mm; width: auto; object-fit: contain; align-self: flex-start; margin-bottom: 2mm; }
+.qrcetak__kode { font-size: 15pt; font-weight: 800; letter-spacing: 0.02em; color: #111; line-height: 1.1; word-break: break-all; }
+.qrcetak__nama { font-size: 8.5pt; font-weight: 600; color: #333; margin-top: 1mm; }
+.qrcetak__property { font-size: 6.5pt; color: #666; margin-top: 3mm; }
+
+.qrcetak__right { flex-shrink: 0; display: flex; align-items: center; padding-left: 4mm; border-left: 1pt solid #1a1a1a; }
+.qrcetak__qr { width: 26mm; height: 26mm; }
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+  .qrcetak { background: #fff; padding: 0; min-height: auto; }
+  .qrcetak__toolbar { display: none; }
+  .qrcetak__sheet { width: auto; margin: 0; box-shadow: none; }
+}
+
+@media (max-width: 840px) {
+  .qrcetak { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 12px 10px 32px; }
+  .qrcetak__toolbar { position: sticky; left: 0; width: 100%; }
+}

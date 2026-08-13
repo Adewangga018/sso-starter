@@ -11,6 +11,9 @@ public record OrgUnit(int? IdDepartemen, string? NamaDepartemen, int? IdKomparte
 // Ringkas unit untuk dropdown Departemen Tujuan.
 public record UnitRingkas(int Id, string Nama, string Tipe);
 
+// Unit + nama unit induknya (mis. Bagian + nama Departemen-nya).
+public record UnitDenganInduk(int Id, string Nama, string? NamaInduk);
+
 // Menentukan departemen & kompartemen (dari NIK atau dari unit), kepala unit
 // (Manager/GM) untuk alur pengesahan, dan merangkai nomor registrasi inovasi.
 // Semua data dari db_mygcs (grading.* + inovasi.*), lewat InovasiDbContext.
@@ -278,6 +281,25 @@ public class OrgResolver
             .OrderBy(u => u.Nama)
             .Select(u => new UnitRingkas(u.IdUnit, u.Nama, u.Tipe))
             .ToListAsync();
+    }
+
+    // Daftar Bagian (sub-unit Departemen) + nama Departemen induknya - dipakai My Asset
+    // untuk PIC bertipe "Bagian" (bukan orang).
+    public async Task<IReadOnlyList<UnitDenganInduk>> ListBagianAsync()
+    {
+        var units = await LoadUnitsAsync();
+        return units.Values.Where(u => u.Tipe == "Bagian")
+            .Select(u => new UnitDenganInduk(u.IdUnit, u.Nama, u.IdUnitInduk is int induk ? units.GetValueOrDefault(induk)?.Nama : null))
+            .OrderBy(u => u.NamaInduk).ThenBy(u => u.Nama)
+            .ToList();
+    }
+
+    // Nama unit organisasi apa pun (Departemen/Bagian/dst) dari id-nya - dipakai My Asset
+    // untuk snapshot nama Bagian saat PIC ditetapkan.
+    public async Task<string?> GetUnitNamaAsync(int idUnit)
+    {
+        var units = await LoadUnitsAsync();
+        return units.GetValueOrDefault(idUnit)?.Nama;
     }
 
     // Nomor registrasi gugus: {jenis}-{urut per-jenis di departemen}/{urut per-jenis

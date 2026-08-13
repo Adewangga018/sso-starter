@@ -31,6 +31,11 @@ public class GcsDbContext : DbContext
     public DbSet<WebSdmPesanTiketDetail> WebSdmPesanTiketDetail => Set<WebSdmPesanTiketDetail>();
     public DbSet<WebSdmCutiHak> WebSdmCutiHak => Set<WebSdmCutiHak>();
     public DbSet<WebSdmCutiView> WebSdmCutiView => Set<WebSdmCutiView>();
+    public DbSet<AsetErp> AsetErp => Set<AsetErp>();
+    public DbSet<AsetErpGroup> AsetErpGroup => Set<AsetErpGroup>();
+    public DbSet<AsetErpCc> AsetErpCc => Set<AsetErpCc>();
+    public DbSet<AsetErpKelompok> AsetErpKelompok => Set<AsetErpKelompok>();
+    public DbSet<AsetErpRekanan> AsetErpRekanan => Set<AsetErpRekanan>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -219,6 +224,42 @@ public class GcsDbContext : DbContext
             e.Property(x => x.IdUser).HasColumnName("id_user");
             e.Property(x => x.ListJenis).HasColumnName("list_jenis");
             e.Property(x => x.TglApprove).HasColumnName("tgl_approve");
+        });
+
+        // Aktiva Tetap ERP (dbo.assets + lookup) — lihat catatan di Models/Gcs/AsetErp.cs.
+        builder.Entity<AsetErp>(e =>
+        {
+            e.ToTable("assets", "dbo");
+            e.HasKey(x => x.OBJECTID);
+            e.Property(x => x.QTY).HasPrecision(18, 2);
+            e.Property(x => x.NILAI_PEROLEHAN).HasPrecision(18, 2);
+            e.Property(x => x.NILAI_BUKU).HasPrecision(18, 2);
+            e.Property(x => x.AKUMULASI).HasPrecision(18, 2);
+            e.Property(x => x.MASA).HasPrecision(18, 2);
+        });
+
+        builder.Entity<AsetErpGroup>(e =>
+        {
+            e.ToTable("AssetS_Group", "dbo");
+            e.HasKey(x => new { x.DIV, x.GROUP_ASSET });
+        });
+
+        builder.Entity<AsetErpKelompok>(e =>
+        {
+            e.ToTable("AssetS_KELOMPOK", "dbo");
+            e.HasKey(x => new { x.DIV, x.KELOMPOK });
+        });
+
+        builder.Entity<AsetErpCc>(e =>
+        {
+            e.ToTable("akun_account_cc", "dbo");
+            e.HasKey(x => x.KODE_CC);
+        });
+
+        builder.Entity<AsetErpRekanan>(e =>
+        {
+            e.ToTable("akun_rekanan", "dbo");
+            e.HasKey(x => x.KODEREKANAN);
         });
 
         builder.Entity<TtdElektronik>(e =>
