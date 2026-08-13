@@ -164,8 +164,9 @@ public class AsetOverlayService
     {
         var term = (q ?? string.Empty).Trim();
         if (term.Length < 2) return Array.Empty<AsetPegawaiDto>();
+        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
         return await _gcs.PegawaiSdm.AsNoTracking()
-            .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
+            .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama).Take(20)
             .Select(p => new AsetPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
             .ToListAsync();

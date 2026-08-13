@@ -2032,5 +2032,29 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [18] CUTI V3 - akrual berbasis TMT per 2 tahun ################';
+GO
+/* ============================================================================
+   Cuti v3 - akrual berbasis TMT per 2 tahun (2026-08-13, diminta user): ganti
+   "12 hari/tahun, reset bareng semua orang tiap 1 Januari kalender" jadi "24
+   hari tiap 2 tahun, di ulang tahun kerja (TMT) masing-masing karyawan".
+   Logika baru sepenuhnya di C# (CutiService.AkrualJikaSiklusBaruAsync) - blok
+   ini HANYA update nilai konfigurasi, TANPA perubahan skema. NON-DESTRUKTIF &
+   idempoten.
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+UPDATE cuti.setelan SET hak_per_tahun = 24 WHERE id = 1 AND hak_per_tahun <> 24;
+PRINT 'cuti.setelan.hak_per_tahun dikoreksi jadi 24 (' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' baris).';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

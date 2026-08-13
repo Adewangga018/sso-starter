@@ -683,6 +683,7 @@ export default function ProfilPage() {
           }>
             <SelectField form={form} setForm={setForm} name="statusNikah" options={NIKAH_OPTIONS} />
           </Row>
+          <Row label="Tanggal Masuk Kerja" locked display={formatTanggal(profile.tanggalMasukKerja)} />
           <Row label="Terdaftar Sejak" locked display={formatTanggal(profile.terdaftarSejak)} />
         </div>
       </div>

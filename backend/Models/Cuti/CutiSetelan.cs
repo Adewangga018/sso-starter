@@ -7,8 +7,12 @@ public class CutiSetelan
     public byte Id { get; set; }
     public int HakDasar { get; set; }
     public int CutiBersama { get; set; }
-    public int HakPerTahun { get; set; } = 12;      // akrual per tahun (diberikan di muka)
-    public int BatasAkumulasi { get; set; } = 24;   // saldo maksimum (2 tahun)
+    // Nama kolom "per tahun" adalah sisa penamaan lama (skema tak diubah) - sejak
+    // 2026-08-13 nilainya = hak per SIKLUS akrual 2-tahunan (di ulang tahun kerja
+    // masing-masing karyawan berbasis TMT), BUKAN lagi per tahun kalender. Lihat
+    // CutiService.AkrualJikaSiklusBaruAsync.
+    public int HakPerTahun { get; set; } = 24;
+    public int BatasAkumulasi { get; set; } = 24;   // saldo maksimum (tetap 24 - 1 siklus penuh)
     public DateTime? DiperbaruiPada { get; set; }
     public string? DiperbaruiOleh { get; set; }
 }

@@ -154,8 +154,9 @@ public class OfficeService
         {
             return [];
         }
+        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
         var rows = await _gcs.PegawaiSdm
-            .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
+            .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama)
             .Take(20)
             .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })

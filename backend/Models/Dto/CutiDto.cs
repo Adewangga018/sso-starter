@@ -29,12 +29,15 @@ public record CutiDto(
     bool AdaData,
     string? Periode,
     DateOnly? Tmt,
-    int Akrual,                                     // basis periode (min(batas, sisa lalu + 12))
+    int Akrual,                                     // basis siklus (min(batas, sisa lalu + hak/siklus))
     int Hak,                                        // net = akrual - cuti bersama pengurang
     int Diambil,
     int CutiBersama,                                // total hari cuti bersama yang mengurangi hak
-    int HakPerTahun,                                // akrual per tahun (mis. 12)
-    int BatasAkumulasi,                             // saldo maksimum (mis. 24)
+    int HakPerTahun,                                // hak per siklus akrual 2-tahunan (24), nama kolom lama
+    int BatasAkumulasi,                             // saldo maksimum (24)
+    // Tanggal akrual berikutnya (ulang tahun kerja ke-1, lalu tiap +2 tahun dari situ).
+    // Null bila TMT tak diketahui.
+    DateOnly? AkrualBerikutnya,
     bool BisaApprove,
     bool IsAdminSdm,                                // kelola cuti bersama & nasional (SDM)
     IReadOnlyList<CutiPengajuanDto> Pengajuan,      // pengajuan saya

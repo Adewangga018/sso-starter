@@ -474,7 +474,9 @@ public class GajiService
     public async Task<IReadOnlyList<GajiPegawaiPickerDto>> CariPegawaiAsync(string? q)
     {
         var term = (q ?? string.Empty).Trim();
-        var query = _gcs.PegawaiSdm.AsNoTracking().Where(p => p.data_aktif == "Aktif");
+        // Sementara khusus tenaga kerja organik (Tetap) - Kontrak/InternShip/Borongan/dst
+        // belum di-onboard sbg pengguna MyGCS, jadi tak boleh muncul sbg pilihan (2026-08-13).
+        var query = _gcs.PegawaiSdm.AsNoTracking().Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap");
         if (term.Length >= 2) query = query.Where(p => p.nama!.Contains(term) || p.Nik.Contains(term));
         var rows = await query
             .OrderBy(p => p.nama)

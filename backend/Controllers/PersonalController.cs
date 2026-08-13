@@ -97,6 +97,11 @@ public class PersonalController : ControllerBase
                 return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
             }
 
+            // Tanggal masuk kerja hidup di PEGAWAI_SDM (legacy SDM), lepas dari MST_PEGAWAI -
+            // bisa saja sudah ada meski baris MST_PEGAWAI (profil MyGCS) belum dibuat.
+            var tglMaskerShell = await _db.PegawaiSdm.AsNoTracking()
+                .Where(p => p.Nik == user.Nik).Select(p => p.tgl_masker).FirstOrDefaultAsync();
+
             // The account is tied to a badge number (from the login token) but HR hasn't
             // created the MST_PEGAWAI master row for it yet. Hand back an empty shell -
             // isProfileEmpty() on the frontend opens edit mode automatically, so the page
@@ -112,6 +117,7 @@ public class PersonalController : ControllerBase
                 new AlamatDto(null, null, null, null, null, null, null, null),
                 null, null, false, null, null, null, null,
                 null,
+                tglMaskerShell.HasValue ? DateOnly.FromDateTime(tglMaskerShell.Value) : null,
                 [],
                 [],
                 Registered: false,
@@ -144,6 +150,11 @@ public class PersonalController : ControllerBase
             .Select(f => new BerkasDto(f.Key, f.Label, !string.IsNullOrWhiteSpace(f.Selector(pegawai))))
             .ToList();
 
+        // Tanggal masuk kerja hidup di PEGAWAI_SDM (legacy SDM), bukan MST_PEGAWAI - lihat
+        // catatan di PegawaiSdm.tgl_masker.
+        var tglMasuk = await _db.PegawaiSdm.AsNoTracking()
+            .Where(p => p.Nik == pegawai.ID_KARYAWAN).Select(p => p.tgl_masker).FirstOrDefaultAsync();
+
         var dto = new PersonalProfileDto(
             pegawai.ID_PEGAWAI,
             pegawai.NAMA_LENGKAP,
@@ -169,6 +180,7 @@ public class PersonalController : ControllerBase
             pegawai.NAMA_DARURAT,
             pegawai.HP_DARURAT,
             DateOnly.FromDateTime(pegawai.CREATED_AT),
+            tglMasuk.HasValue ? DateOnly.FromDateTime(tglMasuk.Value) : null,
             anak,
             berkas,
             ProfileComplete: ProfileRules.IsComplete(pegawai),

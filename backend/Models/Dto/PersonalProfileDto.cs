@@ -107,6 +107,10 @@ public record PersonalProfileDto(
     string? NamaDarurat,
     string? HpDarurat,
     DateOnly? TerdaftarSejak,
+    // Tanggal masuk kerja (hire date) - dari GCS.dbo.PEGAWAI_SDM.tgl_masker (satu-satunya
+    // sumber terpercaya, MST_PEGAWAI tak punya kolom ini). Null bila belum ada baris
+    // PEGAWAI_SDM utk NIK ybs (mis. pegawai sangat baru/data belum diinput SDM).
+    DateOnly? TanggalMasukKerja,
     IReadOnlyList<AnakDto> Anak,
     IReadOnlyList<BerkasDto> Berkas,
     // False when the signed-in account has a badge number (IdKaryawan) but HR hasn't created

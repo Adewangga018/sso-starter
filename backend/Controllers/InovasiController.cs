@@ -686,8 +686,9 @@ public class InovasiController : ControllerBase
         // kompartemen) agar pengguna tidak harus mengetik lebih dulu.
         if (term.Length < 2) return Ok(await DefaultPegawaiAsync(gugusId));
 
+        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
         var raw = await _gcs.PegawaiSdm
-            .Where(p => p.data_aktif == "Aktif" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
+            .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama)
             .Take(50)
             .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
@@ -730,7 +731,8 @@ public class InovasiController : ControllerBase
     {
         var term = (q ?? string.Empty).Trim();
 
-        IQueryable<Models.Gcs.PegawaiSdm> query = _gcs.PegawaiSdm.Where(p => p.data_aktif == "Aktif");
+        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
+        IQueryable<Models.Gcs.PegawaiSdm> query = _gcs.PegawaiSdm.Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap");
         if (term.Length >= 2)
             query = query.Where(p => p.nama!.Contains(term) || p.Nik.Contains(term));
 
@@ -820,8 +822,9 @@ public class InovasiController : ControllerBase
             if (niks.Count > 0)
             {
                 var nikArr = niks.ToArray();
+                // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
                 var scopedRaw = await _gcs.PegawaiSdm
-                    .Where(p => p.data_aktif == "Aktif" && nikArr.Contains(p.Nik))
+                    .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && nikArr.Contains(p.Nik))
                     .OrderBy(p => p.nama)
                     .Take(100)
                     .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
@@ -839,9 +842,10 @@ public class InovasiController : ControllerBase
             if (strict) return Array.Empty<InovasiPegawaiDto>();
         }
 
-        // Fallback: pegawai aktif umum (akun tak tertaut grading / cakupan kosong).
+        // Fallback: pegawai aktif umum (akun tak tertaut grading / cakupan kosong). Sementara
+        // khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
         var fallbackRaw = await _gcs.PegawaiSdm
-            .Where(p => p.data_aktif == "Aktif")
+            .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap")
             .OrderBy(p => p.nama)
             .Take(100)
             .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })

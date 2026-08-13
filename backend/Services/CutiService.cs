@@ -28,7 +28,7 @@ public class CutiService
     {
         // Dimuat tracked agar bisa di-reset bila periode sudah berganti tahun.
         var saldo = await _db.CutiSaldo.FirstOrDefaultAsync(s => s.IdKaryawan == nik);
-        if (saldo is not null) await ResetJikaPeriodeBaruAsync(saldo);
+        if (saldo is not null) await AkrualJikaSiklusBaruAsync(saldo);
 
         var pengajuanRows = await _db.CutiPengajuan.AsNoTracking()
             .Where(p => p.IdKaryawan == nik).OrderByDescending(p => p.Id).Take(50).ToListAsync();
@@ -81,6 +81,9 @@ public class CutiService
             CutiBersama: saldo?.CutiBersama ?? 0,
             HakPerTahun: setelan.HakPerTahun,
             BatasAkumulasi: setelan.BatasAkumulasi,
+            AkrualBerikutnya: saldo?.Tmt is DateOnly tmtNow
+                ? TanggalAkrualBerikutnya(tmtNow, DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7)))
+                : null,
             BisaApprove: persetujuanRows.Count > 0,
             IsAdminSdm: isAdminSdm,
             Pengajuan: pengajuanRows.Select(Map).ToList(),
@@ -104,7 +107,7 @@ public class CutiService
         };
         _db.CutiBersama.Add(cb);
         await _db.SaveChangesAsync();
-        await RecomputeSaldoAsync(TahunSekarang());
+        await RecomputeSaldoAsync(cb.Tahun);
         return (true, null, cb.Id);
     }
 
@@ -115,11 +118,13 @@ public class CutiService
         if (!ok) return (false, err);
         var cb = await _db.CutiBersama.FirstOrDefaultAsync(x => x.Id == id);
         if (cb is null) return (false, "Cuti bersama tidak ditemukan.");
+        var tahunLama = cb.Tahun;
         cb.TglMulai = req.TglMulai; cb.TglSelesai = req.TglSelesai; cb.JumlahHari = hari;
         cb.Keterangan = req.Keterangan.Trim(); cb.MengurangiHak = req.MengurangiHak;
         cb.Tahun = req.TglMulai.Year; cb.DiubahPada = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-        await RecomputeSaldoAsync(TahunSekarang());
+        await RecomputeSaldoAsync(cb.Tahun);
+        if (tahunLama != cb.Tahun) await RecomputeSaldoAsync(tahunLama);
         return (true, null);
     }
 
@@ -128,9 +133,10 @@ public class CutiService
         if (!await _access.IsSdmAdminAsync(nik)) return (false, ForbidSdm);
         var cb = await _db.CutiBersama.FirstOrDefaultAsync(x => x.Id == id);
         if (cb is null) return (false, "Cuti bersama tidak ditemukan.");
+        var tahun = cb.Tahun;
         _db.CutiBersama.Remove(cb);
         await _db.SaveChangesAsync();
-        await RecomputeSaldoAsync(TahunSekarang());
+        await RecomputeSaldoAsync(tahun);
         return (true, null);
     }
 
@@ -189,50 +195,81 @@ public class CutiService
     private async Task<int> CutiBersamaPengurangAsync(int tahun) =>
         await _db.CutiBersama.Where(x => x.MengurangiHak && x.Tahun == tahun).SumAsync(x => (int?)x.JumlahHari) ?? 0;
 
-    // Hitung ulang saldo SEMUA karyawan pada periode `tahun`:
-    // cuti_bersama = total pengurang; hak = akrual - cuti_bersama; saldo = hak - diambil.
+    // Hitung ulang saldo karyawan yang akrual TERAKHIRnya jatuh di tahun `tahun` (bukan lagi
+    // "periode" bersama semua orang - tiap karyawan siklusnya sendiri berbasis TMT, lihat
+    // AkrualJikaSiklusBaruAsync). cuti_bersama = total pengurang tahun itu; hak = akrual -
+    // cuti_bersama; saldo = hak - diambil. Dipanggil saat admin SDM CRUD cuti bersama.
     private async Task RecomputeSaldoAsync(int tahun)
     {
         var total = await CutiBersamaPengurangAsync(tahun);
-        var periode = $"{tahun}-{tahun + 1}";
         await _db.Database.ExecuteSqlRawAsync(
             "UPDATE cuti.saldo SET cuti_bersama = {0}, hak = akrual - {0}, saldo = akrual - {0} - diambil, " +
-            "diperbarui_pada = SYSUTCDATETIME() WHERE periode = {1}",
-            total, periode);
+            "diperbarui_pada = SYSUTCDATETIME() WHERE YEAR(tgl_cutoff) = {1}",
+            total, tahun);
     }
 
-    private static int TahunSekarang() => DateTime.UtcNow.AddHours(7).Year;
-    private static int TahunPeriode(string periode) =>
-        int.TryParse(periode.Split('-')[0], out var y) ? y : TahunSekarang();
-
-    // Periode cuti berjalan = "{tahun}-{tahun+1}" berdasarkan tanggal WIB. Berganti
-    // otomatis tiap 1 Januari (mis. 2026-2027, lalu 2027-2028).
-    public static string PeriodeSekarang()
+    // AddYears bisa gagal utk TMT 29 Feb (tahun kabisat) - jatuhkan ke 28 Feb pada
+    // tahun tujuan yg bukan kabisat, drpd melempar exception.
+    private static DateOnly TambahTahunAman(DateOnly d, int tahun)
     {
-        var wib = DateTime.UtcNow.AddHours(7);
-        return $"{wib.Year}-{wib.Year + 1}";
+        try { return d.AddYears(tahun); }
+        catch (ArgumentOutOfRangeException) { return new DateOnly(d.Year + tahun, 2, 28); }
     }
 
-    // Reset saldo bila periode karyawan sudah bukan periode berjalan (pergantian tahun).
-    // Akrual DI MUKA: sisa tahun lalu + hak/tahun (12), DIBATASI batas_akumulasi (24).
-    // Lalu dikurangi cuti bersama (yang mengurangi hak) untuk periode baru. diambil = 0.
-    // Dipanggil saat karyawan membuka/mengajukan cuti — "berjalan & reset tiap tahun".
-    private async Task ResetJikaPeriodeBaruAsync(CutiSaldo saldo)
+    // Akrual PERTAMA jatuh di ulang tahun kerja ke-1 (TMT + 1 tahun), lalu SETIAP 2 TAHUN
+    // setelah itu (TMT+1, TMT+3, TMT+5, ...) - dikonfirmasi user 2026-08-13, menggantikan
+    // model lama (12 hari/tahun, reset bareng semua orang tiap 1 Januari kalender).
+    // Null = belum genap 1 tahun kerja (belum pernah ada akrual sama sekali).
+    private static DateOnly? TanggalAkrualTerakhir(DateOnly tmt, DateOnly hariIni)
     {
-        var periodeNow = PeriodeSekarang();
-        if (saldo.Periode == periodeNow) return;
+        var pertama = TambahTahunAman(tmt, 1);
+        if (hariIni < pertama) return null;
+        var terakhir = pertama;
+        var berikutnya = TambahTahunAman(pertama, 2);
+        while (berikutnya <= hariIni)
+        {
+            terakhir = berikutnya;
+            berikutnya = TambahTahunAman(berikutnya, 2);
+        }
+        return terakhir;
+    }
+
+    // Tanggal akrual BERIKUTNYA (utk ditampilkan ke karyawan) - akrual pertama kalau belum
+    // pernah lewat, atau +2 tahun dari akrual terakhir yg sudah lewat.
+    private static DateOnly TanggalAkrualBerikutnya(DateOnly tmt, DateOnly hariIni)
+    {
+        var terakhir = TanggalAkrualTerakhir(tmt, hariIni);
+        return terakhir is null ? TambahTahunAman(tmt, 1) : TambahTahunAman(terakhir.Value, 2);
+    }
+
+    // Akrual saldo bila siklus 2-tahunan karyawan (berbasis TMT-nya sendiri) sudah lewat
+    // sejak akrual terakhir. Akrual DI MUKA: sisa lalu + hak/siklus (24), DIBATASI
+    // batas_akumulasi (24) - krn keduanya sama nilainya, ini secara efektif "isi ulang ke
+    // 24" tiap siklus (tak ada carry-over sebagian, konsisten dgn cap yg sudah ada
+    // sebelumnya). Lalu dikurangi cuti bersama (yg mengurangi hak) tahun akrual tsb.
+    // diambil = 0 (siklus baru). Dipanggil saat karyawan membuka/mengajukan cuti - lazy,
+    // tanpa job terjadwal. Karyawan yg belum genap 1 tahun kerja (atau tanpa TMT sama
+    // sekali) TIDAK disentuh - saldo tetap apa adanya (data lama dibiarkan, sesuai
+    // keputusan user: aturan baru berlaku ke depan, bukan dihitung ulang retroaktif).
+    private async Task AkrualJikaSiklusBaruAsync(CutiSaldo saldo)
+    {
+        if (saldo.Tmt is not DateOnly tmt) return;
+        var hariIni = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        var terakhir = TanggalAkrualTerakhir(tmt, hariIni);
+        if (terakhir is null) return;
+        if (saldo.TglCutoff is DateOnly cutoff && cutoff >= terakhir) return;
 
         var setelan = await GetOrInitSetelanAsync();
         var akrual = Math.Min(setelan.BatasAkumulasi, saldo.Saldo + setelan.HakPerTahun);
         if (akrual < 0) akrual = 0;
-        var cbTotal = await CutiBersamaPengurangAsync(TahunPeriode(periodeNow));
-        saldo.Periode = periodeNow;
+        var cbTotal = await CutiBersamaPengurangAsync(terakhir.Value.Year);
+        saldo.Periode = $"{terakhir.Value.Year}-{terakhir.Value.Year + 2}";
         saldo.Akrual = akrual;
         saldo.CutiBersama = cbTotal;
         saldo.Hak = akrual - cbTotal;
         saldo.Diambil = 0;
         saldo.Saldo = akrual - cbTotal;
-        saldo.TglCutoff = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        saldo.TglCutoff = terakhir;
         saldo.DiperbaruiPada = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
@@ -265,7 +302,7 @@ public class CutiService
         {
             return (false, "Saldo cuti belum tersedia untuk akun Anda.", null);
         }
-        await ResetJikaPeriodeBaruAsync(saldo);
+        await AkrualJikaSiklusBaruAsync(saldo);
         var pendingTotal = await _db.CutiPengajuan
             .Where(p => p.IdKaryawan == nik && p.Status == "Menunggu")
             .SumAsync(p => (int?)p.JumlahHari) ?? 0;

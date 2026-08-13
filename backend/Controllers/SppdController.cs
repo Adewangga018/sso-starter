@@ -446,7 +446,8 @@ public class SppdController : ControllerBase
             return Ok(Array.Empty<PegawaiPickerDto>());
         }
 
-        var query = _db.PegawaiSdm.Where(p => p.data_aktif == "Aktif" && p.BAGIAN == bagian);
+        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
+        var query = _db.PegawaiSdm.Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && p.BAGIAN == bagian);
 
         if (!string.IsNullOrWhiteSpace(q))
         {

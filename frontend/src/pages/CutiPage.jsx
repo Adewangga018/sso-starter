@@ -86,7 +86,9 @@ export default function CutiPage() {
     <div className="cuti">
       <div className="cuti__intro">
         <h2 className="cuti__title">Cuti Tahunan</h2>
-        <p className="cuti__sub">Akrual {data.hakPerTahun ?? 12} hari/tahun di muka, menumpuk maksimal {data.batasAkumulasi ?? 24} hari (2 tahun).</p>
+        <p className="cuti__sub">
+          Akrual {data.hakPerTahun ?? 24} hari tiap 2 tahun sekali, di ulang tahun kerja (TMT) Anda — maksimal menumpuk {data.batasAkumulasi ?? 24} hari.
+        </p>
       </div>
 
       {msg && <div className={`cuti__msg cuti__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
@@ -99,6 +101,12 @@ export default function CutiPage() {
           {data.adaData && (
             <div className="cuti__saldo-break">
               Akrual {data.akrual}{data.cutiBersama > 0 ? ` − cuti bersama ${data.cutiBersama}` : ''} = <b>hak {data.hak} hari</b> · terpakai {data.diambil}
+            </div>
+          )}
+          {data.tmt && (
+            <div className="cuti__saldo-break">
+              TMT {formatTgl(data.tmt)}
+              {data.akrualBerikutnya ? ` · akrual berikutnya ${formatTgl(data.akrualBerikutnya)}` : ''}
             </div>
           )}
         </div>

@@ -12,6 +12,7 @@ public record Posisi(int? Band, string? Tingkatan, string? Jabatan);
 public class PosisiResolver
 {
     private readonly InovasiDbContext _db;
+    private readonly ApplicationDbContext _appDb;
 
     // Peta band -> tingkatan (identik dengan grading.band.nama). Satu-satunya sumbu
     // kebenaran level; tidak ada "pjs", "lakma", "plt", dll.
@@ -26,7 +27,11 @@ public class PosisiResolver
         [6] = "Pelaksana Junior",
     };
 
-    public PosisiResolver(InovasiDbContext db) => _db = db;
+    public PosisiResolver(InovasiDbContext db, ApplicationDbContext appDb)
+    {
+        _db = db;
+        _appDb = appDb;
+    }
 
     public static string? TingkatanDariBand(int? band) =>
         band is int b && TingkatanPerBand.TryGetValue(b, out var t) ? t : null;
@@ -58,6 +63,11 @@ public class PosisiResolver
     }
 
     // Posisi grading (band + tingkatan + jabatan struktural bersih) dari penempatan aktif.
+    // Kalau karyawan sedang ditandai PTS (Pemangku Tugas Sementara, grading.pejabat_sementara
+    // - lihat panel Struktur Organisasi), jabatan/band/tingkatan yg dikembalikan adalah
+    // POSISI YANG DIGANTIKAN (diberi awalan "Pjs.") - BUKAN jabatan asli - supaya seluruh
+    // tempat yg pakai resolver ini (header, picker pegawai, dst) konsisten menampilkan
+    // status PTS-nya, bukan cuma panel Struktur Organisasi (diminta user 2026-08-14).
     public async Task<Posisi> ResolveAsync(string? nik)
     {
         if (string.IsNullOrWhiteSpace(nik)) return new Posisi(null, null, null);
@@ -70,12 +80,29 @@ public class PosisiResolver
 
         if (row is null) return new Posisi(null, null, null);
         int band = row.IdBand;
-        return new Posisi(band, TingkatanDariBand(band), row.NamaJabatan);
+        string? jabatan = row.NamaJabatan;
+
+        // JOIN dgn GradingJabatan (BUKAN _db.Jabatan) - keduanya harus dari DbContext yg
+        // SAMA (ApplicationDbContext); EF Core tak bisa menggabung IQueryable lintas
+        // DbContext (InovasiDbContext vs ApplicationDbContext) dlm satu query.
+        var pts = await (
+            from x in _appDb.GradingPejabatSementara
+            join j in _appDb.GradingJabatan on x.IdJabatanPengganti equals j.IdJabatan
+            where x.IdKaryawan == nik && x.Status == "Aktif"
+            select new { j.IdBand, j.NamaJabatan }).FirstOrDefaultAsync();
+        if (pts is not null)
+        {
+            band = pts.IdBand;
+            jabatan = $"Pjs. {pts.NamaJabatan}";
+        }
+
+        return new Posisi(band, TingkatanDariBand(band), jabatan);
     }
 
     // Versi banyak-NIK sekaligus (satu query) - dipakai daftar/picker pegawai supaya
     // tak N+1 query per baris. NIK tanpa penempatan grading aktif (mis. TKNO) tidak
     // muncul di hasil; caller jatuh ke NamaJabatanTerbaik (fallback legacy dibersihkan).
+    // PTS aktif menimpa hasil dasar - sama aturan dgn ResolveAsync di atas.
     public async Task<Dictionary<string, Posisi>> ResolveManyAsync(IReadOnlyCollection<string> niks)
     {
         var result = new Dictionary<string, Posisi>();
@@ -94,6 +121,17 @@ public class PosisiResolver
             if (!result.ContainsKey(r.IdKaryawan))
                 result[r.IdKaryawan] = new Posisi(r.IdBand, TingkatanDariBand(r.IdBand), r.NamaJabatan);
         }
+
+        var ptsRows = await (
+            from x in _appDb.GradingPejabatSementara
+            join j in _appDb.GradingJabatan on x.IdJabatanPengganti equals j.IdJabatan
+            where distinct.Contains(x.IdKaryawan) && x.Status == "Aktif"
+            select new { x.IdKaryawan, j.IdBand, j.NamaJabatan }).ToListAsync();
+        foreach (var r in ptsRows)
+        {
+            result[r.IdKaryawan] = new Posisi(r.IdBand, TingkatanDariBand(r.IdBand), $"Pjs. {r.NamaJabatan}");
+        }
+
         return result;
     }
 
