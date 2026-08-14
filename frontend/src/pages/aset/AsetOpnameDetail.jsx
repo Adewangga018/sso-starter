@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, ScanLine, CheckCircle2 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
-import { tgl, formatLingkupKategori, encodeAsetId, decodeAsetId } from './asetShared'
+import { tgl, formatLingkupKategori, encodeAsetId, decodeAsetId, useConfirm } from './asetShared'
 import './AsetPage.css'
 
 const KONDISI_OPSI = ['Baik', 'Rusak Ringan', 'Rusak Berat', 'Hilang']
@@ -29,6 +29,7 @@ export default function AsetOpnameDetail() {
   const [fotoErr, setFotoErr] = useState('')
   const [saving, setSaving] = useState(false)
   const [lokasiOpsi, setLokasiOpsi] = useState([])
+  const { confirm, ConfirmUI } = useConfirm()
 
   useEffect(() => { api.listLokasiAset().then(setLokasiOpsi).catch(() => setLokasiOpsi([])) }, [])
 
@@ -74,7 +75,7 @@ export default function AsetOpnameDetail() {
   }
 
   async function selesaikan() {
-    if (!window.confirm('Tandai sesi opname ini selesai? Scan baru tidak bisa ditambahkan lagi setelah ini.')) return
+    if (!(await confirm('Tandai sesi opname ini selesai? Scan baru tidak bisa ditambahkan lagi setelah ini.', { danger: true }))) return
     try { await api.selesaikanAsetOpnameSesi(id); setMsg({ t: 'ok', m: 'Sesi opname ditandai selesai.' }); await load() }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal.' }) }
   }
@@ -116,7 +117,7 @@ export default function AsetOpnameDetail() {
                 Scan label QR aset pakai kamera HP (membuka halaman Detail Aset) — salin kode asetnya ke sini. Pilihan di bawah dibatasi ke aset dalam lingkup sesi ini.
               </p>
               <div className="aset__dgrid" style={{ marginBottom: 10 }}>
-                <label className="aset__f">Kode Aset (OBJECTID)
+                <label className="aset__f">Kode Aset
                   <input value={objectId} onChange={(e) => setObjectId(e.target.value)} placeholder="mis. 000123" list="lingkup-aset-opsi" />
                   <datalist id="lingkup-aset-opsi">
                     {lingkupAset.map((a) => (
@@ -190,6 +191,7 @@ export default function AsetOpnameDetail() {
           </div>
         )
       )}
+      {ConfirmUI}
     </div>
   )
 }

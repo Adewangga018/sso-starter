@@ -267,6 +267,11 @@ export const api = {
   // My Asset > Inventaris - sumber datanya GCS.dbo.assets (ERP Aktiva Tetap), read-only.
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getAsetDetail: (objectId) => apiFetch(`/api/aset/${objectId}`),
+  // My Asset > Pendaftaran Aset Baru (MyGCS -> dbo.assets, SSOT tetap ERP).
+  listGroupAssetErp: () => apiFetch('/api/aset/group-asset'),
+  listKelompokErp: (groupAsset) => apiFetch(`/api/aset/kelompok${groupAsset ? `?groupAsset=${encodeURIComponent(groupAsset)}` : ''}`),
+  listKodeCcErp: () => apiFetch('/api/aset/kode-cc'),
+  daftarAsetBaru: (payload) => apiFetch('/api/aset/daftar', { method: 'POST', body: JSON.stringify(payload) }),
   getAsetTidakProduktifList: () => apiFetch('/api/aset/tidak-produktif'),
   buatAsetTidakProduktif: (payload) => apiFetch('/api/aset/tidak-produktif', { method: 'POST', body: JSON.stringify(payload) }),
   ubahAsetTidakProduktif: (id, payload) => apiFetch(`/api/aset/tidak-produktif/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
@@ -289,6 +294,10 @@ export const api = {
   ubahAsetAktivitas: (id, payload) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   hapusAsetAktivitas: (id) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'DELETE' }),
   getAsetClearance: (nik) => apiFetch(`/api/aset/clearance?nik=${encodeURIComponent(nik)}`),
+  // My Asset > Operator Aktivitas (hak terbatas "Catat Aktivitas SAJA", admin-only).
+  listAktivitasOperator: () => apiFetch('/api/aset/aktivitas-operator'),
+  tambahAktivitasOperator: (payload) => apiFetch('/api/aset/aktivitas-operator', { method: 'POST', body: JSON.stringify(payload) }),
+  cabutAktivitasOperator: (id) => apiFetch(`/api/aset/aktivitas-operator/${id}`, { method: 'DELETE' }),
   // My Asset > Riwayat PIC lintas-aset (read-only, filter opsional).
   getAsetRiwayatPic: ({ nik, idUnit, dari, sampai } = {}) => {
     const p = new URLSearchParams()

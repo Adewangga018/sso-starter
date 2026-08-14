@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { LayoutGrid, Boxes, Hash, FileWarning, ScanLine, History, ClipboardCheck } from 'lucide-react'
+import { LayoutGrid, Boxes, Hash, FileWarning, ScanLine, History, ClipboardCheck, PackagePlus, ShieldCheck } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -19,6 +19,7 @@ function buildSections(jumlahJatuhTempo) {
       label: 'My Asset',
       items: [
         { key: 'inventaris', feature: 'my-asset:inventaris', label: 'Aset', icon: Boxes, to: '/my-asset', end: true },
+        { key: 'daftar-baru', feature: 'my-asset:daftar-baru', label: 'Daftar Aset Baru', icon: PackagePlus, to: '/my-asset/daftar' },
         // Dinonaktifkan sementara dari menu (bukan dihapus) - halaman & datanya tetap ada,
         // tetap bisa diakses langsung lewat URL. "Aset Tidak Produktif" nonaktif sejak awal;
         // "Aktivitas Aset" (aktivitas KHUSUS register tidak-produktif) ikut disembunyikan
@@ -38,6 +39,7 @@ function buildSections(jumlahJatuhTempo) {
         { key: 'opname', feature: 'my-asset:opname', label: 'Stock Opname', icon: ScanLine, to: '/my-asset/opname' },
         { key: 'pic-riwayat', feature: 'my-asset:pic-riwayat', label: 'Riwayat PIC', icon: History, to: '/my-asset/pic/riwayat' },
         { key: 'clearance', feature: 'my-asset:clearance', label: 'Clearance Aset', icon: ClipboardCheck, to: '/my-asset/clearance' },
+        { key: 'aktivitas-operator', feature: 'my-asset:aktivitas-operator', label: 'Operator Aktivitas', icon: ShieldCheck, to: '/my-asset/aktivitas-operator' },
       ],
     },
   ]

@@ -156,6 +156,34 @@ public class AsetOverlayController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
+    // ---- Operator Aktivitas (hak terbatas "Catat Aktivitas SAJA", admin-only) ----
+    [HttpGet("aktivitas-operator")]
+    public async Task<ActionResult<IReadOnlyList<AsetAktivitasOperatorDto>>> ListAktivitasOperator()
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        if (!await _overlay.IsAdminAsetAsync(nik)) return Forbid();
+        return Ok(await _overlay.ListAktivitasOperatorAsync(nik));
+    }
+
+    [HttpPost("aktivitas-operator")]
+    public async Task<IActionResult> TambahAktivitasOperator([FromBody] TambahAktivitasOperatorRequest req)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var (ok, error) = await _overlay.TambahAktivitasOperatorAsync(nik, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    [HttpDelete("aktivitas-operator/{id:int}")]
+    public async Task<IActionResult> CabutAktivitasOperator(int id)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var (ok, error) = await _overlay.CabutAktivitasOperatorAsync(nik, id);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
     // Riwayat PIC lintas-aset (READ-ONLY) - filter opsional nik/idUnit/rentang tanggal.
     [HttpGet("pic/riwayat")]
     public async Task<ActionResult<IReadOnlyList<AsetPicRiwayatDto>>> RiwayatPic(

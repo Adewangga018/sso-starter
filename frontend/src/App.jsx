@@ -58,11 +58,13 @@ import AsetAktivitas from './pages/aset/AsetAktivitas'
 import AsetDetail from './pages/aset/AsetDetail'
 import AsetNomorInternal from './pages/aset/AsetNomorInternal'
 import AsetClearance from './pages/aset/AsetClearance'
+import AsetAktivitasOperator from './pages/aset/AsetAktivitasOperator'
 import AsetQrCetak from './pages/aset/AsetQrCetak'
 import AsetDokumenJatuhTempo from './pages/aset/AsetDokumenJatuhTempo'
 import AsetOpname from './pages/aset/AsetOpname'
 import AsetOpnameDetail from './pages/aset/AsetOpnameDetail'
 import AsetPicRiwayat from './pages/aset/AsetPicRiwayat'
+import AsetDaftarBaru from './pages/aset/AsetDaftarBaru'
 import PersetujuanPage from './pages/PersetujuanPage'
 import AbsensiPage from './pages/AbsensiPage'
 import SplPage from './pages/SplPage'
@@ -160,6 +162,7 @@ export default function App() {
 <Route element={<RequireModule moduleKey="my-asset" />}>
               <Route path="/my-asset" element={<MyAssetLayout />}>
                 <Route index element={<Inventaris />} />
+                <Route path="daftar" element={<AsetDaftarBaru />} />
                 <Route path="detail/:objectId" element={<AsetDetail />} />
                 <Route path="nomor-internal" element={<AsetNomorInternal />} />
                 <Route path="clearance" element={<AsetClearance />} />
@@ -169,6 +172,7 @@ export default function App() {
                 <Route path="opname" element={<AsetOpname />} />
                 <Route path="opname/:id" element={<AsetOpnameDetail />} />
                 <Route path="pic/riwayat" element={<AsetPicRiwayat />} />
+                <Route path="aktivitas-operator" element={<AsetAktivitasOperator />} />
               </Route>
             </Route>
 

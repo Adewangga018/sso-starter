@@ -62,7 +62,84 @@ public class AsetOverlayService
             picDtos,
             aktRows.Select(MapAktivitas).ToList(),
             dokRows.Select(MapDokumen).ToList(),
-            isAdmin);
+            isAdmin,
+            isAdmin || await CanCatatAktivitasSajaAsync(nik, objectId, picAktif));
+    }
+
+    // Operator Aktivitas: hak terbatas "Catat Aktivitas SAJA", TIDAK termasuk isAdmin
+    // (yang sudah dicek terpisah sebelum method ini dipanggil). picAktif dioper dari
+    // caller (GetOverlayAsync) supaya tidak query ulang aset.pic_assignment.
+    private async Task<bool> CanCatatAktivitasSajaAsync(string nik, string objectId, AsetPicDto? picAktif)
+    {
+        if (picAktif is null || picAktif.JenisPic != "Orang" || picAktif.Nik != nik) return false;
+        return await IsAktivitasOperatorAsync(nik);
+    }
+
+    // Sama seperti CanCatatAktivitasSajaAsync tapi query PIC-nya fresh (dipakai dari
+    // endpoint yang belum load AsetPicDto, mis. CreateAktivitasAsync).
+    public async Task<bool> CanCatatAktivitasAsync(string nik, string objectId)
+    {
+        if (await _access.IsAsetAdminAsync(nik)) return true;
+        if (!await IsAktivitasOperatorAsync(nik)) return false;
+        return await _db.AsetPicAssignment.AsNoTracking()
+            .AnyAsync(x => x.ObjectId == objectId && x.JenisPic == "Orang" && x.Nik == nik && x.Status == "Aktif");
+    }
+
+    private async Task<bool> IsAktivitasOperatorAsync(string nik) =>
+        await _db.AsetAktivitasOperator.AsNoTracking().AnyAsync(x => x.Nik == nik && x.Aktif);
+
+    // ---- Kelola daftar Operator Aktivitas (admin only) ----
+    public async Task<IReadOnlyList<AsetAktivitasOperatorDto>> ListAktivitasOperatorAsync(string nik)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return Array.Empty<AsetAktivitasOperatorDto>();
+        var rows = await _db.AsetAktivitasOperator.AsNoTracking().OrderBy(x => x.Nama).ToListAsync();
+        if (rows.Count == 0) return Array.Empty<AsetAktivitasOperatorDto>();
+
+        var nikAktifPic = (await _db.AsetPicAssignment.AsNoTracking()
+            .Where(x => x.JenisPic == "Orang" && x.Status == "Aktif" && x.Nik != null)
+            .Select(x => x.Nik!)
+            .Distinct().ToListAsync()).ToHashSet();
+
+        return rows.Select(x => new AsetAktivitasOperatorDto(x.Id, x.Nik, x.Nama, x.Aktif, nikAktifPic.Contains(x.Nik), x.TglDibuat)).ToList();
+    }
+
+    // Syarat: pegawai yg mau digrant HARUS sudah jadi PIC aktif (JenisPic 'Orang') atas
+    // aset apa pun saat ini - sesuai permintaan user, bukan tebakan.
+    public async Task<(bool Ok, string? Error)> TambahAktivitasOperatorAsync(string nik, TambahAktivitasOperatorRequest req)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
+        if (string.IsNullOrWhiteSpace(req.Nik) || string.IsNullOrWhiteSpace(req.Nama))
+            return (false, "Pegawai wajib dipilih.");
+        var targetNik = req.Nik.Trim();
+
+        var masihPic = await _db.AsetPicAssignment.AsNoTracking()
+            .AnyAsync(x => x.JenisPic == "Orang" && x.Nik == targetNik && x.Status == "Aktif");
+        if (!masihPic) return (false, "Pegawai ini belum ditunjuk sebagai PIC aset apa pun - tetapkan PIC-nya dulu.");
+
+        var row = await _db.AsetAktivitasOperator.FirstOrDefaultAsync(x => x.Nik == targetNik);
+        if (row is null)
+        {
+            row = new AsetAktivitasOperator { Nik = targetNik, IdPembuat = nik, TglDibuat = DateTime.UtcNow };
+            _db.AsetAktivitasOperator.Add(row);
+        }
+        row.Nama = req.Nama.Trim();
+        row.Aktif = true;
+        row.IdPengubah = nik;
+        row.TglDiubah = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    public async Task<(bool Ok, string? Error)> CabutAktivitasOperatorAsync(string nik, int id)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
+        var row = await _db.AsetAktivitasOperator.FirstOrDefaultAsync(x => x.Id == id);
+        if (row is null) return (false, "Data tidak ditemukan.");
+        row.Aktif = false;
+        row.IdPengubah = nik;
+        row.TglDiubah = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return (true, null);
     }
 
     // Historis: SELALU insert baris baru (bukan upsert), supaya riwayat kondisi lama tetap ada.
@@ -233,9 +310,12 @@ public class AsetOverlayService
         return (true, null);
     }
 
+    // Boleh dibuat oleh Admin Aset ATAU Operator Aktivitas yang jadi PIC aktif aset ini -
+    // Ubah/Hapus (di bawah) TETAP admin-only, sesuai batasan "catat aktivitas SAJA".
     public async Task<(bool Ok, string? Error, long Id)> CreateAktivitasAsync(string nik, string objectId, SimpanAktivitasUmumRequest req)
     {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, 0);
+        if (!await CanCatatAktivitasAsync(nik, objectId))
+            return (false, "Hanya Admin Aset, atau PIC aset ini yang sudah ditunjuk sebagai Operator Aktivitas, yang dapat mencatat aktivitas.", 0);
         if (string.IsNullOrWhiteSpace(req.Jenis)) return (false, "Jenis aktivitas wajib diisi.", 0);
         if (!await AsetExistsAsync(objectId)) return (false, "Aset tidak ditemukan.", 0);
 

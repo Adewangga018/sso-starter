@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Search, Loader2, UserMinus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../../lib/api'
-import { tgl, encodeAsetId } from './asetShared'
+import { tgl, encodeAsetId, useConfirm } from './asetShared'
 import AsetPegawaiPicker from './AsetPegawaiPicker'
 import './AsetPage.css'
 
@@ -16,6 +16,7 @@ export default function AsetClearance() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState(null)
+  const { confirm, ConfirmUI } = useConfirm()
 
   async function cariNik(targetNik) {
     if (!targetNik.trim()) return
@@ -31,7 +32,7 @@ export default function AsetClearance() {
   }
 
   async function kembalikan(item) {
-    if (!window.confirm(`Tandai aset "${item.namaAset || item.objectId}" sudah dikembalikan?`)) return
+    if (!(await confirm(`Tandai aset "${item.namaAset || item.objectId}" sudah dikembalikan? Aset ini akan hilang dari daftar tanggungan karyawan ini.`))) return
     try {
       await api.kembalikanAsetPic(item.idAssignment)
       setMsg({ t: 'ok', m: 'Aset ditandai sudah dikembalikan.' })
@@ -83,7 +84,7 @@ export default function AsetClearance() {
                       <td className="aset__muted">{tgl(item.tglMulai)}</td>
                       <td className="aset__muted">{item.status}</td>
                       <td>
-                        <button type="button" className="aset__ibtn" title="Tandai dikembalikan" onClick={() => kembalikan(item)}><UserMinus size={15} /></button>
+                        <button type="button" className="aset__ibtn" title="Tandai dikembalikan" aria-label="Tandai dikembalikan" onClick={() => kembalikan(item)}><UserMinus size={15} /></button>
                       </td>
                     </tr>
                   ))}
@@ -95,6 +96,7 @@ export default function AsetClearance() {
       )}
 
       {pickerOpen && <AsetPegawaiPicker onClose={() => setPickerOpen(false)} onPick={pilihPegawai} />}
+      {ConfirmUI}
     </div>
   )
 }
