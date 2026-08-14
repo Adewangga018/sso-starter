@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import {
-  ArrowLeft, Loader2, Pencil, UserPlus, UserMinus, Plus, Trash2, Printer, User, Building2, FileText, Upload,
+  ArrowLeft, Loader2, Pencil, UserPlus, UserMinus, Plus, Trash2, Printer, User, Building2, FileText, Upload, X, FileCheck2,
 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import {
   rupiah, tgl, KondisiBadge, PicBadge, AktivitasStatusBadge, DokumenStatusBadge,
   KondisiFormModal, PicFormModal, AktivitasUmumFormModal, NomorInternalFormModal, DokumenFormModal,
-  encodeAsetId, decodeAsetId,
+  encodeAsetId, decodeAsetId, useConfirm,
 } from './asetShared'
 import './AsetPage.css'
 
@@ -25,6 +25,14 @@ export default function AsetDetail() {
   const [qr, setQr] = useState('')
   const [modal, setModal] = useState(null) // 'kondisi' | 'pic' | {mode:'aktivitas-buat'|'aktivitas-ubah', row?}
   const [sesiAktif, setSesiAktif] = useState([])
+  const [sesiAktifDicek, setSesiAktifDicek] = useState(false)
+  const { confirm, ConfirmUI } = useConfirm()
+  // Riwayat (Kondisi/PIC/Aktivitas) dibatasi 5 baris awal supaya halaman tidak jadi
+  // sangat panjang di aset yang sudah lama - tombol "Lihat semua" membuka sisanya.
+  const BATAS_RIWAYAT = 5
+  const [showSemuaKondisi, setShowSemuaKondisi] = useState(false)
+  const [showSemuaPic, setShowSemuaPic] = useState(false)
+  const [showSemuaAktivitas, setShowSemuaAktivitas] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -42,18 +50,26 @@ export default function AsetDetail() {
   }, [objectId])
 
   const isAdmin = overlay?.isAdminAset ?? false
+  // Admin Aset penuh, ATAU Operator Aktivitas yang jadi PIC aset ini - hanya boleh
+  // MENCATAT aktivitas baru (Ubah/Hapus tetap admin-only, lihat AsetOverlayService).
+  const canCatatAktivitas = overlay?.canCatatAktivitas ?? false
 
   // Untuk tombol jalan pintas "Catat di Opname" - sesi yang masih berjalan saja.
+  // sesiAktifDicek dipakai supaya pesan "belum ada sesi" tidak sempat kelihatan
+  // sebelum daftar sesi selesai dimuat.
   useEffect(() => {
     if (!isAdmin) return
-    api.getAsetOpnameSesiList().then((rows) => setSesiAktif(rows.filter((s) => s.status === 'Berjalan'))).catch(() => setSesiAktif([]))
+    api.getAsetOpnameSesiList()
+      .then((rows) => setSesiAktif(rows.filter((s) => s.status === 'Berjalan')))
+      .catch(() => setSesiAktif([]))
+      .finally(() => setSesiAktifDicek(true))
   }, [isAdmin])
 
   async function simpanKondisi(payload) { await api.setAsetKondisi(objectId, payload); setModal(null); setMsg({ t: 'ok', m: 'Kondisi dicatat.' }); await load() }
   async function simpanNomor(payload) { await api.setAsetNomorInternal(objectId, payload); setModal(null); setMsg({ t: 'ok', m: 'Nomor aset internal disimpan.' }); await load() }
   async function assignPic(payload) { await api.assignAsetPic(objectId, payload); setModal(null); setMsg({ t: 'ok', m: 'PIC ditetapkan.' }); await load() }
   async function kembalikanPic(id) {
-    if (!window.confirm('Tandai PIC ini sudah mengembalikan aset?')) return
+    if (!(await confirm('Tandai PIC ini sudah mengembalikan aset? Status PIC akan berubah jadi "Dikembalikan".'))) return
     try { await api.kembalikanAsetPic(id); setMsg({ t: 'ok', m: 'PIC ditandai sudah mengembalikan aset.' }); await load() }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal.' }) }
   }
@@ -63,7 +79,7 @@ export default function AsetDetail() {
     setModal(null); setMsg({ t: 'ok', m: 'Aktivitas disimpan.' }); await load()
   }
   async function hapusAktivitas(row) {
-    if (!window.confirm(`Hapus aktivitas "${row.jenis}"?`)) return
+    if (!(await confirm(`Hapus aktivitas "${row.jenis}"? Data akan hilang permanen.`, { danger: true }))) return
     try { await api.hapusAsetAktivitas(row.id); setMsg({ t: 'ok', m: 'Aktivitas dihapus.' }); await load() }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal menghapus.' }) }
   }
@@ -74,7 +90,7 @@ export default function AsetDetail() {
     await load()
   }
   async function hapusDokumen(row) {
-    if (!window.confirm(`Hapus dokumen "${row.jenisDokumen}"?`)) return
+    if (!(await confirm(`Hapus dokumen "${row.jenisDokumen}"? Berkas & data akan hilang permanen.`, { danger: true }))) return
     try {
       await api.hapusAsetDokumen(row.id)
       setMsg({ t: 'ok', m: 'Dokumen dihapus.' })
@@ -102,11 +118,19 @@ export default function AsetDetail() {
 
       <div className="aset__head">
         <div>
-          <h2 className="aset__title">{aset.nama || aset.objectId}</h2>
+          <h2 className="aset__title">
+            {aset.nama || aset.objectId}
+            {aset.klasifikasi && <span className="aset__badge aset__badge--info" title="Aset yang disetujui untuk dijual sesuai keputusan pemegang saham" style={{ marginLeft: 10, verticalAlign: 'middle' }}>{aset.klasifikasi}</span>}
+          </h2>
           <p className="aset__sub">
             {aset.objectId}{aset.nomorAset ? ` · No. Internal: ${aset.nomorAset}` : ''} · {aset.kategori || '—'} · {aset.kelompok || '—'}
           </p>
         </div>
+        {aset.klasifikasiDetail && (
+          <button type="button" className="aset__btn aset__btn--highlight" onClick={() => setModal('klasifikasi')}>
+            <FileCheck2 size={14} /> Detail {aset.klasifikasi || 'Klasifikasi'}
+          </button>
+        )}
         {sesiAktif.length === 1 && (
           <Link className="aset__btn aset__btn--ghost" to={`/my-asset/opname/${sesiAktif[0].id}?objectId=${encodeURIComponent(encodeAsetId(aset.objectId))}`}>
             Catat di Opname "{sesiAktif[0].namaSesi}"
@@ -118,6 +142,9 @@ export default function AsetDetail() {
             {sesiAktif.map((s) => <option key={s.id} value={s.id}>{s.namaSesi}</option>)}
           </select>
         )}
+        {isAdmin && sesiAktifDicek && sesiAktif.length === 0 && (
+          <span className="aset__hint--warn">Belum ada sesi Stock Opname yang berjalan.</span>
+        )}
       </div>
 
       {msg && <div className={`aset__msg aset__msg--${msg.t === 'ok' ? 'ok' : 'err'}`}>{msg.m}</div>}
@@ -126,7 +153,7 @@ export default function AsetDetail() {
         <div className="aset__card aset__card--wide">
           <div className="aset__mhead">
             <h3 className="aset__card-title">Info Aset (ERP) & Kondisi</h3>
-            {isAdmin && <button type="button" className="aset__ibtn" title="Catat Kondisi" onClick={() => setModal('kondisi')}><Pencil size={14} /></button>}
+            {isAdmin && <button type="button" className="aset__ibtn" title="Catat Kondisi" aria-label="Catat Kondisi" onClick={() => setModal('kondisi')}><Pencil size={14} /></button>}
           </div>
           <div className="aset__dgrid">
             <div><span>Lokasi</span><b>{aset.lokasi || '—'}</b></div>
@@ -154,7 +181,7 @@ export default function AsetDetail() {
         <div className="aset__card">
           <div className="aset__mhead">
             <h3 className="aset__card-title">Nomor Aset Internal</h3>
-            {isAdmin && <button type="button" className="aset__ibtn" title="Ubah Nomor Aset" onClick={() => setModal('nomor')}><Pencil size={14} /></button>}
+            {isAdmin && <button type="button" className="aset__ibtn" title="Ubah Nomor Aset" aria-label="Ubah Nomor Aset" onClick={() => setModal('nomor')}><Pencil size={14} /></button>}
           </div>
           {overlay?.nomorInternal ? (
             <>
@@ -169,8 +196,8 @@ export default function AsetDetail() {
             <h3 className="aset__card-title">PIC Saat Ini</h3>
             {isAdmin && (
               overlay?.picAktif
-                ? <button type="button" className="aset__ibtn" title="Kembalikan / lepas PIC" onClick={() => kembalikanPic(overlay.picAktif.id)}><UserMinus size={14} /></button>
-                : <button type="button" className="aset__ibtn" title="Tetapkan PIC" onClick={() => setModal('pic')}><UserPlus size={14} /></button>
+                ? <button type="button" className="aset__ibtn" title="Kembalikan / lepas PIC" aria-label="Kembalikan / lepas PIC" onClick={() => kembalikanPic(overlay.picAktif.id)}><UserMinus size={14} /></button>
+                : <button type="button" className="aset__ibtn" title="Tetapkan PIC" aria-label="Tetapkan PIC" onClick={() => setModal('pic')}><UserPlus size={14} /></button>
             )}
           </div>
           {overlay?.picAktif ? (
@@ -196,13 +223,18 @@ export default function AsetDetail() {
         <div className="aset__card">
           <h3 className="aset__card-title">Riwayat Kondisi</h3>
           <div className="aset__mlist">
-            {overlay.riwayatKondisi.map((k) => (
+            {(showSemuaKondisi ? overlay.riwayatKondisi : overlay.riwayatKondisi.slice(0, BATAS_RIWAYAT)).map((k) => (
               <div className="aset__mrow" key={k.id}>
                 <span>{tgl(k.tglDibuat)}{k.catatan ? <small> — {k.catatan}</small> : null}</span>
                 <KondisiBadge kondisi={k.kondisi} />
               </div>
             ))}
           </div>
+          {!showSemuaKondisi && overlay.riwayatKondisi.length > BATAS_RIWAYAT && (
+            <button type="button" className="aset__btn aset__btn--ghost" style={{ marginTop: 10 }} onClick={() => setShowSemuaKondisi(true)}>
+              Lihat semua ({overlay.riwayatKondisi.length})
+            </button>
+          )}
         </div>
       )}
 
@@ -210,7 +242,7 @@ export default function AsetDetail() {
         <div className="aset__card">
           <h3 className="aset__card-title">Riwayat PIC</h3>
           <div className="aset__mlist">
-            {overlay.riwayatPic.map((p) => (
+            {(showSemuaPic ? overlay.riwayatPic : overlay.riwayatPic.slice(0, BATAS_RIWAYAT)).map((p) => (
               <div className="aset__mrow" key={p.id}>
                 <span>
                   <b>{p.jenisPic === 'Bagian' ? p.namaUnit : p.namaPic}</b>
@@ -220,19 +252,24 @@ export default function AsetDetail() {
               </div>
             ))}
           </div>
+          {!showSemuaPic && overlay.riwayatPic.length > BATAS_RIWAYAT && (
+            <button type="button" className="aset__btn aset__btn--ghost" style={{ marginTop: 10 }} onClick={() => setShowSemuaPic(true)}>
+              Lihat semua ({overlay.riwayatPic.length})
+            </button>
+          )}
         </div>
       )}
 
       <div className="aset__card">
         <div className="aset__mhead">
           <h3 className="aset__card-title">Riwayat Aktivitas</h3>
-          {isAdmin && <button type="button" className="aset__btn" onClick={() => setModal({ mode: 'aktivitas-buat' })}><Plus size={14} /> Catat Aktivitas</button>}
+          {canCatatAktivitas && <button type="button" className="aset__btn" onClick={() => setModal({ mode: 'aktivitas-buat' })}><Plus size={14} /> Catat Aktivitas</button>}
         </div>
         {!overlay || overlay.aktivitas.length === 0 ? (
           <div className="aset__muted" style={{ fontSize: '0.84rem' }}>Belum ada aktivitas tercatat.</div>
         ) : (
           <div className="aset__mlist">
-            {overlay.aktivitas.map((a) => (
+            {(showSemuaAktivitas ? overlay.aktivitas : overlay.aktivitas.slice(0, BATAS_RIWAYAT)).map((a) => (
               <div className="aset__mrow" key={a.id}>
                 <span>
                   <b>{a.jenis}</b> · {tgl(a.tglAktivitas)}
@@ -244,14 +281,19 @@ export default function AsetDetail() {
                   <AktivitasStatusBadge status={a.status} />
                   {isAdmin && (
                     <div className="aset__row-act">
-                      <button type="button" className="aset__ibtn" title="Ubah" onClick={() => setModal({ mode: 'aktivitas-ubah', row: a })}><Pencil size={13} /></button>
-                      <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" onClick={() => hapusAktivitas(a)}><Trash2 size={13} /></button>
+                      <button type="button" className="aset__ibtn" title="Ubah" aria-label="Ubah" onClick={() => setModal({ mode: 'aktivitas-ubah', row: a })}><Pencil size={13} /></button>
+                      <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" aria-label="Hapus" onClick={() => hapusAktivitas(a)}><Trash2 size={13} /></button>
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+        )}
+        {overlay && !showSemuaAktivitas && overlay.aktivitas.length > BATAS_RIWAYAT && (
+          <button type="button" className="aset__btn aset__btn--ghost" style={{ marginTop: 10 }} onClick={() => setShowSemuaAktivitas(true)}>
+            Lihat semua ({overlay.aktivitas.length})
+          </button>
         )}
       </div>
 
@@ -275,7 +317,7 @@ export default function AsetDetail() {
                   <DokumenStatusBadge status={d.status} />
                   {isAdmin && (
                     <div className="aset__row-act">
-                      <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" onClick={() => hapusDokumen(d)}><Trash2 size={13} /></button>
+                      <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" aria-label="Hapus dokumen" onClick={() => hapusDokumen(d)}><Trash2 size={13} /></button>
                     </div>
                   )}
                 </div>
@@ -291,6 +333,41 @@ export default function AsetDetail() {
       {modal === 'pic' && <PicFormModal onClose={() => setModal(null)} onSubmit={assignPic} />}
       {modal?.mode === 'aktivitas-buat' && <AktivitasUmumFormModal groupAssetKode={aset.kategoriKode} onClose={() => setModal(null)} onSubmit={simpanAktivitas} />}
       {modal?.mode === 'aktivitas-ubah' && <AktivitasUmumFormModal initial={modal.row} groupAssetKode={aset.kategoriKode} onClose={() => setModal(null)} onSubmit={simpanAktivitas} />}
+      {modal === 'klasifikasi' && <KlasifikasiDetailModal aset={aset} onClose={() => setModal(null)} />}
+      {ConfirmUI}
+    </div>
+  )
+}
+
+// Popup read-only (bukan form) - detail sertifikat/appraisal/perijinan ke pemegang saham
+// utk aset berklasifikasi "Tidak Bergerak", dipisah dari halaman utama Detail Aset supaya
+// tidak memenuhi halaman (cuma tampil lewat tombol "Detail Tidak Bergerak").
+function KlasifikasiDetailModal({ aset, onClose }) {
+  const d = aset.klasifikasiDetail
+  return (
+    <div className="aset__overlay" onClick={onClose}>
+      <div className="aset__modal" onClick={(e) => e.stopPropagation()}>
+        <div className="aset__modal-head"><h3>Detail {aset.klasifikasi || 'Klasifikasi'}</h3><button type="button" className="aset__x" aria-label="Tutup" onClick={onClose}><X size={18} /></button></div>
+        <div className="aset__modal-body">
+          <div className="aset__dgrid">
+            <div><span>Sertifikat Hak</span><b>{d.sertifikatHak || '—'}</b></div>
+            <div><span>No. Sertifikat</span><b>{d.sertifikatNo || '—'}</b></div>
+            <div><span>Tahun Sertifikat</span><b>{d.sertifikatTahun || '—'}</b></div>
+            <div><span>Jangka Waktu</span><b>{d.sertifikatJangkaWaktu || '—'}</b></div>
+            <div><span>Status Jaminan</span><b>{d.statusJaminan || '—'}</b></div>
+            <div><span>Nilai Pasar</span><b>{d.nilaiPasar != null ? rupiah(d.nilaiPasar) : '—'}</b></div>
+            <div><span>Nilai Appraisal</span><b>{d.nilaiAppraisal != null ? rupiah(d.nilaiAppraisal) : '—'}</b></div>
+            <div><span>KJPP</span><b>{d.kjpp || '—'}</b></div>
+            <div><span>Tahun Appraisal</span><b>{d.kjppTahun || '—'}</b></div>
+            <div><span>No. Laporan Appraisal</span><b>{d.kjppNo || '—'}</b></div>
+          </div>
+          {d.keteranganPemegangSaham && <p className="aset__muted" style={{ marginTop: 10 }}>Perijinan ke Pemegang Saham: {d.keteranganPemegangSaham}</p>}
+          {d.catatan && <p className="aset__muted" style={{ fontSize: '0.74rem' }}>Catatan pencocokan: {d.catatan}</p>}
+        </div>
+        <div className="aset__modal-foot">
+          <button type="button" className="aset__btn aset__btn--ghost" onClick={onClose}>Tutup</button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -43,9 +43,45 @@ public record AsetErpDto(
     DateOnly? TglPerolehan,
     decimal? MasaManfaatBulan, // dbo.assets.MASA, satuan bulan
     string? PicSaatIni,    // nama PIC aktif (orang atau bagian) dari aset.pic_assignment, buat filter
-    string? Catatan);
+    string? Klasifikasi,   // status tambahan dari aset.klasifikasi (mis. "Tidak Bergerak"), TANPA ubah skema dbo.assets
+    string? Catatan,
+    AsetKlasifikasiDetailDto? KlasifikasiDetail); // detail sertifikat/appraisal/perijinan - null kalau tidak ada/belum dilengkapi
+
+// Detail sertifikat/appraisal/perijinan ke pemegang saham - khusus aset berklasifikasi
+// "Tidak Bergerak" (disetujui dijual sesuai keputusan pemegang saham). aset.klasifikasi.
+public record AsetKlasifikasiDetailDto(
+    string? Catatan,
+    string? SertifikatHak,
+    string? SertifikatJangkaWaktu,
+    string? SertifikatNo,
+    string? SertifikatTahun,
+    decimal? NilaiPasar,
+    decimal? NilaiAppraisal,
+    string? StatusJaminan,
+    string? Kjpp,
+    string? KjppTahun,
+    string? KjppNo,
+    string? KeteranganPemegangSaham);
 
 public record AsetErpListDto(IReadOnlyList<AsetErpDto> Items, int Total);
+
+// ---- Pendaftaran aset baru (MyGCS -> dbo.assets, SSOT tetap ERP). Lihat catatan
+// arsitektur lengkap di AsetService.DaftarAsetBaruAsync. HANYA identitas dasar yang
+// diisi dari MyGCS - nilai perolehan/nilai buku/masa manfaat/dst TETAP kosong, diisi
+// akunting langsung di ERP.
+public record AsetGroupDto(string Kode, string Nama);
+public record AsetKelompokDto(string Kode, string Nama);
+public record AsetKodeCcDto(string KodeCc, string Wilayah);
+
+public record SimpanAsetBaruRequest(
+    string Nama,
+    string Lokasi,
+    string GroupAsset,
+    string Kelompok,
+    DateOnly Tanggal,
+    string KodeCc,
+    string Satuan,
+    string? NomorInternal); // opsional - kalau diisi, langsung tersimpan ke aset.nomor_internal (MyGCS)
 
 public record AsetMaintenanceDto(
     long Id,

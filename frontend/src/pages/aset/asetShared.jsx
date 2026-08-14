@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Loader2, Search } from 'lucide-react'
+import { X, Loader2, Search, AlertTriangle } from 'lucide-react'
 import { api } from '../../lib/api'
 import AsetPegawaiPicker from './AsetPegawaiPicker'
 import './AsetPage.css'
@@ -53,6 +53,46 @@ export function decodeAsetId(encoded) {
   } catch { return encoded }
 }
 
+// Pengganti window.confirm() bawaan browser, sesuai gaya visual aplikasi (dan bisa
+// menjelaskan akibat aksi, bukan cuma "Yakin?"). Pakai: const { confirm, ConfirmUI } =
+// useConfirm(); ... if (!(await confirm('Hapus X? Tidak bisa dibatalkan.', { danger: true }))) return;
+// ... lalu render {ConfirmUI} sekali di JSX halaman.
+export function useConfirm() {
+  const [state, setState] = useState(null) // { message, danger, resolve }
+
+  const confirm = (message, opts = {}) =>
+    new Promise((resolve) => setState({ message, danger: opts.danger ?? false, resolve }))
+
+  function selesai(hasil) {
+    state?.resolve(hasil)
+    setState(null)
+  }
+
+  const ConfirmUI = state ? (
+    <div className="aset__overlay" onClick={() => selesai(false)}>
+      <div className="aset__modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <div className="aset__modal-head">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={18} color={state.danger ? '#b03636' : undefined} /> Konfirmasi
+          </h3>
+          <button type="button" className="aset__x" aria-label="Tutup" onClick={() => selesai(false)}><X size={18} /></button>
+        </div>
+        <div className="aset__modal-body" style={{ display: 'block' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--gcs-ink)' }}>{state.message}</p>
+        </div>
+        <div className="aset__modal-foot">
+          <button type="button" className="aset__btn aset__btn--ghost" onClick={() => selesai(false)}>Batal</button>
+          <button type="button" className={`aset__btn ${state.danger ? 'aset__btn--danger' : ''}`} onClick={() => selesai(true)} autoFocus>
+            {state.danger ? 'Ya, Hapus' : 'Ya, Lanjutkan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return { confirm, ConfirmUI }
+}
+
 export function KondisiBadge({ kondisi }) {
   const map = { Baik: 'ok', 'Rusak Ringan': 'warn', 'Rusak Berat': 'bad', Hilang: 'bad' }
   return <span className={`aset__badge aset__badge--${map[kondisi] || 'off'}`}>{kondisi}</span>
@@ -70,7 +110,7 @@ function Modal({ title, onClose, children, onSubmit, saving, err }) {
   return (
     <div className="aset__overlay" onClick={onClose}>
       <form className="aset__modal" onClick={(e) => e.stopPropagation()} onSubmit={onSubmit}>
-        <div className="aset__modal-head"><h3>{title}</h3><button type="button" className="aset__x" onClick={onClose}><X size={18} /></button></div>
+        <div className="aset__modal-head"><h3>{title}</h3><button type="button" className="aset__x" aria-label="Tutup" onClick={onClose}><X size={18} /></button></div>
         <div className="aset__modal-body">
           {err && <div className="aset__err">{err}</div>}
           {children}
@@ -260,7 +300,7 @@ export function TidakProduktifFormModal({ initial, onClose, onSubmit }) {
 const EMPTY_AKTIVITAS = { idAset: '', jenis: 'Kunjungan Calon Pembeli', tglAktivitas: '', deskripsi: '', pihakTerkait: '', nilaiNego: '' }
 
 const AKTIVITAS_JENIS_SUGGESTIONS = [
-  'Pembersihan Lingkungan', 'Kunjungan Calon Pembeli', 'Negosiasi Harga', 'Perawatan/Keamanan', 'Lainnya',
+  'Pembersihan Lingkungan', 'Kunjungan Calon Pembeli', 'Negosiasi Harga', 'Negosiasi dengan Customer', 'Perawatan/Keamanan', 'Lainnya',
 ]
 
 export function AktivitasFormModal({ initial, daftarAset, onClose, onSubmit }) {

@@ -1,9 +1,13 @@
 namespace SsoBackend.Models.Gcs;
 
 // Maps to the existing dbo.assets table - modul Aktiva Tetap pada ERP (penyusutan,
-// akuisisi, GL). Read-only: aplikasi ini TIDAK PERNAH menulis ke sini - nilai buku &
-// penyusutan dikelola sepenuhnya oleh akunting/ERP. Hanya subset kolom yang relevan
-// untuk ditampilkan di My Asset > Inventaris yang dipetakan (bukan semua 44 kolom).
+// akuisisi, GL). SEBAGIAN BESAR read-only - satu-satunya tulisan yang MyGCS lakukan ke
+// tabel ini adalah pendaftaran aset baru (AsetService.DaftarAsetBaruAsync), yang HANYA
+// mengisi identitas dasar (nama/lokasi/kategori/tanggal/satuan) + beberapa kolom status
+// dengan nilai default yang meniru pola mayoritas data existing (lihat catatan di
+// DaftarAsetBaruAsync). Nilai buku, penyusutan, & field akuntansi lain TETAP domain
+// akunting/ERP - MyGCS tidak pernah mengisi/mengubahnya. Hanya subset kolom yang relevan
+// untuk My Asset yang dipetakan (bukan semua 44 kolom).
 public class AsetErp
 {
     public string OBJECTID { get; set; } = string.Empty;
@@ -19,6 +23,8 @@ public class AsetErp
     public string? NOPOL { get; set; }
     public string? STATUS { get; set; }
     public string? AKTIF { get; set; }
+    public string? PROSES { get; set; }
+    public string? METODE { get; set; }
     public decimal? NILAI_PEROLEHAN { get; set; }
     public decimal? NILAI_BUKU { get; set; }
     public decimal? AKUMULASI { get; set; }

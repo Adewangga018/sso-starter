@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Plus, Pencil, Trash2, PackageX } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
-import { TidakProduktifFormModal, rupiah, tgl } from './asetShared'
+import { TidakProduktifFormModal, rupiah, tgl, useConfirm } from './asetShared'
 import './AsetPage.css'
 
 export default function AsetTidakProduktif() {
@@ -11,6 +11,7 @@ export default function AsetTidakProduktif() {
   const [msg, setMsg] = useState(null)
   const [modal, setModal] = useState(null) // {mode:'buat'|'ubah', row?}
   const [filterJenis, setFilterJenis] = useState('Semua')
+  const { confirm, ConfirmUI } = useConfirm()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -31,7 +32,7 @@ export default function AsetTidakProduktif() {
   async function buat(payload) { await api.buatAsetTidakProduktif(payload); setModal(null); setMsg({ t: 'ok', m: 'Data ditambahkan.' }); await load() }
   async function ubah(payload) { await api.ubahAsetTidakProduktif(modal.row.id, payload); setModal(null); setMsg({ t: 'ok', m: 'Data diperbarui.' }); await load() }
   async function hapus(row) {
-    if (!window.confirm(`Hapus data "${row.nama || row.jenis}"?`)) return
+    if (!(await confirm(`Hapus data "${row.nama || row.jenis}"? Data akan hilang permanen.`, { danger: true }))) return
     try { await api.hapusAsetTidakProduktif(row.id); setMsg({ t: 'ok', m: 'Data dihapus.' }); await load() }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal menghapus.' }) }
   }
@@ -123,8 +124,8 @@ export default function AsetTidakProduktif() {
                     <td>
                       {isAdmin && (
                         <div className="aset__row-act">
-                          <button type="button" className="aset__ibtn" title="Ubah" onClick={() => setModal({ mode: 'ubah', row: r })}><Pencil size={15} /></button>
-                          <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" onClick={() => hapus(r)}><Trash2 size={15} /></button>
+                          <button type="button" className="aset__ibtn" title="Ubah" aria-label="Ubah" onClick={() => setModal({ mode: 'ubah', row: r })}><Pencil size={15} /></button>
+                          <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" aria-label="Hapus" onClick={() => hapus(r)}><Trash2 size={15} /></button>
                         </div>
                       )}
                     </td>
@@ -137,6 +138,7 @@ export default function AsetTidakProduktif() {
 
       {modal?.mode === 'buat' && <TidakProduktifFormModal onClose={() => setModal(null)} onSubmit={buat} />}
       {modal?.mode === 'ubah' && <TidakProduktifFormModal initial={modal.row} onClose={() => setModal(null)} onSubmit={ubah} />}
+      {ConfirmUI}
     </div>
   )
 }

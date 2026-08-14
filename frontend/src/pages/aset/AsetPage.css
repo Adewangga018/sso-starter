@@ -1,4 +1,12 @@
-.aset { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.aset {
+  max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;
+  /* Override lokal (bukan ubah index.css - supaya tidak mempengaruhi modul lain):
+     --gcs-text-muted bawaan (~2.8-3.2:1 di atas putih) di bawah standar keterbacaan
+     WCAG AA 4.5:1 untuk teks ukuran normal. Warna ini dipakai luas di My Asset lewat
+     kelas .aset__muted (tanggal, lokasi, kategori, dst) - #6e625e solid memberi ~5.9:1,
+     tetap satu keluarga warna coklat-abu dengan tema aplikasi. */
+  --gcs-text-muted: #6e625e;
+}
 .aset__back { display: inline-flex; align-items: center; gap: 6px; color: var(--gcs-text-muted); font-size: 0.84rem; text-decoration: none; width: fit-content; }
 .aset__back:hover { color: var(--gcs-green-700); }
 .aset__detailgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
@@ -9,6 +17,12 @@
 .aset__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .aset__title { font-size: 1.35rem; color: var(--gcs-green-900); margin: 0 0 2px; }
 .aset__sub { color: var(--gcs-text-muted); font-size: 0.9rem; margin: 0; }
+
+.aset__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.aset__stat { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.aset__stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
+.aset__stat-value { font-size: 1.35rem; font-weight: 800; color: var(--gcs-green-900); line-height: 1.2; }
+
 .aset__total { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; background: linear-gradient(135deg, var(--gcs-green-900), var(--gcs-green-700)); border-radius: 12px; padding: 12px 18px; }
 .aset__total--wide { width: 100%; }
 .aset__total-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: rgba(255,255,255,0.8); }
@@ -43,6 +57,10 @@
 .aset__table th { text-align: left; padding: 10px 12px; background: var(--gcs-bg); color: var(--gcs-green-900); font-weight: 700; white-space: nowrap; border-bottom: 1px solid var(--gcs-border); }
 .aset__table td { padding: 9px 12px; border-bottom: 1px solid var(--gcs-border); vertical-align: middle; }
 .aset__table tr:last-child td { border-bottom: none; }
+.aset__sortbtn { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; }
+.aset__sortbtn:hover { color: var(--gcs-green-700); }
+.aset__sortbtn-icon { opacity: 0.4; }
+.aset__sortbtn:hover .aset__sortbtn-icon { opacity: 0.8; }
 .aset__kode { font-weight: 700; color: var(--gcs-green-700); }
 .aset__kode a { color: inherit; text-decoration: none; }
 .aset__kode a:hover { text-decoration: underline; }
@@ -64,6 +82,12 @@
 .aset__btn:disabled { opacity: 0.6; cursor: default; }
 .aset__btn--ghost { background: transparent; color: var(--gcs-text-muted); border: 1px solid var(--gcs-border); }
 .aset__btn--danger { background: transparent; color: #b03636; border: 1px solid rgba(176,54,54,0.3); }
+/* Sorot - dipakai utk aksi/keterangan yang perlu ditonjolkan, mis. tombol "Detail Tidak
+   Bergerak" & keterangan "belum ada sesi opname" di halaman Detail Aset. */
+.aset__btn--highlight { background: #fff4de; color: #a9761b; border: 1px solid rgba(169,118,27,0.4); font-weight: 700; animation: aset-highlight-pulse 2.2s ease-in-out infinite; }
+.aset__btn--highlight:hover { filter: brightness(1.05); }
+.aset__hint--warn { display: inline-flex; align-items: center; gap: 6px; background: #fff4de; color: #a9761b; border: 1px solid rgba(169,118,27,0.4); border-radius: 8px; padding: 7px 12px; font-size: 0.8rem; font-weight: 600; }
+@keyframes aset-highlight-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(169,118,27,0.35); } 50% { box-shadow: 0 0 0 5px rgba(169,118,27,0); } }
 .aset__ibtn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-green-600); cursor: pointer; }
 .aset__ibtn:hover { border-color: var(--gcs-green-500); }
 .aset__ibtn--danger { color: #b03636; border-color: rgba(176,54,54,0.3); }
@@ -76,12 +100,42 @@
 .aset__x { border: none; background: none; cursor: pointer; color: var(--gcs-text-muted); padding: 4px; border-radius: 8px; display: inline-flex; }
 .aset__x:hover { background: var(--gcs-bg); }
 .aset__modal-body { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow-y: auto; }
-.aset__f { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--gcs-text-muted); }
+.aset__f { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--gcs-text-muted); }
 .aset__f--full { grid-column: 1 / -1; }
 .aset__f input, .aset__f textarea, .aset__f select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 0.88rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
 .aset__f input:focus, .aset__f textarea:focus, .aset__f select:focus { outline: none; border-color: var(--gcs-gold-500); }
 .aset__modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--gcs-border); }
 .aset__err { grid-column: 1 / -1; background: rgba(192,57,43,0.1); color: #c0392b; border-radius: 9px; padding: 8px 12px; font-size: 0.84rem; }
+
+/* Mobile: form modal jadi 1 kolom + bottom-sheet, supaya label/field tidak
+   sempit di HP - target pemakaian utama modul ini adalah input di lapangan. */
+@media (max-width: 560px) {
+  .aset__overlay { padding: 0; align-items: flex-end; }
+  .aset__modal { max-width: 100%; max-height: 94vh; border-radius: 16px 16px 0 0; }
+  .aset__modal-body { grid-template-columns: 1fr; }
+}
+
+/* Mobile: perbesar target sentuh tombol ikon (30px -> 42px, di bawah rekomendasi
+   umum 44px tapi cukup lega) + jarak antar tombol supaya tidak salah pencet. */
+@media (max-width: 560px) {
+  .aset__ibtn { width: 42px; height: 42px; }
+  .aset__row-act { gap: 10px; }
+}
+
+/* Tabel Aset (Inventaris) di tablet/HP: sembunyikan kolom sekunder (No. Internal,
+   Kategori, Kelompok, Qty, Nilai Perolehan) supaya tidak wajib geser horizontal -
+   semua kolom ini tetap terlihat lengkap di halaman Detail Aset, cuma disembunyikan
+   dari daftar. Kolom penting (Kode, Nama, Lokasi, PIC, Nilai Buku, Status) tetap ada. */
+@media (max-width: 768px) {
+  .aset__table.aset__table--inventaris { min-width: 560px; }
+  .aset__table--inventaris th:nth-child(3), .aset__table--inventaris td:nth-child(3),
+  .aset__table--inventaris th:nth-child(5), .aset__table--inventaris td:nth-child(5),
+  .aset__table--inventaris th:nth-child(6), .aset__table--inventaris td:nth-child(6),
+  .aset__table--inventaris th:nth-child(9), .aset__table--inventaris td:nth-child(9),
+  .aset__table--inventaris th:nth-child(10), .aset__table--inventaris td:nth-child(10) {
+    display: none;
+  }
+}
 
 /* Detail view (read) */
 .aset__dgrid { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }

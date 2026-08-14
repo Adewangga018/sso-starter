@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
+using SsoBackend.Models.Aset;
 using SsoBackend.Models.Dto;
 using AsetEntity = SsoBackend.Models.Aset.Aset;
 using MaintEntity = SsoBackend.Models.Aset.AsetMaintenance;
@@ -23,22 +24,25 @@ public class AsetService
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
     private readonly ModuleAccessService _access;
+    private readonly ILogger<AsetService> _logger;
 
-    public AsetService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access)
+    public AsetService(ApplicationDbContext db, GcsDbContext gcs, ModuleAccessService access, ILogger<AsetService> logger)
     {
         _db = db;
         _gcs = gcs;
         _access = access;
+        _logger = logger;
     }
 
     // ---- Inventaris (ERP, read-only) ----
     public async Task<AsetErpListDto> GetErpListAsync(string? q)
     {
-        // nomor_internal hidup di db_mygcs (bukan ERP), jadi tidak bisa masuk 1 query SQL
-        // dengan tabel dbo.assets - dicari duluan di sini, lalu OBJECTID yang cocok
-        // digabung ke filter ERP-nya sebagai OR.
+        // nomor_internal & klasifikasi hidup di db_mygcs (bukan ERP), jadi tidak bisa masuk
+        // 1 query SQL dengan tabel dbo.assets - dicari duluan di sini, lalu OBJECTID yang
+        // cocok digabung ke filter ERP-nya sebagai OR.
         var nomorInternal = await _db.AsetNomorInternal.AsNoTracking()
             .ToDictionaryAsync(x => x.ObjectId, x => x.NomorAset);
+        var klasifikasi = await KlasifikasiRowsAsync();
 
         var query = _gcs.AsetErp.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
@@ -47,17 +51,21 @@ public class AsetService
             var matchNomorInternal = nomorInternal
                 .Where(kv => kv.Value.Contains(term, StringComparison.OrdinalIgnoreCase))
                 .Select(kv => kv.Key).ToList();
+            var matchKlasifikasi = klasifikasi
+                .Where(kv => KlasifikasiStatus(kv.Value)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true)
+                .Select(kv => kv.Key).ToList();
             query = query.Where(a => (a.DESC_OBJECT != null && a.DESC_OBJECT.Contains(term))
                 || a.OBJECTID.Contains(term)
                 || (a.LOKASI != null && a.LOKASI.Contains(term))
                 || (a.NOPOL != null && a.NOPOL.Contains(term))
-                || matchNomorInternal.Contains(a.OBJECTID));
+                || matchNomorInternal.Contains(a.OBJECTID)
+                || matchKlasifikasi.Contains(a.OBJECTID));
         }
         var rows = await query.OrderByDescending(a => a.LAST_UPDATED).ToListAsync();
         var (groups, kelompok, cc) = await ErpLookupsAsync();
         var picAktif = await PicAktifMapAsync();
 
-        var items = rows.Select(a => MapErp(a, groups, kelompok, cc, nomorInternal, picAktif)).ToList();
+        var items = rows.Select(a => MapErp(a, groups, kelompok, cc, nomorInternal, picAktif, klasifikasi)).ToList();
         return new AsetErpListDto(items, items.Count);
     }
 
@@ -69,7 +77,170 @@ public class AsetService
         var nomor = await _db.AsetNomorInternal.AsNoTracking().FirstOrDefaultAsync(x => x.ObjectId == objectId);
         var nomorInternal = nomor is null ? new Dictionary<string, string>() : new Dictionary<string, string> { [objectId] = nomor.NomorAset };
         var picAktif = await PicAktifMapAsync();
-        return MapErp(a, groups, kelompok, cc, nomorInternal, picAktif);
+        var klasifikasi = await KlasifikasiRowsAsync();
+        return MapErp(a, groups, kelompok, cc, nomorInternal, picAktif, klasifikasi);
+    }
+
+    // objectid -> baris aset.klasifikasi (mis. status "Tidak Bergerak" + detail sertifikat/
+    // appraisal/perijinan ke pemegang saham). Kalau 1 objectid suatu saat punya >1 baris,
+    // status digabung "A, B" (KlasifikasiStatus) tapi detail cuma diambil dari baris pertama.
+    private async Task<Dictionary<string, List<AsetKlasifikasi>>> KlasifikasiRowsAsync()
+    {
+        var rows = await _db.AsetKlasifikasi.AsNoTracking().ToListAsync();
+        return rows.GroupBy(x => x.ObjectId).ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private static string? KlasifikasiStatus(List<AsetKlasifikasi> rows) =>
+        rows.Count == 0 ? null : string.Join(", ", rows.Select(x => x.Status).Distinct());
+
+    private static AsetKlasifikasiDetailDto? KlasifikasiDetail(Dictionary<string, List<AsetKlasifikasi>> map, string objectId)
+    {
+        if (!map.TryGetValue(objectId, out var rows) || rows.Count == 0) return null;
+        var k = rows[0];
+        return new AsetKlasifikasiDetailDto(k.Catatan, k.SertifikatHak, k.SertifikatJangkaWaktu, k.SertifikatNo,
+            k.SertifikatTahun, k.NilaiPasar, k.NilaiAppraisal, k.StatusJaminan, k.Kjpp, k.KjppTahun, k.KjppNo,
+            k.KeteranganPemegangSaham);
+    }
+
+    // ---- Pendaftaran aset baru (MyGCS -> dbo.assets) ----
+    // KEPUTUSAN (Aug 2026, membalik keputusan lama "MyGCS tidak pernah menulis ke ERP"):
+    // aset baru boleh didaftarkan dari MyGCS supaya dbo.assets tetap SSOT (tidak ada
+    // register aset duplikat di db_mygcs), TAPI hanya identitas dasar yang diisi -
+    // nilai/masa manfaat/dst tetap kosong, wajib dilengkapi akunting langsung di ERP.
+    //
+    // dbo.assets TIDAK PUNYA primary key/unique constraint/identity/trigger insert sama
+    // sekali (diverifikasi lewat sys.indexes/sys.triggers - bukan asumsi) - semua validasi
+    // murni di level aplikasi. OBJECTID dibuat meniru pola nyata data existing (verifikasi
+    // manual: {yyyyMM}{counter 4-digit, GLOBAL naik terus lintas bulan/kategori, BUKAN
+    // reset per bulan}) + dicek ulang "belum dipakai" tepat sebelum INSERT sebagai jaring
+    // pengaman - tapi karena tidak ada unique constraint di database, risiko tabrakan
+    // dengan input bersamaan dari aplikasi ERP tim akunting TIDAK bisa dihilangkan 100%.
+    //
+    // Default kolom status (AKTIF/STATUS/PROSES/METODE) diambil dari pola MAYORITAS data
+    // existing (diverifikasi lewat query GROUP BY, bukan tebakan) - lihat komentar di
+    // masing-masing field di bawah. NOASSET & CERE sengaja TIDAK diisi (maknanya belum
+    // dipastikan ke tim akunting), dibiarkan NULL/default.
+    public async Task<(bool Ok, string? Error, string? ObjectId)> DaftarAsetBaruAsync(string nik, SimpanAsetBaruRequest req)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, null);
+        if (string.IsNullOrWhiteSpace(req.Nama)) return (false, "Nama aset wajib diisi.", null);
+        if (string.IsNullOrWhiteSpace(req.Lokasi)) return (false, "Lokasi wajib diisi.", null);
+        if (string.IsNullOrWhiteSpace(req.GroupAsset)) return (false, "Kategori (Group Asset) wajib dipilih.", null);
+        if (string.IsNullOrWhiteSpace(req.Kelompok)) return (false, "Kelompok wajib dipilih.", null);
+        if (string.IsNullOrWhiteSpace(req.KodeCc)) return (false, "Kode CC / Wilayah wajib dipilih.", null);
+        if (string.IsNullOrWhiteSpace(req.Satuan)) return (false, "Satuan wajib diisi.", null);
+
+        // Validasi kode benar-benar ada di master ERP - jangan sampai simpan kode asal ketik.
+        var groupAsset = req.GroupAsset.Trim();
+        var kelompok = req.Kelompok.Trim();
+        var kodeCc = req.KodeCc.Trim();
+        if (!await _gcs.AsetErpGroup.AnyAsync(g => g.GROUP_ASSET.Trim() == groupAsset))
+            return (false, "Kategori (Group Asset) tidak valid.", null);
+        if (!await _gcs.AsetErpKelompok.AnyAsync(k => k.KELOMPOK.Trim() == kelompok))
+            return (false, "Kelompok tidak valid.", null);
+        if (!kelompok.StartsWith(groupAsset))
+            return (false, "Kelompok yang dipilih bukan bagian dari kategori yang dipilih.", null);
+        if (!await _gcs.AsetErpCc.AnyAsync(c => c.KODE_CC.Trim() == kodeCc))
+            return (false, "Kode CC / Wilayah tidak valid.", null);
+
+        if (!string.IsNullOrWhiteSpace(req.NomorInternal) &&
+            await _db.AsetNomorInternal.AnyAsync(x => x.NomorAset == req.NomorInternal.Trim()))
+            return (false, $"Nomor aset internal '{req.NomorInternal.Trim()}' sudah dipakai aset lain.", null);
+
+        // Cari OBJECTID belum dipakai, mulai dari basis (max counter global + 1), naik
+        // terus sampai ketemu yang kosong - jaring pengaman kalau ada input bersamaan.
+        var basis = await MaxObjectIdCounterAsync();
+        string? objectId = null;
+        for (var offset = 1; offset <= 20; offset++)
+        {
+            var kandidat = DateTime.Now.ToString("yyyyMM") + (basis + offset).ToString("0000");
+            if (!await _gcs.AsetErp.AnyAsync(a => a.OBJECTID == kandidat)) { objectId = kandidat; break; }
+        }
+        if (objectId is null) return (false, "Gagal membuat nomor aset unik, coba lagi.", null);
+
+        var row = new AsetErp
+        {
+            OBJECTID = objectId,
+            DESC_OBJECT = req.Nama.Trim(),
+            LOKASI = req.Lokasi.Trim(),
+            GROUP_ASSET = groupAsset,
+            KELOMPOK = kelompok,
+            TANGGAL = req.Tanggal.ToDateTime(TimeOnly.MinValue),
+            KODE_CC = kodeCc,
+            SATUAN = req.Satuan.Trim(),
+            AKTIF = "Y",   // pola mayoritas aset aktif baru (508/925 baris = 'Y')
+            STATUS = "U",  // 918/925 baris existing = 'U'
+            PROSES = "T",  // 919/925 baris existing = 'T'
+            METODE = "S",  // 924/925 baris existing = 'S'
+            LAST_UPDATED = DateTime.Now,
+        };
+
+        try
+        {
+            _gcs.AsetErp.Add(row);
+            await _gcs.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Gagal mendaftarkan aset baru {ObjectId} ke dbo.assets", objectId);
+            return (false, "Gagal menyimpan aset baru ke ERP. Coba lagi; kalau berulang, hubungi admin.", null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(req.NomorInternal))
+        {
+            _db.AsetNomorInternal.Add(new Models.Aset.AsetNomorInternal
+            {
+                ObjectId = objectId,
+                NomorAset = req.NomorInternal.Trim(),
+                IdPengubah = nik,
+                TglDiubah = DateTime.UtcNow,
+            });
+            await _db.SaveChangesAsync();
+        }
+
+        return (true, null, objectId);
+    }
+
+    public async Task<IReadOnlyList<AsetGroupDto>> ListGroupAssetAsync() =>
+        await _gcs.AsetErpGroup.AsNoTracking()
+            .OrderBy(g => g.GROUP_ASSET)
+            .Select(g => new AsetGroupDto(g.GROUP_ASSET.Trim(), (g.ASSETS_DESC ?? g.GROUP_ASSET).Trim()))
+            .ToListAsync();
+
+    // KELOMPOK selalu diawali 3 karakter GROUP_ASSET induknya (mis. "A0501" -> "A05") -
+    // diverifikasi manual ke seluruh isi dbo.AssetS_KELOMPOK, bukan asumsi. Tanpa
+    // groupAsset = semua kelompok.
+    public async Task<IReadOnlyList<AsetKelompokDto>> ListKelompokAsync(string? groupAsset)
+    {
+        var query = _gcs.AsetErpKelompok.AsNoTracking().AsQueryable();
+        var rows = await query.OrderBy(k => k.KELOMPOK).ToListAsync();
+        if (!string.IsNullOrWhiteSpace(groupAsset))
+            rows = rows.Where(k => k.KELOMPOK.Trim().StartsWith(groupAsset.Trim())).ToList();
+        return rows.Select(k => new AsetKelompokDto(k.KELOMPOK.Trim(), (k.NAMA_KELOMPOK ?? k.KELOMPOK).Trim())).ToList();
+    }
+
+    public async Task<IReadOnlyList<AsetKodeCcDto>> ListKodeCcAsync() =>
+        await _gcs.AsetErpCc.AsNoTracking()
+            .Where(c => c.WILAYAH != null && c.WILAYAH != "")
+            .OrderBy(c => c.WILAYAH)
+            .Select(c => new AsetKodeCcDto(c.KODE_CC.Trim(), c.WILAYAH!.Trim()))
+            .ToListAsync();
+
+    // Counter global (bukan reset per bulan) dari 4 digit terakhir OBJECTID ber-format
+    // {yyyyMM}{counter} - lihat catatan pola di DaftarAsetBaruAsync. CATATAN: asumsi
+    // counter selalu 4 digit; kalau suatu saat tembus 9999 (>10 karakter), logika ini
+    // perlu ditinjau ulang (tidak akan salah, tapi baris >10 karakter tidak ikut terhitung).
+    private async Task<int> MaxObjectIdCounterAsync()
+    {
+        var semua = await _gcs.AsetErp.AsNoTracking().Select(a => a.OBJECTID).ToListAsync();
+        var maxCounter = 0;
+        foreach (var raw in semua)
+        {
+            var id = raw?.Trim() ?? "";
+            if (id.Length != 10) continue;
+            if (int.TryParse(id.Substring(6, 4), out var n) && n > maxCounter) maxCounter = n;
+        }
+        return maxCounter;
     }
 
     // objectid -> nama PIC aktif saat ini (orang atau bagian), untuk kolom/filter PIC di Inventaris.
@@ -100,7 +271,7 @@ public class AsetService
     // Lokasi ditampilkan = WILAYAH dari dbo.akun_account_cc (join lewat KODE_CC), bukan
     // dbo.assets.LOKASI mentah - lebih deskriptif (mis. "Wilayah Produksi Malang" vs "Malang").
     // Fallback ke LOKASI mentah kalau KODE_CC tidak ketemu di lookup.
-    private static AsetErpDto MapErp(AsetErp a, Dictionary<string, string> groups, Dictionary<string, string> kelompok, Dictionary<string, string> cc, Dictionary<string, string> nomorInternal, Dictionary<string, string> picAktif) => new(
+    private static AsetErpDto MapErp(AsetErp a, Dictionary<string, string> groups, Dictionary<string, string> kelompok, Dictionary<string, string> cc, Dictionary<string, string> nomorInternal, Dictionary<string, string> picAktif, Dictionary<string, List<AsetKlasifikasi>> klasifikasi) => new(
         a.OBJECTID,
         nomorInternal.GetValueOrDefault(a.OBJECTID),
         a.DESC_OBJECT?.Trim(),
@@ -118,7 +289,9 @@ public class AsetService
         a.TANGGAL.HasValue ? DateOnly.FromDateTime(a.TANGGAL.Value) : null,
         a.MASA,
         picAktif.TryGetValue(a.OBJECTID, out var pic) && !string.IsNullOrWhiteSpace(pic) ? pic : null,
-        a.NOTE?.Trim());
+        klasifikasi.TryGetValue(a.OBJECTID, out var klsRows) ? KlasifikasiStatus(klsRows) : null,
+        a.NOTE?.Trim(),
+        KlasifikasiDetail(klasifikasi, a.OBJECTID));
 
     // ---- di bawah ini: aset.aset lama (db_mygcs) - lihat catatan arsitektur di atas ----
     public async Task<AsetListDto> GetListAsync(string nik, string? q)

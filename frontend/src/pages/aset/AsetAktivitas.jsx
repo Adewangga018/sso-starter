@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Plus, Pencil, Trash2, Activity } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
-import { AktivitasFormModal, rupiah, tgl } from './asetShared'
+import { AktivitasFormModal, rupiah, tgl, useConfirm } from './asetShared'
 import './AsetPage.css'
 
 export default function AsetAktivitas() {
@@ -11,6 +11,7 @@ export default function AsetAktivitas() {
   const [msg, setMsg] = useState(null)
   const [modal, setModal] = useState(null) // {mode:'buat'|'ubah', row?}
   const [filterAset, setFilterAset] = useState('')
+  const { confirm, ConfirmUI } = useConfirm()
 
   const load = useCallback(async (idAset) => {
     setLoading(true)
@@ -27,7 +28,7 @@ export default function AsetAktivitas() {
   async function buat(payload) { await api.buatAktivitas(payload); setModal(null); setMsg({ t: 'ok', m: 'Aktivitas dicatat.' }); await load(filterAset) }
   async function ubah(payload) { await api.ubahAktivitas(modal.row.id, payload); setModal(null); setMsg({ t: 'ok', m: 'Aktivitas diperbarui.' }); await load(filterAset) }
   async function hapus(row) {
-    if (!window.confirm(`Hapus aktivitas "${row.jenis}" pada ${tgl(row.tglAktivitas)}?`)) return
+    if (!(await confirm(`Hapus aktivitas "${row.jenis}" pada ${tgl(row.tglAktivitas)}? Data akan hilang permanen.`, { danger: true }))) return
     try { await api.hapusAktivitas(row.id); setMsg({ t: 'ok', m: 'Aktivitas dihapus.' }); await load(filterAset) }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal menghapus.' }) }
   }
@@ -71,8 +72,8 @@ export default function AsetAktivitas() {
                     <td>
                       {isAdmin && (
                         <div className="aset__row-act">
-                          <button type="button" className="aset__ibtn" title="Ubah" onClick={() => setModal({ mode: 'ubah', row: r })}><Pencil size={15} /></button>
-                          <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" onClick={() => hapus(r)}><Trash2 size={15} /></button>
+                          <button type="button" className="aset__ibtn" title="Ubah" aria-label="Ubah" onClick={() => setModal({ mode: 'ubah', row: r })}><Pencil size={15} /></button>
+                          <button type="button" className="aset__ibtn aset__ibtn--danger" title="Hapus" aria-label="Hapus" onClick={() => hapus(r)}><Trash2 size={15} /></button>
                         </div>
                       )}
                     </td>
@@ -85,6 +86,7 @@ export default function AsetAktivitas() {
 
       {modal?.mode === 'buat' && <AktivitasFormModal daftarAset={data.daftarAset} onClose={() => setModal(null)} onSubmit={buat} />}
       {modal?.mode === 'ubah' && <AktivitasFormModal initial={modal.row} daftarAset={data.daftarAset} onClose={() => setModal(null)} onSubmit={ubah} />}
+      {ConfirmUI}
     </div>
   )
 }

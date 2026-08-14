@@ -75,7 +75,20 @@ public record AsetOverlayDto(
     IReadOnlyList<AsetPicDto> RiwayatPic,
     IReadOnlyList<AsetAktivitasUmumDto> Aktivitas,
     IReadOnlyList<AsetDokumenDto> Dokumen,
-    bool IsAdminAset);
+    bool IsAdminAset,
+    bool CanCatatAktivitas); // admin, ATAU Operator Aktivitas yg juga PIC aktif aset ini
+
+// Operator Aktivitas: pegawai dgn hak terbatas "Catat Aktivitas SAJA" (bukan Admin Aset
+// penuh), wajib PIC aktif atas aset bersangkutan tiap kali dipakai. Lihat aset.aktivitas_operator.
+public record AsetAktivitasOperatorDto(
+    int Id,
+    string Nik,
+    string Nama,
+    bool Aktif,
+    bool MasihPic,   // status PIC SEKARANG (bukan cuma saat digrant) - dicek ulang tiap load
+    DateTime TglDibuat);
+
+public record TambahAktivitasOperatorRequest(string Nik, string Nama);
 
 // Baris "Riwayat PIC" lintas-aset (halaman Riwayat PIC) - AsetPicDto + info aset,
 // supaya frontend tidak perlu join manual. Query READ-ONLY murni ke aset.pic_assignment

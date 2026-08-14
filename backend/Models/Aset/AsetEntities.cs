@@ -101,6 +101,22 @@ public class AsetNomorInternal
     public DateTime TglDiubah { get; set; }
 }
 
+// Pegawai yang diberi hak terbatas "Catat Aktivitas SAJA" (bukan Admin Aset penuh) -
+// tetap wajib PIC aktif atas aset bersangkutan tiap kali dipakai, dicek ulang saat
+// aksi (bukan cuma saat digrant). Lihat 15-aktivitas-operator-ddl.sql &
+// AsetOverlayService.CanCatatAktivitasAsync.
+public class AsetAktivitasOperator
+{
+    public int Id { get; set; }
+    public string Nik { get; set; } = string.Empty;
+    public string Nama { get; set; } = string.Empty;
+    public bool Aktif { get; set; } = true;
+    public string IdPembuat { get; set; } = string.Empty;
+    public DateTime TglDibuat { get; set; }
+    public string? IdPengubah { get; set; }
+    public DateTime? TglDiubah { get; set; }
+}
+
 // Penanggung jawab (PIC) aset + histori lengkap - basis clearance sheet SDM.
 // JenisPic 'Orang': Nik/NamaPic/Departemen terisi, IdUnit/NamaUnit null.
 // JenisPic 'Bagian': IdUnit/NamaUnit terisi, Nik/NamaPic null (tidak masuk hitungan
@@ -219,6 +235,36 @@ public class AsetOpnameScan
     public string? Catatan { get; set; }
     public string NikPemindai { get; set; } = string.Empty;
     public DateTime TglScan { get; set; }
+}
+
+// Klasifikasi tambahan per aset ERP (mis. "Tidak Bergerak" untuk tanah/bangunan) -
+// TANPA mengubah skema dbo.assets, dihubungkan lewat ObjectId (tanpa FK lintas
+// database, sama seperti tabel overlay lain). Upsert per (objectid, status) - bukan
+// historis, murni penanda klasifikasi. Lihat backend/Database/aset/12-klasifikasi-ddl.sql.
+public class AsetKlasifikasi
+{
+    public long Id { get; set; }
+    public string ObjectId { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string? Catatan { get; set; }
+    public string IdPembuat { get; set; } = string.Empty;
+    public DateTime TglDibuat { get; set; }
+    public string? IdPengubah { get; set; }
+    public DateTime? TglDiubah { get; set; }
+
+    // Detail sertifikat/appraisal/perijinan (khusus status "Tidak Bergerak" - aset yang
+    // disetujui dijual sesuai keputusan pemegang saham). Lihat 14-klasifikasi-detail-ddl.sql.
+    public string? SertifikatHak { get; set; }
+    public string? SertifikatJangkaWaktu { get; set; }
+    public string? SertifikatNo { get; set; }
+    public string? SertifikatTahun { get; set; }
+    public decimal? NilaiPasar { get; set; }
+    public decimal? NilaiAppraisal { get; set; }
+    public string? StatusJaminan { get; set; }
+    public string? Kjpp { get; set; }
+    public string? KjppTahun { get; set; }
+    public string? KjppNo { get; set; }
+    public string? KeteranganPemegangSaham { get; set; }
 }
 
 // Jadwal & riwayat pemeliharaan aset.

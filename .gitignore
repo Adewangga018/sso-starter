@@ -3,6 +3,8 @@
 # =========================
 backend/bin/
 backend/obj/
+# Dokumen aset yang diupload user (sertifikat/BPKB/STNK/dsb) - data runtime, bukan source code
+backend/uploads/
 *.user
 *.userosscache
 *.sln.docstates

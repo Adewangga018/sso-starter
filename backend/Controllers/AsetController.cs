@@ -56,10 +56,45 @@ public class AsetController : ControllerBase
         return Ok(await _aset.GetMaintenanceListAsync(nik));
     }
 
-    // Buat/Ubah/Hapus Aset (core) DIHAPUS dari controller (Aug 2026): data induk aset
-    // sekarang dikelola ERP (dbo.assets), bukan lagi ditulis dari MyGCS. Method-nya
-    // (CreateAsync/UpdateAsync/DeleteAsync) masih ada di AsetService, sengaja dibiarkan
-    // tidak dipanggil - lihat catatan arsitektur di AsetService.cs.
+    // Buat/Ubah/Hapus Aset (core) lama DIHAPUS dari controller (Aug 2026): data induk
+    // aset sekarang dikelola ERP (dbo.assets). Method-nya (CreateAsync/UpdateAsync/
+    // DeleteAsync) masih ada di AsetService, sengaja dibiarkan tidak dipanggil.
+    //
+    // ---- Pendaftaran aset baru (Aug 2026, keputusan berikutnya): dbo.assets tetap SSOT,
+    // tapi MyGCS sekarang BOLEH menulis identitas dasar aset baru ke sana - lihat catatan
+    // lengkap di AsetService.DaftarAsetBaruAsync.
+    [HttpGet("group-asset")]
+    public async Task<ActionResult<IReadOnlyList<AsetGroupDto>>> GroupAsset()
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        return Ok(await _aset.ListGroupAssetAsync());
+    }
+
+    [HttpGet("kelompok")]
+    public async Task<ActionResult<IReadOnlyList<AsetKelompokDto>>> Kelompok([FromQuery] string? groupAsset)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        return Ok(await _aset.ListKelompokAsync(groupAsset));
+    }
+
+    [HttpGet("kode-cc")]
+    public async Task<ActionResult<IReadOnlyList<AsetKodeCcDto>>> KodeCc()
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        return Ok(await _aset.ListKodeCcAsync());
+    }
+
+    [HttpPost("daftar")]
+    public async Task<IActionResult> DaftarBaru([FromBody] SimpanAsetBaruRequest req)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var (ok, error, objectId) = await _aset.DaftarAsetBaruAsync(nik, req);
+        return ok ? Ok(new { objectId }) : BadRequest(new { message = error });
+    }
 
     [HttpPost("{id:long}/maintenance")]
     public async Task<IActionResult> TambahMaintenance(long id, [FromBody] SimpanMaintenanceRequest req)

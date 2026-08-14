@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, Search, Save, Eye } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
@@ -30,6 +30,15 @@ export default function AsetNomorInternal() {
     } finally { setLoading(false) }
   }, [])
   useEffect(() => { load('') }, [load])
+
+  // Cari otomatis 400ms setelah berhenti mengetik - lihat catatan sama di Inventaris.jsx.
+  const bukanRenderPertama = useRef(false)
+  useEffect(() => {
+    if (!bukanRenderPertama.current) { bukanRenderPertama.current = true; return }
+    const t = setTimeout(() => load(q), 400)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
 
   const rows = hanyaKosong ? data.items.filter((a) => !a.nomorAset) : data.items
 
@@ -105,11 +114,11 @@ export default function AsetNomorInternal() {
                     <td>
                       <div className="aset__row-act">
                         {isAdmin && (
-                          <button type="button" className="aset__ibtn" title="Simpan" disabled={saving[a.objectId]} onClick={() => simpan(a)}>
+                          <button type="button" className="aset__ibtn" title="Simpan" aria-label="Simpan" disabled={saving[a.objectId]} onClick={() => simpan(a)}>
                             {saving[a.objectId] ? <Loader2 size={14} className="aset__spin" /> : <Save size={14} />}
                           </button>
                         )}
-                        <Link className="aset__ibtn" title="Detail" to={`/my-asset/detail/${encodeAsetId(a.objectId)}`}><Eye size={14} /></Link>
+                        <Link className="aset__ibtn" title="Detail" aria-label="Detail" to={`/my-asset/detail/${encodeAsetId(a.objectId)}`}><Eye size={14} /></Link>
                       </div>
                     </td>
                   </tr>

@@ -73,6 +73,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AsetDokumen> AsetDokumen => Set<AsetDokumen>();
     public DbSet<AsetOpnameSesi> AsetOpnameSesi => Set<AsetOpnameSesi>();
     public DbSet<AsetOpnameScan> AsetOpnameScan => Set<AsetOpnameScan>();
+    public DbSet<AsetKlasifikasi> AsetKlasifikasi => Set<AsetKlasifikasi>();
+    public DbSet<AsetAktivitasOperator> AsetAktivitasOperator => Set<AsetAktivitasOperator>();
     // Coaching My Team (schema coaching) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<CoachingSesi> CoachingSesi => Set<CoachingSesi>();
     public DbSet<CoachingPesan> CoachingPesan => Set<CoachingPesan>();
@@ -655,6 +657,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
         });
 
+        builder.Entity<AsetAktivitasOperator>(e =>
+        {
+            e.ToTable("aktivitas_operator", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Nik).HasColumnName("nik");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+        });
+
         builder.Entity<AsetPicAssignment>(e =>
         {
             e.ToTable("pic_assignment", "aset", t => t.ExcludeFromMigrations());
@@ -766,6 +782,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Catatan).HasColumnName("catatan");
             e.Property(x => x.NikPemindai).HasColumnName("nik_pemindai");
             e.Property(x => x.TglScan).HasColumnName("tgl_scan");
+        });
+
+        builder.Entity<AsetKlasifikasi>(e =>
+        {
+            e.ToTable("klasifikasi", "aset", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ObjectId).HasColumnName("objectid");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
+            e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
+            e.Property(x => x.IdPengubah).HasColumnName("id_pengubah");
+            e.Property(x => x.TglDiubah).HasColumnName("tgl_diubah");
+            e.Property(x => x.SertifikatHak).HasColumnName("sertifikat_hak");
+            e.Property(x => x.SertifikatJangkaWaktu).HasColumnName("sertifikat_jangka_waktu");
+            e.Property(x => x.SertifikatNo).HasColumnName("sertifikat_no");
+            e.Property(x => x.SertifikatTahun).HasColumnName("sertifikat_tahun");
+            e.Property(x => x.NilaiPasar).HasColumnName("nilai_pasar").HasPrecision(18, 2);
+            e.Property(x => x.NilaiAppraisal).HasColumnName("nilai_appraisal").HasPrecision(18, 2);
+            e.Property(x => x.StatusJaminan).HasColumnName("status_jaminan");
+            e.Property(x => x.Kjpp).HasColumnName("kjpp");
+            e.Property(x => x.KjppTahun).HasColumnName("kjpp_tahun");
+            e.Property(x => x.KjppNo).HasColumnName("kjpp_no");
+            e.Property(x => x.KeteranganPemegangSaham).HasColumnName("keterangan_pemegang_saham");
         });
 
         builder.Entity<AsetMaintenance>(e =>
