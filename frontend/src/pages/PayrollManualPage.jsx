@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, Save, UserCog, ShieldAlert, Search, X, Wand2, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, UserCog, ShieldAlert, Search, X, Wand2, ChevronDown, ChevronRight, Lock, Unlock } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { rupiah, kelompokkan, Field, SubGrup } from './PayrollShared'
@@ -642,6 +642,7 @@ export default function PayrollManualPage() {
   const [nominal, setNominal] = useState({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [posting, setPosting] = useState(false)
   const [msg, setMsg] = useState(null)
 
   const load = useCallback(async () => {
@@ -741,6 +742,23 @@ export default function PayrollManualPage() {
     } finally { setSaving(false) }
   }
 
+  async function toggleStatus(jadiFinal) {
+    if (!pegawai) return
+    setPosting(true); setMsg(null)
+    try {
+      await api.setStatusGaji({ nik: pegawai.nik, tahun, bulan, final: jadiFinal })
+      setData((d) => (d ? { ...d, status: jadiFinal ? 'Final' : 'Draft' } : d))
+      setMsg({
+        type: 'ok',
+        text: jadiFinal
+          ? `Slip ${pegawai.nama} (${BULAN[bulan - 1]} ${tahun}) diposting - karyawan sekarang melihat Gaji Bersih final.`
+          : `Posting ${pegawai.nama} (${BULAN[bulan - 1]} ${tahun}) dibuka kembali - karyawan melihat Estimasi THP sampai diposting ulang.`,
+      })
+    } catch (err) {
+      setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal mengubah status posting.' })
+    } finally { setPosting(false) }
+  }
+
   if (!isAdminModulSdm) {
     return (
       <div className="agt">
@@ -779,6 +797,23 @@ export default function PayrollManualPage() {
           </select>
         </label>
       </div>
+
+      {pegawai && data && (
+        <div className={`agt__msg ${data.status === 'Final' ? 'agt__msg--ok' : 'agt__msg--err'}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <span>
+            {data.status === 'Final'
+              ? <><Lock size={14} style={{ verticalAlign: -2 }} /> Sudah diposting — karyawan melihat Gaji Bersih final untuk periode ini.</>
+              : <><Unlock size={14} style={{ verticalAlign: -2 }} /> Belum diposting — karyawan melihat slip ini sbg "Estimasi THP" sampai ditandai selesai.</>}
+          </span>
+          <button
+            type="button" className="agt__save agt__save--sm" disabled={posting}
+            onClick={() => toggleStatus(data.status !== 'Final')}
+          >
+            {posting ? <Loader2 size={14} className="agt__spin" /> : data.status === 'Final' ? <Unlock size={14} /> : <Lock size={14} />}
+            {data.status === 'Final' ? 'Buka Kembali (Draft)' : 'Tandai Selesai / Posting'}
+          </button>
+        </div>
+      )}
 
       {msg && <div className={`agt__msg agt__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
 

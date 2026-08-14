@@ -196,6 +196,16 @@ public class GajiController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
+    // Tandai slip satu pegawai/periode sudah selesai & posting (Final) atau buka kembali
+    // (Draft). Selama Draft, karyawan melihat slipnya sbg "Estimasi THP" (lihat GajiSlipDto.Final).
+    [HttpPut("admin/posting")]
+    public async Task<IActionResult> SetStatusSlip([FromBody] SetStatusGajiRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _gaji.SetStatusSlipAsync(req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
     // --- Potongan Presensi: preview hitung otomatis dari Absensi + Surat Ijin disetujui
     //     (Nota Dinas 0188/08/ND 2018). TIDAK menyimpan - admin review lalu Simpan via
     //     admin/manual biasa (POT_PRESENSI tetap basis Karyawan_Periode). ---

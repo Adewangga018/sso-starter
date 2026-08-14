@@ -12,6 +12,7 @@ import {
   EyeOff,
   Award,
   CheckCircle2,
+  Clock,
 } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './GajiPage.css'
@@ -262,6 +263,15 @@ export default function GajiPage() {
             </div>
           )}
 
+          {!data.tarifBelumDiisi && !data.final && (
+            <div className="gaji__banner">
+              <Clock size={16} className="gaji__banner-icon" />
+              <span>
+                Admin SDM belum menyelesaikan input potongan periode ini (mis. K3PG, Angsuran, RIT). Angka di bawah adalah <strong>estimasi sementara</strong> dan bisa berubah sampai periode ini diposting/diselesaikan.
+              </span>
+            </div>
+          )}
+
           {/* 2-Column Earnings & Deductions Breakdown */}
           <div className="gaji__cols">
             {/* Column 1: Pendapatan */}
@@ -306,18 +316,24 @@ export default function GajiPage() {
           </div>
 
           {/* Take Home Pay Highlight Card */}
-          <div className="gaji__card gaji__bersih-card">
+          <div className={`gaji__card gaji__bersih-card${!data.final ? ' gaji__bersih-card--estimasi' : ''}`}>
             <div className="gaji__bersih-main">
               <div className="gaji__bersih-icon-wrap">
-                <Award size={24} />
+                {data.final ? <Award size={24} /> : <Clock size={24} />}
               </div>
               <div className="gaji__bersih-text">
-                <div className="gaji__bersih-sub">Gaji Bersih (Take Home Pay)</div>
+                <div className="gaji__bersih-sub">
+                  {data.final ? 'Gaji Bersih (Take Home Pay)' : 'Estimasi Gaji Bersih (Take Home Pay)'}
+                </div>
                 <div className="gaji__bersih-val">{formatVal(data.gajiBersih, hidePrivacy)}</div>
               </div>
             </div>
             <div className="gaji__bersih-stamp">
-              <CheckCircle2 size={15} /> Verified System
+              {data.final ? (
+                <><CheckCircle2 size={15} /> Verified System</>
+              ) : (
+                <><Clock size={15} /> Belum Final</>
+              )}
             </div>
           </div>
 

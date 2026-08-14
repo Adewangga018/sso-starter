@@ -432,17 +432,21 @@
   border: 1px solid var(--gcs-border);
 }
 
+/* Kursor bawaan browser utk "grab"/"grabbing" kerap tampil pucat/putih di Windows -
+   nyaris tak kelihatan di latar terang. Diganti kursor SVG kustom (gelap + outline
+   putih saat idle, emas + outline gelap saat aktif menggeser) supaya selalu kontras
+   di latar apa pun - fallback ke grab/grabbing bawaan bila SVG gagal dimuat. */
 .org-chart-viewport {
   position: relative;
   height: 600px;
   overflow: hidden;
   background: radial-gradient(circle, rgba(15, 38, 31, 0.05) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
-  cursor: grab;
+  cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0Ij4KICA8cGF0aCBmaWxsPSIjMGYyNjFmIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWpvaW49InJvdW5kIgogICAgZD0iTTEyIDIgTDkgNiBMMTEgNiBMMTEgMTAuNSBMNi41IDEwLjUgTDYuNSA4LjUgTDIgMTIgTDYuNSAxNS41IEw2LjUgMTMuNSBMMTEgMTMuNSBMMTEgMTggTDkgMTggTDEyIDIyIEwxNSAxOCBMMTMgMTggTDEzIDEzLjUgTDE3LjUgMTMuNSBMMTcuNSAxNS41IEwyMiAxMiBMMTcuNSA4LjUgTDE3LjUgMTAuNSBMMTMgMTAuNSBMMTMgNiBMMTUgNiBaIi8+Cjwvc3ZnPgo=") 12 12, grab;
   user-select: none;
 }
 .org-chart-viewport.is-dragging {
-  cursor: grabbing;
+  cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0Ij4KICA8cGF0aCBmaWxsPSIjZjRhZTQ2IiBzdHJva2U9IiMwZjI2MWYiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWpvaW49InJvdW5kIgogICAgZD0iTTEyIDIgTDkgNiBMMTEgNiBMMTEgMTAuNSBMNi41IDEwLjUgTDYuNSA4LjUgTDIgMTIgTDYuNSAxNS41IEw2LjUgMTMuNSBMMTEgMTMuNSBMMTEgMTggTDkgMTggTDEyIDIyIEwxNSAxOCBMMTMgMTggTDEzIDEzLjUgTDE3LjUgMTMuNSBMMTcuNSAxNS41IEwyMiAxMiBMMTcuNSA4LjUgTDE3LjUgMTAuNSBMMTMgMTAuNSBMMTMgNiBMMTUgNiBaIi8+Cjwvc3ZnPgo=") 12 12, grabbing;
 }
 
 .org-chart-canvas {

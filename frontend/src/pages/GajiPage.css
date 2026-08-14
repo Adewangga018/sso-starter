@@ -605,6 +605,22 @@
   font-weight: 700;
 }
 
+/* Estimasi (belum diposting Admin SDM) - abu-abu gelap ketimbang hijau/emas "final"
+   supaya jelas beda status sekilas mata, tanpa mengubah layout. */
+.gaji__bersih-card--estimasi {
+  background: linear-gradient(135deg, #3a3f42, #21262a);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.gaji__bersih-card--estimasi .gaji__bersih-icon-wrap {
+  background: linear-gradient(135deg, #9aa1a6, #6b7176);
+  color: #ffffff;
+}
+
+.gaji__bersih-card--estimasi .gaji__bersih-val {
+  color: #ffffff;
+}
+
 .gaji__catatan-card {
   display: flex;
   align-items: flex-start;

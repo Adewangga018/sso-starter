@@ -27,6 +27,11 @@ public record GajiGrupDto(
 // Slip gaji terstruktur untuk satu pegawai pada satu periode.
 // TarifBelumDiisi = true kalau seluruh nominal basis JG_PG masih 0 (tarif belum
 // dikonfigurasi) -> UI menampilkan banner "nominal belum diisi".
+// Final = true kalau Admin SDM sudah menandai slip periode ini SELESAI/POSTING
+// (GajiSlip.Status == "Final") -> UI menampilkan "Gaji Bersih" sebagai angka final.
+// Selama belum (Status "Draft", termasuk saat slip belum pernah dibuat sama sekali),
+// UI HARUS menampilkan sebagai "Estimasi THP" - potongan per-karyawan (K3PG, Angsuran,
+// dst - lihat admin/manual) bisa saja belum lengkap diinput.
 public record GajiSlipDto(
     int Tahun,
     int Bulan,
@@ -43,7 +48,8 @@ public record GajiSlipDto(
     decimal TotalPotongan,
     decimal GajiBersih,
     bool TarifBelumDiisi,
-    string? Catatan);
+    string? Catatan,
+    bool Final = false);
 
 // ---- Konfigurasi tarif (Admin Modul SDM) ----
 
@@ -99,10 +105,16 @@ public record GajiPegawaiPickerDto(string Nik, string Nama, string? Jabatan, str
 public record GajiManualKomponenDto(
     int IdKomponen, string Kode, string Nama, string Tipe, string Kategori, decimal Nominal,
     string? GrupKode, string? GrupLabel);
-public record GajiManualDto(string Nik, string Nama, int Tahun, int Bulan, IReadOnlyList<GajiManualKomponenDto> Komponen);
+// Status = "Draft" (belum diposting, tampil ke karyawan sbg "Estimasi THP") atau
+// "Final" (Admin SDM sudah selesai/posting periode ini untuk pegawai ybs).
+public record GajiManualDto(string Nik, string Nama, int Tahun, int Bulan, IReadOnlyList<GajiManualKomponenDto> Komponen, string Status = "Draft");
 
 public record GajiManualItem(int IdKomponen, decimal Nominal);
 public record SimpanGajiManualRequest(string Nik, int Tahun, int Bulan, IReadOnlyList<GajiManualItem> Items);
+
+// Tandai slip gaji satu pegawai pada satu periode sbg selesai/posting (Final) atau
+// dibuka kembali (Draft). Dipakai admin SDM setelah yakin seluruh potongan sudah lengkap.
+public record SetStatusGajiRequest(string Nik, int Tahun, int Bulan, bool Final);
 
 // ---- Potongan Presensi: dihitung (preview, TIDAK disimpan otomatis) dari absensi +
 // surat ijin disetujui, mengacu Nota Dinas 0188/08/ND Potongan Absen 2018. Admin

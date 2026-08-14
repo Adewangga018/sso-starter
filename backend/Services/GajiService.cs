@@ -64,8 +64,10 @@ public class GajiService
         }
 
         // Slip tersimpan (kalau sudah digenerate) -> nominal manual (Karyawan_Periode),
-        // termasuk Potongan Presensi yang kini komponen tersendiri.
+        // termasuk Potongan Presensi yang kini komponen tersendiri. Status slip menentukan
+        // apakah GajiBersih ditampilkan sbg final atau "Estimasi THP" (lihat GajiSlipDto.Final).
         var manual = new Dictionary<int, decimal>();
+        var sudahFinal = false;
         var periode = await _db.GajiPeriode.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Tahun == (short)tahun && p.Bulan == (byte)bulan);
         if (periode is not null)
@@ -77,6 +79,7 @@ public class GajiService
                 manual = await _db.GajiSlipDetail.AsNoTracking()
                     .Where(d => d.IdSlip == slip.IdSlip)
                     .ToDictionaryAsync(d => d.IdKomponen, d => d.Nominal);
+                sudahFinal = slip.Status == "Final";
             }
         }
 
@@ -152,7 +155,7 @@ public class GajiService
         return new GajiSlipDto(
             tahun, bulan, BulanId[bulan], nama, jabatan, tingkatan, band, jg, pg,
             pendapatan, potongan, totalPendapatan, totalPotongan, gajiBersih,
-            belumDiisi, null);
+            belumDiisi, null, sudahFinal);
     }
 
     private static List<GajiGrupDto> BuildGrup(
@@ -504,6 +507,7 @@ public class GajiService
             .ToListAsync();
 
         var manual = new Dictionary<int, decimal>();
+        var status = "Draft";
         var periode = await _db.GajiPeriode.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Tahun == (short)tahun && p.Bulan == (byte)bulan);
         if (periode is not null)
@@ -515,6 +519,7 @@ public class GajiService
                 manual = await _db.GajiSlipDetail.AsNoTracking()
                     .Where(d => d.IdSlip == slip.IdSlip)
                     .ToDictionaryAsync(d => d.IdKomponen, d => d.Nominal);
+                status = slip.Status;
             }
         }
 
@@ -523,7 +528,48 @@ public class GajiService
             manual.TryGetValue(k.IdKomponen, out var n) ? n : 0m,
             k.GrupKode, k.GrupLabel)).ToList();
 
-        return (true, null, new GajiManualDto(nik, pegawai.nama ?? nik, tahun, bulan, items));
+        return (true, null, new GajiManualDto(nik, pegawai.nama ?? nik, tahun, bulan, items, status));
+    }
+
+    // Tandai slip gaji satu pegawai/periode sbg selesai (Final, dianggap "posting" - potongan
+    // sudah lengkap diinput) atau dibuka kembali (Draft). Slip/periode dibuat kalau belum ada
+    // (mis. admin langsung posting tanpa pernah mengisi komponen manual apa pun).
+    public async Task<(bool Ok, string? Error)> SetStatusSlipAsync(SetStatusGajiRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Nik)) return (false, "NIK wajib diisi.");
+        if (req.Bulan < 1 || req.Bulan > 12) return (false, "Bulan tidak valid.");
+
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == req.Nik);
+        if (pegawai is null) return (false, "Pegawai tidak ditemukan.");
+
+        short th = (short)req.Tahun; byte bl = (byte)req.Bulan;
+        var periode = await _db.GajiPeriode.FirstOrDefaultAsync(p => p.Tahun == th && p.Bulan == bl);
+        if (periode is null)
+        {
+            periode = new Models.Gaji.GajiPeriode { Tahun = th, Bulan = bl, Status = "Draft", DibuatPada = DateTime.UtcNow };
+            _db.GajiPeriode.Add(periode);
+            await _db.SaveChangesAsync();
+        }
+
+        var slip = await _db.GajiSlip.FirstOrDefaultAsync(s => s.IdPeriode == periode.IdPeriode && s.IdKaryawan == req.Nik);
+        if (slip is null)
+        {
+            var (jg, band, jabatan) = await ResolveJabatanAsync(req.Nik);
+            var pg = await ResolvePgAsync(req.Nik, req.Tahun);
+            slip = new Models.Gaji.GajiSlip
+            {
+                IdPeriode = periode.IdPeriode, IdKaryawan = req.Nik, Nama = pegawai.nama ?? req.Nik,
+                Jg = jg is int jgv ? (byte)jgv : null, Pg = pg is int pgv ? (byte)pgv : null,
+                IdBand = band is int bv ? (byte)bv : null,
+                Tingkatan = band is int bv1 && BandLabel.TryGetValue(bv1, out var bl1) ? bl1 : null,
+                Jabatan = jabatan, Status = "Draft", DibuatPada = DateTime.UtcNow,
+            };
+            _db.GajiSlip.Add(slip);
+        }
+
+        slip.Status = req.Final ? "Final" : "Draft";
+        await _db.SaveChangesAsync();
+        return (true, null);
     }
 
     public async Task<(bool Ok, string? Error)> SimpanManualAsync(SimpanGajiManualRequest req)
