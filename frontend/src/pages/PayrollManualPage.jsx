@@ -798,6 +798,16 @@ export default function PayrollManualPage() {
         </label>
       </div>
 
+      {pegawai && pegawai.adaGrading === false && (
+        <div className="agt__msg agt__msg--err">
+          <ShieldAlert size={15} style={{ verticalAlign: -2, marginRight: 4 }} />
+          <strong>{pegawai.nama}</strong> belum ditempatkan di sistem grading (tidak ada baris aktif di Struktur Organisasi &gt; Penempatan Karyawan).
+          Jabatan "{pegawai.jabatan ?? '-'}" yang tampil di atas cuma teks lama dari data SDM, BUKAN posisi struktural — akibatnya Gaji Pokok, Tunjangan Jabatan,
+          dan kalkulator Lembur/formula lain TIDAK bisa dihitung untuknya sampai ditempatkan.{' '}
+          <Link to="/org/penempatan" style={{ fontWeight: 700 }}>Buka Penempatan Karyawan →</Link>
+        </div>
+      )}
+
       {pegawai && data && (
         <div className={`agt__msg ${data.status === 'Final' ? 'agt__msg--ok' : 'agt__msg--err'}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <span>

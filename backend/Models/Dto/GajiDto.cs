@@ -100,7 +100,12 @@ public record SimpanFlatItem(int IdKomponen, decimal Nilai);
 public record SimpanFlatRequest(IReadOnlyList<SimpanFlatItem> Items);
 
 // ---- Nominal manual per karyawan per periode (basis 'Karyawan_Periode') ----
-public record GajiPegawaiPickerDto(string Nik, string Nama, string? Jabatan, string? Unit);
+// AdaGrading = false berarti pegawai ybs TIDAK punya baris grading.penempatan aktif -
+// seluruh komponen berbasis Band/JG/PG (Gaji Pokok, Tunjangan Jabatan, formula Lembur,
+// dst) akan gagal/kosong untuknya sampai ditempatkan lewat Struktur Organisasi >
+// Penempatan Karyawan. Jabatan yg tetap tampil (kalau ada) dlm kasus ini HANYA teks
+// legacy PEGAWAI_SDM, BUKAN posisi struktural - lihat PosisiResolver.NamaJabatanTerbaik.
+public record GajiPegawaiPickerDto(string Nik, string Nama, string? Jabatan, string? Unit, bool AdaGrading = true);
 
 public record GajiManualKomponenDto(
     int IdKomponen, string Kode, string Nama, string Tipe, string Kategori, decimal Nominal,

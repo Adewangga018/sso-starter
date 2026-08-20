@@ -39,10 +39,10 @@ import GajiPage from './pages/GajiPage'
 import PayrollFormulaPage from './pages/PayrollFormulaPage'
 import PayrollManualPage from './pages/PayrollManualPage'
 import DinasVerifikasiPage from './pages/DinasVerifikasiPage'
-import MyPayrollLayout from './layouts/MyPayrollLayout'
 import OrgStrukturPage from './pages/OrgStrukturPage'
 import OrgPenempatanPage from './pages/OrgPenempatanPage'
-import MyOrgLayout from './layouts/MyOrgLayout'
+import PegawaiDirektoriPage from './pages/PegawaiDirektoriPage'
+import MyHrManagementLayout from './layouts/MyHrManagementLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
 import MyHealthLayout from './layouts/MyHealthLayout'
@@ -116,25 +116,25 @@ export default function App() {
             {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
                 belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
             <Route path="/juri" element={<AdminJuriPage />} />
-            {/* Modul Payroll — khusus Admin Modul SDM (kartu "payroll" hanya muncul untuk
-                mereka, sehingga RequireModule ini hanya lolos bagi Admin SDM). Rute lama
-                /modul-sdm/gaji-tarif diarahkan ke sini. */}
-            <Route element={<RequireModule moduleKey="payroll" />}>
-              <Route path="/payroll" element={<MyPayrollLayout />}>
+            {/* Modul HR Management — gabungan Payroll + Struktur Organisasi (2026-08-20),
+                khusus Admin Modul SDM (kartu "hr-management" hanya muncul untuk mereka,
+                sehingga RequireModule ini hanya lolos bagi Admin SDM). Rute /payroll/* dan
+                /org/* sengaja TIDAK diubah (link lama tetap jalan) - cuma shell/sidebar-nya
+                disatukan lewat MyHrManagementLayout. Rute lama /modul-sdm/gaji-tarif
+                diarahkan ke /payroll. */}
+            <Route element={<RequireModule moduleKey="hr-management" />}>
+              <Route path="/payroll" element={<MyHrManagementLayout />}>
                 <Route index element={<PayrollFormulaPage />} />
                 <Route path="manual" element={<PayrollManualPage />} />
                 <Route path="dinas" element={<DinasVerifikasiPage />} />
               </Route>
-            </Route>
-            <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />
-            {/* Modul Struktur Organisasi — sama pola dengan Payroll di atas (khusus Admin
-                Modul SDM, kartu "org" menjaga rute lewat RequireModule). */}
-            <Route element={<RequireModule moduleKey="org" />}>
-              <Route path="/org" element={<MyOrgLayout />}>
+              <Route path="/org" element={<MyHrManagementLayout />}>
                 <Route index element={<OrgStrukturPage />} />
                 <Route path="penempatan" element={<OrgPenempatanPage />} />
+                <Route path="pegawai" element={<PegawaiDirektoriPage />} />
               </Route>
             </Route>
+            <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />
             <Route path="/admin/juri" element={<Navigate to="/juri" replace />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardPage />} />

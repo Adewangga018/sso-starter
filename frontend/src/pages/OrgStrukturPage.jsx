@@ -9,12 +9,19 @@ import { api, ApiError } from '../lib/api'
 import { useDialog } from '../components/DialogProvider'
 import './OrgStruktur.css'
 
-const TIPE_UNIT = ['Direktorat', 'Kompartemen', 'Departemen', 'Region', 'Kelompok']
+// "Bagian" ditambahkan sbg tipe unit tersendiri (2026-08-20) - sebelumnya jabatan Kepala
+// Bagian sengaja langsung diarahkan ke unit Departemen induknya (lihat komentar di
+// backend/Database/grading/02-seed-master.sql baris ~175), tapi itu bikin jabatan Kepala
+// Bagian tampil dobel/rancu di dalam tabel unit Departemen-nya sendiri. Sekarang "Bagian"
+// bisa dibuat sbg unit anak (child) dari Departemen/Kompartemen, lalu jabatan Kepala
+// Bagian dipindah id_unit-nya ke situ - lihat pola "Bagian Pengadaan" yang sudah benar.
+const TIPE_UNIT = ['Direktorat', 'Kompartemen', 'Departemen', 'Bagian', 'Region', 'Kelompok']
 
 const TIPE_COLORS = {
   Direktorat: { bg: '#0f261f', text: '#f4ae46', border: '#1f4f2c', badgeBg: 'rgba(244, 174, 70, 0.15)', badgeText: '#f4ae46' },
   Kompartemen: { bg: '#1e293b', text: '#38bdf8', border: '#334155', badgeBg: 'rgba(56, 189, 248, 0.15)', badgeText: '#38bdf8' },
   Departemen: { bg: '#064e3b', text: '#34d399', border: '#065f46', badgeBg: 'rgba(52, 211, 153, 0.15)', badgeText: '#34d399' },
+  Bagian: { bg: '#164e63', text: '#67e8f9', border: '#155e75', badgeBg: 'rgba(103, 232, 249, 0.15)', badgeText: '#67e8f9' },
   Region: { bg: '#78350f', text: '#fbbf24', border: '#92400e', badgeBg: 'rgba(251, 191, 36, 0.15)', badgeText: '#fbbf24' },
   Kelompok: { bg: '#4c1d95', text: '#c084fc', border: '#5b21b6', badgeBg: 'rgba(192, 132, 252, 0.15)', badgeText: '#c084fc' },
 }
@@ -64,6 +71,10 @@ function initialAvatar(name) {
   const parts = name.trim().split(' ')
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
   return name.slice(0, 2).toUpperCase()
+}
+
+function incumbentKey(inc, index = 0) {
+  return inc.idPenempatan ?? `${inc.idKaryawan}-${inc.tmt ?? 'no-tmt'}-${index}`
 }
 
 /* --- Component: Node Unit untuk Sidebar Tree --- */
@@ -191,11 +202,15 @@ function OrgChartNode({
                   </div>
                   <div className="org-chart__incumbents">
                     {j.incumbent && j.incumbent.length > 0 ? (
-                      j.incumbent.map((inc) => (
-                        <span key={inc.id} className="org-chart__avatar" title={`${inc.nama} (${inc.idKaryawan})`}>
+                      j.incumbent.map((inc, index) => (
+                        <span key={incumbentKey(inc, index)} className="org-chart__avatar" title={`${inc.nama} (${inc.idKaryawan})`}>
                           {initialAvatar(inc.nama)}
                         </span>
                       ))
+                    ) : j.pts ? (
+                      <span className="org-chart__avatar org-chart__avatar--pts" title={`Pjs. ${j.pts.namaKaryawan}${j.pts.jabatanAsli ? ` (asal: ${j.pts.jabatanAsli})` : ''}`}>
+                        {initialAvatar(j.pts.namaKaryawan)}
+                      </span>
                     ) : (
                       <span className="org-chart__empty-formasi" title="Formasi Kosong">Kosong</span>
                     )}
@@ -280,6 +295,11 @@ function ReportingJabatanNode({ node, depth, search, onViewDetail, onEdit, onDel
             <span className={`org-report__formasi ${isVacant ? 'is-vacant' : 'is-filled'}`}>
               <Users size={12} /> {filledCount}/{targetFormasi} Terisi
             </span>
+            {isVacant && node.pts && (
+              <span className="org-report__badge org-report__badge--pts" title={node.pts.jabatanAsli ? `Asal: ${node.pts.jabatanAsli}` : ''}>
+                PTS: {node.pts.namaKaryawan}
+              </span>
+            )}
           </div>
         </div>
 
@@ -480,6 +500,16 @@ export default function OrgStrukturPage() {
     return list
   }, [jabatan, selectedUnit, search])
 
+  const getJabatanDeleteBlockReason = useCallback((j) => {
+    if ((j.incumbent?.length || 0) > 0) {
+      return 'Jabatan ini masih ditempati karyawan aktif. Akhiri dulu penempatan aktifnya di menu Penempatan Karyawan.'
+    }
+    if (jabatan.some((other) => other.idAtasan === j.idJabatan)) {
+      return 'Jabatan ini masih menjadi atasan untuk jabatan lain. Ubah dulu relasi atasan-bawahannya.'
+    }
+    return ''
+  }, [jabatan])
+
   function toggleExpand(id) {
     setExpanded((prev) => {
       const next = new Set(prev)
@@ -605,6 +635,15 @@ export default function OrgStrukturPage() {
   }
 
   async function deleteJabatan(j) {
+    const blockReason = getJabatanDeleteBlockReason(j)
+    if (blockReason) {
+      await dialog.alert({
+        title: 'Jabatan belum bisa dihapus',
+        message: blockReason,
+      })
+      return
+    }
+
     if (!(await dialog.confirm({ title: 'Hapus Jabatan', message: `Hapus jabatan "${j.namaJabatan}"?`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.hapusOrgJabatan(j.idJabatan)
@@ -903,6 +942,7 @@ export default function OrgStrukturPage() {
                     const capacity = j.jumlahFormasi || 1
                     const isFull = filled >= capacity
                     const isEmpty = filled === 0
+                    const deleteBlockReason = getJabatanDeleteBlockReason(j)
 
                     return (
                       <tr key={j.idJabatan} className={!j.aktif ? 'is-nonaktif' : ''}>
@@ -938,12 +978,18 @@ export default function OrgStrukturPage() {
                         <td>
                           <div className="org-table__incumbents" onClick={() => setDetailJabatan(j)}>
                             {j.incumbent && j.incumbent.length > 0 ? (
-                              j.incumbent.map((inc) => (
-                                <span key={inc.id} className="org-incumbent-chip" title={`NIK: ${inc.idKaryawan}`}>
+                              j.incumbent.map((inc, index) => (
+                                <span key={incumbentKey(inc, index)} className="org-incumbent-chip" title={`NIK: ${inc.idKaryawan}`}>
                                   <span className="org-incumbent-avatar">{initialAvatar(inc.nama)}</span>
                                   <span className="org-incumbent-name">{inc.nama}</span>
                                 </span>
                               ))
+                            ) : j.pts ? (
+                              <span className="org-incumbent-chip org-incumbent-chip--pts" title={`Pjs. sejak ${j.pts.tmt ? new Date(j.pts.tmt).toLocaleDateString('id-ID') : '-'}${j.pts.jabatanAsli ? ` · asal: ${j.pts.jabatanAsli}` : ''}`}>
+                                <span className="org-incumbent-avatar">{initialAvatar(j.pts.namaKaryawan)}</span>
+                                <span className="org-incumbent-name">{j.pts.namaKaryawan}</span>
+                                <span className="org-pts-flag">PTS</span>
+                              </span>
                             ) : (
                               <span className="org-incumbent-empty">Belum ada karyawan</span>
                             )}
@@ -962,7 +1008,13 @@ export default function OrgStrukturPage() {
                             <button type="button" className="org-iconbtn" title="Ubah Jabatan" onClick={() => openEditJabatan(j)}>
                               <Pencil size={14} />
                             </button>
-                            <button type="button" className="org-iconbtn org-iconbtn--danger" title="Hapus" onClick={() => deleteJabatan(j)}>
+                            <button
+                              type="button"
+                              className="org-iconbtn org-iconbtn--danger"
+                              title={deleteBlockReason || 'Hapus'}
+                              onClick={() => deleteJabatan(j)}
+                              disabled={Boolean(deleteBlockReason)}
+                            >
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -1056,8 +1108,8 @@ export default function OrgStrukturPage() {
 
                 {detailJabatan.incumbent && detailJabatan.incumbent.length > 0 ? (
                   <div className="org-incumbent-list">
-                    {detailJabatan.incumbent.map((inc) => (
-                      <div key={inc.id} className="org-incumbent-card">
+                    {detailJabatan.incumbent.map((inc, index) => (
+                      <div key={incumbentKey(inc, index)} className="org-incumbent-card">
                         <div className="org-incumbent-avatar org-incumbent-avatar--lg">
                           {initialAvatar(inc.nama)}
                         </div>
@@ -1068,6 +1120,32 @@ export default function OrgStrukturPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                ) : detailJabatan.pts ? (
+                  <div className="org-incumbent-list">
+                    <div className="org-incumbent-card org-incumbent-card--pts">
+                      <div className="org-incumbent-avatar org-incumbent-avatar--lg">
+                        {initialAvatar(detailJabatan.pts.namaKaryawan)}
+                      </div>
+                      <div className="org-incumbent-meta">
+                        <span className="org-incumbent-card-name">
+                          {detailJabatan.pts.namaKaryawan} <span className="org-pts-flag">PTS</span>
+                        </span>
+                        <span className="org-incumbent-card-nik">NIK: {detailJabatan.pts.idKaryawan}</span>
+                        {detailJabatan.pts.jabatanAsli && (
+                          <span className="org-incumbent-card-tmt">Jabatan asli: {detailJabatan.pts.jabatanAsli}</span>
+                        )}
+                        {detailJabatan.pts.tmt && (
+                          <span className="org-incumbent-card-tmt">Pjs. sejak: {new Date(detailJabatan.pts.tmt).toLocaleDateString('id-ID')}</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="org-incumbent-pts-note">
+                      Jabatan ini formasinya masih kosong secara struktural - sementara diisi (Pemangku Tugas Sementara) oleh karyawan di atas.
+                    </p>
+                    <Link to="/org/penempatan" className="org-btn org-btn--pri">
+                      Tempatkan Karyawan Tetap Ke Jabatan Ini
+                    </Link>
                   </div>
                 ) : (
                   <div className="org-incumbent-empty-box">

@@ -51,14 +51,17 @@ public static class FeatureCatalog
         // My Health
         new("my-health:mcu",           "my-health", "Medical Check-Up"),
 
-        // Payroll
-        new("payroll:formula",         "payroll", "Formula & Generalisasi"),
-        new("payroll:manual",          "payroll", "Manual per Karyawan"),
-        new("payroll:dinas",           "payroll", "Verifikasi Dinas"),
-
-        // Struktur Organisasi
-        new("org:struktur",            "org", "Unit & Jabatan"),
-        new("org:penempatan",          "org", "Penempatan Karyawan"),
+        // HR Management (gabungan Payroll + Struktur Organisasi, 2026-08-20) - Key fitur
+        // ("payroll:...", "org:...") SENGAJA dibiarkan apa adanya walau ModuleKey-nya kini
+        // sama ("hr-management") - mengubah Key akan mengorbankan override lock yang sudah
+        // pernah tersimpan Admin IT (dbo.feature_access keyed by FeatureKey), dan Key juga
+        // harus tetap sama dgn atribut `feature` di sidebar frontend (MyHrManagementLayout).
+        new("payroll:formula",         "hr-management", "Formula & Generalisasi"),
+        new("payroll:manual",          "hr-management", "Manual per Karyawan"),
+        new("payroll:dinas",           "hr-management", "Verifikasi Dinas"),
+        new("org:struktur",            "hr-management", "Unit & Jabatan"),
+        new("org:penempatan",          "hr-management", "Penempatan Karyawan"),
+        new("org:pegawai",             "hr-management", "Direktori Karyawan"),
     ];
 
     public static FeatureDefinition? Find(string? key) =>

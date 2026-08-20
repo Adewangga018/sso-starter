@@ -96,15 +96,13 @@ public class DashboardController : ControllerBase
         var nik = pegawai?.ID_KARYAWAN;
         var modules = await _modules.GetTilesForAsync(isAdmin, key => _access.IsModuleAdminAsync(key, nik));
 
-        // Modul "Payroll" khusus Admin Modul SDM (konfigurasi tarif gaji). Tidak ada di
-        // katalog modul umum; kartunya hanya ditambahkan untuk yang berhak. Ini juga jadi
-        // penjaga rute /payroll (RequireModule "payroll" hanya lolos bila kartu ini ada).
+        // Modul "HR Management" (gabungan Payroll + Struktur Organisasi, 2026-08-20) khusus
+        // Admin Modul SDM. Tidak ada di katalog modul umum; kartunya hanya ditambahkan untuk
+        // yang berhak. Ini juga jadi penjaga rute /payroll & /org (RequireModule
+        // "hr-management" hanya lolos bila kartu ini ada) - lihat frontend App.jsx.
         if (isAdminModulSdm)
         {
-            modules = modules.Append(new ModuleTileDto("payroll", "Payroll", "GAJI & TARIF", "wallet", true)).ToList();
-            // Modul "Struktur Organisasi" - sama pola dengan Payroll di atas (khusus Admin
-            // Modul SDM, kartu jadi penjaga rute /org lewat RequireModule).
-            modules = modules.Append(new ModuleTileDto("org", "Struktur Organisasi", "UNIT & JABATAN", "network", true)).ToList();
+            modules = modules.Append(new ModuleTileDto("hr-management", "HR Management", "PAYROLL & STRUKTUR ORGANISASI", "wallet", true)).ToList();
         }
 
         var lockedFeatures = await _features.GetLockedKeysAsync();

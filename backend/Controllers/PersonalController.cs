@@ -476,6 +476,12 @@ public class PersonalController : ControllerBase
         return NoContent();
     }
 
+    // Batas riwayat absen yang ditampilkan My Personal (data terbaru dulu) - menampilkan
+    // SEMUA riwayat sejak karyawan bergabung bikin loading lambat utk karyawan lama.
+    // Buffer query per sumber dilebihkan (3x) krn SDM & kamera digabung per tanggal
+    // setelah diambil - jaga2 tanggal tak berimpit persis antar dua sumber.
+    private const int AbsensiLimit = 50;
+
     [HttpGet("absensi")]
     public async Task<ActionResult<IReadOnlyList<AbsensiDto>>> GetAbsensi()
     {
@@ -488,6 +494,8 @@ public class PersonalController : ControllerBase
         // Baris resmi dari SDM (read-only; view GCS tidak pernah diubah). Diindeks per tanggal.
         var sdmRows = await _db.AbsensiLog
             .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
+            .OrderByDescending(a => a.Tanggal)
+            .Take(AbsensiLimit * 3)
             .Select(a => new
             {
                 a.Tanggal,
@@ -507,6 +515,8 @@ public class PersonalController : ControllerBase
         // awal, jam keluar = check-out paling akhir pada hari itu.
         var kameraRows = await _appDb.Attendances
             .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
+            .OrderByDescending(a => a.Tanggal)
+            .Take(AbsensiLimit * 3)
             .ToListAsync();
 
         var kameraByDate = kameraRows
@@ -538,6 +548,7 @@ public class PersonalController : ControllerBase
                     k != null ? "Kamera" : "SDM");
             })
             .OrderByDescending(x => x.Tanggal)
+            .Take(AbsensiLimit)
             .ToList();
 
         return Ok(logs);

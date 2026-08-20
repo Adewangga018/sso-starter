@@ -608,6 +608,13 @@ export const api = {
   getEmployeeAktaAnak: (idPegawai, idAnak) =>
     apiBlob(`/api/admin/documents/${idPegawai}/anak/${idAnak}/akta`),
 
+  // direktori karyawan (Admin Modul SDM, modul HR Management > Data Karyawan)
+  cariPegawaiDirektori: (q) => apiFetch(`/api/org/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  getPegawaiDirektoriDetail: (idPegawai) => apiFetch(`/api/org/pegawai/${idPegawai}`),
+  getPegawaiDirektoriFile: (idPegawai, key) => apiBlob(`/api/org/pegawai/${idPegawai}/file/${key}`),
+  getPegawaiDirektoriAktaAnak: (idPegawai, idAnak) =>
+    apiBlob(`/api/org/pegawai/${idPegawai}/anak/${idAnak}/akta`),
+
   // admin control panel (Admin IT, Bearer)
   getAdminOverview: () => apiFetch('/api/admin/overview'),
   getAdminUsers: (q) => apiFetch(`/api/admin/users?q=${encodeURIComponent(q ?? '')}`),

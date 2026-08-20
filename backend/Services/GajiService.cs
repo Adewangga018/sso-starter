@@ -493,7 +493,8 @@ public class GajiService
         return rows.Select(r => new GajiPegawaiPickerDto(
             r.Nik, r.nama ?? r.Nik,
             PosisiResolver.NamaJabatanTerbaik(posisi.GetValueOrDefault(r.Nik), r.nm_jabatan),
-            r.Unit)).ToList();
+            r.Unit,
+            posisi.GetValueOrDefault(r.Nik)?.Band is not null)).ToList();
     }
 
     public async Task<(bool Ok, string? Error, GajiManualDto? Data)> GetManualAsync(string nik, int tahun, int bulan)

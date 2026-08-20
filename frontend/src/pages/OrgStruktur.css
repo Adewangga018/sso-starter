@@ -125,33 +125,82 @@
   background: var(--gcs-gold-500);
 }
 
+/* Kontras dipertegas (2026-08-20) - versi lama pakai border/bg nyaris putih di atas
+   sel tabel putih juga, jadi tombol Detail/Ubah/Hapus di kolom Aksi nyaris tak
+   kelihatan (menyatu dgn background). Sekarang bg abu-abu jelas + border solid +
+   warna ikon dipaksakan ke svg langsung (bukan cuma warisan currentColor) supaya
+   tetap kontras di kondisi apa pun. */
 .org-iconbtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(15, 38, 31, 0.18);
+  background: var(--gcs-bg);
   border-radius: 8px;
-  padding: 6px;
+  padding: 0;
   cursor: pointer;
   color: var(--gcs-ink);
   transition: all 0.15s ease;
 }
+.org-iconbtn svg {
+  color: var(--gcs-ink);
+  stroke: currentColor;
+}
 .org-iconbtn:hover {
-  background: var(--gcs-bg);
-  border-color: rgba(15, 38, 31, 0.2);
-  color: var(--gcs-green-900);
+  background: var(--gcs-green-900);
+  border-color: var(--gcs-green-900);
+  color: var(--gcs-white);
+}
+.org-iconbtn:hover svg {
+  color: var(--gcs-white);
 }
 .org-iconbtn--lg {
-  padding: 10px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   border-radius: 10px;
 }
 .org-iconbtn--danger {
   color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+.org-iconbtn--danger svg {
+  color: #dc2626;
 }
 .org-iconbtn--danger:hover {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.2);
+  background: #dc2626;
+  border-color: #dc2626;
+  color: var(--gcs-white);
+}
+.org-iconbtn--danger:hover svg {
+  color: var(--gcs-white);
+}
+
+.org-iconbtn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.org-iconbtn:disabled:hover {
+  background: var(--gcs-bg);
+  border-color: rgba(15, 38, 31, 0.18);
+  color: var(--gcs-ink);
+}
+
+.org-iconbtn--danger:disabled {
+  border-color: rgba(220, 38, 38, 0.28);
+  color: #dc2626;
+}
+
+.org-iconbtn--danger:disabled svg {
+  color: #dc2626;
 }
 
 /* Spin animation */
@@ -1137,7 +1186,11 @@
 
 .org-col-center { text-align: center; }
 .org-col-right { text-align: right; }
-.org-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+/* align-items TAK di-set sebelumnya -> default "stretch" bikin tiap tombol ikon
+   melar mengikuti tinggi baris (baris jadi tinggi krn kolom lain berisi teks 2
+   baris, mis. "GM SDM, Kepatuhan & Pengembangan") - lebar tombol tetap kecil tapi
+   tinggi memanjang jadi kapsul, ikon di dalamnya nyaris tak kelihatan. */
+.org-row-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 
 .org-empty-row {
   text-align: center;
@@ -1495,6 +1548,55 @@
 }
 .org-incumbent-empty-box p { margin: 0; font-size: 0.88rem; font-weight: 600; }
 
+/* Flag "PTS" (Pemangku Tugas Sementara) - tampil di mana pun karyawan/jabatan PTS
+   muncul di halaman ini (chart, tabel manage, hirarki reporting, modal detail),
+   bukan cuma di tab Penempatan Karyawan. Aksen amber-dashed konsisten dgn
+   .org-incumbent-empty-box (formasi kosong) supaya keduanya terasa satu bahasa
+   visual "belum definitif secara struktural". */
+.org-pts-flag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #92400e;
+  background: rgba(244, 174, 70, 0.25);
+  border: 1px solid var(--gcs-gold-500);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.org-chart__avatar--pts {
+  border: 1.5px dashed var(--gcs-gold-500) !important;
+  background: rgba(244, 174, 70, 0.18) !important;
+}
+
+.org-incumbent-chip--pts {
+  border: 1px dashed var(--gcs-gold-500);
+  background: rgba(244, 174, 70, 0.1);
+}
+
+.org-report__badge--pts {
+  background: rgba(244, 174, 70, 0.18);
+  color: #92400e;
+  border: 1px dashed var(--gcs-gold-500);
+  font-weight: 700;
+}
+
+.org-incumbent-card--pts {
+  border: 1px dashed var(--gcs-gold-500);
+  background: rgba(244, 174, 70, 0.08);
+}
+
+.org-incumbent-pts-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--gcs-text-muted);
+  grid-column: 1 / -1;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 1024px) {
   .org-stats {
@@ -1538,7 +1640,7 @@
 .org-penempatan__col-center { text-align: center; }
 .org-penempatan__nama { font-weight: 600; color: var(--gcs-ink); }
 .org-penempatan__empty { text-align: center; color: var(--gcs-text-muted); padding: 24px; }
-.org-penempatan__row-actions { display: flex; gap: 8px; }
+.org-penempatan__row-actions { display: flex; gap: 8px; align-items: center; }
 .org-penempatan__iconbtn { display: inline-flex; border: 1px solid var(--gcs-border); background: var(--gcs-white); border-radius: 8px; padding: 5px; cursor: pointer; color: var(--gcs-ink); }
 .org-penempatan__iconbtn:hover { background: var(--gcs-bg); }
 .org-penempatan__iconbtn--danger { color: #c0392b; }

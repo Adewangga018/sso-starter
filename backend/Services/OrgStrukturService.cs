@@ -121,6 +121,30 @@ public class OrgStrukturService
             .ToDictionary(g => g.Key, g => (IReadOnlyList<IncumbentDto>)g
                 .Select(p => new IncumbentDto(p.Id, p.IdKaryawan, p.Nama, p.Tmt)).ToList());
 
+        // PTS aktif yang sedang mengisi salah satu jabatan di daftar ini - dipakai frontend
+        // menampilkan flag "PTS" di chart/tabel/detail/reporting (bukan cuma tab Penempatan).
+        var ptsByJabatan = new Dictionary<int, PtsRingkasDto>();
+        var ptsRows = await _db.GradingPejabatSementara.AsNoTracking()
+            .Where(x => x.Status == "Aktif" && ids.Contains(x.IdJabatanPengganti))
+            .ToListAsync();
+        if (ptsRows.Count > 0)
+        {
+            var ptsNiks = ptsRows.Select(r => r.IdKaryawan).Distinct().ToList();
+            var ptsNama = await _gcs.MstPegawai.AsNoTracking()
+                .Where(p => ptsNiks.Contains(p.ID_KARYAWAN))
+                .ToDictionaryAsync(p => p.ID_KARYAWAN, p => p.NAMA_LENGKAP ?? p.ID_KARYAWAN);
+            var jabatanAsliByNik = await _db.GradingPenempatan.AsNoTracking()
+                .Where(p => ptsNiks.Contains(p.IdKaryawan) && p.Status == "Aktif")
+                .ToDictionaryAsync(p => p.IdKaryawan, p => p.IdJabatan);
+            foreach (var r in ptsRows)
+            {
+                var jabatanAsliNama = jabatanAsliByNik.TryGetValue(r.IdKaryawan, out var jaId) && jabatanById.TryGetValue(jaId, out var ja)
+                    ? ja.NamaJabatan : null;
+                ptsByJabatan[r.IdJabatanPengganti] = new PtsRingkasDto(
+                    r.IdKaryawan, ptsNama.GetValueOrDefault(r.IdKaryawan, r.IdKaryawan), jabatanAsliNama, r.Tmt);
+            }
+        }
+
         return jabatan
             .OrderBy(j => j.IdBand).ThenBy(j => j.NamaJabatan)
             .Select(j => new JabatanDto(
@@ -129,7 +153,8 @@ public class OrgStrukturService
                 j.IdUnit, j.IdUnit is int uid2 && unitById.TryGetValue(uid2, out var u) ? u.Nama : null,
                 j.IdAtasan, j.IdAtasan is int aid && jabatanById.TryGetValue(aid, out var a) ? a.NamaJabatan : null,
                 j.Inti, j.KelompokFungsi, j.JumlahFormasi, j.Aktif,
-                incumbentByJabatan.GetValueOrDefault(j.IdJabatan, Array.Empty<IncumbentDto>())))
+                incumbentByJabatan.GetValueOrDefault(j.IdJabatan, Array.Empty<IncumbentDto>()),
+                ptsByJabatan.GetValueOrDefault(j.IdJabatan)))
             .ToList();
     }
 
@@ -251,32 +276,61 @@ public class OrgStrukturService
         var pegawai = await _gcs.MstPegawai.AsNoTracking().FirstOrDefaultAsync(p => p.ID_KARYAWAN == req.IdKaryawan);
         if (pegawai is null) return (false, "Karyawan tidak ditemukan.", null);
 
-        await using var tx = await _db.Database.BeginTransactionAsync();
-
-        // Satu karyawan hanya boleh punya SATU penempatan aktif (constraint tabel) -
-        // akhiri dulu penempatan aktifnya yang lama (kalau ada) sebelum menempatkan baru,
-        // ini yang membuat aksi ini sekaligus berfungsi sebagai "mutasi".
-        var lama = await _db.GradingPenempatan.FirstOrDefaultAsync(p => p.IdKaryawan == req.IdKaryawan && p.Status == "Aktif");
-        if (lama is not null)
+        // Validasi silang thd PEGAWAI_SDM (roster aktif, SUMBER KEBENARAN payroll/picker
+        // pencarian pegawai di seluruh app - lihat GajiService.CariPegawaiAsync) - BUKAN cuma
+        // MST_PEGAWAI (tabel profil MyGCS, bisa "basi" - id_karyawan lama tetap ada di sana
+        // meski badge pegawai sudah berganti, mis. probation "BP.xxx" -> Tetap "T.xxx").
+        // Tanpa cek ini, tombol MUTASI (yang memindahkan baris penempatan LAMA apa adanya,
+        // termasuk id_karyawan-nya) bisa diam-diam melanggengkan ID basi - persis kasus yg
+        // ditemukan 2026-08-20 (Risma: grading.penempatan terikat "BP.226318", padahal roster
+        // aktifnya sudah "T.226323", membuat SELURUH kalkulator payroll gagal menemukannya
+        // walau dia tampil normal di bagan Struktur Organisasi).
+        if (!await _gcs.PegawaiSdm.AsNoTracking().AnyAsync(p => p.Nik == req.IdKaryawan && p.data_aktif == "Aktif"))
         {
-            lama.Status = "Selesai";
-            lama.TanggalSelesai = req.Tmt ?? DateTime.UtcNow.Date;
+            return (false,
+                $"ID karyawan \"{req.IdKaryawan}\" tidak ditemukan di roster SDM aktif (PEGAWAI_SDM) - kemungkinan sudah usang/berganti badge (mis. probation -> Tetap). " +
+                "Jangan pakai Mutasi dari baris lama ini; akhiri dulu penempatan lamanya, lalu \"Tempatkan Karyawan\" ulang dgn mencari namanya dari kotak pencarian.",
+                null);
         }
 
-        var baru = new GradingPenempatan
+        // DbContext dikonfigurasi dgn EnableRetryOnFailure (SqlServerRetryingExecutionStrategy)
+        // - transaksi user-initiated biasa (BeginTransactionAsync polos) TIDAK didukung
+        // strategi retry itu (EF Core melempar InvalidOperationException saat retry mencoba
+        // mengulang transaksi yg sudah separuh jalan). Harus dibungkus lewat
+        // CreateExecutionStrategy().ExecuteAsync supaya seluruh blok (baca+tulis+commit)
+        // diulang sebagai SATU unit yang retriable.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        int idBaru = 0;
+        await strategy.ExecuteAsync(async () =>
         {
-            IdJabatan = req.IdJabatan,
-            IdKaryawan = req.IdKaryawan,
-            Nama = pegawai.NAMA_LENGKAP ?? req.IdKaryawan,
-            Tmt = req.Tmt,
-            Status = "Aktif",
-            Catatan = string.IsNullOrWhiteSpace(req.Catatan) ? null : req.Catatan.Trim(),
-            DibuatPada = DateTime.UtcNow,
-        };
-        _db.GradingPenempatan.Add(baru);
-        await _db.SaveChangesAsync();
-        await tx.CommitAsync();
-        return (true, null, baru.Id);
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            // Satu karyawan hanya boleh punya SATU penempatan aktif (constraint tabel) -
+            // akhiri dulu penempatan aktifnya yang lama (kalau ada) sebelum menempatkan baru,
+            // ini yang membuat aksi ini sekaligus berfungsi sebagai "mutasi".
+            var lama = await _db.GradingPenempatan.FirstOrDefaultAsync(p => p.IdKaryawan == req.IdKaryawan && p.Status == "Aktif");
+            if (lama is not null)
+            {
+                lama.Status = "Selesai";
+                lama.TanggalSelesai = req.Tmt ?? DateTime.UtcNow.Date;
+            }
+
+            var baru = new GradingPenempatan
+            {
+                IdJabatan = req.IdJabatan,
+                IdKaryawan = req.IdKaryawan,
+                Nama = pegawai.NAMA_LENGKAP ?? req.IdKaryawan,
+                Tmt = req.Tmt,
+                Status = "Aktif",
+                Catatan = string.IsNullOrWhiteSpace(req.Catatan) ? null : req.Catatan.Trim(),
+                DibuatPada = DateTime.UtcNow,
+            };
+            _db.GradingPenempatan.Add(baru);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            idBaru = baru.Id;
+        });
+        return (true, null, idBaru);
     }
 
     public async Task<(bool Ok, string? Error)> AkhiriPenempatanAsync(int id, AkhiriPenempatanRequest req)

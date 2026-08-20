@@ -53,8 +53,7 @@ const MODULE_ROUTES = {
   'my-health': '/my-health',
   'my-progress': '/my-progress',
   'my-asset': '/my-asset',
-  payroll: '/payroll',
-  org: '/org',
+  'hr-management': '/payroll',
 }
 
 const MODULE_LOGOS = {
@@ -66,8 +65,7 @@ const MODULE_LOGOS = {
   'my-asset': '/asset.png',
   'my-progress': '/progress.png',
   'my-team': '/team.png',
-  payroll: '/payroll.png',
-  'my-payroll': '/payroll.png',
+  'hr-management': '/payroll.png',
 }
 
 const CATEGORIES = [
@@ -81,8 +79,7 @@ const CATEGORIES = [
 const MODULE_CATEGORY_MAP = {
   'my-personal': 'sdm',
   'my-team': 'sdm',
-  payroll: 'sdm',
-  'my-payroll': 'sdm',
+  'hr-management': 'sdm',
   'my-office': 'operasional',
   'my-prosedur': 'operasional',
   'my-asset': 'operasional',

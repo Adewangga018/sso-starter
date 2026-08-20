@@ -15,11 +15,17 @@ public record SimpanUnitRequest(string Nama, string Tipe, int? IdUnitInduk, stri
 // ---- Jabatan ----
 public record IncumbentDto(int IdPenempatan, string IdKaryawan, string Nama, DateTime? Tmt);
 
+// Ringkasan PTS aktif YANG SEDANG MENGISI jabatan ini (grading.pejabat_sementara.
+// id_jabatan_pengganti = jabatan ybs) - dipasang di JabatanDto supaya flag "PTS"
+// tampil di SELURUH halaman Struktur Organisasi (chart/tabel/detail/reporting),
+// bukan cuma di tab Penempatan Karyawan (lihat OrgStrukturService.ListJabatanAsync).
+public record PtsRingkasDto(string IdKaryawan, string NamaKaryawan, string? JabatanAsli, DateTime? Tmt);
+
 public record JabatanDto(
     int IdJabatan, int? Kode, string NamaJabatan, byte IdBand, string? NamaBand, byte? Jg,
     int? IdUnit, string? NamaUnit, int? IdAtasan, string? NamaAtasan, bool? Inti,
     string? KelompokFungsi, short? JumlahFormasi, bool Aktif,
-    IReadOnlyList<IncumbentDto> Incumbent);
+    IReadOnlyList<IncumbentDto> Incumbent, PtsRingkasDto? Pts = null);
 
 public record SimpanJabatanRequest(
     int? Kode, string NamaJabatan, byte IdBand, byte? Jg, int? IdUnit, int? IdAtasan,
