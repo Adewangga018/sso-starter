@@ -25,7 +25,8 @@ public record JabatanDto(
     int IdJabatan, int? Kode, string NamaJabatan, byte IdBand, string? NamaBand, byte? Jg,
     int? IdUnit, string? NamaUnit, int? IdAtasan, string? NamaAtasan, bool? Inti,
     string? KelompokFungsi, short? JumlahFormasi, bool Aktif,
-    IReadOnlyList<IncumbentDto> Incumbent, PtsRingkasDto? Pts = null);
+    IReadOnlyList<IncumbentDto> Incumbent, PtsRingkasDto? Pts = null,
+    string? Alasan = null);
 
 public record SimpanJabatanRequest(
     int? Kode, string NamaJabatan, byte IdBand, byte? Jg, int? IdUnit, int? IdAtasan,

@@ -8,6 +8,14 @@ namespace SsoBackend.Models.Dto;
 public record PegawaiDirektoriItemDto(
     int IdPegawai, string IdKaryawan, string Nik, string Nama, string? StatusKaryawan);
 
+// Rekap karyawan (roster aktif PEGAWAI_SDM, semua jenis_pegawai - termasuk Kontrak) yang
+// BELUM punya penempatan grading aktif, dipakai admin SDM melacak progres onboarding
+// bertahap (2026-08-20) - akun/profil MyGCS boleh jalan duluan (banyak Kontrak sudah
+// login & isi profil), plot jabatan/JG/PG menyusul belakangan per orang.
+public record PegawaiBelumDiplotDto(
+    int IdPegawai, string IdKaryawan, string Nama, string? StatusKaryawan,
+    string? JenisPegawai, string? JabatanLegacy, string? UnitLegacy);
+
 // Detail lengkap satu karyawan (biodata, alamat, keluarga, anak, berkas) - field yang
 // sama dengan PersonalProfileDto (My Personal > Profil versi milik sendiri), ditambah
 // konteks jabatan/unit/band. AlamatDto/PasanganDto/AnakDto/BerkasDto dipakai bersama

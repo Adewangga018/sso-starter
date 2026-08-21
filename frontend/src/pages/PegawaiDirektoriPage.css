@@ -35,6 +35,39 @@
   align-items: start;
 }
 
+/* --- Tab "Semua" vs "Belum Diplot" (rekap onboarding, 2026-08-20) --- */
+.pgd__tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--gcs-bg);
+  padding: 4px;
+  border-radius: 10px;
+}
+.pgd__tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gcs-text-muted);
+  cursor: pointer;
+}
+.pgd__tab.is-active { background: var(--gcs-white); color: var(--gcs-green-900); box-shadow: 0 1px 3px rgba(15, 38, 31, 0.12); }
+.pgd__tab-note {
+  font-size: 0.76rem;
+  color: var(--gcs-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+.pgd__spin { animation: pgdSpin 0.8s linear infinite; }
+@keyframes pgdSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* --- Panel kiri: cari + daftar --- */
 .pgd__list-panel {
   background: var(--gcs-white);

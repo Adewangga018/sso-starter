@@ -66,6 +66,43 @@ public class PegawaiDirektoriController : ControllerBase
         return Ok(rows);
     }
 
+    // GET /org/pegawai/belum-diplot -> rekap karyawan roster aktif (semua jenis_pegawai,
+    // termasuk Kontrak) yang belum punya penempatan grading aktif - admin SDM pakai ini
+    // melacak progres onboarding bertahap (2026-08-20), BUKAN daftar utk memilih/menempatkan
+    // langsung (itu tetap lewat picker Payroll/Struktur Organisasi yg sengaja Tetap-saja).
+    [HttpGet("belum-diplot")]
+    public async Task<ActionResult<IReadOnlyList<PegawaiBelumDiplotDto>>> BelumDiplot()
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+
+        var legacy = await _db.PegawaiSdm.AsNoTracking()
+            .Where(p => p.data_aktif == "Aktif")
+            .Select(p => new { p.Nik, p.nm_jabatan, p.jenis_pegawai, Unit = p.UNIT_KERJA ?? p.BAGIAN })
+            .ToListAsync();
+        var legacyByNik = legacy.ToDictionary(p => p.Nik);
+        var niksAktif = legacy.Select(p => p.Nik).ToList();
+
+        var pegawai = await _db.MstPegawai.AsNoTracking()
+            .Where(p => niksAktif.Contains(p.ID_KARYAWAN))
+            .ToListAsync();
+
+        var posisi = await _posisi.ResolveManyAsync(pegawai.Select(p => p.ID_KARYAWAN).ToList());
+
+        var belumDiplot = pegawai
+            .Where(p => !posisi.TryGetValue(p.ID_KARYAWAN, out var pos) || pos.Band is null)
+            .Select(p =>
+            {
+                legacyByNik.TryGetValue(p.ID_KARYAWAN, out var lg);
+                return new PegawaiBelumDiplotDto(
+                    p.ID_PEGAWAI, p.ID_KARYAWAN, p.NAMA_LENGKAP, p.STATUS_KARYAWAN,
+                    lg?.jenis_pegawai, lg?.nm_jabatan, lg?.Unit);
+            })
+            .OrderBy(x => x.Nama)
+            .ToList();
+
+        return Ok(belumDiplot);
+    }
+
     // GET /org/pegawai/{idPegawai} -> detail lengkap (biodata, alamat, keluarga, anak,
     // manifest berkas) + konteks jabatan/unit/band kalau ada penempatan grading aktif.
     [HttpGet("{idPegawai:int}")]

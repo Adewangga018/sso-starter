@@ -14,11 +14,39 @@ public class OrgStrukturService
 {
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
+    private readonly PosisiResolver _posisi;
 
-    public OrgStrukturService(ApplicationDbContext db, GcsDbContext gcs)
+    public OrgStrukturService(ApplicationDbContext db, GcsDbContext gcs, PosisiResolver posisi)
     {
         _db = db;
         _gcs = gcs;
+        _posisi = posisi;
+    }
+
+    // ===================== Pencarian pegawai utk Penempatan (Tempatkan/Mutasi/PTS) =====================
+    // Beda dari GajiService.CariPegawaiAsync (picker Payroll, SENGAJA dibatasi Tetap saja) -
+    // di sini SEMUA jenis_pegawai aktif ikut muncul (termasuk Kontrak/InternShip/dst),
+    // supaya karyawan yg "belum diplot" (lihat PegawaiDirektoriController.BelumDiplot)
+    // bisa langsung ditempatkan dari sini begitu diperlukan (2026-08-20, diminta eksplisit -
+    // sebelumnya sengaja ditahan dulu, sekarang dibuka utk Struktur Organisasi meski Payroll
+    // tetap Tetap-only krn formula gajinya belum tentu cocok utk non-organik).
+    public async Task<IReadOnlyList<GajiPegawaiPickerDto>> CariPegawaiUntukPenempatanAsync(string? q)
+    {
+        var term = (q ?? string.Empty).Trim();
+        var query = _gcs.PegawaiSdm.AsNoTracking().Where(p => p.data_aktif == "Aktif");
+        if (term.Length >= 2) query = query.Where(p => p.nama!.Contains(term) || p.Nik.Contains(term));
+        var rows = await query
+            .OrderBy(p => p.nama)
+            .Take(100)
+            .Select(p => new { p.Nik, p.nama, p.nm_jabatan, Unit = p.UNIT_KERJA ?? p.BAGIAN })
+            .ToListAsync();
+
+        var posisi = await _posisi.ResolveManyAsync(rows.Select(r => r.Nik).ToList());
+        return rows.Select(r => new GajiPegawaiPickerDto(
+            r.Nik, r.nama ?? r.Nik,
+            PosisiResolver.NamaJabatanTerbaik(posisi.GetValueOrDefault(r.Nik), r.nm_jabatan),
+            r.Unit,
+            posisi.GetValueOrDefault(r.Nik)?.Band is not null)).ToList();
     }
 
     // ===================== Unit Organisasi =====================
@@ -154,7 +182,8 @@ public class OrgStrukturService
                 j.IdAtasan, j.IdAtasan is int aid && jabatanById.TryGetValue(aid, out var a) ? a.NamaJabatan : null,
                 j.Inti, j.KelompokFungsi, j.JumlahFormasi, j.Aktif,
                 incumbentByJabatan.GetValueOrDefault(j.IdJabatan, Array.Empty<IncumbentDto>()),
-                ptsByJabatan.GetValueOrDefault(j.IdJabatan)))
+                ptsByJabatan.GetValueOrDefault(j.IdJabatan),
+                j.Alasan))
             .ToList();
     }
 
@@ -216,14 +245,45 @@ public class OrgStrukturService
         return (true, null, savedId);
     }
 
-    public async Task<(bool Ok, string? Error)> HapusJabatanAsync(int id)
+    // paksa=true membolehkan hapus jabatan yg punya RIWAYAT penempatan/PTS - baris
+    // grading.penempatan & grading.pejabat_sementara milik jabatan ini IKUT DIHAPUS
+    // (siapa saja yg pernah/sedang menempatinya hilang dari riwayat, bukan cuma
+    // jabatannya) supaya tak melanggar FK. Dipakai admin utk bebersih data manual
+    // (2026-08-20, diminta eksplisit, "sementara" - lihat pesan di OrgStrukturController).
+    // Placement AKTIF tetap SELALU diblok apa pun nilai paksa - jangan sampai
+    // menghapus jabatan yg sedang benar-benar diisi orang.
+    public async Task<(bool Ok, string? Error)> HapusJabatanAsync(int id, bool paksa = false)
     {
         var row = await _db.GradingJabatan.FirstOrDefaultAsync(j => j.IdJabatan == id);
         if (row is null) return (false, "Jabatan tidak ditemukan.");
         if (await _db.GradingPenempatan.AnyAsync(p => p.IdJabatan == id && p.Status == "Aktif"))
             return (false, "Jabatan ini masih ada karyawan aktif menempatinya - akhiri penempatannya dulu.");
+
+        if (!paksa)
+        {
+            // Riwayat penempatan LAMA (status "Selesai") tetap punya FK ke jabatan
+            // (grading.penempatan.id_jabatan, constraint FK_penempatan_jabatan) - cek di
+            // atas cuma menyaring yang AKTIF, jadi jabatan yg formasinya sekarang kosong
+            // tapi PERNAH diisi orang (mis. hasil mutasi/akhiri penempatan) tetap gagal
+            // di-hapus permanen kalau tak dicek juga di sini - sebelumnya ini nyelonong
+            // sampai DELETE lalu melanggar FK constraint mentah -> 500 tak tertangani
+            // (ditemukan 2026-08-20). Arahkan admin ke "Non-Aktifkan" (field Aktif, sudah
+            // ada di form Ubah Jabatan) sbg cara yg benar meretensi jabatan yg sudah tak
+            // dipakai TANPA membuang riwayat - kalau memang mau buang riwayatnya jg,
+            // pakai paksa=true (hapusJabatanPaksa di frontend).
+            if (await _db.GradingPenempatan.AnyAsync(p => p.IdJabatan == id))
+                return (false, "Jabatan ini punya riwayat penempatan karyawan (pernah/sedang ditempati) - tidak bisa dihapus permanen agar riwayatnya tidak hilang. Kalau sudah tidak dipakai, non-aktifkan saja lewat Ubah Jabatan (matikan status Aktif).");
+            if (await _db.GradingPejabatSementara.AnyAsync(x => x.IdJabatanPengganti == id))
+                return (false, "Jabatan ini pernah/sedang ditandai PTS (Pemangku Tugas Sementara) - akhiri/hapus dulu penandaan PTS-nya di Struktur Organisasi > Penempatan Karyawan.");
+        }
         if (await _db.GradingJabatan.AnyAsync(j => j.IdAtasan == id))
             return (false, "Jabatan ini masih menjadi atasan jabatan lain - ubah dulu rantai atasannya.");
+
+        if (paksa)
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM grading.penempatan WHERE id_jabatan = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM grading.pejabat_sementara WHERE id_jabatan_pengganti = {id}");
+        }
 
         // grading.jabatan_hirarki (closure table) punya FK ke grading.jabatan - baris
         // dirinya sendiri (kedalaman 0) dari rebuild terakhir harus dibuang dulu SEBELUM
@@ -412,5 +472,165 @@ public class OrgStrukturService
         if (!string.IsNullOrWhiteSpace(req.Catatan)) row.Catatan = req.Catatan.Trim();
         await _db.SaveChangesAsync();
         return (true, null);
+    }
+
+    // ===================== Person Grade (PG) =====================
+    // PG melekat ke ORANGNYA (beda dari JG yg melekat ke jabatan, diatur lewat Ubah
+    // Jabatan) - dipakai basis komponen tarif JG_PG di Payroll (GajiService.ResolvePgAsync).
+    // Sebelumnya cuma bisa diisi lewat SQL manual; CRUD ini yg pertama (2026-08-20).
+
+    public async Task<IReadOnlyList<PersonGradeDto>> ListPersonGradeAsync(string? idKaryawan)
+    {
+        // Susulkan siklus naik otomatis dulu (kalau ada) sebelum ditampilkan - supaya
+        // admin selalu melihat PG yg sudah terkini, bukan baru ketahuan pas Payroll jalan.
+        if (!string.IsNullOrWhiteSpace(idKaryawan))
+            await NaikkanPgOtomatisJikaSaatnyaAsync(idKaryawan);
+
+        var q = _db.GradingPersonGrade.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(idKaryawan)) q = q.Where(x => x.IdKaryawan == idKaryawan);
+        var rows = await q.OrderBy(x => x.Nama).ThenByDescending(x => x.TahunBerlaku).ToListAsync();
+        return rows.Select(x => new PersonGradeDto(
+            x.Id, x.IdKaryawan, x.Nama, x.Pg, x.GolonganLama, x.TahunBerlaku, x.Catatan, x.DibuatPada)).ToList();
+    }
+
+    public async Task<(bool Ok, string? Error, int? Id)> SimpanPersonGradeAsync(int? id, SimpanPersonGradeRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.IdKaryawan)) return (false, "Karyawan wajib dipilih.", null);
+        if (req.TahunBerlaku < 2000) return (false, "Tahun berlaku tidak valid.", null);
+
+        // Validasi silang ke PEGAWAI_SDM (roster aktif) - sama pola dgn guardrail
+        // Tempatkan/Mutasi Karyawan (lihat TempatkanKaryawanAsync) supaya PG tidak
+        // pernah tersimpan atas ID basi yang sudah tak match roster aktif.
+        var pegawai = await _gcs.PegawaiSdm.AsNoTracking().FirstOrDefaultAsync(p => p.Nik == req.IdKaryawan && p.data_aktif == "Aktif");
+        if (pegawai is null) return (false, "Karyawan tidak ditemukan di roster SDM aktif.", null);
+
+        // Satu (id_karyawan, tahun_berlaku) cuma boleh satu baris (UQ_person_grade_karyawan_tahun) -
+        // baris LAIN (bukan diri sendiri kalau sedang edit) yg sudah pakai kombinasi ini
+        // ditolak di sini drpd gagal mentah krn unique index.
+        var bentrok = await _db.GradingPersonGrade.FirstOrDefaultAsync(
+            x => x.IdKaryawan == req.IdKaryawan && x.TahunBerlaku == req.TahunBerlaku && x.Id != (id ?? 0));
+        if (bentrok is not null)
+            return (false, $"{pegawai.nama ?? req.IdKaryawan} sudah punya PG untuk tahun {req.TahunBerlaku} - ubah baris yang sudah ada itu saja.", null);
+
+        if (id is int existingId)
+        {
+            var row = await _db.GradingPersonGrade.FirstOrDefaultAsync(x => x.Id == existingId);
+            if (row is null) return (false, "Baris tidak ditemukan.", null);
+            row.IdKaryawan = req.IdKaryawan;
+            row.Nama = pegawai.nama ?? req.IdKaryawan;
+            row.Pg = req.Pg;
+            row.GolonganLama = string.IsNullOrWhiteSpace(req.GolonganLama) ? null : req.GolonganLama.Trim();
+            row.TahunBerlaku = req.TahunBerlaku;
+            row.Catatan = string.IsNullOrWhiteSpace(req.Catatan) ? null : req.Catatan.Trim();
+            await _db.SaveChangesAsync();
+            return (true, null, row.Id);
+        }
+
+        var baru = new GradingPersonGrade
+        {
+            IdKaryawan = req.IdKaryawan,
+            Nama = pegawai.nama ?? req.IdKaryawan,
+            Pg = req.Pg,
+            GolonganLama = string.IsNullOrWhiteSpace(req.GolonganLama) ? null : req.GolonganLama.Trim(),
+            TahunBerlaku = req.TahunBerlaku,
+            Catatan = string.IsNullOrWhiteSpace(req.Catatan) ? null : req.Catatan.Trim(),
+            DibuatPada = DateTime.UtcNow,
+        };
+        _db.GradingPersonGrade.Add(baru);
+        await _db.SaveChangesAsync();
+        return (true, null, baru.Id);
+    }
+
+    public async Task<(bool Ok, string? Error)> HapusPersonGradeAsync(int id)
+    {
+        var row = await _db.GradingPersonGrade.FirstOrDefaultAsync(x => x.Id == id);
+        if (row is null) return (false, "Baris tidak ditemukan.");
+        _db.GradingPersonGrade.Remove(row);
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    // ===================== Siklus naik PG otomatis =====================
+    // PG naik +1 tiap 3 tahun (2 tahun kalau diakselerasi - grading.pg_akselerasi),
+    // dihitung dari tahun_berlaku baris PG TERAKHIR (baseline manual admin ATAU hasil
+    // naik otomatis sebelumnya) - BUKAN dari TMT langsung, supaya tak dobel-hitung
+    // riwayat manual yg sudah pernah dimasukkan admin (2026-08-20, diminta eksplisit).
+    // PG TIDAK PERNAH melebihi JG jabatan aktif karyawan - kalau PG sudah = JG, mentok
+    // (harus promosi jabatan dulu spy JG naik, baru PG bisa lanjut naik). Kalau karyawan
+    // tak punya penempatan grading aktif, JG tak diketahui - dilewati (tak ada patokan).
+    // Dipanggil lazy (pola sama dgn CutiService.AkrualJikaSiklusBaruAsync) - dari
+    // ListPersonGradeAsync (halaman admin) & GajiService.ResolvePgAsync (Payroll), BUKAN
+    // cron job (app ini tak punya infra scheduler terjadwal).
+    public async Task NaikkanPgOtomatisJikaSaatnyaAsync(string idKaryawan)
+    {
+        var terakhir = await _db.GradingPersonGrade
+            .Where(x => x.IdKaryawan == idKaryawan)
+            .OrderByDescending(x => x.TahunBerlaku)
+            .FirstOrDefaultAsync();
+        if (terakhir is null) return; // belum ada baseline PG - admin blm pernah menetapkan PG awal
+
+        var jg = await _db.GradingPenempatan.AsNoTracking()
+            .Where(p => p.IdKaryawan == idKaryawan && p.Status == "Aktif")
+            .Join(_db.GradingJabatan, p => p.IdJabatan, j => j.IdJabatan, (p, j) => j.Jg)
+            .FirstOrDefaultAsync();
+        if (jg is not byte jgValue || jgValue == 0) return; // tak ditempatkan / JG Direksi (null) - tak ada patokan batas atas
+
+        var diakselerasi = await _db.GradingPgAkselerasi.AsNoTracking().AnyAsync(x => x.IdKaryawan == idKaryawan);
+        var siklusTahun = diakselerasi ? 2 : 3;
+
+        var tahunSekarang = (short)DateTime.UtcNow.Year;
+        var pg = terakhir.Pg;
+        var tahunAcuan = terakhir.TahunBerlaku;
+        var adaPerubahan = false;
+
+        // Satu baris PG baru per siklus terlewat (bukan lompat langsung ke nilai akhir) -
+        // supaya riwayat tetap akurat kalau nanti ada yg butuh PG pada tahun tertentu di
+        // masa lalu (mis. hitung ulang Payroll tahun lalu).
+        while (pg < jgValue && tahunSekarang - tahunAcuan >= siklusTahun)
+        {
+            pg++;
+            tahunAcuan = (short)(tahunAcuan + siklusTahun);
+            _db.GradingPersonGrade.Add(new GradingPersonGrade
+            {
+                IdKaryawan = idKaryawan,
+                Nama = terakhir.Nama,
+                Pg = pg,
+                TahunBerlaku = tahunAcuan,
+                Catatan = $"Naik otomatis (siklus {siklusTahun} tahun)",
+                DibuatPada = DateTime.UtcNow,
+            });
+            adaPerubahan = true;
+        }
+
+        if (adaPerubahan) await _db.SaveChangesAsync();
+    }
+
+    public async Task<PgAkselerasiStatusDto> GetPgAkselerasiAsync(string idKaryawan)
+    {
+        var row = await _db.GradingPgAkselerasi.AsNoTracking().FirstOrDefaultAsync(x => x.IdKaryawan == idKaryawan);
+        return new PgAkselerasiStatusDto(row is not null, row?.Catatan, row?.DibuatPada);
+    }
+
+    public async Task SetPgAkselerasiAsync(string idKaryawan, bool aktif, SetPgAkselerasiRequest? req, string? olehNik)
+    {
+        var row = await _db.GradingPgAkselerasi.FirstOrDefaultAsync(x => x.IdKaryawan == idKaryawan);
+        if (aktif)
+        {
+            if (row is null)
+            {
+                _db.GradingPgAkselerasi.Add(new GradingPgAkselerasi
+                {
+                    IdKaryawan = idKaryawan,
+                    Catatan = string.IsNullOrWhiteSpace(req?.Catatan) ? null : req!.Catatan!.Trim(),
+                    DitetapkanOleh = olehNik,
+                    DibuatPada = DateTime.UtcNow,
+                });
+            }
+        }
+        else if (row is not null)
+        {
+            _db.GradingPgAkselerasi.Remove(row);
+        }
+        await _db.SaveChangesAsync();
     }
 }

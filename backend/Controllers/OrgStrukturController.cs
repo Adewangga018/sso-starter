@@ -91,15 +91,29 @@ public class OrgStrukturController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
+    // paksa=true (opsi "Hapus Paksa" terpisah di frontend, dipakai admin utk bebersih
+    // data manual, 2026-08-20 - lihat OrgStrukturService.HapusJabatanAsync) ikut menghapus
+    // riwayat penempatan/PTS jabatan ini, bukan cuma jabatannya - dipakai sengaja/sadar,
+    // bukan default tombol Hapus biasa.
     [HttpDelete("jabatan/{id:int}")]
-    public async Task<IActionResult> HapusJabatan(int id)
+    public async Task<IActionResult> HapusJabatan(int id, [FromQuery] bool paksa = false)
     {
         if (!await IsSdmAdminAsync()) return Forbid();
-        var (ok, error) = await _org.HapusJabatanAsync(id);
+        var (ok, error) = await _org.HapusJabatanAsync(id, paksa);
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
     // --- Penempatan ---
+
+    // Pencarian pegawai KHUSUS utk memilih siapa yg akan ditempatkan (Tempatkan/Mutasi) -
+    // beda dari picker Payroll (cariPegawaiGaji, Tetap-only): di sini semua jenis_pegawai
+    // aktif ikut muncul, termasuk Kontrak - lihat OrgStrukturService.CariPegawaiUntukPenempatanAsync.
+    [HttpGet("penempatan/cari-pegawai")]
+    public async Task<ActionResult<IReadOnlyList<GajiPegawaiPickerDto>>> CariPegawaiPenempatan([FromQuery] string? q)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _org.CariPegawaiUntukPenempatanAsync(q));
+    }
 
     [HttpGet("penempatan")]
     public async Task<ActionResult<IReadOnlyList<PenempatanDto>>> ListPenempatan(
@@ -148,6 +162,70 @@ public class OrgStrukturController : ControllerBase
         if (!await IsSdmAdminAsync()) return Forbid();
         var (ok, error) = await _org.AkhiriPtsAsync(id, req);
         return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Person Grade (PG) - lihat OrgStrukturService untuk penjelasan beda PG vs JG ---
+
+    [HttpGet("person-grade")]
+    public async Task<ActionResult<IReadOnlyList<PersonGradeDto>>> ListPersonGrade([FromQuery] string? idKaryawan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _org.ListPersonGradeAsync(idKaryawan));
+    }
+
+    [HttpPost("person-grade")]
+    public async Task<IActionResult> BuatPersonGrade([FromBody] SimpanPersonGradeRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error, id) = await _org.SimpanPersonGradeAsync(null, req);
+        return ok ? Ok(new { id }) : BadRequest(new { message = error });
+    }
+
+    [HttpPut("person-grade/{id:int}")]
+    public async Task<IActionResult> UbahPersonGrade(int id, [FromBody] SimpanPersonGradeRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error, _) = await _org.SimpanPersonGradeAsync(id, req);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    [HttpDelete("person-grade/{id:int}")]
+    public async Task<IActionResult> HapusPersonGrade(int id)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        var (ok, error) = await _org.HapusPersonGradeAsync(id);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
+    // --- Akselerasi siklus naik PG (2 tahun, bukan 3) - lihat OrgStrukturService ---
+
+    [HttpGet("person-grade/{idKaryawan}/akselerasi")]
+    public async Task<ActionResult<PgAkselerasiStatusDto>> GetPgAkselerasi(string idKaryawan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        return Ok(await _org.GetPgAkselerasiAsync(idKaryawan));
+    }
+
+    [HttpPut("person-grade/{idKaryawan}/akselerasi")]
+    public async Task<IActionResult> SetPgAkselerasi(string idKaryawan, [FromBody] SetPgAkselerasiRequest req)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        await _org.SetPgAkselerasiAsync(idKaryawan, true, req, await CurrentNikAsync());
+        return NoContent();
+    }
+
+    [HttpDelete("person-grade/{idKaryawan}/akselerasi")]
+    public async Task<IActionResult> HapusPgAkselerasi(string idKaryawan)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+        await _org.SetPgAkselerasiAsync(idKaryawan, false, null, await CurrentNikAsync());
+        return NoContent();
+    }
+
+    private async Task<string?> CurrentNikAsync()
+    {
+        var (user, pegawai) = await _currentUser.ResolveAsync(User);
+        return pegawai?.ID_KARYAWAN ?? user?.Nik;
     }
 
     private async Task<bool> IsSdmAdminAsync()

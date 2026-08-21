@@ -231,6 +231,19 @@ public class GcsDbContext : DbContext
         {
             e.ToTable("assets", "dbo");
             e.HasKey(x => x.OBJECTID);
+            // dbo.assets.OBJECTID adalah kolom lebar-tetap (CHAR) legacy - sebagian baris (181
+            // dari 925, diverifikasi 2026-08-20) tersimpan dengan SPASI PENUTUP asli (mis.
+            // "2015110745" + 10 spasi). Dibaca AS-IS itu bocor ke seluruh app: URL yang dibangun
+            // frontend dari OBJECTID (Inventaris, Detail, QR, encode/decode di asetShared.jsx)
+            // ikut ber-spasi, dan di backend Directory.CreateDirectory MENDIAMKAN spasi ekor saat
+            // membuat folder (Windows otomatis memangkasnya) tapi File.Create sesudahnya memakai
+            // string yg MASIH ber-spasi utk path yg SAMA -> DirectoryNotFoundException tak
+            // tertangani (500) - persis penyebab upload Dokumen Aset gagal. Dipangkas di SATU
+            // titik (baca dari DB) drpd menambal tiap service (AsetService/AsetOverlayService/
+            // AsetOpnameService/AsetDokumenService semua independen query OBJECTID) - toProvider
+            // dibiarkan apa adanya (identity) krn perbandingan `WHERE OBJECTID = @p` di SQL Server
+            // sudah otomatis mengabaikan beda spasi ekor (aturan ANSI padding CHAR/VARCHAR).
+            e.Property(x => x.OBJECTID).HasConversion(v => v, v => v.TrimEnd());
             e.Property(x => x.QTY).HasPrecision(18, 2);
             e.Property(x => x.NILAI_PEROLEHAN).HasPrecision(18, 2);
             e.Property(x => x.NILAI_BUKU).HasPrecision(18, 2);

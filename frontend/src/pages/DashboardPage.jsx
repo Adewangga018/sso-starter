@@ -413,11 +413,13 @@ export default function DashboardPage() {
                 }
 
                 return (
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className={`module-tile module-tile--open ${isFav ? 'module-tile--fav' : ''}`}
                     key={mod.key}
                     onClick={() => navigate(target)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(target) } }}
                     aria-label={`Buka modul ${mod.label}`}
                   >
                     <div className="module-tile__top-bar">
@@ -452,7 +454,7 @@ export default function DashboardPage() {
                       <span>Buka Modul</span>
                       <ArrowRight size={14} className="module-tile__arrow" />
                     </div>
-                  </button>
+                  </div>
                 )
               })}
             </div>

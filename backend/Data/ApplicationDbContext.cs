@@ -71,6 +71,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GradingPenempatan> GradingPenempatan => Set<GradingPenempatan>();
     public DbSet<GradingBand> GradingBand => Set<GradingBand>();
     public DbSet<GradingPejabatSementara> GradingPejabatSementara => Set<GradingPejabatSementara>();
+    public DbSet<GradingPersonGrade> GradingPersonGrade => Set<GradingPersonGrade>();
+    public DbSet<GradingPgAkselerasi> GradingPgAkselerasi => Set<GradingPgAkselerasi>();
     // My Progress (schema kpi) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Kpi> Kpi => Set<Kpi>();
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -664,6 +666,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.TanggalSelesai).HasColumnName("tanggal_selesai");
             e.Property(x => x.Status).HasColumnName("status");
             e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GradingPersonGrade>(e =>
+        {
+            e.ToTable("person_grade", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Nama).HasColumnName("nama");
+            e.Property(x => x.Pg).HasColumnName("pg");
+            e.Property(x => x.GolonganLama).HasColumnName("golongan_lama");
+            e.Property(x => x.TahunBerlaku).HasColumnName("tahun_berlaku");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GradingPgAkselerasi>(e =>
+        {
+            e.ToTable("pg_akselerasi", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.IdKaryawan);
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DitetapkanOleh).HasColumnName("ditetapkan_oleh");
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 

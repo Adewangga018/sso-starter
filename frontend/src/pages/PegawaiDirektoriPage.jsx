@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, CheckCircle2, ChevronRight, FileWarning, Search, ShieldAlert, UserSquare2, Users,
+  ArrowLeft, CheckCircle2, ChevronRight, FileWarning, ListChecks, Loader2, Search, ShieldAlert, UserSquare2, Users,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -19,6 +19,7 @@ function fmtTanggal(v) {
 
 export default function PegawaiDirektoriPage() {
   const { isAdminModulSdm, summary } = useAuth()
+  const [mode, setMode] = useState('semua') // 'semua' | 'belum-diplot'
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -26,9 +27,16 @@ export default function PegawaiDirektoriPage() {
   const [detailError, setDetailError] = useState('')
   const [modal, setModal] = useState(emptyModal)
 
+  // Rekap "belum diplot" (semua jenis_pegawai, termasuk Kontrak, yg belum punya
+  // penempatan grading) - diambil sekali per aktivasi mode, disaring di klien lewat
+  // kotak cari yg sama (bukan lewat server spt mode "Semua").
+  const [belumDiplotAll, setBelumDiplotAll] = useState(null)
+  const [belumDiplotLoading, setBelumDiplotLoading] = useState(false)
+
   // Daftar default (100 pertama) langsung tampil begitu halaman dibuka - kotak cari
   // cuma menyaring lewat query >=2 huruf (sama pola dgn PayrollManualPage).
   useEffect(() => {
+    if (mode !== 'semua') return
     const term = query.trim()
     setSearching(true)
     const t = setTimeout(() => {
@@ -38,7 +46,24 @@ export default function PegawaiDirektoriPage() {
         .finally(() => setSearching(false))
     }, term ? 300 : 0)
     return () => clearTimeout(t)
-  }, [query])
+  }, [mode, query])
+
+  useEffect(() => {
+    if (mode !== 'belum-diplot' || belumDiplotAll !== null) return
+    setBelumDiplotLoading(true)
+    api.getPegawaiBelumDiplot()
+      .then((rows) => setBelumDiplotAll(rows))
+      .catch(() => setBelumDiplotAll([]))
+      .finally(() => setBelumDiplotLoading(false))
+  }, [mode, belumDiplotAll])
+
+  useEffect(() => {
+    if (mode !== 'belum-diplot' || belumDiplotAll === null) return
+    const term = query.trim().toLowerCase()
+    setResults(term
+      ? belumDiplotAll.filter((r) => r.nama.toLowerCase().includes(term) || r.idKaryawan.toLowerCase().includes(term))
+      : belumDiplotAll)
+  }, [mode, query, belumDiplotAll])
 
   async function selectEmployee(row) {
     setDetailError('')
@@ -100,30 +125,57 @@ export default function PegawaiDirektoriPage() {
 
       <div className="pgd__layout">
         <div className="pgd__list-panel">
+          <div className="pgd__tabs">
+            <button type="button" className={`pgd__tab${mode === 'semua' ? ' is-active' : ''}`} onClick={() => { setMode('semua'); setSelected(null) }}>
+              Semua
+            </button>
+            <button type="button" className={`pgd__tab${mode === 'belum-diplot' ? ' is-active' : ''}`} onClick={() => { setMode('belum-diplot'); setSelected(null) }}>
+              <ListChecks size={13} /> Belum Diplot{belumDiplotAll !== null && ` (${belumDiplotAll.length})`}
+            </button>
+          </div>
+
+          {mode === 'belum-diplot' && (
+            <p className="pgd__tab-note">
+              Karyawan roster aktif (termasuk Kontrak) yang belum punya penempatan jabatan/grading - buat lacak progres onboarding bertahap.
+            </p>
+          )}
+
           <div className="pgd__search">
             <Search size={15} />
             <input
-              placeholder="Cari nama, NIK, atau ID karyawan… (opsional - daftar sudah tampil)"
+              placeholder={mode === 'semua' ? 'Cari nama, NIK, atau ID karyawan… (opsional - daftar sudah tampil)' : 'Saring nama atau ID karyawan…'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
           <div className="pgd__results">
-            {results.map((r) => (
-              <button
-                type="button" key={r.idPegawai}
-                className={`pgd__result${selected?.idPegawai === r.idPegawai ? ' is-active' : ''}`}
-                onClick={() => selectEmployee(r)}
-              >
-                <span className="pgd__result-avatar">{r.nama?.charAt(0)?.toUpperCase() ?? '?'}</span>
-                <span className="pgd__result-text">
-                  <span className="pgd__result-nama">{r.nama}</span>
-                  <span className="pgd__result-sub">{r.idKaryawan} · NIK {r.nik} · {r.statusKaryawan ?? '-'}</span>
-                </span>
-              </button>
-            ))}
-            {!searching && results.length === 0 && (
-              <div className="pgd__empty">Tidak ada pegawai yang cocok.</div>
+            {mode === 'belum-diplot' && belumDiplotLoading ? (
+              <div className="pgd__empty"><Loader2 size={16} className="pgd__spin" /> Memuat…</div>
+            ) : (
+              <>
+                {results.map((r) => (
+                  <button
+                    type="button" key={r.idPegawai}
+                    className={`pgd__result${selected?.idPegawai === r.idPegawai ? ' is-active' : ''}`}
+                    onClick={() => selectEmployee(r)}
+                  >
+                    <span className="pgd__result-avatar">{r.nama?.charAt(0)?.toUpperCase() ?? '?'}</span>
+                    <span className="pgd__result-text">
+                      <span className="pgd__result-nama">{r.nama}</span>
+                      <span className="pgd__result-sub">
+                        {mode === 'semua'
+                          ? <>{r.idKaryawan} · NIK {r.nik} · {r.statusKaryawan ?? '-'}</>
+                          : <>{r.idKaryawan} · {r.jenisPegawai ?? r.statusKaryawan ?? '-'}{r.jabatanLegacy ? ` · ${r.jabatanLegacy}` : ''}</>}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+                {results.length === 0 && (mode === 'semua' ? !searching : true) && (
+                  <div className="pgd__empty">
+                    {mode === 'belum-diplot' ? 'Semua karyawan sudah punya penempatan grading.' : 'Tidak ada pegawai yang cocok.'}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

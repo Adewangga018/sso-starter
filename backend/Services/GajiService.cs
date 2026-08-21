@@ -15,12 +15,14 @@ public class GajiService
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
     private readonly PosisiResolver _posisi;
+    private readonly OrgStrukturService _org;
 
-    public GajiService(ApplicationDbContext db, GcsDbContext gcs, PosisiResolver posisi)
+    public GajiService(ApplicationDbContext db, GcsDbContext gcs, PosisiResolver posisi, OrgStrukturService org)
     {
         _db = db;
         _gcs = gcs;
         _posisi = posisi;
+        _org = org;
     }
 
     private static readonly string[] BulanId =
@@ -217,6 +219,12 @@ public class GajiService
     // PG berlaku: baris person_grade dengan tahun_berlaku terbaru <= tahun periode.
     private async Task<int?> ResolvePgAsync(string nik, int tahun)
     {
+        // Susulkan siklus naik PG otomatis dulu (kalau saatnya) - lihat
+        // OrgStrukturService.NaikkanPgOtomatisJikaSaatnyaAsync. Aman dipanggil di sini
+        // tiap kali Payroll dihitung: hanya menambah baris baru bila memang sudah waktunya,
+        // no-op selebihnya.
+        await _org.NaikkanPgOtomatisJikaSaatnyaAsync(nik);
+
         var conn = _db.Database.GetDbConnection();
         var mustClose = conn.State != ConnectionState.Open;
         if (mustClose) await conn.OpenAsync();

@@ -57,7 +57,9 @@ export default function OrgPenempatanPage() {
     if (term.length < 2) { setPegawaiHasil([]); return }
     const t = setTimeout(async () => {
       try {
-        setPegawaiHasil(await api.cariPegawaiGaji(term))
+        // Semua jenis_pegawai aktif (termasuk Kontrak) - beda dari picker Payroll yg
+        // Tetap-only, supaya karyawan "belum diplot" bisa langsung ditempatkan dari sini.
+        setPegawaiHasil(await api.cariPegawaiPenempatan(term))
       } catch {
         setPegawaiHasil([])
       }

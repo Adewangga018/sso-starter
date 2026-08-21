@@ -266,7 +266,7 @@ export const api = {
 
   // My Asset > Inventaris - sumber datanya GCS.dbo.assets (ERP Aktiva Tetap), read-only.
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  getAsetDetail: (objectId) => apiFetch(`/api/aset/${objectId}`),
+  getAsetDetail: (objectId) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}`),
   // My Asset > Pendaftaran Aset Baru (MyGCS -> dbo.assets, SSOT tetap ERP).
   listGroupAssetErp: () => apiFetch('/api/aset/group-asset'),
   listKelompokErp: (groupAsset) => apiFetch(`/api/aset/kelompok${groupAsset ? `?groupAsset=${encodeURIComponent(groupAsset)}` : ''}`),
@@ -285,12 +285,12 @@ export const api = {
   cariPegawaiAset: (q) => apiFetch(`/api/aset/pegawai?q=${encodeURIComponent(q ?? '')}`),
   listBagianAset: () => apiFetch('/api/aset/bagian'),
   listJenisAktivitasAset: () => apiFetch('/api/aset/jenis-aktivitas'),
-  getAsetOverlay: (objectId) => apiFetch(`/api/aset/${objectId}/overlay`),
-  setAsetKondisi: (objectId, payload) => apiFetch(`/api/aset/${objectId}/kondisi`, { method: 'POST', body: JSON.stringify(payload) }),
-  setAsetNomorInternal: (objectId, payload) => apiFetch(`/api/aset/${objectId}/nomor`, { method: 'PUT', body: JSON.stringify(payload) }),
-  assignAsetPic: (objectId, payload) => apiFetch(`/api/aset/${objectId}/pic`, { method: 'POST', body: JSON.stringify(payload) }),
+  getAsetOverlay: (objectId) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/overlay`),
+  setAsetKondisi: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/kondisi`, { method: 'POST', body: JSON.stringify(payload) }),
+  setAsetNomorInternal: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/nomor`, { method: 'PUT', body: JSON.stringify(payload) }),
+  assignAsetPic: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/pic`, { method: 'POST', body: JSON.stringify(payload) }),
   kembalikanAsetPic: (id) => apiFetch(`/api/aset/pic/${id}/kembalikan`, { method: 'POST' }),
-  buatAsetAktivitas: (objectId, payload) => apiFetch(`/api/aset/${objectId}/aktivitas`, { method: 'POST', body: JSON.stringify(payload) }),
+  buatAsetAktivitas: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/aktivitas`, { method: 'POST', body: JSON.stringify(payload) }),
   ubahAsetAktivitas: (id, payload) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   hapusAsetAktivitas: (id) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'DELETE' }),
   getAsetClearance: (nik) => apiFetch(`/api/aset/clearance?nik=${encodeURIComponent(nik)}`),
@@ -313,7 +313,7 @@ export const api = {
     const body = new FormData()
     Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== '') body.append(k, v) })
     if (file) body.append('file', file)
-    return apiFetch(`/api/aset/${objectId}/dokumen`, { method: 'POST', body })
+    return apiFetch(`/api/aset/${encodeURIComponent(objectId)}/dokumen`, { method: 'POST', body })
   },
   ubahAsetDokumen: (id, payload) => apiFetch(`/api/aset/dokumen/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   hapusAsetDokumen: (id) => apiFetch(`/api/aset/dokumen/${id}`, { method: 'DELETE' }),
@@ -420,6 +420,10 @@ export const api = {
   buatOrgJabatan: (payload) => apiFetch('/api/org/jabatan', { method: 'POST', body: JSON.stringify(payload) }),
   ubahOrgJabatan: (id, payload) => apiFetch(`/api/org/jabatan/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   hapusOrgJabatan: (id) => apiFetch(`/api/org/jabatan/${id}`, { method: 'DELETE' }),
+  // "Hapus Paksa" (sementara, diminta 2026-08-20) - ikut menghapus riwayat penempatan/PTS
+  // jabatan ini, bukan cuma jabatannya. Dipakai lewat konfirmasi terpisah, bukan tombol
+  // Hapus biasa - lihat OrgStrukturPage.jsx deleteJabatan.
+  hapusOrgJabatanPaksa: (id) => apiFetch(`/api/org/jabatan/${id}?paksa=true`, { method: 'DELETE' }),
 
   getOrgPenempatan: (params = {}) => {
     const q = new URLSearchParams()
@@ -432,9 +436,24 @@ export const api = {
   tempatkanKaryawan: (payload) => apiFetch('/api/org/penempatan', { method: 'POST', body: JSON.stringify(payload) }),
   akhiriPenempatan: (id, payload) => apiFetch(`/api/org/penempatan/${id}/akhiri`, { method: 'POST', body: JSON.stringify(payload ?? {}) }),
 
+  // Pencarian pegawai khusus Tempatkan/Mutasi (SEMUA jenis_pegawai aktif, termasuk Kontrak -
+  // beda dari cariPegawaiGaji yg Tetap-only utk Payroll).
+  cariPegawaiPenempatan: (q) => apiFetch(`/api/org/penempatan/cari-pegawai?q=${encodeURIComponent(q ?? '')}`),
   getOrgPts: () => apiFetch('/api/org/pts'),
   tandaiPts: (payload) => apiFetch('/api/org/pts', { method: 'POST', body: JSON.stringify(payload) }),
   akhiriPts: (id, payload) => apiFetch(`/api/org/pts/${id}/akhiri`, { method: 'POST', body: JSON.stringify(payload ?? {}) }),
+
+  // Person Grade (PG) per karyawan - beda dari JG yg melekat ke jabatan (Ubah Jabatan).
+  getOrgPersonGrade: (idKaryawan) => apiFetch(`/api/org/person-grade${idKaryawan ? `?idKaryawan=${encodeURIComponent(idKaryawan)}` : ''}`),
+  buatOrgPersonGrade: (payload) => apiFetch('/api/org/person-grade', { method: 'POST', body: JSON.stringify(payload) }),
+  ubahOrgPersonGrade: (id, payload) => apiFetch(`/api/org/person-grade/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  hapusOrgPersonGrade: (id) => apiFetch(`/api/org/person-grade/${id}`, { method: 'DELETE' }),
+  // Akselerasi siklus naik PG (2 tahun, bukan 3) - lihat OrgStrukturService.
+  getPgAkselerasi: (idKaryawan) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`),
+  setPgAkselerasi: (idKaryawan, payload) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'PUT', body: JSON.stringify(payload ?? {}) }),
+  hapusPgAkselerasi: (idKaryawan) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'DELETE' }),
+  // Opsi JG/PG (dipakai jg utk info Payroll > Formula) - lihat GajiService.GetGradeOpsiAsync.
+  getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
   submitAbsensi: (payload) =>
@@ -610,6 +629,9 @@ export const api = {
 
   // direktori karyawan (Admin Modul SDM, modul HR Management > Data Karyawan)
   cariPegawaiDirektori: (q) => apiFetch(`/api/org/pegawai?q=${encodeURIComponent(q ?? '')}`),
+  // Rekap karyawan roster aktif (termasuk Kontrak) yang belum punya penempatan grading -
+  // lacak progres onboarding bertahap, bukan picker utk menempatkan langsung.
+  getPegawaiBelumDiplot: () => apiFetch('/api/org/pegawai/belum-diplot'),
   getPegawaiDirektoriDetail: (idPegawai) => apiFetch(`/api/org/pegawai/${idPegawai}`),
   getPegawaiDirektoriFile: (idPegawai, key) => apiBlob(`/api/org/pegawai/${idPegawai}/file/${key}`),
   getPegawaiDirektoriAktaAnak: (idPegawai, idAnak) =>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { LayoutGrid, MapPinned, Network, SlidersHorizontal, UserCog, UserSquare2, UsersRound } from 'lucide-react'
+import { LayoutGrid, MapPinned, Network, SlidersHorizontal, UserCog, UserCog2, UserSquare2, UsersRound } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -34,6 +34,7 @@ function buildSections() {
       label: 'Data Karyawan',
       items: [
         { key: 'pegawai', feature: 'org:pegawai', label: 'Direktori Karyawan', icon: UserSquare2, to: '/org/pegawai' },
+        { key: 'person-grade', feature: 'org:person-grade', label: 'Person Grade (PG)', icon: UserCog2, to: '/org/person-grade' },
       ],
     },
   ]

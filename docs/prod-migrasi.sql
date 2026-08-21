@@ -2056,5 +2056,39 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [19] PG AKSELERASI - siklus naik PG otomatis ################';
+GO
+/* ============================================================================
+   grading.pg_akselerasi (2026-08-20): penanda karyawan yg PG-nya naik tiap 2
+   tahun (bukan 3 tahun default), ditetapkan Admin SDM. Logika siklus naik PG
+   sepenuhnya di C# (OrgStrukturService.NaikkanPgOtomatisJikaSaatnyaAsync) -
+   blok ini HANYA skema tabel baru, TANPA data. NON-DESTRUKTIF & idempoten.
+   Isi lengkap: backend/Database/grading/11-pg-akselerasi-ddl.sql
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('grading.pg_akselerasi', 'U') IS NULL
+BEGIN
+    CREATE TABLE grading.pg_akselerasi
+    (
+        id_karyawan     NVARCHAR(20) NOT NULL CONSTRAINT PK_grading_pg_akselerasi PRIMARY KEY,
+        catatan         NVARCHAR(400) NULL,
+        ditetapkan_oleh NVARCHAR(20) NULL,
+        dibuat_pada     DATETIME2 NOT NULL CONSTRAINT DF_pg_akselerasi_dibuat DEFAULT (SYSDATETIME())
+    );
+    PRINT 'Tabel grading.pg_akselerasi dibuat.';
+END
+ELSE
+    PRINT 'LEWATI: grading.pg_akselerasi sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

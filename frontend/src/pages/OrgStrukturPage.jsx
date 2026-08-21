@@ -1,20 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertCircle, ArrowDown, ArrowRight, Briefcase, Building2, ChevronDown, ChevronRight,
-  ChevronUp, Compass, Eye, Layers, LayoutGrid, ListTree, Maximize2, Network,
-  Pencil, Plus, RefreshCw, RotateCcw, Search, Sparkles, Trash2, UserCheck, UserPlus, Users, X, ZoomIn, ZoomOut
+  AlertCircle, ArrowDown, ArrowRight, Briefcase, Building2, ChevronDown,
+  ChevronRight, ChevronUp, Compass, CornerDownRight, Eye, FileText,
+  FolderTree, Info, Layers, LayoutGrid, ListTree, Maximize2, MoreVertical,
+  Network, Pencil, Plus, RefreshCw, RotateCcw, Search, Sparkles, Star,
+  Trash2, UserCheck, UserPlus, Users, X, ZoomIn, ZoomOut
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
 import { useDialog } from '../components/DialogProvider'
 import './OrgStruktur.css'
 
-// "Bagian" ditambahkan sbg tipe unit tersendiri (2026-08-20) - sebelumnya jabatan Kepala
-// Bagian sengaja langsung diarahkan ke unit Departemen induknya (lihat komentar di
-// backend/Database/grading/02-seed-master.sql baris ~175), tapi itu bikin jabatan Kepala
-// Bagian tampil dobel/rancu di dalam tabel unit Departemen-nya sendiri. Sekarang "Bagian"
-// bisa dibuat sbg unit anak (child) dari Departemen/Kompartemen, lalu jabatan Kepala
-// Bagian dipindah id_unit-nya ke situ - lihat pola "Bagian Pengadaan" yang sudah benar.
+// "Bagian" ditambahkan sbg tipe unit tersendiri (2026-08-20)
 const TIPE_UNIT = ['Direktorat', 'Kompartemen', 'Departemen', 'Bagian', 'Region', 'Kelompok']
 
 const TIPE_COLORS = {
@@ -24,6 +21,19 @@ const TIPE_COLORS = {
   Bagian: { bg: '#164e63', text: '#67e8f9', border: '#155e75', badgeBg: 'rgba(103, 232, 249, 0.15)', badgeText: '#67e8f9' },
   Region: { bg: '#78350f', text: '#fbbf24', border: '#92400e', badgeBg: 'rgba(251, 191, 36, 0.15)', badgeText: '#fbbf24' },
   Kelompok: { bg: '#4c1d95', text: '#c084fc', border: '#5b21b6', badgeBg: 'rgba(192, 132, 252, 0.15)', badgeText: '#c084fc' },
+}
+
+// Warna titik bundar penanda tipe unit di tree Unit Kerja (2026-08-21) - palet TERPISAH
+// dari TIPE_COLORS.text di atas: warna pastel di sana didesain di atas header kartu
+// gelap (chart/badge), kalau dipakai langsung sbg titik kecil di sidebar PUTIH jadi
+// pucat/kurang kontras. Di sini dipilih versi lebih pekat/saturated khusus latar terang.
+const TIPE_DOT_COLORS = {
+  Direktorat: '#f4ae46', // emas/amber
+  Kompartemen: '#2563eb', // biru
+  Departemen: '#16a34a', // hijau
+  Bagian: '#db2777', // pink
+  Region: '#dc2626', // merah
+  Kelompok: '#7c3aed', // ungu
 }
 
 const emptyUnitForm = { nama: '', tipe: 'Departemen', idUnitInduk: '', wilayah: '', keterangan: '' }
@@ -66,6 +76,19 @@ function buildJabatanTree(jabatanList) {
   return attach(0)
 }
 
+function getUnitAncestry(unitId, unitById) {
+  if (!unitId || unitId === 'ALL') return []
+  const ancestry = []
+  let curr = unitById.get(unitId)
+  const seen = new Set()
+  while (curr && !seen.has(curr.idUnit)) {
+    seen.add(curr.idUnit)
+    ancestry.unshift(curr)
+    curr = curr.idUnitInduk ? unitById.get(curr.idUnitInduk) : null
+  }
+  return ancestry
+}
+
 function initialAvatar(name) {
   if (!name) return '?'
   const parts = name.trim().split(' ')
@@ -77,12 +100,71 @@ function incumbentKey(inc, index = 0) {
   return inc.idPenempatan ?? `${inc.idKaryawan}-${inc.tmt ?? 'no-tmt'}-${index}`
 }
 
+/* --- Component: Universal 3-Dots Action Dropdown Menu --- */
+function ActionDropdown({ items = [], title = 'Aksi' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="org-dropdown-wrap" ref={ref} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className="org-iconbtn org-dropdown-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        title={title}
+        aria-expanded={open}
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <div className="org-dropdown-menu">
+          {items.map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className={`org-dropdown-item ${item.danger ? 'org-dropdown-item--danger' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpen(false)
+                item.onClick?.()
+              }}
+              disabled={item.disabled}
+              title={item.title || item.label}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* --- Component: Node Unit untuk Sidebar Tree --- */
 function UnitTreeNode({ node, depth, selectedId, expanded, search, onToggle, onSelect, onEdit, onDelete, onCreateSub }) {
   const isExpanded = expanded.has(node.idUnit)
   const hasChildren = node.children && node.children.length > 0
   const matchesSearch = !search || node.nama.toLowerCase().includes(search.toLowerCase()) || node.tipe.toLowerCase().includes(search.toLowerCase())
-  const colors = TIPE_COLORS[node.tipe] || TIPE_COLORS.Departemen
+  const dotColor = TIPE_DOT_COLORS[node.tipe] || TIPE_DOT_COLORS.Departemen
 
   if (!matchesSearch && search && !node.children.some(c => c.nama.toLowerCase().includes(search.toLowerCase()))) {
     return null
@@ -92,13 +174,14 @@ function UnitTreeNode({ node, depth, selectedId, expanded, search, onToggle, onS
     <div className="org-tree__unit-node">
       <div
         className={`org-tree__unit-row ${selectedId === node.idUnit ? 'is-selected' : ''}`}
-        style={{ paddingLeft: 12 + depth * 18 }}
+        style={{ paddingLeft: 8 + depth * 14 }}
       >
         <button
           type="button"
           className="org-tree__unit-caret"
           onClick={() => hasChildren && onToggle(node.idUnit)}
           disabled={!hasChildren}
+          title={hasChildren ? (isExpanded ? 'Ciutkan' : 'Kembangkan') : ''}
         >
           {hasChildren ? (
             isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
@@ -106,25 +189,24 @@ function UnitTreeNode({ node, depth, selectedId, expanded, search, onToggle, onS
             <span className="org-tree__caret-spacer" />
           )}
         </button>
-        <button type="button" className="org-tree__unit-label" onClick={() => onSelect(node.idUnit)}>
-          <span className="org-tree__unit-tipe" style={{ color: colors.badgeText, backgroundColor: colors.badgeBg }}>
-            {node.tipe}
-          </span>
+        <button
+          type="button"
+          className="org-tree__unit-label"
+          onClick={() => onSelect(node.idUnit)}
+          title={`${node.tipe}: ${node.nama}${node.wilayah ? ` (${node.wilayah})` : ''}`}
+        >
+          <span className="org-tree__unit-dot" style={{ backgroundColor: dotColor }} />
           <span className="org-tree__unit-nama">{node.nama}</span>
-          <span className="org-tree__unit-count" title={`${node.jumlahJabatan} jabatan`}>
-            {node.jumlahJabatan} <Briefcase size={11} />
-          </span>
         </button>
         <div className="org-tree__unit-actions">
-          <button type="button" className="org-iconbtn" title="Tambah Sub-unit" onClick={() => onCreateSub(node.idUnit)}>
-            <Plus size={13} />
-          </button>
-          <button type="button" className="org-iconbtn" title="Ubah Unit" onClick={() => onEdit(node)}>
-            <Pencil size={13} />
-          </button>
-          <button type="button" className="org-iconbtn org-iconbtn--danger" title="Hapus Unit" onClick={() => onDelete(node)}>
-            <Trash2 size={13} />
-          </button>
+          <ActionDropdown
+            title="Aksi Unit"
+            items={[
+              { label: 'Tambah Sub-Unit', icon: <Plus size={13} />, onClick: () => onCreateSub(node.idUnit) },
+              { label: 'Ubah Unit', icon: <Pencil size={13} />, onClick: () => onEdit(node) },
+              { label: 'Hapus Unit', icon: <Trash2 size={13} />, danger: true, onClick: () => onDelete(node) },
+            ]}
+          />
         </div>
       </div>
       {hasChildren && isExpanded && node.children.map((c) => (
@@ -197,8 +279,8 @@ function OrgChartNode({
               {unitJabatan.slice(0, 4).map((j) => (
                 <div key={j.idJabatan} className="org-chart__jabatan-item" onClick={() => onViewJabatanDetail(j)}>
                   <div className="org-chart__jabatan-info">
-                    <span className="org-chart__jabatan-name">{j.namaJabatan}</span>
-                    <span className="org-chart__jabatan-band">{j.namaBand || `Band ${j.idBand}`}</span>
+                    <span className="org-chart__jabatan-name" title={j.namaJabatan}>{j.namaJabatan}</span>
+                    <span className="org-chart__jabatan-band">{j.namaBand || `Band ${j.idBand}`} {j.jg ? `(JG ${j.jg})` : ''}</span>
                   </div>
                   <div className="org-chart__incumbents">
                     {j.incumbent && j.incumbent.length > 0 ? (
@@ -304,12 +386,14 @@ function ReportingJabatanNode({ node, depth, search, onViewDetail, onEdit, onDel
         </div>
 
         <div className="org-report__actions">
-          <button type="button" className="org-iconbtn" title="Ubah Jabatan" onClick={() => onEdit(node)}>
-            <Pencil size={13} />
-          </button>
-          <button type="button" className="org-iconbtn org-iconbtn--danger" title="Hapus Jabatan" onClick={() => onDelete(node)}>
-            <Trash2 size={13} />
-          </button>
+          <ActionDropdown
+            title="Aksi Jabatan"
+            items={[
+              { label: 'Lihat Detail', icon: <Eye size={13} />, onClick: () => onViewDetail(node) },
+              { label: 'Ubah Jabatan', icon: <Pencil size={13} />, onClick: () => onEdit(node) },
+              { label: 'Hapus Jabatan', icon: <Trash2 size={13} />, danger: true, onClick: () => onDelete(node) },
+            ]}
+          />
         </div>
       </div>
 
@@ -318,7 +402,7 @@ function ReportingJabatanNode({ node, depth, search, onViewDetail, onEdit, onDel
           {node.children.map((c) => (
             <ReportingJabatanNode
               key={c.idJabatan} node={c} depth={depth + 1} search={search}
-              onViewDetail={onViewDetail} onEdit={onEdit} onDelete={onDelete}
+              onViewDetail={onViewDetail} onEdit={onEdit} onDelete={deleteJabatan}
             />
           ))}
         </div>
@@ -383,6 +467,23 @@ export default function OrgStrukturPage() {
   const jabatanTree = useMemo(() => buildJabatanTree(jabatan), [jabatan])
   const unitById = useMemo(() => new Map(units.map((u) => [u.idUnit, u])), [units])
 
+  /* Direct Subordinates calculation for detail modal */
+  const directSubordinates = useMemo(() => {
+    if (!detailJabatan) return []
+    return jabatan.filter(j => j.idAtasan === detailJabatan.idJabatan)
+  }, [jabatan, detailJabatan])
+
+  /* Selected Unit Breadcrumbs */
+  const selectedUnitAncestry = useMemo(() => {
+    return getUnitAncestry(selectedUnit, unitById)
+  }, [selectedUnit, unitById])
+
+  /* Detail Jabatan Unit Breadcrumbs */
+  const detailUnitAncestry = useMemo(() => {
+    if (!detailJabatan?.idUnit) return []
+    return getUnitAncestry(detailJabatan.idUnit, unitById)
+  }, [detailJabatan, unitById])
+
   /* Auto expand first level units on initial load */
   useEffect(() => {
     if (units.length > 0 && expanded.size === 0) {
@@ -434,7 +535,7 @@ export default function OrgStrukturPage() {
   /* Pan Drag Handlers */
   const handleMouseDown = (e) => {
     if (e.button !== 0) return
-    if (e.target.closest('button, input, a, select')) return
+    if (e.target.closest('button, input, a, select, textarea')) return
     setIsDragging(true)
     setStartPan({ x: e.clientX - panX, y: e.clientY - panY })
   }
@@ -469,7 +570,7 @@ export default function OrgStrukturPage() {
     setIsDragging(false)
   }
 
-  /* Calculated KPI Stats */
+  /* Calculated Overall KPI Stats */
   const stats = useMemo(() => {
     const totalUnits = units.length
     const totalJabatan = jabatan.length
@@ -481,24 +582,47 @@ export default function OrgStrukturPage() {
     return { totalUnits, totalJabatan, totalFormasiSlots, filledFormasiSlots, vacantJabatan, filledPercent }
   }, [units, jabatan])
 
+  /* Selected Unit Specific Jabatan and Stats */
+  const currentUnitJabatan = useMemo(() => {
+    if (selectedUnit === null) return jabatan.filter(j => j.idUnit === null)
+    if (selectedUnit === 'ALL') return jabatan
+    return jabatan.filter(j => j.idUnit === selectedUnit)
+  }, [jabatan, selectedUnit])
+
+  const unitStats = useMemo(() => {
+    const totalJabatan = currentUnitJabatan.length
+    const totalFormasi = currentUnitJabatan.reduce((acc, j) => acc + (j.jumlahFormasi || 1), 0)
+    const filledFormasi = currentUnitJabatan.reduce((acc, j) => acc + (j.incumbent?.length || 0), 0)
+    const vacantJabatan = currentUnitJabatan.filter(j => !j.incumbent || j.incumbent.length === 0).length
+    const coreJabatan = currentUnitJabatan.filter(j => j.inti === true).length
+    const ptsJabatan = currentUnitJabatan.filter(j => Boolean(j.pts)).length
+    const subUnitsCount = selectedUnit && selectedUnit !== 'ALL'
+      ? units.filter(u => u.idUnitInduk === selectedUnit).length
+      : 0
+    const fillPercentage = totalFormasi > 0 ? Math.round((filledFormasi / totalFormasi) * 100) : 0
+
+    return { totalJabatan, totalFormasi, filledFormasi, vacantJabatan, coreJabatan, ptsJabatan, subUnitsCount, fillPercentage }
+  }, [currentUnitJabatan, units, selectedUnit])
+
+  /* Filtered Table Rows for Manage View */
   const jabatanTampil = useMemo(() => {
-    let list = jabatan
-    if (selectedUnit === null) {
-      list = jabatan.filter((j) => j.idUnit === null)
-    } else if (selectedUnit !== 'ALL') {
-      list = jabatan.filter((j) => j.idUnit === selectedUnit)
-    }
+    let list = currentUnitJabatan
     if (search.trim()) {
       const term = search.toLowerCase()
       list = list.filter((j) =>
         j.namaJabatan.toLowerCase().includes(term) ||
+        (j.kode && String(j.kode).toLowerCase().includes(term)) ||
+        (j.kelompokFungsi && j.kelompokFungsi.toLowerCase().includes(term)) ||
+        (j.alasan && j.alasan.toLowerCase().includes(term)) ||
         (j.namaBand && j.namaBand.toLowerCase().includes(term)) ||
+        (j.namaUnit && j.namaUnit.toLowerCase().includes(term)) ||
         (j.namaAtasan && j.namaAtasan.toLowerCase().includes(term)) ||
-        j.incumbent?.some(i => i.nama.toLowerCase().includes(term) || i.idKaryawan.toLowerCase().includes(term))
+        j.incumbent?.some(i => i.nama.toLowerCase().includes(term) || i.idKaryawan.toLowerCase().includes(term)) ||
+        (j.pts && (j.pts.namaKaryawan.toLowerCase().includes(term) || j.pts.idKaryawan.toLowerCase().includes(term)))
       )
     }
     return list
-  }, [jabatan, selectedUnit, search])
+  }, [currentUnitJabatan, search])
 
   const getJabatanDeleteBlockReason = useCallback((j) => {
     if ((j.incumbent?.length || 0) > 0) {
@@ -570,6 +694,7 @@ export default function OrgStrukturPage() {
   }
 
   async function deleteUnit(u) {
+    if (!u) return
     if (!(await dialog.confirm({ title: 'Hapus Unit', message: `Hapus unit "${u.nama}"? Semua jabatan di dalamnya akan terpengaruh.`, danger: true, confirmText: 'Hapus' }))) return
     try {
       await api.hapusOrgUnit(u.idUnit)
@@ -593,11 +718,17 @@ export default function OrgStrukturPage() {
   function openEditJabatan(j) {
     setJabatanEditing(j)
     setJabatanForm({
-      kode: j.kode ?? '', namaJabatan: j.namaJabatan, idBand: j.idBand,
-      jg: j.jg ?? '', idUnit: j.idUnit ?? '', idAtasan: j.idAtasan ?? '',
+      kode: j.kode ?? '',
+      namaJabatan: j.namaJabatan,
+      idBand: j.idBand,
+      jg: j.jg ?? '',
+      idUnit: j.idUnit ?? '',
+      idAtasan: j.idAtasan ?? '',
       inti: j.inti === null || j.inti === undefined ? '' : String(j.inti),
-      kelompokFungsi: j.kelompokFungsi ?? '', jumlahFormasi: j.jumlahFormasi ?? '',
-      alasan: '', aktif: j.aktif,
+      kelompokFungsi: j.kelompokFungsi ?? '',
+      jumlahFormasi: j.jumlahFormasi ?? '',
+      alasan: j.alasan ?? '',
+      aktif: j.aktif,
     })
     setJabatanError('')
     setJabatanModal(true)
@@ -650,7 +781,24 @@ export default function OrgStrukturPage() {
       if (detailJabatan?.idJabatan === j.idJabatan) setDetailJabatan(null)
       await load()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal menghapus jabatan.')
+      const msg = err instanceof ApiError ? err.message : 'Gagal menghapus jabatan.'
+      const bisaPaksa = err instanceof ApiError && /riwayat penempatan|PTS \(Pemangku/.test(msg)
+      if (bisaPaksa && await dialog.confirm({
+        title: 'Hapus Paksa (termasuk riwayat)',
+        message: `${msg}\n\nHapus paksa akan MENGHAPUS PERMANEN riwayat penempatan/PTS jabatan ini juga. Lanjutkan hapus paksa?`,
+        danger: true,
+        confirmText: 'Hapus Paksa',
+      })) {
+        try {
+          await api.hapusOrgJabatanPaksa(j.idJabatan)
+          if (detailJabatan?.idJabatan === j.idJabatan) setDetailJabatan(null)
+          await load()
+        } catch (err2) {
+          setError(err2 instanceof ApiError ? err2.message : 'Gagal menghapus paksa jabatan.')
+        }
+        return
+      }
+      setError(msg)
     }
   }
 
@@ -752,7 +900,7 @@ export default function OrgStrukturPage() {
             <Search size={16} className="org-toolbar__search-icon" />
             <input
               type="text"
-              placeholder="Cari nama unit, jabatan, atau karyawan..."
+              placeholder="Cari unit, jabatan, kode, keterangan, atau karyawan..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -863,7 +1011,7 @@ export default function OrgStrukturPage() {
           {/* Panel Kiri: Tree Sidebar */}
           <aside className="org-manage-panel org-manage-panel--sidebar">
             <div className="org-manage-panel__head">
-              <h3><Building2 size={16} /> Unit Kerja</h3>
+              <h3><Building2 size={16} /> Unit Kerja ({units.length})</h3>
               <div className="org-manage-panel__actions">
                 <button type="button" className="org-iconbtn" title="Kembangkan Semua" onClick={expandAll}>
                   <ChevronDown size={14} />
@@ -871,7 +1019,7 @@ export default function OrgStrukturPage() {
                 <button type="button" className="org-iconbtn" title="Ciutkan Semua" onClick={collapseAll}>
                   <ChevronUp size={14} />
                 </button>
-                <button type="button" className="org-btn-mini" onClick={() => openCreateUnit()}>
+                <button type="button" className="org-btn-mini" onClick={() => openCreateUnit()} title="Tambah Unit Baru">
                   <Plus size={13} /> Unit
                 </button>
               </div>
@@ -883,7 +1031,8 @@ export default function OrgStrukturPage() {
                 className={`org-tree__unit-root ${selectedUnit === 'ALL' ? 'is-selected' : ''}`}
                 onClick={() => setSelectedUnit('ALL')}
               >
-                <Building2 size={14} /> Semua Unit ({units.length})
+                <Building2 size={15} />
+                <span>Semua Unit ({units.length})</span>
               </button>
 
               <button
@@ -891,7 +1040,8 @@ export default function OrgStrukturPage() {
                 className={`org-tree__unit-root ${selectedUnit === null ? 'is-selected' : ''}`}
                 onClick={() => setSelectedUnit(null)}
               >
-                <Briefcase size={14} /> Tanpa Unit / Direksi ({jabatan.filter(j => !j.idUnit).length})
+                <Briefcase size={15} />
+                <span>Tanpa Unit / Direksi ({jabatan.filter(j => !j.idUnit).length})</span>
               </button>
 
               {tree.map((node) => (
@@ -904,12 +1054,12 @@ export default function OrgStrukturPage() {
             </div>
           </aside>
 
-          {/* Panel Kanan: Tabel Jabatan */}
+          {/* Panel Kanan: Overview Unit & Tabel Jabatan */}
           <main className="org-manage-panel org-manage-panel--main">
             <div className="org-manage-panel__head">
               <div>
                 <h2>
-                  {selectedUnitObj ? selectedUnitObj.nama : 'Jabatan Tanpa Unit'}
+                  {selectedUnitObj ? selectedUnitObj.nama : (selectedUnit === 'ALL' ? 'Semua Unit Organisasi' : 'Jabatan Tanpa Unit')}
                   {selectedUnitObj?.tipe && selectedUnitObj.tipe !== 'GLOBAL' && (
                     <span className="org-unit-badge">{selectedUnitObj.tipe}</span>
                   )}
@@ -923,16 +1073,24 @@ export default function OrgStrukturPage() {
               </button>
             </div>
 
+            {/* Table Jabatan */}
             <div className="org-table-wrap">
               <table className="org-table">
+                <colgroup>
+                  <col className="org-col-jabatan" />
+                  <col className="org-col-band" />
+                  <col className="org-col-atasan" />
+                  <col className="org-col-formasi" />
+                  <col className="org-col-incumbent" />
+                  <col className="org-col-aksi" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>Jabatan &amp; Code</th>
-                    <th>Band / Grade</th>
-                    <th>Reporting (Atasan)</th>
-                    <th>Formasi</th>
-                    <th>Pemegang Jabatan (Incumbent)</th>
-                    <th className="org-col-center">Status</th>
+                    <th>Jabatan</th>
+                    <th>Grade</th>
+                    <th>Atasan</th>
+                    <th>Status</th>
+                    <th>Nama</th>
                     <th className="org-col-right">Aksi</th>
                   </tr>
                 </thead>
@@ -948,13 +1106,16 @@ export default function OrgStrukturPage() {
                       <tr key={j.idJabatan} className={!j.aktif ? 'is-nonaktif' : ''}>
                         <td>
                           <div className="org-table__jabatan-cell">
-                            <span className="org-table__jabatan-title" onClick={() => setDetailJabatan(j)}>
+                            <span className="org-table__jabatan-title" onClick={() => setDetailJabatan(j)} title="Klik untuk lihat detail & incumbent">
                               {j.namaJabatan}
                             </span>
-                            {j.kode && <span className="org-table__jabatan-code">Kode: {j.kode}</span>}
-                            {j.namaUnit && selectedUnit === 'ALL' && (
-                              <span className="org-table__jabatan-unit">🏢 {j.namaUnit}</span>
-                            )}
+                            <div className="org-table__jabatan-tags">
+                              {j.kode && <span className="org-table__jabatan-code">Kode: {j.kode}</span>}
+                              {j.inti === true && <span className="org-tag org-tag--core">⭐ Inti</span>}
+                              {j.namaUnit && selectedUnit === 'ALL' && (
+                                <span className="org-table__jabatan-unit">🏢 {j.namaUnit}</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td>
@@ -972,6 +1133,9 @@ export default function OrgStrukturPage() {
                           <div className="org-table__formasi-cell">
                             <span className={`org-formasi-pill ${isEmpty ? 'is-empty' : (isFull ? 'is-full' : 'is-partial')}`}>
                               {filled}/{capacity} Slot
+                            </span>
+                            <span className={`org-status-dot ${j.aktif ? 'is-active' : 'is-inactive'}`}>
+                              {j.aktif ? 'Aktif' : 'Non-Aktif'}
                             </span>
                           </div>
                         </td>
@@ -995,28 +1159,23 @@ export default function OrgStrukturPage() {
                             )}
                           </div>
                         </td>
-                        <td className="org-col-center">
-                          <span className={`org-status-dot ${j.aktif ? 'is-active' : 'is-inactive'}`}>
-                            {j.aktif ? 'Aktif' : 'Non-Aktif'}
-                          </span>
-                        </td>
                         <td className="org-col-right">
                           <div className="org-row-actions">
-                            <button type="button" className="org-iconbtn" title="Detail & Incumbent" onClick={() => setDetailJabatan(j)}>
-                              <Eye size={14} />
-                            </button>
-                            <button type="button" className="org-iconbtn" title="Ubah Jabatan" onClick={() => openEditJabatan(j)}>
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="org-iconbtn org-iconbtn--danger"
-                              title={deleteBlockReason || 'Hapus'}
-                              onClick={() => deleteJabatan(j)}
-                              disabled={Boolean(deleteBlockReason)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <ActionDropdown
+                              title="Aksi Jabatan"
+                              items={[
+                                { label: 'Lihat Detail', icon: <Eye size={13} />, onClick: () => setDetailJabatan(j) },
+                                { label: 'Ubah Jabatan', icon: <Pencil size={13} />, onClick: () => openEditJabatan(j) },
+                                {
+                                  label: 'Hapus Jabatan',
+                                  icon: <Trash2 size={13} />,
+                                  danger: true,
+                                  onClick: () => deleteJabatan(j),
+                                  disabled: Boolean(deleteBlockReason),
+                                  title: deleteBlockReason || 'Hapus Jabatan'
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -1024,8 +1183,14 @@ export default function OrgStrukturPage() {
                   })}
                   {!jabatanTampil.length && !loading && (
                     <tr>
-                      <td colSpan={7} className="org-empty-row">
-                        Tidak ada jabatan ditemukan untuk unit ini.
+                      <td colSpan={6} className="org-empty-row">
+                        <div className="org-table-empty-msg">
+                          <Briefcase size={28} />
+                          <span>Tidak ada jabatan ditemukan untuk unit ini.</span>
+                          <button type="button" className="org-btn-mini" onClick={() => openCreateJabatan()}>
+                            <Plus size={12} /> Tambah Jabatan Baru
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -1071,8 +1236,16 @@ export default function OrgStrukturPage() {
           <div className="org-modal org-modal--lg" onClick={(e) => e.stopPropagation()}>
             <div className="org-modal-header">
               <div>
-                <span className="org-modal-subtitle">Detail Jabatan &amp; Pemegang Position</span>
+                <span className="org-modal-subtitle">Detail Jabatan &amp; Formasi Organisasi</span>
                 <h3>{detailJabatan.namaJabatan}</h3>
+                <div className="org-modal-header-tags">
+                  <span className="org-badge org-badge--band">{detailJabatan.namaBand || `Band ${detailJabatan.idBand}`} {detailJabatan.jg ? `(JG ${detailJabatan.jg})` : ''}</span>
+                  {detailJabatan.inti === true && <span className="org-tag org-tag--core"><Star size={11} /> Jabatan Inti (Core)</span>}
+                  {detailJabatan.inti === false && <span className="org-tag org-tag--support">Jabatan Pendukung</span>}
+                  <span className={`org-status-dot ${detailJabatan.aktif ? 'is-active' : 'is-inactive'}`}>
+                    {detailJabatan.aktif ? 'Aktif' : 'Non-Aktif'}
+                  </span>
+                </div>
               </div>
               <button type="button" className="org-modal-close" onClick={() => setDetailJabatan(null)}>
                 <X size={20} />
@@ -1082,22 +1255,49 @@ export default function OrgStrukturPage() {
               <div className="org-detail-grid">
                 <div className="org-detail-card">
                   <span className="org-detail-label">Unit Kerja</span>
-                  <span className="org-detail-value">{detailJabatan.namaUnit || 'Direksi / Tanpa Unit'}</span>
+                  <span className="org-detail-value">
+                    {detailJabatan.namaUnit || 'Direksi / Tanpa Unit'}
+                  </span>
+                  {detailUnitAncestry.length > 1 && (
+                    <span className="org-detail-subtext">
+                      🏛️ {detailUnitAncestry.map(u => u.nama).join(' › ')}
+                    </span>
+                  )}
                 </div>
                 <div className="org-detail-card">
                   <span className="org-detail-label">Band &amp; Job Grade</span>
-                  <span className="org-detail-value">{detailJabatan.namaBand || `Band ${detailJabatan.idBand}`} (JG {detailJabatan.jg || '-'})</span>
+                  <span className="org-detail-value">{detailJabatan.namaBand || `Band ${detailJabatan.idBand}`} (JG {detailJabatan.jg || 'Direksi'})</span>
                 </div>
                 <div className="org-detail-card">
-                  <span className="org-detail-label">Atasan Directly</span>
-                  <span className="org-detail-value">{detailJabatan.namaAtasan || 'Puncak Hirarki'}</span>
+                  <span className="org-detail-label">Atasan Langsung (Direct Superior)</span>
+                  <span className="org-detail-value">{detailJabatan.namaAtasan || 'Puncak Hirarki Organisasi'}</span>
                 </div>
                 <div className="org-detail-card">
                   <span className="org-detail-label">Kapasitas Formasi</span>
                   <span className="org-detail-value">{detailJabatan.incumbent?.length || 0} / {detailJabatan.jumlahFormasi || 1} Slot Terisi</span>
                 </div>
+                <div className="org-detail-card">
+                  <span className="org-detail-label">Kelompok Fungsi</span>
+                  <span className="org-detail-value">{detailJabatan.kelompokFungsi || '—'}</span>
+                </div>
+                <div className="org-detail-card">
+                  <span className="org-detail-label">Kode Jabatan</span>
+                  <span className="org-detail-value">{detailJabatan.kode ? `Kode ${detailJabatan.kode}` : '—'}</span>
+                </div>
               </div>
 
+              {/* Keterangan / Deskripsi Jabatan */}
+              {detailJabatan.alasan && (
+                <div className="org-detail-keterangan-card">
+                  <div className="org-detail-keterangan-head">
+                    <FileText size={16} />
+                    <span>Keterangan &amp; Deskripsi Jabatan</span>
+                  </div>
+                  <p className="org-detail-keterangan-text">{detailJabatan.alasan}</p>
+                </div>
+              )}
+
+              {/* Incumbent Section */}
               <div className="org-detail-section">
                 <div className="org-detail-section__head">
                   <h4><Users size={16} /> Karyawan Terdaftar (Incumbent)</h4>
@@ -1133,7 +1333,7 @@ export default function OrgStrukturPage() {
                         </span>
                         <span className="org-incumbent-card-nik">NIK: {detailJabatan.pts.idKaryawan}</span>
                         {detailJabatan.pts.jabatanAsli && (
-                          <span className="org-incumbent-card-tmt">Jabatan asli: {detailJabatan.pts.jabatanAsli}</span>
+                          <span className="org-incumbent-card-tmt">Jabatan Asli: {detailJabatan.pts.jabatanAsli}</span>
                         )}
                         {detailJabatan.pts.tmt && (
                           <span className="org-incumbent-card-tmt">Pjs. sejak: {new Date(detailJabatan.pts.tmt).toLocaleDateString('id-ID')}</span>
@@ -1157,6 +1357,30 @@ export default function OrgStrukturPage() {
                   </div>
                 )}
               </div>
+
+              {/* Bawahan Langsung (Direct Subordinates) Section */}
+              {directSubordinates.length > 0 && (
+                <div className="org-detail-section">
+                  <div className="org-detail-section__head">
+                    <h4><Layers size={16} /> Bawahan Langsung ({directSubordinates.length} Jabatan)</h4>
+                  </div>
+                  <div className="org-subordinates-list">
+                    {directSubordinates.map(sub => (
+                      <div key={sub.idJabatan} className="org-subordinate-item" onClick={() => setDetailJabatan(sub)} title="Klik untuk lihat jabatan ini">
+                        <div className="org-subordinate-info">
+                          <span className="org-subordinate-title">{sub.namaJabatan}</span>
+                          <span className="org-subordinate-meta">
+                            {sub.namaUnit ? `🏢 ${sub.namaUnit}` : 'Tanpa Unit'} • {sub.namaBand || `Band ${sub.idBand}`}
+                          </span>
+                        </div>
+                        <span className="org-subordinate-formasi">
+                          <Users size={11} /> {sub.incumbent?.length || 0}/{sub.jumlahFormasi || 1} Terisi
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1167,7 +1391,7 @@ export default function OrgStrukturPage() {
         <div className="org-modal-backdrop" onClick={() => setUnitModal(false)}>
           <div className="org-modal" onClick={(e) => e.stopPropagation()}>
             <div className="org-modal-header">
-              <h3>{unitEditing ? `Ubah Unit ${unitEditing.nama}` : 'Tambah Unit Organisasi'}</h3>
+              <h3>{unitEditing ? `Ubah Unit: ${unitEditing.nama}` : 'Tambah Unit Organisasi'}</h3>
               <button type="button" className="org-modal-close" onClick={() => setUnitModal(false)}><X size={20} /></button>
             </div>
             <form className="org-modal-body" onSubmit={submitUnit}>
@@ -1210,12 +1434,12 @@ export default function OrgStrukturPage() {
               </label>
 
               <label className="org-form-group">
-                <span>Keterangan</span>
-                <input
-                  type="text"
+                <span>Keterangan Unit</span>
+                <textarea
+                  rows={3}
                   value={unitForm.keterangan}
                   onChange={(e) => setUnitForm((f) => ({ ...f, keterangan: e.target.value }))}
-                  placeholder="Opsional"
+                  placeholder="Keterangan atau ruang lingkup unit organisasi ini..."
                 />
               </label>
 
@@ -1254,6 +1478,16 @@ export default function OrgStrukturPage() {
                 </label>
 
                 <label className="org-form-group">
+                  <span>Kode Jabatan</span>
+                  <input
+                    type="number"
+                    value={jabatanForm.kode}
+                    onChange={(e) => setJabatanForm((f) => ({ ...f, kode: e.target.value }))}
+                    placeholder="Mis. 1010 (Opsional)"
+                  />
+                </label>
+
+                <label className="org-form-group">
                   <span>Band *</span>
                   <select value={jabatanForm.idBand} onChange={(e) => setJabatanForm((f) => ({ ...f, idBand: e.target.value }))} required>
                     <option value="">(Pilih Band)</option>
@@ -1282,13 +1516,32 @@ export default function OrgStrukturPage() {
                 </label>
 
                 <label className="org-form-group">
-                  <span>Atasan Directly</span>
+                  <span>Atasan Directly (Reporting)</span>
                   <select value={jabatanForm.idAtasan} onChange={(e) => setJabatanForm((f) => ({ ...f, idAtasan: e.target.value }))}>
-                    <option value="">(Tidak Ada / Puncak)</option>
+                    <option value="">(Tidak Ada / Puncak Organisasi)</option>
                     {jabatan.filter((j) => j.idJabatan !== jabatanEditing?.idJabatan).map((j) => (
-                      <option key={j.idJabatan} value={j.idJabatan}>{j.namaJabatan}</option>
+                      <option key={j.idJabatan} value={j.idJabatan}>{j.namaJabatan} {j.namaUnit ? `(${j.namaUnit})` : ''}</option>
                     ))}
                   </select>
+                </label>
+
+                <label className="org-form-group">
+                  <span>Sifat Jabatan</span>
+                  <select value={jabatanForm.inti} onChange={(e) => setJabatanForm((f) => ({ ...f, inti: e.target.value }))}>
+                    <option value="">(Tidak Ditentukan)</option>
+                    <option value="true">⭐ Jabatan Inti (Core)</option>
+                    <option value="false">Jabatan Pendukung</option>
+                  </select>
+                </label>
+
+                <label className="org-form-group">
+                  <span>Kelompok Fungsi</span>
+                  <input
+                    type="text"
+                    value={jabatanForm.kelompokFungsi}
+                    onChange={(e) => setJabatanForm((f) => ({ ...f, kelompokFungsi: e.target.value }))}
+                    placeholder="Mis. IT, Finance, Operasional, HC"
+                  />
                 </label>
 
                 <label className="org-form-group">
@@ -1302,13 +1555,13 @@ export default function OrgStrukturPage() {
                   />
                 </label>
 
-                <label className="org-form-group">
-                  <span>Kelompok Fungsi</span>
-                  <input
-                    type="text"
-                    value={jabatanForm.kelompokFungsi}
-                    onChange={(e) => setJabatanForm((f) => ({ ...f, kelompokFungsi: e.target.value }))}
-                    placeholder="Opsional, mis. IT Development"
+                <label className="org-form-group org-col-span-2">
+                  <span>Keterangan &amp; Alasan Pembentukan Jabatan</span>
+                  <textarea
+                    rows={3}
+                    value={jabatanForm.alasan}
+                    onChange={(e) => setJabatanForm((f) => ({ ...f, alasan: e.target.value }))}
+                    placeholder="Keterangan deskripsi tugas, tujuan formasi, atau alasan pembentukan jabatan..."
                   />
                 </label>
 
@@ -1325,7 +1578,7 @@ export default function OrgStrukturPage() {
               {jabatanError && <div className="org-alert org-alert--err">{jabatanError}</div>}
 
               <div className="org-modal-footer">
-                <button type="button" className="org-btn org-btn--sec" onClick={() => setUnitModal(false)}>Batal</button>
+                <button type="button" className="org-btn org-btn--sec" onClick={() => setJabatanModal(false)}>Batal</button>
                 <button type="submit" className="org-btn org-btn--pri" disabled={jabatanSaving}>
                   {jabatanSaving ? 'Menyimpan...' : 'Simpan Jabatan'}
                 </button>

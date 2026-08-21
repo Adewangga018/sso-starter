@@ -62,6 +62,7 @@ public static class FeatureCatalog
         new("org:struktur",            "hr-management", "Unit & Jabatan"),
         new("org:penempatan",          "hr-management", "Penempatan Karyawan"),
         new("org:pegawai",             "hr-management", "Direktori Karyawan"),
+        new("org:person-grade",        "hr-management", "Person Grade (PG)"),
     ];
 
     public static FeatureDefinition? Find(string? key) =>

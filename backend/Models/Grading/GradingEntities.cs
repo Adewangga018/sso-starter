@@ -55,6 +55,34 @@ public class GradingBand
     public byte Urutan { get; set; }
 }
 
+// PG (Person Grade) pegawai per tahun - beda dari JG (melekat ke JABATAN, lihat
+// GradingJabatan.Jg): PG melekat ke ORANGNYA (senioritas/tenure individu dlm band yg
+// sama), dipakai basis komponen tarif JG_PG (lihat GajiService.ResolvePgAsync - baris
+// tahun_berlaku terbaru <= tahun periode yang berlaku). Sebelumnya HANYA bisa diisi
+// lewat SQL manual (seed scripts) - CRUD di OrgStrukturService (2026-08-20) yg pertama.
+public class GradingPersonGrade
+{
+    public int Id { get; set; }
+    public string IdKaryawan { get; set; } = string.Empty;   // = GCS.dbo.MST_PEGAWAI.ID_KARYAWAN (tanpa FK)
+    public string Nama { get; set; } = string.Empty;
+    public byte Pg { get; set; }
+    public string? GolonganLama { get; set; }
+    public short TahunBerlaku { get; set; }
+    public string? Catatan { get; set; }
+    public DateTime DibuatPada { get; set; }
+}
+
+// Penanda karyawan yg PG-nya naik tiap 2 tahun (bukan 3 tahun default) - kehadiran
+// baris = diakselerasi, dihapus = kembali ke siklus normal. Lihat
+// OrgStrukturService.NaikkanPgOtomatisJikaSaatnyaAsync.
+public class GradingPgAkselerasi
+{
+    public string IdKaryawan { get; set; } = string.Empty;
+    public string? Catatan { get; set; }
+    public string? DitetapkanOleh { get; set; }
+    public DateTime DibuatPada { get; set; }
+}
+
 // Penandaan PTS (Pemangku Tugas Sementara): karyawan yang menggantikan sementara formasi
 // atasannya yang kosong. Dipakai GajiService (formula TJ_PTS) & OrgStrukturService
 // (CRUD, panel Struktur Organisasi).

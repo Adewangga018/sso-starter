@@ -34,6 +34,13 @@ public class AsetDokumenService
 
     public async Task<(bool Ok, string? Error, AsetDokumenDto? Dto)> UploadAsync(string nik, string objectId, UploadDokumenForm form)
     {
+        // Jaga-jaga: objectId dari route bisa masih ber-spasi ekor kalau browser pemanggil
+        // masih menyimpan URL lama (cache/tab terbuka) dari sebelum OBJECTID dipangkas di
+        // sumbernya (GcsDbContext) - tanpa ini, Directory.CreateDirectory di bawah diam-diam
+        // membuat folder TANPA spasi tapi File.Create sesudahnya masih memakai path BER-spasi
+        // utk folder yg sama, jadi DirectoryNotFoundException tak tertangani (500).
+        objectId = objectId.Trim();
+
         if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, null);
         if (!await AsetExistsAsync(objectId)) return (false, "Aset tidak ditemukan.", null);
         if (string.IsNullOrWhiteSpace(form.JenisDokumen)) return (false, "Jenis dokumen wajib diisi.", null);
