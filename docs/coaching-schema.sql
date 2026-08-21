@@ -125,5 +125,31 @@ END
 ELSE PRINT 'LEWATI: coaching.baca sudah ada.';
 GO
 
+/* ---------------------------------------------------------------------------
+   atasan_override - override "atasan efektif" Coaching SAJA (2026-08-21). Dipakai
+   utk jabatan yang jobdesk sehari-harinya bersinggungan dgn pihak lain drpd atasan
+   strukturalnya (mis. Staf Sekretariat = sekretaris direksi, coaching-nya dgn
+   Direksi, BUKAN Kepala Bagian Sekretariat tempatnya struktural berada) - TANPA
+   mengubah grading.jabatan.id_atasan (hierarki organisasi asli, dipakai
+   Approval/PTS/Payroll/My Team lain, sengaja TIDAK disentuh). Satu jabatan_bawahan
+   boleh py LEBIH DARI SATU baris (mis. Staf Sekretariat -> ketiga Direktur
+   sekaligus) - CoachingService menjumlah semuanya jadi kandidat/ruang tim.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('coaching.atasan_override', 'U') IS NULL
+BEGIN
+    CREATE TABLE coaching.atasan_override
+    (
+        id                  INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_coaching_atasan_override PRIMARY KEY,
+        id_jabatan_bawahan  INT NOT NULL,           -- grading.jabatan.id_jabatan yg di-override
+        id_jabatan_atasan   INT NOT NULL,           -- jabatan atasan pengganti (khusus Coaching)
+        catatan             NVARCHAR(400) NULL,
+        dibuat_pada         DATETIME2 NOT NULL CONSTRAINT df_coaching_override_dibuat DEFAULT (SYSUTCDATETIME())
+    );
+    CREATE UNIQUE INDEX ux_coaching_override_pasangan ON coaching.atasan_override (id_jabatan_bawahan, id_jabatan_atasan);
+    PRINT 'Tabel coaching.atasan_override dibuat.';
+END
+ELSE PRINT 'LEWATI: coaching.atasan_override sudah ada.';
+GO
+
 SET NOEXEC OFF;
 GO

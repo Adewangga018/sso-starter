@@ -35,6 +35,17 @@ public class CoachingBaca
     public DateTime TglBaca { get; set; }
 }
 
+// Override "atasan efektif" Coaching SAJA (2026-08-21) - lihat catatan lengkap di
+// docs/coaching-schema.sql. TIDAK mengubah grading.jabatan.id_atasan (hierarki asli).
+public class CoachingAtasanOverride
+{
+    public int Id { get; set; }
+    public int IdJabatanBawahan { get; set; }
+    public int IdJabatanAtasan { get; set; }
+    public string? Catatan { get; set; }
+    public DateTime DibuatPada { get; set; }
+}
+
 // Action item hasil sesi coaching.
 public class CoachingTindakLanjut
 {

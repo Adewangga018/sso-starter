@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Coaching;
 using SsoBackend.Models.Dto;
+using SsoBackend.Models.Grading;
 
 namespace SsoBackend.Services;
 
@@ -56,14 +57,16 @@ public class CoachingService
         }).ToList();
 
         // Ruang tim: milik atasan efektif (anggota) + milik sendiri (pemilik) bila punya bawahan.
+        // Bisa LEBIH DARI SATU ruang "Anggota" kalau jabatan saya di-override Coaching ke
+        // beberapa atasan sekaligus (mis. Staf Sekretariat -> 3 Direktur, lihat
+        // EffectiveAtasanListAsync) - beda dari hierarki struktural biasa yg selalu satu.
         var ruang = new List<CoachingRuangRingkasDto>();
-        var atasan = await EffectiveAtasanAsync(nik);
-        if (atasan is not null)
+        foreach (var atasan in await EffectiveAtasanListAsync(nik))
         {
-            var anggota = await EffectiveBawahanAsync(atasan.Value.Nik);
-            var last = await LastPesanRuangAsync(atasan.Value.Nik);
-            ruang.Add(new CoachingRuangRingkasDto(atasan.Value.Nik, atasan.Value.Nama, "Anggota", anggota.Count + 1,
-                last?.Isi, last?.TglKirim, Unread($"ruang:{atasan.Value.Nik}", last)));
+            var anggota = await EffectiveBawahanAsync(atasan.Nik);
+            var last = await LastPesanRuangAsync(atasan.Nik);
+            ruang.Add(new CoachingRuangRingkasDto(atasan.Nik, atasan.Nama, "Anggota", anggota.Count + 1,
+                last?.Isi, last?.TglKirim, Unread($"ruang:{atasan.Nik}", last)));
         }
         var bawahanSaya = await EffectiveBawahanAsync(nik);
         if (bawahanSaya.Count > 0)
@@ -162,14 +165,14 @@ public class CoachingService
         return new CoachingAdminListDto(sesi, ruang);
     }
 
-    // Kandidat lawan bicara sesi baru: atasan langsung + bawahan langsung efektif.
+    // Kandidat lawan bicara sesi baru: atasan langsung (bisa lebih dari satu, lihat
+    // EffectiveAtasanListAsync) + bawahan langsung efektif.
     public async Task<IReadOnlyList<LawanBicaraDto>> GetLawanBicaraAsync(string nik)
     {
         var list = new List<LawanBicaraDto>();
-        var atasan = await EffectiveAtasanAsync(nik);
-        if (atasan is not null)
+        foreach (var atasan in await EffectiveAtasanListAsync(nik))
         {
-            list.Add(new LawanBicaraDto(atasan.Value.Nik, atasan.Value.Nama ?? atasan.Value.Nik, atasan.Value.Jabatan, "Atasan"));
+            list.Add(new LawanBicaraDto(atasan.Nik, atasan.Nama ?? atasan.Nik, atasan.Jabatan, "Atasan"));
         }
         foreach (var b in await EffectiveBawahanAsync(nik))
         {
@@ -184,13 +187,13 @@ public class CoachingService
         if (string.IsNullOrWhiteSpace(topik)) return (false, "Topik wajib diisi.", 0);
         if (string.Equals(targetNik, nik, StringComparison.OrdinalIgnoreCase)) return (false, "Tidak bisa membuat sesi dengan diri sendiri.", 0);
 
-        var atasan = await EffectiveAtasanAsync(nik);
+        var atasanList = await EffectiveAtasanListAsync(nik);
         var bawahan = await EffectiveBawahanAsync(nik);
         string idAtasan, idBawahan, namaAtasan, namaBawahan;
 
-        if (atasan is not null && atasan.Value.Nik == targetNik)
+        if (atasanList.FirstOrDefault(a => a.Nik == targetNik) is { Nik: not null } atasanTarget)
         {
-            idAtasan = targetNik; namaAtasan = atasan.Value.Nama ?? targetNik;
+            idAtasan = targetNik; namaAtasan = atasanTarget.Nama ?? targetNik;
             idBawahan = nik; namaBawahan = nama ?? nik;
         }
         else if (bawahan.FirstOrDefault(b => b.Nik == targetNik) is { Nik: not null } b)
@@ -313,19 +316,56 @@ public class CoachingService
         return (true, null);
     }
 
-    // "Pemilik" bila me==owner (punya bawahan), "Anggota" bila owner = atasan efektif me, else null.
+    // "Pemilik" bila me==owner (punya bawahan), "Anggota" bila owner termasuk salah satu
+    // atasan efektif saya (bisa lebih dari satu - lihat EffectiveAtasanListAsync), else null.
     private async Task<string?> PeranRuangAsync(string nik, string ownerNik)
     {
         if (string.Equals(nik, ownerNik, StringComparison.OrdinalIgnoreCase))
         {
             return (await EffectiveBawahanAsync(nik)).Count > 0 ? "Pemilik" : null;
         }
-        var atasan = await EffectiveAtasanAsync(nik);
-        return atasan is not null && atasan.Value.Nik == ownerNik ? "Anggota" : null;
+        var atasanList = await EffectiveAtasanListAsync(nik);
+        return atasanList.Any(a => a.Nik == ownerNik) ? "Anggota" : null;
     }
 
     // ===================== helpers (grading, raw SQL) =====================
-    private async Task<(string Nik, string? Nama, string? Jabatan)?> EffectiveAtasanAsync(string nik)
+
+    // Atasan efektif utk Coaching - NORMALNYA satu (struktural), tapi bisa LEBIH DARI
+    // SATU kalau jabatan saya di-override (coaching.atasan_override, mis. Staf
+    // Sekretariat -> ketiga Direktur sekaligus - lihat docs/coaching-schema.sql).
+    // Override TIDAK mengubah grading.jabatan.id_atasan (hierarki asli dipakai
+    // Approval/PTS/Payroll/My Team lain tetap apa adanya) - murni menambah/mengganti
+    // siapa "lawan bicara atasan" Coaching saja.
+    private async Task<List<(string Nik, string? Nama, string? Jabatan)>> EffectiveAtasanListAsync(string nik)
+    {
+        var idJabatan = await IdJabatanAktifAsync(nik);
+        if (idJabatan is int jab)
+        {
+            var overrideJabatanAtasan = await _db.CoachingAtasanOverride.AsNoTracking()
+                .Where(x => x.IdJabatanBawahan == jab)
+                .Select(x => x.IdJabatanAtasan)
+                .ToListAsync();
+            if (overrideJabatanAtasan.Count > 0)
+            {
+                var rows = await (
+                    from p in _db.GradingPenempatan.AsNoTracking()
+                    join j in _db.GradingJabatan.AsNoTracking() on p.IdJabatan equals j.IdJabatan
+                    where p.Status == "Aktif" && overrideJabatanAtasan.Contains(p.IdJabatan)
+                    select new { p.IdKaryawan, p.Nama, j.NamaJabatan }).ToListAsync();
+                return rows.Select(r => (r.IdKaryawan, (string?)r.Nama, (string?)r.NamaJabatan)).ToList();
+            }
+        }
+        var struktural = await EffectiveAtasanStrukturalAsync(nik);
+        return struktural is not null ? [struktural.Value] : [];
+    }
+
+    private async Task<int?> IdJabatanAktifAsync(string nik) =>
+        await _db.GradingPenempatan.AsNoTracking()
+            .Where(p => p.IdKaryawan == nik && p.Status == "Aktif")
+            .Select(p => (int?)p.IdJabatan)
+            .FirstOrDefaultAsync();
+
+    private async Task<(string Nik, string? Nama, string? Jabatan)?> EffectiveAtasanStrukturalAsync(string nik)
     {
         var conn = _db.Database.GetDbConnection();
         var mustClose = conn.State != ConnectionState.Open;
@@ -377,9 +417,36 @@ public class CoachingService
             await using var r = await cmd.ExecuteReaderAsync();
             while (await r.ReadAsync())
                 list.Add((r.GetString(0), r.IsDBNull(1) ? "" : r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2)));
-            return list;
         }
         finally { if (mustClose) await conn.CloseAsync(); }
+
+        // + bawahan override Coaching: jabatan saya jadi "atasan pengganti" utk jabatan lain
+        // (mis. Direktur menerima Staf Sekretariat sbg anggota ruang tim jg - lihat
+        // EffectiveAtasanListAsync). Ditambahkan, bukan menggantikan, bawahan struktural asli.
+        var idJabatanSaya = await IdJabatanAktifAsync(nik);
+        if (idJabatanSaya is int myJab)
+        {
+            var overrideJabatanBawahan = await _db.CoachingAtasanOverride.AsNoTracking()
+                .Where(x => x.IdJabatanAtasan == myJab)
+                .Select(x => x.IdJabatanBawahan)
+                .ToListAsync();
+            if (overrideJabatanBawahan.Count > 0)
+            {
+                var existingNiks = list.Select(x => x.Item1).ToHashSet();
+                var extraRows = await (
+                    from p in _db.GradingPenempatan.AsNoTracking()
+                    join j in _db.GradingJabatan.AsNoTracking() on p.IdJabatan equals j.IdJabatan
+                    where p.Status == "Aktif" && overrideJabatanBawahan.Contains(p.IdJabatan)
+                    select new { p.IdKaryawan, p.Nama, j.NamaJabatan }).ToListAsync();
+                foreach (var r in extraRows)
+                {
+                    if (existingNiks.Add(r.IdKaryawan))
+                        list.Add((r.IdKaryawan, r.Nama, r.NamaJabatan));
+                }
+            }
+        }
+
+        return list;
     }
 
     private async Task<string?> NamaPenempatanAsync(string nik)

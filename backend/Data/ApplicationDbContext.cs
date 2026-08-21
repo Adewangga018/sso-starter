@@ -96,6 +96,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CoachingPesan> CoachingPesan => Set<CoachingPesan>();
     public DbSet<CoachingTindakLanjut> CoachingTindakLanjut => Set<CoachingTindakLanjut>();
     public DbSet<CoachingBaca> CoachingBaca => Set<CoachingBaca>();
+    public DbSet<CoachingAtasanOverride> CoachingAtasanOverride => Set<CoachingAtasanOverride>();
     // My Prosedur (schema prosedur) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<ProsedurDokumen> ProsedurDokumen => Set<ProsedurDokumen>();
     public DbSet<ProsedurVersi> ProsedurVersi => Set<ProsedurVersi>();
@@ -1021,6 +1022,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.IdPembuat).HasColumnName("id_pembuat");
             e.Property(x => x.TglDibuat).HasColumnName("tgl_dibuat");
             e.Property(x => x.TglSelesai).HasColumnName("tgl_selesai");
+        });
+
+        builder.Entity<CoachingAtasanOverride>(e =>
+        {
+            e.ToTable("atasan_override", "coaching", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdJabatanBawahan).HasColumnName("id_jabatan_bawahan");
+            e.Property(x => x.IdJabatanAtasan).HasColumnName("id_jabatan_atasan");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 
         builder.Entity<CoachingBaca>(e =>
