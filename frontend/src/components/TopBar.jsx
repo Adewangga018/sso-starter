@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Bell, ChevronDown, Gavel, LogOut, Menu, MessagesSquare, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import './TopBar.css'
 
 /**
@@ -21,6 +22,7 @@ import './TopBar.css'
  */
 export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark = false, onMenuClick, onLogout, hideAdminLinks = false }) {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
+  const photoUrl = useEmployeePhoto(null, { self: true })
   const { isAdmin, isPengelolaJuri, summary } = useAuth()
   const { unread, toggle: toggleChat } = useChat()
   // Chat = bagian dari coaching My Team; sembunyikan ikon bila modul my-team nonaktif.
@@ -141,7 +143,9 @@ export default function TopBar({ title, titleLogo, name, subtitle, logoSrc, dark
               setNotifOpen(false)
             }}
           >
-            <div className="topbar__avatar">{initial}</div>
+            <div className="topbar__avatar">
+              {photoUrl ? <img src={photoUrl} alt={name} className="topbar__avatar-img" /> : initial}
+            </div>
             {name && (
               <div className="topbar__user-text">
                 <div className="topbar__user-name">{name}</div>

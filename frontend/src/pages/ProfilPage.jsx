@@ -185,12 +185,28 @@ function missingFieldsOf(profile) {
     .map(([, label]) => label)
 }
 
+// Dokumen "dasar" yang ikut menentukan skor Kelengkapan Profil (diminta 2026-08-24 -
+// sebelumnya skor 100% hanya dari biodata, jadi bisa 100% walau belum upload KTP dkk).
+// SIM/Sertifikat Gada Pratama/K3/Berkas Lainnya SENGAJA tidak diikutkan - itu spesifik
+// profesi tertentu, bukan semua karyawan akan pernah punya, supaya karyawan yang memang
+// tidak butuh itu tetap bisa mencapai 100%. Buku Nikah hanya wajib kalau berstatus Kawin.
+const REQUIRED_DOCUMENT_KEYS = ['ktp', 'kk', 'ijazah']
+
+function missingDocumentsOf(profile) {
+  const requiredKeys = new Set(REQUIRED_DOCUMENT_KEYS)
+  if (profile.isMarried) requiredKeys.add('buku-nikah')
+  return (profile.berkas ?? [])
+    .filter((b) => requiredKeys.has(b.key) && !b.available)
+    .map((b) => b.label)
+}
+
 function getCompletenessPercentage(profile) {
   if (!profile) return 0
-  if (profile.profileComplete) return 100
-  const missing = missingFieldsOf(profile)
-  const total = REQUIRED_ON_REGISTER.length
-  const filled = total - missing.length
+  const missingBiodata = missingFieldsOf(profile)
+  const missingDocs = missingDocumentsOf(profile)
+  const totalDocRequired = REQUIRED_DOCUMENT_KEYS.length + (profile.isMarried ? 1 : 0)
+  const total = REQUIRED_ON_REGISTER.length + totalDocRequired
+  const filled = total - missingBiodata.length - missingDocs.length
   return Math.max(10, Math.round((filled / total) * 100))
 }
 
@@ -465,6 +481,10 @@ export default function ProfilPage() {
   const bukuNikahDoc = profile.berkas.find((b) => b.key === 'buku-nikah')
   const requiredNow = !profile.profileComplete
   const completenessPercent = getCompletenessPercentage(profile)
+  // Beda dari profile.profileComplete (biodata saja, dipakai gate Absensi/Izin/dst) - ini
+  // yang benar-benar dipakai meteran "Kelengkapan Profil" krn ikut menghitung dokumen dasar.
+  const missingDocsNow = missingDocumentsOf(profile)
+  const fullyComplete = profile.profileComplete && missingDocsNow.length === 0
 
   return (
     <div className="profil">
@@ -545,10 +565,13 @@ export default function ProfilPage() {
               <div className="profil__completeness-fill" style={{ width: `${completenessPercent}%` }} />
             </div>
             <div className="profil__completeness-sub">
-              {profile.profileComplete ? (
+              {fullyComplete ? (
                 <span className="text-ok"><CheckCircle2 size={12} /> Data Lengkap &amp; Terverifikasi</span>
               ) : (
-                <span className="text-warn"><AlertCircle size={12} /> Perlengkapi data Anda</span>
+                <span className="text-warn">
+                  <AlertCircle size={12} />
+                  {!profile.profileComplete ? 'Perlengkapi data Anda' : `Lengkapi dokumen: ${missingDocsNow.join(', ')}`}
+                </span>
               )}
             </div>
           </div>

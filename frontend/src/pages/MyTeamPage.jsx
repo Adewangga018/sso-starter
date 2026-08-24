@@ -4,6 +4,7 @@ import {
   Clock, ClipboardList, Copy, Download, Loader2, Plus, Trash2, UserCheck, Users2, UserX, X,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import './MyTeamPage.css'
 
 const COLUMNS = [
@@ -25,9 +26,12 @@ function initial(name) {
 }
 
 function Person({ m, showHadir, compact }) {
+  const photoUrl = useEmployeePhoto(m.terisi ? m.idKaryawan : null)
   return (
     <div className={`mt-person${compact ? ' mt-person--compact' : ''}${m.terisi ? '' : ' mt-person--empty'}`}>
-      <div className="mt-person__avatar">{m.terisi ? initial(m.nama) : <UserX size={16} />}</div>
+      <div className="mt-person__avatar">
+        {m.terisi ? (photoUrl ? <img src={photoUrl} alt={m.nama} className="mt-person__avatar-img" /> : initial(m.nama)) : <UserX size={16} />}
+      </div>
       <div className="mt-person__info">
         <div className="mt-person__name">{m.terisi ? m.nama : 'Formasi kosong'}</div>
         <div className="mt-person__role">{m.jabatan}</div>
@@ -43,6 +47,18 @@ function Person({ m, showHadir, compact }) {
         <span className={`mt-dot${m.hadirHariIni ? ' is-on' : ''}`} title={m.hadirHariIni ? 'Hadir hari ini' : 'Belum absen'} />
       )}
     </div>
+  )
+}
+
+function TaskWho({ idKaryawan, nama }) {
+  const photoUrl = useEmployeePhoto(idKaryawan)
+  return (
+    <span className="mt-task__who">
+      <span className="mt-task__avatar">
+        {photoUrl ? <img src={photoUrl} alt={nama} className="mt-task__avatar-img" /> : initial(nama)}
+      </span>
+      <span className="mt-task__whoname">{nama ?? idKaryawan}</span>
+    </span>
   )
 }
 
@@ -357,10 +373,10 @@ export default function MyTeamPage() {
                             </div>
                             {t.deskripsi && <div className="mt-task__desc">{t.deskripsi}</div>}
                             <div className="mt-task__foot">
-                              <span className="mt-task__who">
-                                <span className="mt-task__avatar">{initial(canManage ? t.namaPenerima : t.namaPemberi)}</span>
-                                <span className="mt-task__whoname">{canManage ? (t.namaPenerima ?? t.idPenerima) : (t.namaPemberi ?? t.idPemberi)}</span>
-                              </span>
+                              <TaskWho
+                                idKaryawan={canManage ? t.idPenerima : t.idPemberi}
+                                nama={canManage ? t.namaPenerima : t.namaPemberi}
+                              />
                               {t.tenggat && <span className="mt-task__due"><Clock size={11} /> {formatTanggal(t.tenggat)}</span>}
                             </div>
                           </article>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, CheckCircle2, ChevronRight, FileWarning, ListChecks, Loader2, Search, ShieldAlert, UserSquare2, Users,
+  ArrowLeft, CheckCircle2, ChevronRight, FileWarning, ListChecks, Loader2, PieChart, Search, ShieldAlert, UserSquare2, Users,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import PdfPopupModal from '../components/PdfPopupModal'
 import './PegawaiDirektoriPage.css'
 
@@ -17,6 +18,15 @@ function fmtTanggal(v) {
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
+function ResultAvatar({ idKaryawan, nama }) {
+  const photoUrl = useEmployeePhoto(idKaryawan)
+  return (
+    <span className="pgd__result-avatar">
+      {photoUrl ? <img src={photoUrl} alt={nama} className="pgd__avatar-img" /> : (nama?.charAt(0)?.toUpperCase() ?? '?')}
+    </span>
+  )
+}
+
 export default function PegawaiDirektoriPage() {
   const { isAdminModulSdm, summary } = useAuth()
   const [mode, setMode] = useState('semua') // 'semua' | 'belum-diplot'
@@ -24,6 +34,7 @@ export default function PegawaiDirektoriPage() {
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [selected, setSelected] = useState(null)
+  const selectedPhotoUrl = useEmployeePhoto(selected?.idKaryawan)
   const [detailError, setDetailError] = useState('')
   const [modal, setModal] = useState(emptyModal)
 
@@ -32,6 +43,13 @@ export default function PegawaiDirektoriPage() {
   // kotak cari yg sama (bukan lewat server spt mode "Semua").
   const [belumDiplotAll, setBelumDiplotAll] = useState(null)
   const [belumDiplotLoading, setBelumDiplotLoading] = useState(false)
+
+  // Dashboard "Kelengkapan Profil" (biodata + dokumen dasar) SELURUH karyawan (diminta
+  // 2026-08-24) - sama pola dgn belumDiplotAll: diambil sekali per aktivasi tab, disaring
+  // di klien lewat kotak cari yg sama, diurutkan yg paling belum lengkap dulu.
+  const [kelengkapan, setKelengkapan] = useState(null) // { totalKaryawan, sudahLengkap, belumBiodata, belumDokumen, items }
+  const [kelengkapanLoading, setKelengkapanLoading] = useState(false)
+  const [kelengkapanFilter, setKelengkapanFilter] = useState('belum') // 'belum' | 'semua'
 
   // Daftar default (100 pertama) langsung tampil begitu halaman dibuka - kotak cari
   // cuma menyaring lewat query >=2 huruf (sama pola dgn PayrollManualPage).
@@ -64,6 +82,24 @@ export default function PegawaiDirektoriPage() {
       ? belumDiplotAll.filter((r) => r.nama.toLowerCase().includes(term) || r.idKaryawan.toLowerCase().includes(term))
       : belumDiplotAll)
   }, [mode, query, belumDiplotAll])
+
+  useEffect(() => {
+    if (mode !== 'kelengkapan' || kelengkapan !== null) return
+    setKelengkapanLoading(true)
+    api.getPegawaiKelengkapan()
+      .then((rekap) => setKelengkapan(rekap))
+      .catch(() => setKelengkapan({ totalKaryawan: 0, sudahLengkap: 0, belumBiodata: 0, belumDokumen: 0, items: [] }))
+      .finally(() => setKelengkapanLoading(false))
+  }, [mode, kelengkapan])
+
+  useEffect(() => {
+    if (mode !== 'kelengkapan' || kelengkapan === null) return
+    const term = query.trim().toLowerCase()
+    let list = kelengkapan.items
+    if (kelengkapanFilter === 'belum') list = list.filter((r) => !r.biodataLengkap || !r.dokumenLengkap)
+    if (term) list = list.filter((r) => r.nama.toLowerCase().includes(term) || r.idKaryawan.toLowerCase().includes(term))
+    setResults([...list].sort((a, b) => a.persenKelengkapan - b.persenKelengkapan || a.nama.localeCompare(b.nama)))
+  }, [mode, query, kelengkapan, kelengkapanFilter])
 
   async function selectEmployee(row) {
     setDetailError('')
@@ -126,11 +162,14 @@ export default function PegawaiDirektoriPage() {
       <div className="pgd__layout">
         <div className="pgd__list-panel">
           <div className="pgd__tabs">
-            <button type="button" className={`pgd__tab${mode === 'semua' ? ' is-active' : ''}`} onClick={() => { setMode('semua'); setSelected(null) }}>
+            <button type="button" className={`pgd__tab${mode === 'semua' ? ' is-active' : ''}`} onClick={() => { setMode('semua'); setSelected(null); setResults([]) }}>
               Semua
             </button>
-            <button type="button" className={`pgd__tab${mode === 'belum-diplot' ? ' is-active' : ''}`} onClick={() => { setMode('belum-diplot'); setSelected(null) }}>
+            <button type="button" className={`pgd__tab${mode === 'belum-diplot' ? ' is-active' : ''}`} onClick={() => { setMode('belum-diplot'); setSelected(null); setResults([]) }}>
               <ListChecks size={13} /> Belum Diplot{belumDiplotAll !== null && ` (${belumDiplotAll.length})`}
+            </button>
+            <button type="button" className={`pgd__tab${mode === 'kelengkapan' ? ' is-active' : ''}`} onClick={() => { setMode('kelengkapan'); setSelected(null); setResults([]) }}>
+              <PieChart size={13} /> Kelengkapan Profil
             </button>
           </div>
 
@@ -138,6 +177,33 @@ export default function PegawaiDirektoriPage() {
             <p className="pgd__tab-note">
               Karyawan roster aktif (termasuk Kontrak) yang belum punya penempatan jabatan/grading - buat lacak progres onboarding bertahap.
             </p>
+          )}
+
+          {mode === 'kelengkapan' && kelengkapan && (
+            <>
+              <div className="pgd__kelengkapan-stats">
+                <div className="pgd__kelengkapan-stat">
+                  <span className="pgd__kelengkapan-stat-val">{kelengkapan.sudahLengkap}/{kelengkapan.totalKaryawan}</span>
+                  <span className="pgd__kelengkapan-stat-label">Lengkap Penuh</span>
+                </div>
+                <div className="pgd__kelengkapan-stat pgd__kelengkapan-stat--warn">
+                  <span className="pgd__kelengkapan-stat-val">{kelengkapan.belumBiodata}</span>
+                  <span className="pgd__kelengkapan-stat-label">Belum Biodata</span>
+                </div>
+                <div className="pgd__kelengkapan-stat pgd__kelengkapan-stat--warn">
+                  <span className="pgd__kelengkapan-stat-val">{kelengkapan.belumDokumen}</span>
+                  <span className="pgd__kelengkapan-stat-label">Belum Dokumen</span>
+                </div>
+              </div>
+              <div className="pgd__kelengkapan-toggle">
+                <button type="button" className={kelengkapanFilter === 'belum' ? 'is-active' : ''} onClick={() => setKelengkapanFilter('belum')}>
+                  Belum Lengkap
+                </button>
+                <button type="button" className={kelengkapanFilter === 'semua' ? 'is-active' : ''} onClick={() => setKelengkapanFilter('semua')}>
+                  Semua Karyawan
+                </button>
+              </div>
+            </>
           )}
 
           <div className="pgd__search">
@@ -149,7 +215,7 @@ export default function PegawaiDirektoriPage() {
             />
           </div>
           <div className="pgd__results">
-            {mode === 'belum-diplot' && belumDiplotLoading ? (
+            {(mode === 'belum-diplot' && belumDiplotLoading) || (mode === 'kelengkapan' && kelengkapanLoading) ? (
               <div className="pgd__empty"><Loader2 size={16} className="pgd__spin" /> Memuat…</div>
             ) : (
               <>
@@ -159,20 +225,27 @@ export default function PegawaiDirektoriPage() {
                     className={`pgd__result${selected?.idPegawai === r.idPegawai ? ' is-active' : ''}`}
                     onClick={() => selectEmployee(r)}
                   >
-                    <span className="pgd__result-avatar">{r.nama?.charAt(0)?.toUpperCase() ?? '?'}</span>
+                    <ResultAvatar idKaryawan={r.idKaryawan} nama={r.nama} />
                     <span className="pgd__result-text">
                       <span className="pgd__result-nama">{r.nama}</span>
                       <span className="pgd__result-sub">
-                        {mode === 'semua'
-                          ? <>{r.idKaryawan} · NIK {r.nik} · {r.statusKaryawan ?? '-'}</>
-                          : <>{r.idKaryawan} · {r.jenisPegawai ?? r.statusKaryawan ?? '-'}{r.jabatanLegacy ? ` · ${r.jabatanLegacy}` : ''}</>}
+                        {mode === 'semua' && <>{r.idKaryawan} · NIK {r.nik} · {r.statusKaryawan ?? '-'}</>}
+                        {mode === 'belum-diplot' && <>{r.idKaryawan} · {r.jenisPegawai ?? r.statusKaryawan ?? '-'}{r.jabatanLegacy ? ` · ${r.jabatanLegacy}` : ''}</>}
+                        {mode === 'kelengkapan' && (
+                          <>{r.idKaryawan} · Kurang: {[...(r.biodataKurang ?? []), ...(r.dokumenKurang ?? [])].join(', ') || '-'}</>
+                        )}
                       </span>
                     </span>
+                    {mode === 'kelengkapan' && (
+                      <span className={`pgd__kelengkapan-pill${r.persenKelengkapan >= 100 ? ' is-ok' : ''}`}>{r.persenKelengkapan}%</span>
+                    )}
                   </button>
                 ))}
                 {results.length === 0 && (mode === 'semua' ? !searching : true) && (
                   <div className="pgd__empty">
-                    {mode === 'belum-diplot' ? 'Semua karyawan sudah punya penempatan grading.' : 'Tidak ada pegawai yang cocok.'}
+                    {mode === 'belum-diplot' && 'Semua karyawan sudah punya penempatan grading.'}
+                    {mode === 'kelengkapan' && (kelengkapanFilter === 'belum' ? 'Semua karyawan sudah lengkap.' : 'Tidak ada pegawai yang cocok.')}
+                    {mode === 'semua' && 'Tidak ada pegawai yang cocok.'}
                   </div>
                 )}
               </>
@@ -188,7 +261,9 @@ export default function PegawaiDirektoriPage() {
           ) : (
             <>
               <div className="pgd__ident">
-                <div className="pgd__ident-avatar">{selected.namaLengkap?.charAt(0)?.toUpperCase() ?? '?'}</div>
+                <div className="pgd__ident-avatar">
+                  {selectedPhotoUrl ? <img src={selectedPhotoUrl} alt={selected.namaLengkap} className="pgd__avatar-img" /> : (selected.namaLengkap?.charAt(0)?.toUpperCase() ?? '?')}
+                </div>
                 <div>
                   <div className="pgd__ident-nama">{selected.namaLengkap}</div>
                   <div className="pgd__ident-sub">

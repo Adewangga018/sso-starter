@@ -178,6 +178,9 @@ export const api = {
   // Foto profil (avatar lingkaran). getProfilePhoto mengembalikan { url, contentType }
   // (blob object URL) - caller wajib URL.revokeObjectURL saat selesai; 404 = belum ada foto.
   getProfilePhoto: () => apiBlob('/api/personal/profile/photo'),
+  // Foto profil KARYAWAN LAIN (header/My Team/Struktur Organisasi/dsb) - beda dari
+  // getProfilePhoto() di atas yg cuma foto diri sendiri.
+  getEmployeePhoto: (idKaryawan) => apiBlob(`/api/personal/photo/${encodeURIComponent(idKaryawan)}`),
   uploadProfilePhoto: (blob) => {
     const body = new FormData()
     body.append('file', blob, 'profile.jpg')
@@ -643,6 +646,7 @@ export const api = {
   // Rekap karyawan roster aktif (termasuk Kontrak) yang belum punya penempatan grading -
   // lacak progres onboarding bertahap, bukan picker utk menempatkan langsung.
   getPegawaiBelumDiplot: () => apiFetch('/api/org/pegawai/belum-diplot'),
+  getPegawaiKelengkapan: () => apiFetch('/api/org/pegawai/kelengkapan'),
   getPegawaiDirektoriDetail: (idPegawai) => apiFetch(`/api/org/pegawai/${idPegawai}`),
   getPegawaiDirektoriFile: (idPegawai, key) => apiBlob(`/api/org/pegawai/${idPegawai}/file/${key}`),
   getPegawaiDirektoriAktaAnak: (idPegawai, idAnak) =>

@@ -135,11 +135,46 @@
   font-weight: 700;
   font-size: 0.82rem;
   flex-shrink: 0;
+  overflow: hidden;
 }
-.pgd__result-text { min-width: 0; display: flex; flex-direction: column; }
+.pgd__avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pgd__result-text { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .pgd__result-nama { font-weight: 600; color: var(--gcs-ink); font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pgd__result-sub { font-size: 0.72rem; color: var(--gcs-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pgd__empty { text-align: center; color: var(--gcs-text-muted); font-size: 0.85rem; padding: 20px 10px; }
+
+/* --- Tab "Kelengkapan Profil" (dashboard admin SDM, 2026-08-24) --- */
+.pgd__kelengkapan-stats { display: flex; gap: 6px; }
+.pgd__kelengkapan-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: var(--gcs-bg);
+  border: 1px solid var(--gcs-border);
+}
+.pgd__kelengkapan-stat--warn { background: rgba(217, 119, 6, 0.08); border-color: rgba(217, 119, 6, 0.2); }
+.pgd__kelengkapan-stat-val { font-size: 1rem; font-weight: 800; color: var(--gcs-green-900); }
+.pgd__kelengkapan-stat--warn .pgd__kelengkapan-stat-val { color: #b45309; }
+.pgd__kelengkapan-stat-label { font-size: 0.64rem; color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: 0.02em; text-align: center; }
+
+.pgd__kelengkapan-toggle { display: flex; gap: 4px; background: var(--gcs-bg); border-radius: 8px; padding: 3px; }
+.pgd__kelengkapan-toggle button { flex: 1; border: none; background: transparent; border-radius: 6px; padding: 6px 8px; font-size: 0.76rem; font-weight: 600; color: var(--gcs-text-muted); cursor: pointer; }
+.pgd__kelengkapan-toggle button.is-active { background: var(--gcs-white); color: var(--gcs-green-900); box-shadow: 0 1px 3px rgba(15, 38, 31, 0.12); }
+
+.pgd__kelengkapan-pill {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+.pgd__kelengkapan-pill.is-ok { background: rgba(47, 108, 63, 0.12); color: var(--gcs-green-900); }
 
 /* --- Panel kanan: detail --- */
 .pgd__detail-panel {
@@ -185,6 +220,7 @@
   font-weight: 700;
   font-size: 1.3rem;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .pgd__ident-nama { font-weight: 700; color: var(--gcs-ink); font-size: 1.1rem; }
 .pgd__ident-sub { font-size: 0.82rem; color: var(--gcs-text-muted); margin-top: 2px; }

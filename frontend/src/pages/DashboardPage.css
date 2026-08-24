@@ -225,7 +225,9 @@
   font-weight: 800;
   color: var(--gcs-green-900);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
+.dashboard__avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .dashboard__user-online {
   position: absolute;

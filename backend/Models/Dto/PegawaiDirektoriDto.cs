@@ -8,6 +8,19 @@ namespace SsoBackend.Models.Dto;
 public record PegawaiDirektoriItemDto(
     int IdPegawai, string IdKaryawan, string Nik, string Nama, string? StatusKaryawan);
 
+// Dashboard "Kelengkapan Profil" utk Admin SDM (diminta 2026-08-24 - sebelumnya admin harus
+// buka satu-satu ke tab "Semua" utk tahu siapa yang belum lengkap). Persen/BiodataLengkap/
+// DokumenLengkap dihitung ProfileRules.Assess - lihat catatan di sana soal beda dgn
+// IsComplete (yang menggerbang modul lain, sengaja tidak ikut dokumen).
+public record PegawaiKelengkapanItemDto(
+    int IdPegawai, string IdKaryawan, string Nik, string Nama, string? StatusKaryawan,
+    bool BiodataLengkap, bool DokumenLengkap, int PersenKelengkapan,
+    IReadOnlyList<string> BiodataKurang, IReadOnlyList<string> DokumenKurang);
+
+public record PegawaiKelengkapanRekapDto(
+    int TotalKaryawan, int SudahLengkap, int BelumBiodata, int BelumDokumen,
+    IReadOnlyList<PegawaiKelengkapanItemDto> Items);
+
 // Rekap karyawan (roster aktif PEGAWAI_SDM, semua jenis_pegawai - termasuk Kontrak) yang
 // BELUM punya penempatan grading aktif, dipakai admin SDM melacak progres onboarding
 // bertahap (2026-08-20) - akun/profil MyGCS boleh jalan duluan (banyak Kontrak sudah

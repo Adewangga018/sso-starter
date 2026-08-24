@@ -35,4 +35,18 @@ public static class EmployeeDocuments
 
     public static bool IsMarried(MstPegawai pegawai) =>
         string.Equals(pegawai.STATUS_NIKAH, "Kawin", StringComparison.OrdinalIgnoreCase);
+
+    // Dokumen "dasar" yang menentukan skor Kelengkapan Profil (diminta 2026-08-24) - KTP/KK/
+    // Ijazah selalu wajib; "buku-nikah" cuma kalau IsMarried. SIM/Gada Pratama/K3/Berkas
+    // Lainnya SENGAJA tidak diikutkan - itu spesifik profesi tertentu (mis. satpam), bukan
+    // semua karyawan akan pernah punya, supaya yang memang tidak butuh itu tetap bisa 100%.
+    // Mirror ProfilPage.jsx REQUIRED_DOCUMENT_KEYS - keep in sync. Lihat ProfileRules.Assess.
+    private static readonly IReadOnlySet<string> RequiredScoreKeys = new HashSet<string> { "ktp", "kk", "ijazah" };
+
+    public static IReadOnlyList<Field> RequiredFieldsFor(MstPegawai pegawai)
+    {
+        var keys = IsMarried(pegawai) ? RequiredScoreKeys.Append("buku-nikah") : RequiredScoreKeys;
+        var keySet = keys as ISet<string> ?? keys.ToHashSet();
+        return Fields.Where(f => keySet.Contains(f.Key)).ToList();
+    }
 }

@@ -5,6 +5,9 @@ backend/bin/
 backend/obj/
 # Dokumen aset yang diupload user (sertifikat/BPKB/STNK/dsb) - data runtime, bukan source code
 backend/uploads/
+# Foto karyawan mentah (~1.2 GB, sumber seed-foto-profil.ps1) - sudah disalin (resize+crop)
+# ke share foto profil EASy, tidak perlu ikut masuk git (terlalu besar utk repo).
+backend/SeedData/
 *.user
 *.userosscache
 *.sln.docstates

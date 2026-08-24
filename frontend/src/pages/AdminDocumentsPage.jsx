@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, ChevronRight, FileWarning, FolderLock, Search, Users } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import PdfPopupModal from '../components/PdfPopupModal'
 import './AdminDocumentsPage.css'
 
@@ -14,6 +15,7 @@ export default function AdminDocumentsPage() {
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [selected, setSelected] = useState(null) // manifest of the chosen employee
+  const selectedPhotoUrl = useEmployeePhoto(selected?.idKaryawan)
   const [manifestError, setManifestError] = useState('')
   const [modal, setModal] = useState(emptyModal)
 
@@ -118,7 +120,9 @@ export default function AdminDocumentsPage() {
       {selected && (
         <div className="admin-docs__panel">
           <div className="admin-docs__emp">
-            <div className="admin-docs__emp-avatar">{selected.nama?.charAt(0)?.toUpperCase() ?? '?'}</div>
+            <div className="admin-docs__emp-avatar">
+              {selectedPhotoUrl ? <img src={selectedPhotoUrl} alt={selected.nama} className="admin-docs__emp-avatar-img" /> : (selected.nama?.charAt(0)?.toUpperCase() ?? '?')}
+            </div>
             <div>
               <div className="admin-docs__emp-name">{selected.nama}</div>
               <div className="admin-docs__emp-sub">

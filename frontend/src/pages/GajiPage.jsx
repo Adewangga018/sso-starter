@@ -15,6 +15,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import './GajiPage.css'
 
 const BULAN = [
@@ -123,6 +124,7 @@ function Grup({ grup, hidePrivacy }) {
 }
 
 export default function GajiPage() {
+  const photoUrl = useEmployeePhoto(null, { self: true })
   const now = new Date()
   const [tahun, setTahun] = useState(now.getFullYear())
   const [bulan, setBulan] = useState(now.getMonth() + 1)
@@ -217,7 +219,7 @@ export default function GajiPage() {
           <div className="gaji__card gaji__ident">
             <div className="gaji__ident-main">
               <div className="gaji__avatar">
-                <span>{data.nama?.charAt(0)?.toUpperCase() ?? '?'}</span>
+                {photoUrl ? <img src={photoUrl} alt={data.nama} className="gaji__avatar-img" /> : <span>{data.nama?.charAt(0)?.toUpperCase() ?? '?'}</span>}
               </div>
               <div className="gaji__ident-details">
                 <div className="gaji__ident-nama">{data.nama}</div>

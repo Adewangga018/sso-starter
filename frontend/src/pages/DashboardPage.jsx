@@ -30,6 +30,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import './DashboardPage.css'
 
 const ICONS = {
@@ -165,6 +166,7 @@ export default function DashboardPage() {
   }, [modules, activeCategory, favorites, searchQuery])
 
   const userInitial = summary?.nama?.charAt(0)?.toUpperCase() ?? '?'
+  const userPhotoUrl = useEmployeePhoto(null, { self: true })
 
   return (
     <div className="dashboard">
@@ -233,7 +235,9 @@ export default function DashboardPage() {
         {/* User Card inside Hero */}
         <div className="dashboard__hero-user">
           <div className="dashboard__user-avatar-wrap">
-            <div className="dashboard__avatar">{userInitial}</div>
+            <div className="dashboard__avatar">
+              {userPhotoUrl ? <img src={userPhotoUrl} alt={summary?.nama} className="dashboard__avatar-img" /> : userInitial}
+            </div>
             <span className="dashboard__user-online" title="SSO Active" />
           </div>
           <div className="dashboard__user-info">

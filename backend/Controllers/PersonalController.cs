@@ -972,6 +972,30 @@ public class PersonalController : ControllerBase
         return NoContent();
     }
 
+    // Foto profil KARYAWAN LAIN (rekan setim, atasan, bawahan, dst - dipakai header, My
+    // Team, Struktur Organisasi, dan tempat lain yg menampilkan avatar orang lain, bukan
+    // cuma diri sendiri) - diminta 2026-08-24. Sensitivitas rendah (setara nama di org
+    // chart yg memang terbuka utk semua karyawan login), jadi tidak ada pengecekan
+    // kepemilikan/relasi tim - siapa saja yang sudah login boleh lihat foto siapa saja.
+    [HttpGet("photo/{idKaryawan}")]
+    public async Task<IActionResult> GetEmployeePhoto(string idKaryawan)
+    {
+        var (user, _) = await _currentUser.ResolveAsync(User);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var path = FindProfilePhoto(idKaryawan);
+        if (path is null)
+        {
+            return NotFound();
+        }
+
+        var ct = Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+        return File(System.IO.File.OpenRead(path), ct);
+    }
+
     // Menghapus foto profil (kembali ke avatar huruf inisial).
     [HttpDelete("profile/photo")]
     public async Task<IActionResult> DeleteProfilePhoto()

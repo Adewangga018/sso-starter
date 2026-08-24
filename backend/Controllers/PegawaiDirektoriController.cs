@@ -103,6 +103,33 @@ public class PegawaiDirektoriController : ControllerBase
         return Ok(belumDiplot);
     }
 
+    // GET /org/pegawai/kelengkapan -> dashboard Kelengkapan Profil (biodata + dokumen dasar)
+    // SELURUH karyawan (tidak dibatasi Take(100) spt Cari() di atas - list picker vs rekap
+    // lengkap adalah kebutuhan beda; ~278 baris saat ini, aman ditampilkan sekaligus).
+    [HttpGet("kelengkapan")]
+    public async Task<ActionResult<PegawaiKelengkapanRekapDto>> Kelengkapan()
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+
+        var pegawai = await _db.MstPegawai.AsNoTracking().OrderBy(p => p.NAMA_LENGKAP).ToListAsync();
+        var items = pegawai.Select(p =>
+        {
+            var k = ProfileRules.Assess(p);
+            return new PegawaiKelengkapanItemDto(
+                p.ID_PEGAWAI, p.ID_KARYAWAN, p.NIK, p.NAMA_LENGKAP, p.STATUS_KARYAWAN,
+                k.BiodataLengkap, k.DokumenLengkap, k.Persen, k.BiodataKurang, k.DokumenKurang);
+        }).ToList();
+
+        var rekap = new PegawaiKelengkapanRekapDto(
+            items.Count,
+            items.Count(i => i.BiodataLengkap && i.DokumenLengkap),
+            items.Count(i => !i.BiodataLengkap),
+            items.Count(i => !i.DokumenLengkap),
+            items);
+
+        return Ok(rekap);
+    }
+
     // GET /org/pegawai/{idPegawai} -> detail lengkap (biodata, alamat, keluarga, anak,
     // manifest berkas) + konteks jabatan/unit/band kalau ada penempatan grading aktif.
     [HttpGet("{idPegawai:int}")]

@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
 import { useDialog } from '../components/DialogProvider'
+import { useEmployeePhoto } from '../hooks/useEmployeePhoto'
 import './OrgStruktur.css'
 
 // "Bagian" ditambahkan sbg tipe unit tersendiri (2026-08-20)
@@ -98,6 +99,19 @@ function initialAvatar(name) {
 
 function incumbentKey(inc, index = 0) {
   return inc.idPenempatan ?? `${inc.idKaryawan}-${inc.tmt ?? 'no-tmt'}-${index}`
+}
+
+// Avatar bundar (foto profil kalau ada, else inisial huruf) - dipakai di org chart &
+// panel detail jabatan (2026-08-24). className tetap dipertahankan per pemanggil supaya
+// styling ukuran/warna yg sudah ada (org-chart__avatar, org-incumbent-avatar, dst) tidak
+// berubah.
+function PersonAvatar({ idKaryawan, nama, className, title }) {
+  const photoUrl = useEmployeePhoto(idKaryawan)
+  return (
+    <span className={className} title={title}>
+      {photoUrl ? <img src={photoUrl} alt={nama} className="org-avatar-img" /> : initialAvatar(nama)}
+    </span>
+  )
 }
 
 // Cocokkan satu jabatan (nama/kode/band/atasan/unit) DAN karyawan yang mengisinya
@@ -328,14 +342,17 @@ function OrgChartNode({
                   <div className="org-chart__incumbents">
                     {j.incumbent && j.incumbent.length > 0 ? (
                       j.incumbent.map((inc, index) => (
-                        <span key={incumbentKey(inc, index)} className="org-chart__avatar" title={`${inc.nama} (${inc.idKaryawan})`}>
-                          {initialAvatar(inc.nama)}
-                        </span>
+                        <PersonAvatar
+                          key={incumbentKey(inc, index)} idKaryawan={inc.idKaryawan} nama={inc.nama}
+                          className="org-chart__avatar" title={`${inc.nama} (${inc.idKaryawan})`}
+                        />
                       ))
                     ) : j.pts ? (
-                      <span className="org-chart__avatar org-chart__avatar--pts" title={`Pjs. ${j.pts.namaKaryawan}${j.pts.jabatanAsli ? ` (asal: ${j.pts.jabatanAsli})` : ''}`}>
-                        {initialAvatar(j.pts.namaKaryawan)}
-                      </span>
+                      <PersonAvatar
+                        idKaryawan={j.pts.idKaryawan} nama={j.pts.namaKaryawan}
+                        className="org-chart__avatar org-chart__avatar--pts"
+                        title={`Pjs. ${j.pts.namaKaryawan}${j.pts.jabatanAsli ? ` (asal: ${j.pts.jabatanAsli})` : ''}`}
+                      />
                     ) : (
                       <span className="org-chart__empty-formasi" title="Formasi Kosong">Kosong</span>
                     )}
@@ -1190,13 +1207,13 @@ export default function OrgStrukturPage() {
                             {j.incumbent && j.incumbent.length > 0 ? (
                               j.incumbent.map((inc, index) => (
                                 <span key={incumbentKey(inc, index)} className="org-incumbent-chip" title={`NIK: ${inc.idKaryawan}`}>
-                                  <span className="org-incumbent-avatar">{initialAvatar(inc.nama)}</span>
+                                  <PersonAvatar idKaryawan={inc.idKaryawan} nama={inc.nama} className="org-incumbent-avatar" />
                                   <span className="org-incumbent-name">{inc.nama}</span>
                                 </span>
                               ))
                             ) : j.pts ? (
                               <span className="org-incumbent-chip org-incumbent-chip--pts" title={`Pjs. sejak ${j.pts.tmt ? new Date(j.pts.tmt).toLocaleDateString('id-ID') : '-'}${j.pts.jabatanAsli ? ` · asal: ${j.pts.jabatanAsli}` : ''}`}>
-                                <span className="org-incumbent-avatar">{initialAvatar(j.pts.namaKaryawan)}</span>
+                                <PersonAvatar idKaryawan={j.pts.idKaryawan} nama={j.pts.namaKaryawan} className="org-incumbent-avatar" />
                                 <span className="org-incumbent-name">{j.pts.namaKaryawan}</span>
                                 <span className="org-pts-flag">PTS</span>
                               </span>
@@ -1358,9 +1375,7 @@ export default function OrgStrukturPage() {
                   <div className="org-incumbent-list">
                     {detailJabatan.incumbent.map((inc, index) => (
                       <div key={incumbentKey(inc, index)} className="org-incumbent-card">
-                        <div className="org-incumbent-avatar org-incumbent-avatar--lg">
-                          {initialAvatar(inc.nama)}
-                        </div>
+                        <PersonAvatar idKaryawan={inc.idKaryawan} nama={inc.nama} className="org-incumbent-avatar org-incumbent-avatar--lg" />
                         <div className="org-incumbent-meta">
                           <span className="org-incumbent-card-name">{inc.nama}</span>
                           <span className="org-incumbent-card-nik">NIK: {inc.idKaryawan}</span>
@@ -1372,9 +1387,7 @@ export default function OrgStrukturPage() {
                 ) : detailJabatan.pts ? (
                   <div className="org-incumbent-list">
                     <div className="org-incumbent-card org-incumbent-card--pts">
-                      <div className="org-incumbent-avatar org-incumbent-avatar--lg">
-                        {initialAvatar(detailJabatan.pts.namaKaryawan)}
-                      </div>
+                      <PersonAvatar idKaryawan={detailJabatan.pts.idKaryawan} nama={detailJabatan.pts.namaKaryawan} className="org-incumbent-avatar org-incumbent-avatar--lg" />
                       <div className="org-incumbent-meta">
                         <span className="org-incumbent-card-name">
                           {detailJabatan.pts.namaKaryawan} <span className="org-pts-flag">PTS</span>
