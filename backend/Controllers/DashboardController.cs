@@ -102,7 +102,7 @@ public class DashboardController : ControllerBase
         // "hr-management" hanya lolos bila kartu ini ada) - lihat frontend App.jsx.
         if (isAdminModulSdm)
         {
-            modules = modules.Append(new ModuleTileDto("hr-management", "HR Management", "PAYROLL & STRUKTUR ORGANISASI", "wallet", true)).ToList();
+            modules = modules.Append(new ModuleTileDto("hr-management", "Admin SDM", "PAYROLL & STRUKTUR ORGANISASI", "user-cog", true)).ToList();
         }
 
         var lockedFeatures = await _features.GetLockedKeysAsync();

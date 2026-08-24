@@ -61,6 +61,7 @@ public static class FeatureCatalog
         new("payroll:dinas",           "hr-management", "Verifikasi Dinas"),
         new("org:struktur",            "hr-management", "Unit & Jabatan"),
         new("org:penempatan",          "hr-management", "Penempatan Karyawan"),
+        new("org:versi",               "hr-management", "Riwayat Versi (SK)"),
         new("org:pegawai",             "hr-management", "Direktori Karyawan"),
         new("org:person-grade",        "hr-management", "Person Grade (PG)"),
     ];

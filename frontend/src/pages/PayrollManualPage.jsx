@@ -73,15 +73,29 @@ function PegawaiSearch({ selected, onSelect }) {
   )
 }
 
+// "HH:mm:ss" atau "HH:mm" -> "HH:mm"; kosong/null -> "—".
+function formatJam(v) {
+  if (!v) return '—'
+  const m = String(v).match(/^(\d{1,2}):(\d{2})/)
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}` : v
+}
+
 // Menghitung Potongan Presensi otomatis dari Absensi + Surat Ijin yang sudah disetujui
 // (acuan Nota Dinas 0188/08/ND Potongan Absen 2018). HANYA preview - hasilnya cuma
 // mengisi field nominal POT_PRESENSI di form; admin tetap harus koreksi bila perlu &
 // menekan tombol Simpan utama sebelum tersimpan.
-function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNominal, onHasil }) {
+// Potongan TP (Tunjangan Pangan) & TA (Tunjangan Angkutan) diinput TERPISAH (diminta
+// 2026-08-21 - sebelumnya cuma satu kolom "Total") supaya admin bisa mengoreksi
+// masing-masing bagian; Total tetap SATU nilai yang disimpan ke komponen POT_PRESENSI
+// (skema payroll belum punya komponen TP/TA presensi terpisah) - Total = TP + TA,
+// dihitung ulang otomatis tiap kali salah satu kolom diubah.
+function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, onHasil }) {
   const [loading, setLoading] = useState(false)
   const [hasil, setHasil] = useState(null)
   const [error, setError] = useState(null)
   const [open, setOpen] = useState(false)
+  const [tp, setTp] = useState('')
+  const [ta, setTa] = useState('')
 
   async function hitung() {
     setLoading(true); setError(null)
@@ -89,18 +103,35 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
       const r = await api.hitungPotonganPresensi(pegawai.nik, tahun, bulan)
       setHasil(r)
       setOpen(true)
+      setTp(String(r.nominalTp))
+      setTa(String(r.nominalTa))
       onHasil(komponen.idKomponen, r.total)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal menghitung potongan presensi.')
     } finally { setLoading(false) }
   }
 
+  function updateTp(v) {
+    setTp(v)
+    onHasil(komponen.idKomponen, (Number(v) || 0) + (Number(ta) || 0))
+  }
+  function updateTa(v) {
+    setTa(v)
+    onHasil(komponen.idKomponen, (Number(tp) || 0) + (Number(v) || 0))
+  }
+
+  // Sebelum kalkulator dipakai/diedit (tp & ta masih kosong), tampilkan nominal
+  // tersimpan apa adanya (spt Field biasa) - jangan timpa jadi 0 hanya krn dirender.
+  const totalTampil = (tp !== '' || ta !== '')
+    ? (Number(tp) || 0) + (Number(ta) || 0)
+    : Number(nominal[komponen.idKomponen] || 0)
+
   return (
     <div className="agt__presensi">
       <div className="agt__presensi-head">
         <div>
           <span className="agt__presensi-nama">{komponen.nama}</span>
-          <span className="agt__presensi-note">Dihitung dari Absensi + Surat Ijin disetujui bulan ini (acuan Nota Dinas Potongan Absen). Boleh dikoreksi manual di kolom nominal.</span>
+          <span className="agt__presensi-note">Dihitung dari Absensi + Surat Ijin disetujui bulan ini (acuan Nota Dinas Potongan Absen). Boleh dikoreksi manual per bagian (TP/TA) di bawah.</span>
         </div>
         <button type="button" className="agt__save agt__save--sm" onClick={hitung} disabled={loading}>
           {loading ? <Loader2 size={14} className="agt__spin" /> : <Wand2 size={14} />}
@@ -108,7 +139,34 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
         </button>
       </div>
 
-      <Field it={komponen} nominal={nominal} setNominal={setNominal} />
+      <div className="agt__presensi-split">
+        <label className="agt__field">
+          <span className="agt__k-nama agt__k-nama--out">Potongan Tunjangan Pangan</span>
+          <div className="agt__input-wrap">
+            <span className="agt__rp">Rp</span>
+            <input type="number" min="0" step="1000" inputMode="numeric" value={tp} placeholder="0"
+              onChange={(e) => updateTp(e.target.value)} />
+          </div>
+          <span className="agt__preview">{rupiah(Number(tp || 0))}</span>
+        </label>
+        <label className="agt__field">
+          <span className="agt__k-nama agt__k-nama--out">Potongan Tunjangan Angkutan</span>
+          <div className="agt__input-wrap">
+            <span className="agt__rp">Rp</span>
+            <input type="number" min="0" step="1000" inputMode="numeric" value={ta} placeholder="0"
+              onChange={(e) => updateTa(e.target.value)} />
+          </div>
+          <span className="agt__preview">{rupiah(Number(ta || 0))}</span>
+        </label>
+        <label className="agt__field agt__field--total">
+          <span className="agt__k-nama agt__k-nama--out">Total ({komponen.nama})</span>
+          <div className="agt__input-wrap agt__input-wrap--readonly">
+            <span className="agt__rp">Rp</span>
+            <input type="text" readOnly value={totalTampil.toLocaleString('id-ID')} />
+          </div>
+          <span className="agt__preview">{rupiah(totalTampil)}</span>
+        </label>
+      </div>
 
       {error && <div className="agt__msg agt__msg--err">{error}</div>}
 
@@ -122,13 +180,6 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
             <span className="agt__subgrup-count">TP {hasil.persenTpTotal}% · TA {hasil.persenTaTotal}%</span>
             <span className="agt__subgrup-total">{rupiah(hasil.total)}</span>
           </button>
-          <p className="agt__pd-note">
-            Potongan Tunjangan Pangan ({hasil.persenTpTotal}%): <strong>{rupiah(hasil.nominalTp)}</strong>
-            {' · '}
-            Potongan Tunjangan Angkutan ({hasil.persenTaTotal}%): <strong>{rupiah(hasil.nominalTa)}</strong>
-            {' · '}
-            Total: <strong>{rupiah(hasil.total)}</strong>
-          </p>
           {open && (
             <div className="agt__subgrup-body">
               {hasil.kejadian.length === 0 ? (
@@ -137,13 +188,15 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
                 <div style={{ overflowX: 'auto' }}>
                   <table className="agt__presensi-table">
                     <thead>
-                      <tr><th>Tanggal</th><th>Jenis</th><th>Ijin</th><th>Jam Hilang</th><th>TP</th><th>TA</th></tr>
+                      <tr><th>Tanggal</th><th>Jenis</th><th>Jam Masuk</th><th>Jam Keluar</th><th>Ijin</th><th>Jam Hilang</th><th>TP</th><th>TA</th></tr>
                     </thead>
                     <tbody>
                       {hasil.kejadian.map((k, i) => (
                         <tr key={i}>
                           <td>{k.tanggal}</td>
                           <td>{k.jenis}</td>
+                          <td>{formatJam(k.checkIn)}</td>
+                          <td>{formatJam(k.checkOut)}</td>
                           <td>{k.adaIjin ? 'Ya' : 'Tidak'}</td>
                           <td>{k.jamHilang != null ? `${Number(k.jamHilang).toFixed(1)} jam` : '—'}</td>
                           <td>{k.persenTp}%</td>
@@ -155,7 +208,7 @@ function PresensiCalculator({ pegawai, tahun, bulan, komponen, nominal, setNomin
                 </div>
               )}
               <p className="agt__pd-note">
-                Nominal dihitung dari Tunjangan Pangan/Angkutan Band pegawai — hasil sudah mengisi field nominal di atas, boleh dikoreksi manual sebelum Simpan.
+                Nominal dihitung dari Tunjangan Pangan/Angkutan Band pegawai — hasil sudah mengisi kolom TP/TA di atas, boleh dikoreksi manual sebelum Simpan.
               </p>
             </div>
           )}
@@ -641,7 +694,10 @@ export default function PayrollManualPage() {
   const [data, setData] = useState(null)
   const [nominal, setNominal] = useState({})
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
+  // Tombol Simpan dipecah per kelompok komponen (diminta 2026-08-21) - satu kunci
+  // "sedang menyimpan" dipakai bersama supaya tak ada 2 kelompok tersimpan bersamaan
+  // (idKomponen bisa saja tumpang tindih via mirrorId TJ_PAJAK<->POT_PAJAK dst).
+  const [savingGroup, setSavingGroup] = useState(null)
   const [posting, setPosting] = useState(false)
   const [msg, setMsg] = useState(null)
 
@@ -728,18 +784,34 @@ export default function PayrollManualPage() {
     [data],
   )
 
-  async function save() {
-    if (!data || !pegawai) return
-    setSaving(true); setMsg(null)
+  // Kelompok tombol Simpan (diminta 2026-08-21):
+  //  1. 3 jenis Lembur + Presensi + Uang Makan Dinas + SPPD
+  //  2. Tunjangan Luar Daerah + Potongan BPJS Kesehatan + Tunjangan PTS
+  //  3. Sisanya (grid komponen umum: K3PG, KSPPS, BMT, RIT, Angsuran, dst) jadi satu
+  // + tombol "Simpan Semua" di paling bawah (statis, bukan mengambang lagi).
+  const groupLemburDinasIds = useMemo(
+    () => [lemburBiasaKomponen, lemburPenggantiKomponen, lemburCrashKomponen, presensiKomponen, umdlKomponen, sppdKomponen]
+      .filter(Boolean).map((k) => k.idKomponen),
+    [lemburBiasaKomponen, lemburPenggantiKomponen, lemburCrashKomponen, presensiKomponen, umdlKomponen, sppdKomponen],
+  )
+  const groupTunjanganKhususIds = useMemo(
+    () => [luarDaerahKomponen, bpjsKesKomponen, ptsKomponen].filter(Boolean).map((k) => k.idKomponen),
+    [luarDaerahKomponen, bpjsKesKomponen, ptsKomponen],
+  )
+  const groupLainnyaIds = useMemo(() => grup.flatMap(([, list]) => list.map((k) => k.idKomponen)), [grup])
+
+  async function simpanSebagian(ids, groupKey, label) {
+    if (!data || !pegawai || ids.length === 0) return
+    setSavingGroup(groupKey); setMsg(null)
     try {
       await api.simpanGajiManual({
         nik: pegawai.nik, tahun, bulan,
-        items: data.komponen.map((k) => ({ idKomponen: k.idKomponen, nominal: Number(nominal[k.idKomponen] || 0) })),
+        items: ids.map((id) => ({ idKomponen: id, nominal: Number(nominal[id] || 0) })),
       })
-      setMsg({ type: 'ok', text: `Nominal ${pegawai.nama} (${BULAN[bulan - 1]} ${tahun}) tersimpan.` })
+      setMsg({ type: 'ok', text: `${label} — ${pegawai.nama} (${BULAN[bulan - 1]} ${tahun}) tersimpan.` })
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof ApiError ? err.message : 'Gagal menyimpan.' })
-    } finally { setSaving(false) }
+    } finally { setSavingGroup(null) }
   }
 
   async function toggleStatus(jadiFinal) {
@@ -827,75 +899,109 @@ export default function PayrollManualPage() {
 
       {msg && <div className={`agt__msg agt__msg--${msg.type === 'ok' ? 'ok' : 'err'}`}>{msg.text}</div>}
 
-      {pegawai && lemburBiasaKomponen && (
-        <LemburBertingkatCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburBiasaKomponen}
-          hitungFn={api.hitungLemburBiasa} jenisSpl="Biasa"
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
+      {pegawai && groupLemburDinasIds.length > 0 && (
+        <section className="agt__section">
+          <h3 className="agt__section-title">Lembur, Presensi, Uang Makan Dinas &amp; SPPD</h3>
+
+          {lemburBiasaKomponen && (
+            <LemburBertingkatCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburBiasaKomponen}
+              hitungFn={api.hitungLemburBiasa} jenisSpl="Biasa"
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          {lemburPenggantiKomponen && (
+            <LemburBertingkatCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburPenggantiKomponen}
+              hitungFn={api.hitungLemburPengganti} jenisSpl="Mengganti"
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          {lemburCrashKomponen && (
+            <LemburCrashCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburCrashKomponen}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          {presensiKomponen && (
+            <PresensiCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={presensiKomponen}
+              nominal={nominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          {umdlKomponen && (
+            <UmdlFormulaCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={umdlKomponen}
+              nominal={nominal} setNominal={setNominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          {sppdKomponen && (
+            <SppdFormulaCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={sppdKomponen}
+              nominal={nominal} setNominal={setNominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
+
+          <div className="agt__group-save">
+            <button
+              type="button" className="agt__save agt__save--sm"
+              onClick={() => simpanSebagian(groupLemburDinasIds, 'lembur-dinas', 'Lembur, Presensi, UMDL & SPPD')}
+              disabled={savingGroup !== null}
+            >
+              {savingGroup === 'lembur-dinas' ? <Loader2 size={14} className="agt__spin" /> : <Save size={14} />}
+              Simpan Lembur, Presensi, UMDL &amp; SPPD
+            </button>
+          </div>
+        </section>
       )}
 
-      {pegawai && lemburPenggantiKomponen && (
-        <LemburBertingkatCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburPenggantiKomponen}
-          hitungFn={api.hitungLemburPengganti} jenisSpl="Mengganti"
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
+      {pegawai && groupTunjanganKhususIds.length > 0 && (
+        <section className="agt__section">
+          <h3 className="agt__section-title">Tunjangan Luar Daerah, Potongan BPJS Kesehatan &amp; Tunjangan PTS</h3>
 
-      {pegawai && lemburCrashKomponen && (
-        <LemburCrashCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={lemburCrashKomponen}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
+          {luarDaerahKomponen && (
+            <LuarDaerahCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={luarDaerahKomponen}
+              nominal={nominal} setNominal={setNominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
 
-      {pegawai && presensiKomponen && (
-        <PresensiCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={presensiKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
+          {bpjsKesKomponen && (
+            <BpjsKesCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={bpjsKesKomponen}
+              nominal={nominal} setNominal={setNominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
 
-      {pegawai && umdlKomponen && (
-        <UmdlFormulaCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={umdlKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
+          {ptsKomponen && (
+            <PtsCalculator
+              pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={ptsKomponen}
+              nominal={nominal} setNominal={setNominal}
+              onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
+            />
+          )}
 
-      {pegawai && sppdKomponen && (
-        <SppdFormulaCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={sppdKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
-
-      {pegawai && luarDaerahKomponen && (
-        <LuarDaerahCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={luarDaerahKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
-
-      {pegawai && bpjsKesKomponen && (
-        <BpjsKesCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={bpjsKesKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
-      )}
-
-      {pegawai && ptsKomponen && (
-        <PtsCalculator
-          pegawai={pegawai} tahun={tahun} bulan={bulan} komponen={ptsKomponen}
-          nominal={nominal} setNominal={setNominal}
-          onHasil={(idKomponen, total) => setNominal((m) => ({ ...m, [idKomponen]: String(total) }))}
-        />
+          <div className="agt__group-save">
+            <button
+              type="button" className="agt__save agt__save--sm"
+              onClick={() => simpanSebagian(groupTunjanganKhususIds, 'tunjangan-khusus', 'Tunjangan Luar Daerah, BPJS Kesehatan & PTS')}
+              disabled={savingGroup !== null}
+            >
+              {savingGroup === 'tunjangan-khusus' ? <Loader2 size={14} className="agt__spin" /> : <Save size={14} />}
+              Simpan Tunjangan Luar Daerah, BPJS Kesehatan &amp; PTS
+            </button>
+          </div>
+        </section>
       )}
 
       {!pegawai ? (
@@ -906,26 +1012,44 @@ export default function PayrollManualPage() {
         <div className="agt__empty">Tidak ada komponen manual per karyawan.</div>
       ) : (
         <>
-          <div className="agt__grid">
-            {grup.map(([kat, list]) => (
-              <div className="agt__kat" key={kat}>
-                <div className="agt__kat-head">{kat}</div>
-                {kelompokkan(list).map((en) => en.type === 'sub'
-                  ? <SubGrup key={en.grupKode} sub={en} nominal={nominal} setNominal={setNominal} />
-                  : (
-                    <Field
-                      key={en.item.idKomponen} it={en.item} nominal={nominal} setNominal={setNominal}
-                      mirrorId={pairMap[en.item.idKomponen]}
-                      mirrorNama={namaKomponenById[pairMap[en.item.idKomponen]]}
-                    />
-                  ))}
-              </div>
-            ))}
-          </div>
+          <section className="agt__section">
+            <h3 className="agt__section-title">Komponen Lainnya</h3>
+            <div className="agt__grid">
+              {grup.map(([kat, list]) => (
+                <div className="agt__kat" key={kat}>
+                  <div className="agt__kat-head">{kat}</div>
+                  {kelompokkan(list).map((en) => en.type === 'sub'
+                    ? <SubGrup key={en.grupKode} sub={en} nominal={nominal} setNominal={setNominal} />
+                    : (
+                      <Field
+                        key={en.item.idKomponen} it={en.item} nominal={nominal} setNominal={setNominal}
+                        mirrorId={pairMap[en.item.idKomponen]}
+                        mirrorNama={namaKomponenById[pairMap[en.item.idKomponen]]}
+                      />
+                    ))}
+                </div>
+              ))}
+            </div>
+            <div className="agt__group-save">
+              <button
+                type="button" className="agt__save agt__save--sm"
+                onClick={() => simpanSebagian(groupLainnyaIds, 'lainnya', 'Komponen Lainnya')}
+                disabled={savingGroup !== null}
+              >
+                {savingGroup === 'lainnya' ? <Loader2 size={14} className="agt__spin" /> : <Save size={14} />}
+                Simpan Komponen Lainnya
+              </button>
+            </div>
+          </section>
+
           <div className="agt__foot">
-            <button type="button" className="agt__save" onClick={save} disabled={saving}>
-              {saving ? <Loader2 size={16} className="agt__spin" /> : <Save size={16} />}
-              Simpan Nominal {pegawai.nama} ({BULAN[bulan - 1]} {tahun})
+            <button
+              type="button" className="agt__save"
+              onClick={() => simpanSebagian(data.komponen.map((k) => k.idKomponen), 'semua', 'Semua nominal')}
+              disabled={savingGroup !== null}
+            >
+              {savingGroup === 'semua' ? <Loader2 size={16} className="agt__spin" /> : <Save size={16} />}
+              Simpan Semua Nominal {pegawai.nama} ({BULAN[bulan - 1]} {tahun})
             </button>
           </div>
         </>

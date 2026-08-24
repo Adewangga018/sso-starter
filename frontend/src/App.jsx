@@ -43,6 +43,7 @@ import OrgStrukturPage from './pages/OrgStrukturPage'
 import OrgPenempatanPage from './pages/OrgPenempatanPage'
 import PegawaiDirektoriPage from './pages/PegawaiDirektoriPage'
 import PersonGradePage from './pages/PersonGradePage'
+import OrgVersiPage from './pages/OrgVersiPage'
 import MyHrManagementLayout from './layouts/MyHrManagementLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
 import ProsedurPage from './pages/prosedur/ProsedurPage'
@@ -134,6 +135,7 @@ export default function App() {
                 <Route path="penempatan" element={<OrgPenempatanPage />} />
                 <Route path="pegawai" element={<PegawaiDirektoriPage />} />
                 <Route path="person-grade" element={<PersonGradePage />} />
+                <Route element={<RequireFeature featureKey="org:versi" />}><Route path="versi" element={<OrgVersiPage />} /></Route>
               </Route>
             </Route>
             <Route path="/modul-sdm/gaji-tarif" element={<Navigate to="/payroll" replace />} />

@@ -97,3 +97,27 @@ public class GradingPejabatSementara
     public string? Catatan { get; set; }
     public DateTime DibuatPada { get; set; }
 }
+
+// Riwayat versi Struktur Organisasi terikat SK direksi (diminta 2026-08-24) - lihat
+// OrgVersiService & backend/Database/grading/12-org-versi-ddl.sql. Setiap baris = satu
+// versi yang DIBEKUKAN (snapshot unit/jabatan/penempatan/pts saat itu, di SnapshotJson)
+// + berkas SK pendukung (KontenSk, pola sama dgn ProsedurVersi.Konten). Minor = penempatan
+// saja berubah; Major = struktur ikut berubah (reset VersiMinor ke 0).
+public class GradingOrgVersi
+{
+    public int Id { get; set; }
+    public int VersiMajor { get; set; }
+    public int VersiMinor { get; set; }
+    public string Jenis { get; set; } = "Minor";   // Minor|Major
+    public string? NomorSk { get; set; }
+    public DateOnly? TanggalSk { get; set; }
+    public string? Ringkasan { get; set; }
+    public string? NamaFileSk { get; set; }
+    public string? TipeFileSk { get; set; }
+    public byte[]? KontenSk { get; set; }          // NULL hanya utk v1.0 baseline (tanpa SK)
+    public string? SnapshotJson { get; set; }       // NULL selama Status masih Draft
+    public string Status { get; set; } = "Draft";   // Draft|Berlaku|Usang|Dibatalkan
+    public string? DiterbitkanOleh { get; set; }
+    public string? NamaPenerbit { get; set; }
+    public DateTime DiterbitkanPada { get; set; }
+}

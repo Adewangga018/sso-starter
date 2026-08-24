@@ -22,6 +22,7 @@ import {
   Star,
   TrendingUp,
   UserCheck,
+  UserCog,
   Users,
   Users2,
   Wallet,
@@ -42,6 +43,7 @@ const ICONS = {
   'users-round': Users2,
   wallet: Wallet,
   network: Network,
+  'user-cog': UserCog,
 }
 
 const MODULE_ROUTES = {
@@ -65,7 +67,9 @@ const MODULE_LOGOS = {
   'my-asset': '/asset.png',
   'my-progress': '/progress.png',
   'my-team': '/team.png',
-  'hr-management': '/payroll.png',
+  // Sengaja TANPA entri "hr-management" (diminta 2026-08-21) - dulu pakai logo
+  // /payroll.png peninggalan sebelum modul ini digabung dgn Struktur Organisasi,
+  // sekarang jatuh ke ikon generik (UserCog, lihat ICONS map) drpd logo payroll saja.
 }
 
 const CATEGORIES = [

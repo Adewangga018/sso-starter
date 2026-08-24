@@ -12,7 +12,7 @@ public static class ModuleCatalog
 {
     public static readonly IReadOnlyList<ModuleDefinition> All =
     [
-        new("my-personal", "My Personal", "HR MANAGEMENT", "users", true),
+        new("my-personal", "My Personal", "DATA PRIBADI", "users", true),
         new("my-office", "My Office", "SURAT-MENYURAT", "mail", true),
         new("my-prosedur", "My Prosedur", "SOP & KEBIJAKAN", "clipboard-check", true),
         new("my-health", "My Health", "KESEHATAN", "activity", true),

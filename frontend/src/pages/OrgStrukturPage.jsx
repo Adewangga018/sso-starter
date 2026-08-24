@@ -100,6 +100,45 @@ function incumbentKey(inc, index = 0) {
   return inc.idPenempatan ?? `${inc.idKaryawan}-${inc.tmt ?? 'no-tmt'}-${index}`
 }
 
+// Cocokkan satu jabatan (nama/kode/band/atasan/unit) DAN karyawan yang mengisinya
+// (incumbent/PTS, nama maupun NIK) terhadap kata kunci pencarian - dipakai bersama oleh
+// tabel Kelola Unit & Jabatan, Org Chart, dan Hirarki Reporting (2026-08-24, diminta
+// search berdasarkan unit/jabatan/nama karyawan sekaligus).
+function jabatanMatchesTerm(j, term) {
+  if (!term) return true
+  return (
+    j.namaJabatan.toLowerCase().includes(term) ||
+    (j.kode && String(j.kode).toLowerCase().includes(term)) ||
+    (j.kelompokFungsi && j.kelompokFungsi.toLowerCase().includes(term)) ||
+    (j.alasan && j.alasan.toLowerCase().includes(term)) ||
+    (j.namaBand && j.namaBand.toLowerCase().includes(term)) ||
+    (j.namaUnit && j.namaUnit.toLowerCase().includes(term)) ||
+    (j.namaAtasan && j.namaAtasan.toLowerCase().includes(term)) ||
+    (j.incumbent?.some(i => i.nama.toLowerCase().includes(term) || i.idKaryawan.toLowerCase().includes(term)) ?? false) ||
+    (j.pts ? (j.pts.namaKaryawan.toLowerCase().includes(term) || j.pts.idKaryawan.toLowerCase().includes(term)) : false)
+  )
+}
+
+// Unit (atau salah satu sub-unit/jabatan/karyawan di bawahnya) cocok dengan kata kunci -
+// dipakai UnitTreeNode (sidebar Kelola Unit & Jabatan) supaya pencarian nama karyawan
+// tetap menampilkan/menyorot unit tempat karyawan itu ditempatkan, bukan cuma nama unit.
+function unitSubtreeMatchesTerm(node, jabatanList, term) {
+  if (!term) return true
+  const own = node.nama.toLowerCase().includes(term) || node.tipe.toLowerCase().includes(term)
+  if (own) return true
+  const jabatanHere = jabatanList.filter((j) => j.idUnit === node.idUnit)
+  if (jabatanHere.some((j) => jabatanMatchesTerm(j, term))) return true
+  return (node.children || []).some((c) => unitSubtreeMatchesTerm(c, jabatanList, term))
+}
+
+// Sama spt unitSubtreeMatchesTerm, tapi utk pohon Hirarki Reporting (node & children-nya
+// sudah berbentuk jabatan bertingkat atasan-bawahan, bukan unit).
+function jabatanSubtreeMatchesTerm(node, term) {
+  if (!term) return true
+  if (jabatanMatchesTerm(node, term)) return true
+  return (node.children || []).some((c) => jabatanSubtreeMatchesTerm(c, term))
+}
+
 /* --- Component: Universal 3-Dots Action Dropdown Menu --- */
 function ActionDropdown({ items = [], title = 'Aksi' }) {
   const [open, setOpen] = useState(false)
@@ -160,20 +199,24 @@ function ActionDropdown({ items = [], title = 'Aksi' }) {
 }
 
 /* --- Component: Node Unit untuk Sidebar Tree --- */
-function UnitTreeNode({ node, depth, selectedId, expanded, search, onToggle, onSelect, onEdit, onDelete, onCreateSub }) {
+function UnitTreeNode({ node, depth, selectedId, expanded, search, jabatanList, onToggle, onSelect, onEdit, onDelete, onCreateSub }) {
   const isExpanded = expanded.has(node.idUnit)
   const hasChildren = node.children && node.children.length > 0
-  const matchesSearch = !search || node.nama.toLowerCase().includes(search.toLowerCase()) || node.tipe.toLowerCase().includes(search.toLowerCase())
+  const term = search ? search.toLowerCase() : ''
+  const matchesSearch = !term || node.nama.toLowerCase().includes(term) || node.tipe.toLowerCase().includes(term)
   const dotColor = TIPE_DOT_COLORS[node.tipe] || TIPE_DOT_COLORS.Departemen
 
-  if (!matchesSearch && search && !node.children.some(c => c.nama.toLowerCase().includes(search.toLowerCase()))) {
+  // Sorot/tampilkan unit ini kalau namanya sendiri, salah satu jabatannya, ATAU nama/NIK
+  // karyawan yang menempatinya cocok dengan pencarian - bukan cuma nama unitnya sendiri
+  // (2026-08-24, diminta search berdasarkan unit/jabatan/nama karyawan sekaligus).
+  if (term && !unitSubtreeMatchesTerm(node, jabatanList, term)) {
     return null
   }
 
   return (
     <div className="org-tree__unit-node">
       <div
-        className={`org-tree__unit-row ${selectedId === node.idUnit ? 'is-selected' : ''}`}
+        className={`org-tree__unit-row ${selectedId === node.idUnit ? 'is-selected' : ''} ${term && matchesSearch ? 'is-search-hit' : ''}`}
         style={{ paddingLeft: 8 + depth * 14 }}
       >
         <button
@@ -212,7 +255,7 @@ function UnitTreeNode({ node, depth, selectedId, expanded, search, onToggle, onS
       {hasChildren && isExpanded && node.children.map((c) => (
         <UnitTreeNode
           key={c.idUnit} node={c} depth={depth + 1} selectedId={selectedId} expanded={expanded}
-          search={search} onToggle={onToggle} onSelect={onSelect} onEdit={onEdit} onDelete={onDelete}
+          search={search} jabatanList={jabatanList} onToggle={onToggle} onSelect={onSelect} onEdit={onEdit} onDelete={onDelete}
           onCreateSub={onCreateSub}
         />
       ))}
@@ -232,10 +275,10 @@ function OrgChartNode({
   const filledPositions = unitJabatan.reduce((acc, j) => acc + (j.incumbent?.length || 0), 0)
   const totalFormasi = unitJabatan.reduce((acc, j) => acc + (j.jumlahFormasi || 1), 0)
 
-  const isMatched = search && (
+  const isMatched = Boolean(search.trim()) && (
     node.nama.toLowerCase().includes(search.toLowerCase()) ||
     node.tipe.toLowerCase().includes(search.toLowerCase()) ||
-    unitJabatan.some(j => j.namaJabatan.toLowerCase().includes(search.toLowerCase()))
+    unitJabatan.some((j) => jabatanMatchesTerm(j, search.toLowerCase()))
   )
 
   const hasChildren = node.children && node.children.length > 0
@@ -348,9 +391,10 @@ function ReportingJabatanNode({ node, depth, search, onViewDetail, onEdit, onDel
   const targetFormasi = node.jumlahFormasi || 1
   const isVacant = filledCount === 0
 
-  const matchesSearch = !search || node.namaJabatan.toLowerCase().includes(search.toLowerCase()) || (node.namaUnit && node.namaUnit.toLowerCase().includes(search.toLowerCase()))
+  const term = search ? search.toLowerCase() : ''
+  const matchesSearch = !term || jabatanMatchesTerm(node, term)
 
-  if (!matchesSearch && search && !node.children.some(c => c.namaJabatan.toLowerCase().includes(search.toLowerCase()))) {
+  if (term && !jabatanSubtreeMatchesTerm(node, term)) {
     return null
   }
 
@@ -402,7 +446,7 @@ function ReportingJabatanNode({ node, depth, search, onViewDetail, onEdit, onDel
           {node.children.map((c) => (
             <ReportingJabatanNode
               key={c.idJabatan} node={c} depth={depth + 1} search={search}
-              onViewDetail={onViewDetail} onEdit={onEdit} onDelete={deleteJabatan}
+              onViewDetail={onViewDetail} onEdit={onEdit} onDelete={onDelete}
             />
           ))}
         </div>
@@ -422,6 +466,14 @@ export default function OrgStrukturPage() {
   const [expanded, setExpanded] = useState(new Set())
   const [viewMode, setViewMode] = useState('chart') // 'chart' | 'manage' | 'reporting'
   const [search, setSearch] = useState('')
+
+  // Sedang mencari (unit/jabatan/nama karyawan) - sidebar Kelola Unit & Jabatan default
+  // TERCIUT (expanded kosong), jadi tanpa ini hasil pencarian yg ada di sub-unit tersembunyi
+  // tetap tidak kelihatan walau node induknya sudah tersaring benar. Kembangkan semua unit
+  // selama pencarian aktif (2026-08-24).
+  useEffect(() => {
+    if (search.trim()) setExpanded(new Set(units.map((u) => u.idUnit)))
+  }, [search, units])
 
   /* Canvas Controls State (Zoom & Pan) */
   const viewportRef = useRef(null)
@@ -604,25 +656,15 @@ export default function OrgStrukturPage() {
     return { totalJabatan, totalFormasi, filledFormasi, vacantJabatan, coreJabatan, ptsJabatan, subUnitsCount, fillPercentage }
   }, [currentUnitJabatan, units, selectedUnit])
 
-  /* Filtered Table Rows for Manage View */
+  /* Filtered Table Rows for Manage View - saat sedang mencari, cari di SELURUH jabatan
+     (lintas unit), bukan dibatasi unit yg sedang dipilih di sidebar - supaya mencari nama
+     karyawan langsung ketemu di unit manapun dia ditempatkan, tanpa harus tebak-tebak klik
+     unit yg benar dulu (2026-08-24, diminta search berdasarkan unit/jabatan/nama karyawan). */
   const jabatanTampil = useMemo(() => {
-    let list = currentUnitJabatan
-    if (search.trim()) {
-      const term = search.toLowerCase()
-      list = list.filter((j) =>
-        j.namaJabatan.toLowerCase().includes(term) ||
-        (j.kode && String(j.kode).toLowerCase().includes(term)) ||
-        (j.kelompokFungsi && j.kelompokFungsi.toLowerCase().includes(term)) ||
-        (j.alasan && j.alasan.toLowerCase().includes(term)) ||
-        (j.namaBand && j.namaBand.toLowerCase().includes(term)) ||
-        (j.namaUnit && j.namaUnit.toLowerCase().includes(term)) ||
-        (j.namaAtasan && j.namaAtasan.toLowerCase().includes(term)) ||
-        j.incumbent?.some(i => i.nama.toLowerCase().includes(term) || i.idKaryawan.toLowerCase().includes(term)) ||
-        (j.pts && (j.pts.namaKaryawan.toLowerCase().includes(term) || j.pts.idKaryawan.toLowerCase().includes(term)))
-      )
-    }
-    return list
-  }, [currentUnitJabatan, search])
+    const term = search.trim().toLowerCase()
+    if (!term) return currentUnitJabatan
+    return jabatan.filter((j) => jabatanMatchesTerm(j, term))
+  }, [currentUnitJabatan, jabatan, search])
 
   const getJabatanDeleteBlockReason = useCallback((j) => {
     if ((j.incumbent?.length || 0) > 0) {
@@ -1047,7 +1089,7 @@ export default function OrgStrukturPage() {
               {tree.map((node) => (
                 <UnitTreeNode
                   key={node.idUnit} node={node} depth={0} selectedId={selectedUnit} expanded={expanded}
-                  search={search} onToggle={toggleExpand} onSelect={setSelectedUnit} onEdit={openEditUnit}
+                  search={search} jabatanList={jabatan} onToggle={toggleExpand} onSelect={setSelectedUnit} onEdit={openEditUnit}
                   onDelete={deleteUnit} onCreateSub={openCreateUnit}
                 />
               ))}
@@ -1059,12 +1101,16 @@ export default function OrgStrukturPage() {
             <div className="org-manage-panel__head">
               <div>
                 <h2>
-                  {selectedUnitObj ? selectedUnitObj.nama : (selectedUnit === 'ALL' ? 'Semua Unit Organisasi' : 'Jabatan Tanpa Unit')}
-                  {selectedUnitObj?.tipe && selectedUnitObj.tipe !== 'GLOBAL' && (
+                  {search.trim()
+                    ? `Hasil Pencarian: "${search.trim()}"`
+                    : (selectedUnitObj ? selectedUnitObj.nama : (selectedUnit === 'ALL' ? 'Semua Unit Organisasi' : 'Jabatan Tanpa Unit'))}
+                  {!search.trim() && selectedUnitObj?.tipe && selectedUnitObj.tipe !== 'GLOBAL' && (
                     <span className="org-unit-badge">{selectedUnitObj.tipe}</span>
                   )}
                 </h2>
-                {selectedUnitObj?.wilayah && (
+                {search.trim() ? (
+                  <span className="org-unit-subtext">Mencari di seluruh unit, jabatan, dan nama/NIK karyawan · {jabatanTampil.length} jabatan cocok</span>
+                ) : selectedUnitObj?.wilayah && (
                   <span className="org-unit-subtext">📍 Wilayah: {selectedUnitObj.wilayah}</span>
                 )}
               </div>
@@ -1112,7 +1158,7 @@ export default function OrgStrukturPage() {
                             <div className="org-table__jabatan-tags">
                               {j.kode && <span className="org-table__jabatan-code">Kode: {j.kode}</span>}
                               {j.inti === true && <span className="org-tag org-tag--core">⭐ Inti</span>}
-                              {j.namaUnit && selectedUnit === 'ALL' && (
+                              {j.namaUnit && (selectedUnit === 'ALL' || search.trim()) && (
                                 <span className="org-table__jabatan-unit">🏢 {j.namaUnit}</span>
                               )}
                             </div>
@@ -1186,10 +1232,12 @@ export default function OrgStrukturPage() {
                       <td colSpan={6} className="org-empty-row">
                         <div className="org-table-empty-msg">
                           <Briefcase size={28} />
-                          <span>Tidak ada jabatan ditemukan untuk unit ini.</span>
-                          <button type="button" className="org-btn-mini" onClick={() => openCreateJabatan()}>
-                            <Plus size={12} /> Tambah Jabatan Baru
-                          </button>
+                          <span>{search.trim() ? `Tidak ada unit, jabatan, atau karyawan yang cocok dengan "${search.trim()}".` : 'Tidak ada jabatan ditemukan untuk unit ini.'}</span>
+                          {!search.trim() && (
+                            <button type="button" className="org-btn-mini" onClick={() => openCreateJabatan()}>
+                              <Plus size={12} /> Tambah Jabatan Baru
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

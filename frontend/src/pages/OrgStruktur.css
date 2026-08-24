@@ -988,6 +988,15 @@
 .org-tree__unit-row.is-selected {
   background: rgba(244, 174, 70, 0.18);
 }
+/* Unit yang namanya sendiri cocok dgn kata kunci pencarian (beda dari unit yg cuma
+   tampil krn salah satu jabatan/karyawan DI DALAMNYA cocok) - 2026-08-24. */
+.org-tree__unit-row.is-search-hit .org-tree__unit-nama {
+  color: var(--gcs-green-900);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--gcs-gold-500);
+  text-decoration-thickness: 2px;
+}
 
 .org-tree__unit-caret {
   border: none;
@@ -1939,3 +1948,52 @@
 .org-penempatan__picker-results { border: 1px solid var(--gcs-border); border-radius: 8px; margin-top: 4px; max-height: 180px; overflow-y: auto; }
 .org-penempatan__picker-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 8px 12px; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid var(--gcs-border); }
 .org-penempatan__picker-item:hover { background: var(--gcs-bg); }
+
+/* ===========================================================================
+   Riwayat Versi Struktur Organisasi (SK direksi) - diminta 2026-08-24.
+   Reuse layout org-penempatan__* (toolbar/panel/table/modal), tambahan khusus
+   di sini: banner versi berjalan, badge Minor/Major, pilihan jenis versi,
+   dan panel pembaca snapshot read-only (tree Unit > Jabatan > incumbent).
+   =========================================================================== */
+.org-versi__current { display: flex; align-items: flex-start; gap: 10px; background: rgba(47, 108, 63, 0.08); border: 1px solid rgba(47, 108, 63, 0.25); color: var(--gcs-green-900); border-radius: 10px; padding: 10px 14px; font-size: 0.86rem; }
+.org-versi__current svg { flex-shrink: 0; margin-top: 2px; }
+.org-versi__current span { color: var(--gcs-text-muted); font-weight: 400; }
+
+.org-versi__badge { display: inline-block; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; border-radius: 999px; padding: 2px 9px; margin-left: 6px; }
+.org-versi__badge--minor { background: rgba(56, 189, 248, 0.15); color: #0369a1; }
+.org-versi__badge--major { background: rgba(244, 174, 70, 0.18); color: #92400e; }
+.org-versi__badge--berjalan,
+.org-versi__badge--status-berlaku { background: rgba(47, 108, 63, 0.15); color: var(--gcs-green-900); }
+.org-versi__badge--status-draft { background: rgba(148, 163, 184, 0.2); color: #475569; }
+.org-versi__badge--status-usang { background: rgba(148, 163, 184, 0.12); color: var(--gcs-text-muted); }
+.org-versi__badge--status-dibatalkan { background: rgba(192, 57, 43, 0.1); color: #c0392b; }
+.org-versi__ringkasan { white-space: normal; min-width: 200px; max-width: 320px; color: var(--gcs-text-muted); }
+
+.org-versi__jenis-pilih { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.org-versi__jenis-opsi { display: flex; align-items: flex-start; gap: 8px; border: 1px solid var(--gcs-border); border-radius: 10px; padding: 12px; cursor: pointer; }
+.org-versi__jenis-opsi input { margin-top: 3px; }
+.org-versi__jenis-opsi div { display: flex; flex-direction: column; gap: 2px; }
+.org-versi__jenis-opsi strong { font-size: 0.86rem; color: var(--gcs-ink); }
+.org-versi__jenis-opsi span { font-size: 0.74rem; color: var(--gcs-text-muted); }
+.org-versi__jenis-opsi.is-active { border-color: var(--gcs-gold-500); background: rgba(244, 174, 70, 0.08); }
+
+.org-versi__viewer { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; max-height: 70vh; overflow-y: auto; }
+.org-versi__viewer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.org-versi__viewer-head h3 { font-size: 1rem; color: var(--gcs-green-900); }
+
+.org-versi__snap-tree { list-style: none; margin: 0; padding-left: 18px; }
+.org-versi__snap-tree--root { padding-left: 0; }
+.org-versi__snap-unit { border-left: 2px solid var(--gcs-border); padding-left: 12px; margin: 6px 0; }
+.org-versi__snap-unit-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.org-versi__snap-unit-nama { font-weight: 700; color: var(--gcs-ink); font-size: 0.88rem; }
+.org-versi__snap-tipe { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; background: var(--gcs-bg); color: var(--gcs-text-muted); }
+.org-versi__snap-jabatan-list { list-style: none; margin: 4px 0 4px 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.org-versi__snap-jabatan { border: 1px solid var(--gcs-border); border-radius: 8px; padding: 6px 10px; background: var(--gcs-bg); }
+.org-versi__snap-jabatan-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.org-versi__snap-jabatan-nama { font-weight: 600; font-size: 0.82rem; color: var(--gcs-ink); }
+.org-versi__snap-jabatan-band { font-size: 0.7rem; color: var(--gcs-text-muted); }
+.org-versi__snap-badge--nonaktif { font-size: 0.64rem; font-weight: 700; color: #c0392b; background: rgba(192, 57, 43, 0.1); border-radius: 999px; padding: 1px 8px; }
+.org-versi__snap-incumbent { display: flex; flex-direction: column; gap: 1px; margin-top: 3px; font-size: 0.78rem; color: var(--gcs-green-900); }
+.org-versi__snap-incumbent em { color: var(--gcs-text-muted); font-style: normal; }
+.org-versi__snap-incumbent--pts { color: #92400e; }
+.org-versi__snap-kosong { font-size: 0.76rem; color: var(--gcs-text-muted); font-style: italic; margin-top: 3px; }

@@ -452,6 +452,17 @@ export const api = {
   getPgAkselerasi: (idKaryawan) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`),
   setPgAkselerasi: (idKaryawan, payload) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'PUT', body: JSON.stringify(payload ?? {}) }),
   hapusPgAkselerasi: (idKaryawan) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'DELETE' }),
+
+  // Riwayat Versi Struktur Organisasi terikat SK direksi (diminta 2026-08-24) -
+  // lihat OrgVersiService. Minor/Major dipilih admin sendiri saat menerbitkan.
+  getOrgVersiList: () => apiFetch('/api/org/versi'),
+  getOrgVersiBerlaku: () => apiFetch('/api/org/versi/berlaku'),
+  getOrgVersiSnapshot: (id) => apiFetch(`/api/org/versi/${id}`),
+  getOrgVersiSkFile: (id) => apiBlob(`/api/org/versi/${id}/sk`),
+  unduhOrgVersiSk: (id, filename) => apiDownload(`/api/org/versi/${id}/sk`, filename || 'SK'),
+  buatDraftOrgVersi: (formData) => apiFetch('/api/org/versi', { method: 'POST', body: formData }),
+  berlakukanOrgVersi: (id) => apiFetch(`/api/org/versi/${id}/berlakukan`, { method: 'POST' }),
+  hapusDraftOrgVersi: (id) => apiFetch(`/api/org/versi/${id}`, { method: 'DELETE' }),
   // Opsi JG/PG (dipakai jg utk info Payroll > Formula) - lihat GajiService.GetGradeOpsiAsync.
   getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
   getAbsensi: () => apiFetch('/api/personal/absensi'),

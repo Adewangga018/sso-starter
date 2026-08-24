@@ -73,6 +73,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GradingPejabatSementara> GradingPejabatSementara => Set<GradingPejabatSementara>();
     public DbSet<GradingPersonGrade> GradingPersonGrade => Set<GradingPersonGrade>();
     public DbSet<GradingPgAkselerasi> GradingPgAkselerasi => Set<GradingPgAkselerasi>();
+    public DbSet<GradingOrgVersi> GradingOrgVersi => Set<GradingOrgVersi>();
     // My Progress (schema kpi) — dikelola manual (raw SQL), EF baca/tulis saja.
     public DbSet<Kpi> Kpi => Set<Kpi>();
     // My Asset (schema aset) — dikelola manual (raw SQL), EF baca/tulis saja.
@@ -692,6 +693,27 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Catatan).HasColumnName("catatan");
             e.Property(x => x.DitetapkanOleh).HasColumnName("ditetapkan_oleh");
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        builder.Entity<GradingOrgVersi>(e =>
+        {
+            e.ToTable("org_versi", "grading", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.VersiMajor).HasColumnName("versi_major");
+            e.Property(x => x.VersiMinor).HasColumnName("versi_minor");
+            e.Property(x => x.Jenis).HasColumnName("jenis");
+            e.Property(x => x.NomorSk).HasColumnName("nomor_sk");
+            e.Property(x => x.TanggalSk).HasColumnName("tanggal_sk");
+            e.Property(x => x.Ringkasan).HasColumnName("ringkasan");
+            e.Property(x => x.NamaFileSk).HasColumnName("nama_file_sk");
+            e.Property(x => x.TipeFileSk).HasColumnName("tipe_file_sk");
+            e.Property(x => x.KontenSk).HasColumnName("konten_sk");
+            e.Property(x => x.SnapshotJson).HasColumnName("snapshot_json");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.DiterbitkanOleh).HasColumnName("diterbitkan_oleh");
+            e.Property(x => x.NamaPenerbit).HasColumnName("nama_penerbit");
+            e.Property(x => x.DiterbitkanPada).HasColumnName("diterbitkan_pada");
         });
 
         builder.Entity<Kpi>(e =>

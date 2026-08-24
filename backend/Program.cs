@@ -58,6 +58,7 @@ builder.Services.AddScoped<CutiService>();
 builder.Services.AddScoped<ApprovalService>();
 builder.Services.AddScoped<GajiService>();
 builder.Services.AddScoped<OrgStrukturService>();
+builder.Services.AddScoped<OrgVersiService>();
 builder.Services.AddScoped<DinasBuktiService>();
 // Hak "Admin Modul SDM" (berbasis grading).
 builder.Services.AddScoped<ModuleAccessService>();

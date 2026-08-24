@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { LayoutGrid, MapPinned, Network, SlidersHorizontal, UserCog, UserCog2, UserSquare2, UsersRound } from 'lucide-react'
+import { FileClock, LayoutGrid, MapPinned, Network, SlidersHorizontal, UserCog, UserCog2, UserSquare2, UsersRound } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -28,6 +28,7 @@ function buildSections() {
       items: [
         { key: 'struktur', feature: 'org:struktur', label: 'Unit & Jabatan', icon: Network, to: '/org', end: true },
         { key: 'penempatan', feature: 'org:penempatan', label: 'Penempatan Karyawan', icon: UsersRound, to: '/org/penempatan' },
+        { key: 'versi', feature: 'org:versi', label: 'Riwayat Versi (SK)', icon: FileClock, to: '/org/versi' },
       ],
     },
     {

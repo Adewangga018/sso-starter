@@ -125,7 +125,8 @@ public record SetStatusGajiRequest(string Nik, int Tahun, int Bulan, bool Final)
 // surat ijin disetujui, mengacu Nota Dinas 0188/08/ND Potongan Absen 2018. Admin
 // Payroll review hasil ini lalu simpan manual lewat endpoint admin/manual biasa. ----
 public record PresensiKejadianDto(
-    DateOnly Tanggal, string Jenis, bool AdaIjin, decimal? JamHilang, decimal PersenTp, decimal PersenTa);
+    DateOnly Tanggal, string Jenis, bool AdaIjin, decimal? JamHilang, decimal PersenTp, decimal PersenTa,
+    string? CheckIn = null, string? CheckOut = null);
 
 public record PotonganPresensiDto(
     string Nik, string Nama, int Tahun, int Bulan,

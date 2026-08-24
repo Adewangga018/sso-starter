@@ -103,16 +103,28 @@
 .agt__subgrup-body { background: var(--gcs-bg); padding-bottom: 4px; }
 .agt__subgrup-body .agt__field { padding-left: 32px; }
 
-.agt__foot { display: flex; justify-content: flex-end; position: sticky; bottom: 12px; }
+/* Tombol Simpan TIDAK lagi mengambang/sticky mengikuti scroll (diminta 2026-08-21) -
+   posisi statis biasa, ada per-kelompok komponen (.agt__group-save) + satu "Simpan
+   Semua" di paling bawah halaman (.agt__foot). */
+.agt__foot { display: flex; justify-content: flex-end; position: static; padding-top: 4px; }
 .agt__save { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 10px; padding: 11px 18px; background: var(--gcs-green-900); color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 20px -8px rgba(15,38,31,0.5); }
 .agt__save:hover { filter: brightness(1.12); }
 .agt__save:disabled { opacity: 0.6; cursor: default; }
 /* Sub-bagian (Pendapatan Dasar, Potongan Tunggal, Formula, Flat, Matriks JG×PG) -
-   tombol lebih ringkas & tidak sticky, supaya beberapa sub-bagian dalam satu halaman
-   tidak terasa seperti banyak tombol besar bertumpuk. */
+   tombol lebih ringkas, supaya beberapa sub-bagian dalam satu halaman tidak terasa
+   seperti banyak tombol besar bertumpuk. */
 .agt__save--sm { position: static; padding: 8px 14px; font-size: 0.82rem; box-shadow: none; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-green-700); }
 .agt__save--sm:hover { background: var(--gcs-bg); filter: none; }
 .agt__pd .agt__foot { position: static; }
+
+/* Tombol Simpan per kelompok komponen (Lembur+Presensi+UMDL+SPPD / Tunjangan Luar
+   Daerah+BPJS+PTS / Komponen Lainnya) - ditaruh rata kanan tepat di bawah kelompoknya. */
+.agt__group-save { display: flex; justify-content: flex-end; padding: 2px 2px 4px; }
+
+/* Section box pembungkus tiap kelompok komponen Simpan (2026-08-24) - biar 3 kelompok
+   di atas kelihatan sbg kotak terpisah, bukan menyatu jadi satu daftar panjang. */
+.agt__section { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.agt__section-title { margin: 0; font-size: 0.86rem; font-weight: 700; color: var(--gcs-green-900); }
 
 /* Kalkulator Potongan Presensi (Manual per Karyawan) */
 .agt__presensi { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -120,6 +132,30 @@
 .agt__presensi-nama { display: block; font-size: 0.9rem; font-weight: 700; color: var(--gcs-green-900); }
 .agt__presensi-note { display: block; font-size: 0.76rem; color: var(--gcs-text-muted); margin-top: 2px; max-width: 46ch; }
 .agt__presensi-hasil { border-top: 1px dashed var(--gcs-border); padding-top: 4px; }
+
+/* Potongan Presensi dipecah jadi 3 kolom (TP/TA/Total) - diminta 2026-08-21, sebelumnya
+   cuma satu kolom gabungan. Ditata berdampingan (bukan ditumpuk spt .agt__field biasa
+   di grid komponen utama) supaya jelas kelihatan sbg satu perhitungan yg berkaitan. */
+.agt__presensi-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 2px 2px 4px;
+}
+.agt__presensi-split .agt__field {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--gcs-bg);
+  border-radius: 10px;
+}
+.agt__presensi-split .agt__preview { grid-column: auto; text-align: left; }
+.agt__field--total { background: rgba(15, 38, 31, 0.05) !important; }
+.agt__input-wrap--readonly { background: var(--gcs-bg); }
+.agt__input-wrap--readonly input { color: var(--gcs-ink); font-weight: 700; cursor: default; }
 .agt__presensi-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin: 6px 0; }
 .agt__presensi-table th, .agt__presensi-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--gcs-border); white-space: nowrap; }
 .agt__presensi-table th { color: var(--gcs-text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.66rem; letter-spacing: 0.02em; }
@@ -150,11 +186,6 @@
 
   .agt__preview {
     grid-column: 1;
-  }
-
-  /* Tombol simpan melekat di dasar layar - formulir tarif ini panjang. */
-  .agt__foot {
-    bottom: calc(10px + var(--safe-b));
   }
 
   .agt__save {

@@ -786,17 +786,17 @@ public class GajiService
             if (checkIn is null && checkOut is null)
             {
                 TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Tidak Masuk Kerja",
-                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Masuk Kerja"), null);
+                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Masuk Kerja"), null, checkIn, checkOut);
             }
             else if (checkIn is null)
             {
                 TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Tidak Clocking In",
-                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Clocking In"), null);
+                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Clocking In"), null, checkIn, checkOut);
             }
             else if (checkOut is null)
             {
                 TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Tidak Clocking Out",
-                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Clocking Out"), null);
+                    izinHariIni.Any(s => s.jenis_ijin == "Tidak Clocking Out"), null, checkIn, checkOut);
             }
             else
             {
@@ -804,19 +804,19 @@ public class GajiService
                 if (izinTerlambat is not null)
                 {
                     var jam = (decimal)(izinTerlambat.tgl_ijin_sd ?? izinTerlambat.tgl_ijin).Subtract(izinTerlambat.tgl_ijin).TotalHours;
-                    TambahKejadian(kejadian, ref persenTp, ref persenTa, d, izinTerlambat.jenis_ijin, true, jam);
+                    TambahKejadian(kejadian, ref persenTp, ref persenTa, d, izinTerlambat.jenis_ijin, true, jam, checkIn, checkOut);
                 }
                 else if (TimeOnly.TryParse(checkIn, out var jamMasuk) && TimeOnly.TryParse(checkOut, out var jamPulang))
                 {
                     if (jamMasuk > JamMasukStandar)
                     {
                         var jam = (decimal)(jamMasuk - JamMasukStandar).TotalHours;
-                        TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Datang Terlambat", false, jam);
+                        TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Datang Terlambat", false, jam, checkIn, checkOut);
                     }
                     if (jamPulang < JamPulangStandar)
                     {
                         var jam = (decimal)(JamPulangStandar - jamPulang).TotalHours;
-                        TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Pulang Lebih Awal", false, jam);
+                        TambahKejadian(kejadian, ref persenTp, ref persenTa, d, "Pulang Lebih Awal", false, jam, checkIn, checkOut);
                     }
                 }
             }
@@ -836,10 +836,11 @@ public class GajiService
     // Tabel persentase Nota Dinas 0188/08/ND 2018 (TP=Tunjangan Pangan, TA=Tunjangan Angkutan).
     private static void TambahKejadian(
         List<PresensiKejadianDto> kejadian, ref decimal persenTp, ref decimal persenTa,
-        DateOnly tanggal, string jenis, bool adaIjin, decimal? jamHilang)
+        DateOnly tanggal, string jenis, bool adaIjin, decimal? jamHilang,
+        string? checkIn = null, string? checkOut = null)
     {
         var (tp, ta) = RatePersen(jenis, adaIjin, jamHilang);
-        kejadian.Add(new PresensiKejadianDto(tanggal, jenis, adaIjin, jamHilang, tp, ta));
+        kejadian.Add(new PresensiKejadianDto(tanggal, jenis, adaIjin, jamHilang, tp, ta, checkIn, checkOut));
         persenTp += tp;
         persenTa += ta;
     }

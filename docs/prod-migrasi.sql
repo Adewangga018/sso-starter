@@ -2090,5 +2090,67 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [20] ORG VERSI - riwayat versi Struktur Organisasi (SK) ################';
+GO
+/* ============================================================================
+   grading.org_versi (2026-08-24, status Draft/Berlaku ditambahkan sehari
+   kemudian sesuai masukan): Struktur Organisasi kini adaptif, terikat SK
+   direksi. Admin melampirkan SK sbg DRAFT dulu (nomor versi dicadangkan, belum
+   membekukan apa pun); menekan "Berlakukan" (OrgVersiService.BerlakukanVersiAsync)
+   BARU membekukan snapshot unit_organisasi/jabatan/penempatan/pejabat_sementara
+   LIVE saat itu. MINOR (v1.0->v1.1..) = penempatan saja; MAJOR (v1.x->v2.0) =
+   struktur berubah. Blok ini HANYA skema tabel, TANPA data - baris v1.0
+   baseline di-seed OTOMATIS oleh aplikasi (lazy, System.Text.Json, portable di
+   semua versi SQL Server - server dev tidak mendukung T-SQL FOR JSON) saat
+   endpoint riwayat versi pertama kali diakses, lihat
+   OrgVersiService.PastikanBaselineAsync. NON-DESTRUKTIF & idempoten (blok ini
+   aman dijalankan ulang bahkan kalau tabel sudah ada dari versi migrasi lama
+   tanpa status Draft - constraint & kolom snapshot_json diperbarui otomatis).
+   Isi lengkap: backend/Database/grading/12-org-versi-ddl.sql
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('grading.org_versi', 'U') IS NULL
+BEGIN
+    CREATE TABLE grading.org_versi
+    (
+        id                INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_grading_org_versi PRIMARY KEY,
+        versi_major       INT NOT NULL,
+        versi_minor       INT NOT NULL,
+        jenis             NVARCHAR(10) NOT NULL CONSTRAINT CK_org_versi_jenis CHECK (jenis IN ('Minor','Major')),
+        nomor_sk          NVARCHAR(100) NULL,
+        tanggal_sk        DATE NULL,
+        ringkasan         NVARCHAR(500) NULL,
+        nama_file_sk      NVARCHAR(255) NULL,
+        tipe_file_sk      NVARCHAR(100) NULL,
+        konten_sk         VARBINARY(MAX) NULL,
+        snapshot_json     NVARCHAR(MAX) NULL,
+        status            NVARCHAR(20) NOT NULL CONSTRAINT DF_org_versi_status DEFAULT ('Draft')
+                              CONSTRAINT CK_org_versi_status CHECK (status IN ('Draft','Berlaku','Usang','Dibatalkan')),
+        diterbitkan_oleh  NVARCHAR(20) NULL,
+        nama_penerbit     NVARCHAR(150) NULL,
+        diterbitkan_pada  DATETIME2 NOT NULL CONSTRAINT DF_org_versi_diterbitkan DEFAULT (SYSDATETIME()),
+        CONSTRAINT UQ_grading_org_versi_nomor UNIQUE (versi_major, versi_minor)
+    );
+    PRINT 'Tabel grading.org_versi dibuat.';
+END
+ELSE
+BEGIN
+    PRINT 'LEWATI: grading.org_versi sudah ada - memastikan status Draft & snapshot_json nullable tersedia.';
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_org_versi_status')
+        ALTER TABLE grading.org_versi DROP CONSTRAINT CK_org_versi_status;
+    ALTER TABLE grading.org_versi ADD CONSTRAINT CK_org_versi_status CHECK (status IN ('Draft','Berlaku','Usang','Dibatalkan'));
+    ALTER TABLE grading.org_versi ALTER COLUMN snapshot_json NVARCHAR(MAX) NULL;
+END
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO
