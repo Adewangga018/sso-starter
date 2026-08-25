@@ -100,9 +100,13 @@
 .aset__x { border: none; background: none; cursor: pointer; color: var(--gcs-text-muted); padding: 4px; border-radius: 8px; display: inline-flex; }
 .aset__x:hover { background: var(--gcs-bg); }
 .aset__modal-body { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow-y: auto; }
-.aset__f { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--gcs-text-muted); }
+/* min-width: 0 - tanpa ini, item grid/flex punya lebar minimum bawaan browser
+   sebesar konten intrinsiknya (mis. <input> punya lebar minimum ~170-200px),
+   yang MEMAKSA track grid melebar keluar container di layar sempit walau
+   grid-nya sendiri sudah 1 kolom - ini akar penyebab input meluber di HP. */
+.aset__f { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--gcs-text-muted); }
 .aset__f--full { grid-column: 1 / -1; }
-.aset__f input, .aset__f textarea, .aset__f select { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 0.88rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
+.aset__f input, .aset__f textarea, .aset__f select { width: 100%; min-width: 0; border: 1px solid var(--gcs-border); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 0.88rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--gcs-ink); }
 .aset__f input:focus, .aset__f textarea:focus, .aset__f select:focus { outline: none; border-color: var(--gcs-gold-500); }
 .aset__modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--gcs-border); }
 .aset__err { grid-column: 1 / -1; background: rgba(192,57,43,0.1); color: #c0392b; border-radius: 9px; padding: 8px 12px; font-size: 0.84rem; }
@@ -113,6 +117,10 @@
   .aset__overlay { padding: 0; align-items: flex-end; }
   .aset__modal { max-width: 100%; max-height: 94vh; border-radius: 16px 16px 0 0; }
   .aset__modal-body { grid-template-columns: 1fr; }
+  /* aset__dgrid dipakai di luar modal juga (Info Aset & Kondisi, Detail Tidak Bergerak,
+     form Catat Scan Opname, Tambah Aset Baru) - tanpa ini, grid 2 kolom fixed-nya bikin
+     input/select meluber keluar kartu di layar sempit (dilaporkan nyata dari HP). */
+  .aset__dgrid { grid-template-columns: 1fr; }
 }
 
 /* Mobile: perbesar target sentuh tombol ikon (30px -> 42px, di bawah rekomendasi
@@ -142,8 +150,11 @@
 .aset__dgrid > div { display: flex; flex-direction: column; gap: 1px; }
 .aset__dgrid span { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
 .aset__dgrid b { font-size: 0.88rem; color: var(--gcs-ink); font-weight: 600; }
-.aset__mhead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; margin-top: 6px; border-top: 1px solid var(--gcs-border); padding-top: 12px; }
+.aset__mhead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 6px; border-top: 1px solid var(--gcs-border); padding-top: 12px; }
 .aset__mhead h4 { margin: 0; font-size: 0.9rem; color: var(--gcs-green-900); }
 .aset__mlist { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
-.aset__mrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--gcs-border); border-radius: 10px; background: var(--gcs-bg); font-size: 0.82rem; }
+.aset__mrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--gcs-border); border-radius: 10px; background: var(--gcs-bg); font-size: 0.82rem; flex-wrap: wrap; }
 .aset__mrow small { color: var(--gcs-text-muted); }
+/* Tombol aksi di kanan .aset__mrow (mis. badge status + tombol Selesai/Ubah/Hapus) - biar
+   tidak ikut melar penuh 100% saat baris wrap ke bawah di layar sempit. */
+.aset__mrow > div:last-child { flex-shrink: 0; }
