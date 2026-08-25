@@ -1,0 +1,28 @@
+/* Halaman cetak/export PDF daftar Inventaris - tabel A4 landscape, dipisah dari
+   AsetQrCetak.css (dipakai bareng untuk toolbar/state) karena layoutnya beda total. */
+
+.asetcetak__sheet {
+  width: 297mm; margin: 0 auto; background: #fff; padding: 12mm;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15); font-family: system-ui, sans-serif;
+}
+.asetcetak__head { display: flex; align-items: center; gap: 4mm; margin-bottom: 6mm; border-bottom: 1.5pt solid #1a1a1a; padding-bottom: 4mm; }
+.asetcetak__logo { height: 12mm; width: auto; object-fit: contain; }
+.asetcetak__head h1 { font-size: 14pt; margin: 0; color: #111; }
+.asetcetak__head p { font-size: 9pt; margin: 2px 0 0; color: #555; }
+
+.asetcetak__table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+.asetcetak__table th, .asetcetak__table td { border: 0.5pt solid #ccc; padding: 1.5mm 2mm; text-align: left; }
+.asetcetak__table th { background: #f1f2f1; font-weight: 700; }
+.asetcetak__table tbody tr:nth-child(even) { background: #fafafa; }
+.asetcetak__table td:nth-child(6), .asetcetak__table td:nth-child(7), .asetcetak__table td:nth-child(8) { text-align: right; }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  .asetcetak__sheet { width: auto; margin: 0; padding: 0; box-shadow: none; }
+  .asetcetak__table { break-inside: auto; }
+  .asetcetak__table tr { break-inside: avoid; }
+}
+
+@media (max-width: 840px) {
+  .asetcetak__sheet { width: 100%; overflow-x: auto; }
+}

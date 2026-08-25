@@ -45,6 +45,7 @@ export default function AsetDokumenJatuhTempo() {
           <option value={7}>H-7</option>
           <option value={30}>H-30</option>
           <option value={90}>H-90</option>
+          <option value={750}>H-750 (2 tahun — mis. perpanjangan SHGB)</option>
         </select>
       </div>
 

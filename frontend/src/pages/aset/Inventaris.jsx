@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2, Search, ChevronLeft, ChevronRight, QrCode, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Loader2, Search, ChevronLeft, ChevronRight, QrCode, ArrowUp, ArrowDown, ArrowUpDown, FileSpreadsheet, Printer } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../../lib/api'
 import { rupiah, encodeAsetId } from './asetShared'
 import './AsetPage.css'
@@ -29,33 +29,35 @@ export default function Inventaris() {
     else { setSortKey(key); setSortDir('asc') }
   }
 
-  const load = useCallback(async (term) => {
+  const load = useCallback(async () => {
     setLoading(true)
-    try { setData(await api.getAsetList(term)); setError('') }
+    try { setData(await api.getAsetList()); setError('') }
     catch (err) {
       if (isEmptyDataError(err)) setData({ items: [], total: 0 })
       else setError(err instanceof ApiError ? err.message : 'Gagal memuat aset.')
     } finally { setLoading(false) }
   }, [])
-  useEffect(() => { load('') }, [load])
-  useEffect(() => { setPage(1) }, [filterKelompok, filterLokasi, filterPic, filterKlasifikasi, pageSize, data.items])
-
-  // Cari otomatis 400ms setelah berhenti mengetik - form/tombol cari tetap ada untuk
-  // yang mau trigger langsung (mis. tekan Enter). Dilewati pada render pertama supaya
-  // tidak dobel dengan load('') di atas.
-  const bukanRenderPertama = useRef(false)
-  useEffect(() => {
-    if (!bukanRenderPertama.current) { bukanRenderPertama.current = true; return }
-    const t = setTimeout(() => load(q), 400)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q])
+  useEffect(() => { load() }, [load])
+  useEffect(() => { setPage(1) }, [q, filterKelompok, filterLokasi, filterPic, filterKlasifikasi, pageSize, data.items])
 
   const kelompokList = ['Semua', ...new Set(data.items.map((a) => a.kelompok).filter(Boolean))]
   const lokasiList = ['Semua', ...new Set(data.items.map((a) => a.lokasi).filter(Boolean))]
   const picList = ['Semua', ...new Set(data.items.map((a) => a.picSaatIni).filter(Boolean))]
   const klasifikasiList = ['Semua', ...new Set(data.items.map((a) => a.klasifikasi).filter(Boolean))]
+  // Pencarian difilter di client (bukan fetch ulang ke server) - seluruh data sudah
+  // termuat sejak awal (tanpa pagination server), jadi request ulang tiap ketik cuma
+  // menduplikasi data yang sudah ada. Field yang dicocokkan sama persis dengan pencarian
+  // server sebelumnya (lihat AsetService.GetErpListAsync): nama/kode/lokasi/nopol/nomor
+  // internal/klasifikasi.
+  const term = q.trim().toLowerCase()
   const rowsTersaring = data.items
+    .filter((a) => !term
+      || a.nama?.toLowerCase().includes(term)
+      || a.objectId?.toLowerCase().includes(term)
+      || a.lokasi?.toLowerCase().includes(term)
+      || a.noPol?.toLowerCase().includes(term)
+      || a.nomorAset?.toLowerCase().includes(term)
+      || a.klasifikasi?.toLowerCase().includes(term))
     .filter((a) => filterKelompok === 'Semua' || a.kelompok === filterKelompok)
     .filter((a) => filterLokasi === 'Semua' || a.lokasi === filterLokasi)
     .filter((a) => filterPic === 'Semua' || a.picSaatIni === filterPic)
@@ -109,6 +111,22 @@ export default function Inventaris() {
   function cetakTerpilih() {
     if (selected.size === 0) return
     window.open(`/cetak/aset-qr?ids=${encodeURIComponent([...selected].map(encodeAsetId).join(','))}`, '_blank')
+  }
+
+  // Query filter yang lagi aktif di layar - dipakai bareng oleh Export Excel (fetch file)
+  // & Export PDF (buka tab cetak) supaya hasil export sama persis dgn yang tampil.
+  const filterAktif = { q, kelompok: filterKelompok, lokasi: filterLokasi, pic: filterPic, klasifikasi: filterKlasifikasi }
+  const [exporting, setExporting] = useState(false)
+  async function exportExcel() {
+    setExporting(true)
+    try { await api.exportAsetExcel(filterAktif) }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Gagal export Excel.') }
+    finally { setExporting(false) }
+  }
+  function exportPdf() {
+    const p = new URLSearchParams()
+    Object.entries(filterAktif).forEach(([k, v]) => { if (v && v !== 'Semua') p.set(k, v) })
+    window.open(`/cetak/aset-list?${p.toString()}`, '_blank')
   }
 
   return (
@@ -166,10 +184,22 @@ export default function Inventaris() {
             ))}
           </select>
         )}
-        <form onSubmit={(e) => { e.preventDefault(); load(q) }} style={{ display: 'flex', gap: 6 }}>
+        {/* Pencarian sudah reaktif per-ketik (filter client-side) - form ini cuma supaya
+            tombol Enter/kaca-pembesar terasa wajar, tidak trigger fetch apa pun lagi. */}
+        <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', gap: 6 }}>
           <input className="aset__search" placeholder="Cari kode/nama/lokasi/nopol/klasifikasi…" value={q} onChange={(e) => setQ(e.target.value)} />
           <button type="submit" className="aset__ibtn" aria-label="Cari"><Search size={16} /></button>
         </form>
+        {!loading && !error && data.items.length > 0 && (
+          <>
+            <button type="button" className="aset__btn aset__btn--ghost" onClick={exportExcel} disabled={exporting} title="Export daftar sesuai filter yang aktif ke Excel">
+              {exporting ? <Loader2 size={15} className="aset__spin" /> : <FileSpreadsheet size={15} />} Export Excel
+            </button>
+            <button type="button" className="aset__btn aset__btn--ghost" onClick={exportPdf} title="Buka tampilan cetak/PDF sesuai filter yang aktif">
+              <Printer size={15} /> Export PDF
+            </button>
+          </>
+        )}
       </div>
 
       {loading ? <div className="aset__loading"><Loader2 className="aset__spin" size={22} /> Memuat…</div>

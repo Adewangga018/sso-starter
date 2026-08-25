@@ -6,8 +6,8 @@ using SsoBackend.Services;
 
 namespace SsoBackend.Controllers;
 
-// My Asset. Semua karyawan melihat inventaris & jadwal maintenance; hanya Admin
-// Aset (Departemen Kepatuhan Kabag ke atas s/d GM SKP) yang mengelola.
+// My Asset. Semua karyawan melihat inventaris; hanya Admin Aset (Departemen
+// Kepatuhan Kabag ke atas s/d GM SKP) yang mengelola.
 [ApiController]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 [Route("aset")]
@@ -16,11 +16,13 @@ public class AsetController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
     private readonly AsetService _aset;
+    private readonly AsetExportService _export;
 
-    public AsetController(CurrentUserContext currentUser, AsetService aset)
+    public AsetController(CurrentUserContext currentUser, AsetService aset, AsetExportService export)
     {
         _currentUser = currentUser;
         _aset = aset;
+        _export = export;
     }
 
     private async Task<string?> NikAsync()
@@ -39,6 +41,22 @@ public class AsetController : ControllerBase
         return Ok(await _aset.GetErpListAsync(q));
     }
 
+    // Export Excel dari daftar Inventaris - filter (q + 4 dropdown) sama seperti yang
+    // sedang tampil di layar. Literal "export/excel" diregister sebelum {objectId} di
+    // bawah supaya tidak ketabrak (rute literal menang atas rute parameter di ASP.NET Core).
+    [HttpGet("export/excel")]
+    public async Task<IActionResult> ExportExcel(
+        [FromQuery] string? q, [FromQuery] string? kelompok, [FromQuery] string? lokasi,
+        [FromQuery] string? pic, [FromQuery] string? klasifikasi)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var rows = await _aset.GetErpExportRowsAsync(q, kelompok, lokasi, pic, klasifikasi);
+        var bytes = _export.BuildExcel(rows);
+        var fileName = $"Inventaris-Aset-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
     [HttpGet("{objectId}")]
     public async Task<ActionResult<AsetErpDto>> Detail(string objectId)
     {
@@ -48,18 +66,6 @@ public class AsetController : ControllerBase
         return detail is null ? NotFound(new { message = "Aset tidak ditemukan." }) : Ok(detail);
     }
 
-    [HttpGet("maintenance")]
-    public async Task<ActionResult<MaintenanceListDto>> Maintenance()
-    {
-        var nik = await NikAsync();
-        if (string.IsNullOrWhiteSpace(nik)) return NotFound(new { message = "Akun ini belum tertaut ke nomor karyawan." });
-        return Ok(await _aset.GetMaintenanceListAsync(nik));
-    }
-
-    // Buat/Ubah/Hapus Aset (core) lama DIHAPUS dari controller (Aug 2026): data induk
-    // aset sekarang dikelola ERP (dbo.assets). Method-nya (CreateAsync/UpdateAsync/
-    // DeleteAsync) masih ada di AsetService, sengaja dibiarkan tidak dipanggil.
-    //
     // ---- Pendaftaran aset baru (Aug 2026, keputusan berikutnya): dbo.assets tetap SSOT,
     // tapi MyGCS sekarang BOLEH menulis identitas dasar aset baru ke sana - lihat catatan
     // lengkap di AsetService.DaftarAsetBaruAsync.
@@ -93,34 +99,10 @@ public class AsetController : ControllerBase
         var nik = await NikAsync();
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
         var (ok, error, objectId) = await _aset.DaftarAsetBaruAsync(nik, req);
-        return ok ? Ok(new { objectId }) : BadRequest(new { message = error });
-    }
-
-    [HttpPost("{id:long}/maintenance")]
-    public async Task<IActionResult> TambahMaintenance(long id, [FromBody] SimpanMaintenanceRequest req)
-    {
-        var nik = await NikAsync();
-        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
-        var (ok, error) = await _aset.AddMaintenanceAsync(nik, id, req);
-        return ok ? NoContent() : BadRequest(new { message = error });
-    }
-
-    [HttpPut("maintenance/{mid:long}")]
-    public async Task<IActionResult> UbahMaintenance(long mid, [FromBody] SimpanMaintenanceRequest req)
-    {
-        var nik = await NikAsync();
-        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
-        var (ok, error) = await _aset.UpdateMaintenanceAsync(nik, mid, req);
-        return ok ? NoContent() : BadRequest(new { message = error });
-    }
-
-    [HttpDelete("maintenance/{mid:long}")]
-    public async Task<IActionResult> HapusMaintenance(long mid)
-    {
-        var nik = await NikAsync();
-        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
-        var (ok, error) = await _aset.DeleteMaintenanceAsync(nik, mid);
-        return ok ? NoContent() : BadRequest(new { message = error });
+        // ok=true dengan error terisi = aset TETAP berhasil didaftarkan ke ERP, tapi ada
+        // langkah tambahan (Nomor Internal) yang gagal - dikirim sebagai peringatan, bukan
+        // kegagalan, supaya frontend tidak mengira seluruh pendaftaran gagal lalu retry.
+        return ok ? Ok(new { objectId, warning = error }) : BadRequest(new { message = error });
     }
 
     // ---- aset tidak produktif ----

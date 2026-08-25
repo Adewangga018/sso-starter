@@ -209,11 +209,20 @@ public class AsetOpnameService
         return await query.ToListAsync();
     }
 
+    // Hitung SAJA (COUNT di database), bukan tarik seluruh baris aset ke memori lewat
+    // ScopeAsync - dipanggil 1x per sesi di ListSesiAsync (N sesi = N query), jadi tiap
+    // query di sini sengaja dibikin seringan mungkin.
     private async Task<(int DalamLingkup, int SudahDiscan)> HitungAsync(int idSesi, string? lingkupKategori)
     {
-        var scope = await ScopeAsync(lingkupKategori);
+        var query = _gcs.AsetErp.AsNoTracking().Where(a => a.AKTIF != null && a.AKTIF == "Y");
+        if (!string.IsNullOrWhiteSpace(lingkupKategori))
+        {
+            var kategori = lingkupKategori.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            query = query.Where(a => a.GROUP_ASSET != null && kategori.Contains(a.GROUP_ASSET));
+        }
+        var dalamLingkup = await query.CountAsync();
         var scanned = await _db.AsetOpnameScan.AsNoTracking().Where(x => x.IdSesi == idSesi).Select(x => x.ObjectId).Distinct().CountAsync();
-        return (scope.Count, scanned);
+        return (dalamLingkup, scanned);
     }
 
     private string UploadRoot()
@@ -231,7 +240,7 @@ public class AsetOpnameService
         _ => "application/octet-stream",
     };
 
-    private const string ForbidMsg = "Hanya Admin Aset (Departemen Kepatuhan) yang dapat mengelola aset.";
+    private const string ForbidMsg = AsetShared.ForbidMsg;
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static AsetOpnameSesiDto MapSesi(AsetOpnameSesi s, int dalamLingkup, int sudahDiscan) => new(

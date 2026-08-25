@@ -48,6 +48,10 @@ public class AsetOverlayService
             .Where(x => x.ObjectId == objectId)
             .OrderByDescending(x => x.TglDibuat).ThenByDescending(x => x.Id)
             .ToListAsync();
+        var mutasiRows = await _db.AsetMutasi.AsNoTracking()
+            .Where(x => x.ObjectId == objectId)
+            .OrderByDescending(x => x.TglDibuat).ThenByDescending(x => x.Id)
+            .ToListAsync();
         var isAdmin = await _access.IsAsetAdminAsync(nik);
 
         var kondisiDtos = kondisiRows.Select(MapKondisi).ToList();
@@ -61,9 +65,10 @@ public class AsetOverlayService
             picAktif,
             picDtos,
             aktRows.Select(MapAktivitas).ToList(),
-            dokRows.Select(MapDokumen).ToList(),
+            dokRows.Select(AsetShared.MapDokumen).ToList(),
             isAdmin,
-            isAdmin || await CanCatatAktivitasSajaAsync(nik, objectId, picAktif));
+            isAdmin || await CanCatatAktivitasSajaAsync(nik, objectId, picAktif),
+            mutasiRows.Select(MapMutasi).ToList());
     }
 
     // Operator Aktivitas: hak terbatas "Catat Aktivitas SAJA", TIDAK termasuk isAdmin
@@ -194,6 +199,14 @@ public class AsetOverlayService
 
         var jenis = req.JenisPic == "Bagian" ? "Bagian" : "Orang";
         var tglMulai = req.TglMulai ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Ambil PIC aktif SEKARANG sekali di sini (tracked) - dipakai baik utk validasi
+        // tanggal di bawah maupun utk ditutup jadi "Dipindahkan" nanti, supaya tidak query
+        // baris yang sama dua kali.
+        var current = await _db.AsetPicAssignment.FirstOrDefaultAsync(x => x.ObjectId == objectId && x.Status == "Aktif");
+        if (current is not null && tglMulai < current.TglMulai)
+            return (false, $"Tgl Mulai PIC baru ({tglMulai:dd/MM/yyyy}) tidak boleh lebih awal dari PIC aktif saat ini yang mulai {current.TglMulai:dd/MM/yyyy}.", 0);
+
         var row = new AsetPicAssignment
         {
             ObjectId = objectId,
@@ -224,7 +237,6 @@ public class AsetOverlayService
             row.NamaUnit = namaUnit;
         }
 
-        var current = await _db.AsetPicAssignment.FirstOrDefaultAsync(x => x.ObjectId == objectId && x.Status == "Aktif");
         if (current is not null)
         {
             current.Status = "Dipindahkan";
@@ -236,17 +248,44 @@ public class AsetOverlayService
         return (true, null, row.Id);
     }
 
-    // Picker "Individu" di form PIC (search-as-you-type, min 2 karakter).
+    // Picker "Individu" di form PIC (search-as-you-type, min 2 karakter). Beda dari
+    // pencarian pegawai modul lain (GajiService dkk, yang khusus Tetap/organik) - PIC aset
+    // BOLEH tenaga kerja non-organik (TKNO): Layanan Jasa/IK/BP, karena mereka juga bisa
+    // jadi penanggung jawab fisik aset di lapangan (mis. petugas jasa outsourcing).
     public async Task<IReadOnlyList<AsetPegawaiDto>> SearchPegawaiAsync(string? q)
     {
         var term = (q ?? string.Empty).Trim();
         if (term.Length < 2) return Array.Empty<AsetPegawaiDto>();
-        // Sementara khusus tenaga kerja organik (Tetap) - lihat catatan di GajiService.CariPegawaiAsync.
-        return await _gcs.PegawaiSdm.AsNoTracking()
+
+        // Tetap (tenaga kerja organik) - lihat catatan di GajiService.CariPegawaiAsync.
+        // Take(20) di query (bukan cuma di gabungan akhir) - term 2 huruf bisa cocok ratusan
+        // pegawai, jangan tarik semuanya ke memori kalau cuma 20 teratas yang dipakai.
+        var tetap = await _gcs.PegawaiSdm.AsNoTracking()
             .Where(p => p.data_aktif == "Aktif" && p.jenis_pegawai == "Tetap" && (p.nama!.Contains(term) || p.Nik.Contains(term)))
             .OrderBy(p => p.nama).Take(20)
             .Select(p => new AsetPegawaiDto(p.Nik, p.nama ?? p.Nik, p.nm_jabatan, p.UNIT_KERJA ?? p.BAGIAN))
             .ToListAsync();
+
+        // TKNO (Layanan Jasa/IK/BP) - PEGAWAI_SDM (dipakai di atas) tidak punya kategori ini
+        // sama sekali, jadi dicari dari MST_PEGAWAI.STATUS_KARYAWAN. PKWT sengaja TIDAK
+        // diikutkan (di luar permintaan). MST_PEGAWAI sendiri TIDAK punya kolom aktif/keluar -
+        // "masih aktif" dicek lewat akun SSO-nya (db_mygcs Users.IsActive, join Nik==ID_KARYAWAN,
+        // diverifikasi manual: 184/189 TKNO kategori ini punya akun & semuanya IsActive=1 saat
+        // dicek) - pegawai TKNO yang belum/tidak pernah punya akun SSO otomatis tidak ikut.
+        var kategoriTkno = new[] { "BP", "IK", "Layanan Jasa" };
+        var tkno = await _gcs.MstPegawai.AsNoTracking()
+            .Where(p => p.STATUS_KARYAWAN != null && kategoriTkno.Contains(p.STATUS_KARYAWAN)
+                && (p.NAMA_LENGKAP.Contains(term) || p.ID_KARYAWAN.Contains(term)))
+            .Select(p => new { p.ID_KARYAWAN, p.NAMA_LENGKAP, p.STATUS_KARYAWAN })
+            .ToListAsync();
+        var nikTkno = tkno.Select(p => p.ID_KARYAWAN).ToList();
+        var nikAktif = (await _db.Users.AsNoTracking()
+            .Where(u => u.Nik != null && u.IsActive && nikTkno.Contains(u.Nik))
+            .Select(u => u.Nik!).ToListAsync()).ToHashSet();
+        var tknoAktif = tkno.Where(p => nikAktif.Contains(p.ID_KARYAWAN))
+            .Select(p => new AsetPegawaiDto(p.ID_KARYAWAN, p.NAMA_LENGKAP, p.STATUS_KARYAWAN, null));
+
+        return tetap.Concat(tknoAktif).OrderBy(p => p.Nama).Take(20).ToList();
     }
 
     // Dropdown "Bagian" di form PIC.
@@ -306,6 +345,73 @@ public class AsetOverlayService
         if (row.Status != "Aktif") return (false, "Assignment ini sudah tidak aktif.");
         row.Status = "Dikembalikan";
         row.TglSelesai = DateOnly.FromDateTime(DateTime.UtcNow);
+        await _db.SaveChangesAsync();
+        return (true, null);
+    }
+
+    // Pengajuan mutasi lokasi/wilayah - overlay MURNI, TIDAK menulis apa pun ke dbo.assets.
+    // lokasi_lama/kode_cc_lama/wilayah_lama/nilai_buku_saat_diajukan diambil snapshot dari
+    // ERP di saat pengajuan (konteks histori, bukan sumber kebenaran yg terus disinkron).
+    // Perubahan LOKASI/KODE_CC/NILAI_BUKU yang SEBENARNYA di ERP tetap dilakukan tim
+    // akunting secara manual di ERP setelah mereka proses approval-nya di sana - lihat
+    // catatan arsitektur di AsetMutasi (AsetEntities.cs).
+    public async Task<(bool Ok, string? Error, long Id)> CreateMutasiAsync(string nik, string objectId, SimpanMutasiRequest req)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, 0);
+        if (string.IsNullOrWhiteSpace(req.LokasiBaru)) return (false, "Lokasi baru wajib diisi.", 0);
+
+        var aset = await _gcs.AsetErp.AsNoTracking().FirstOrDefaultAsync(a => a.OBJECTID == objectId);
+        if (aset is null) return (false, "Aset tidak ditemukan.", 0);
+
+        // 1 query buat wilayah lama+baru sekaligus (bukan 2 round trip terpisah) - kode CC
+        // lama & baru dicari dalam 1 IN-list.
+        var kodeCcBaru = Clean(req.KodeCcBaru);
+        var kodeCandidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(aset.KODE_CC)) kodeCandidates.Add(aset.KODE_CC);
+        if (kodeCcBaru is not null) kodeCandidates.Add(kodeCcBaru);
+
+        string? wilayahLama = null, wilayahBaru = null;
+        if (kodeCandidates.Count > 0)
+        {
+            var ccRows = await _gcs.AsetErpCc.AsNoTracking().Where(c => kodeCandidates.Contains(c.KODE_CC)).ToListAsync();
+            if (kodeCcBaru is not null && !ccRows.Any(c => c.KODE_CC == kodeCcBaru))
+                return (false, "Kode CC / Wilayah baru tidak valid.", 0);
+            wilayahLama = ccRows.FirstOrDefault(c => c.KODE_CC == aset.KODE_CC)?.WILAYAH?.Trim();
+            wilayahBaru = ccRows.FirstOrDefault(c => c.KODE_CC == kodeCcBaru)?.WILAYAH?.Trim();
+        }
+
+        var row = new AsetMutasi
+        {
+            ObjectId = objectId,
+            LokasiLama = aset.LOKASI?.Trim(),
+            LokasiBaru = req.LokasiBaru.Trim(),
+            KodeCcLama = aset.KODE_CC?.Trim(),
+            WilayahLama = wilayahLama,
+            KodeCcBaru = kodeCcBaru,
+            WilayahBaru = wilayahBaru,
+            NilaiBukuSaatDiajukan = aset.NILAI_BUKU,
+            Alasan = Clean(req.Alasan),
+            Status = "Diajukan",
+            IdPembuat = nik,
+            TglDibuat = DateTime.UtcNow,
+        };
+        _db.AsetMutasi.Add(row);
+        await _db.SaveChangesAsync();
+        return (true, null, row.Id);
+    }
+
+    // Ditandai manual oleh Admin Aset setelah mengonfirmasi tim akunting sudah memproses
+    // perpindahan lokasi & nilai buku-nya LANGSUNG di ERP (di luar MyGCS) - bukan trigger
+    // otomatis, murni pencatatan status di sisi MyGCS.
+    public async Task<(bool Ok, string? Error)> SelesaikanMutasiAsync(string nik, long id)
+    {
+        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
+        var row = await _db.AsetMutasi.FirstOrDefaultAsync(x => x.Id == id);
+        if (row is null) return (false, "Data tidak ditemukan.");
+        if (row.Status == "Selesai") return (false, "Mutasi ini sudah ditandai selesai.");
+        row.Status = "Selesai";
+        row.IdPengubah = nik;
+        row.TglDiubah = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return (true, null);
     }
@@ -424,7 +530,7 @@ public class AsetOverlayService
 
     private async Task<bool> AsetExistsAsync(string objectId) => await _gcs.AsetErp.AnyAsync(a => a.OBJECTID == objectId);
 
-    private const string ForbidMsg = "Hanya Admin Aset (Departemen Kepatuhan) yang dapat mengelola aset.";
+    private const string ForbidMsg = AsetShared.ForbidMsg;
     private static string ValidKondisi(string? s) => s is "Baik" or "Rusak Ringan" or "Rusak Berat" or "Hilang" ? s : "Baik";
     private static string ValidAktivitasStatus(string? s) => s is "Dijadwalkan" or "Proses" or "Selesai" or "Batal" ? s : "Selesai";
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
@@ -435,9 +541,7 @@ public class AsetOverlayService
         p.Id, p.ObjectId, p.JenisPic, p.Nik, p.NamaPic, p.Departemen, p.IdUnit, p.NamaUnit, p.TglMulai, p.TglSelesai, p.Status, p.Catatan, p.TglDibuat);
     private static AsetAktivitasUmumDto MapAktivitas(AsetAktivitas a) => new(
         a.Id, a.ObjectId, a.Jenis, a.TglAktivitas, a.Deskripsi, a.VendorPelaksana, a.Biaya, a.Status, a.TglDibuat, a.TglDiubah);
-
-    // FileUrl null kalau baris dokumen dibuat tanpa upload berkas (metadata saja).
-    private static AsetDokumenDto MapDokumen(AsetDokumen d) => new(
-        d.Id, d.ObjectId, d.JenisDokumen, d.NomorDokumen, d.TglTerbit, d.TglJatuhTempo,
-        d.FilePath is null ? null : $"/api/aset/dokumen/{d.Id}/file", d.FileNamaAsli, d.Catatan, d.Status, d.TglDibuat);
+    private static AsetMutasiDto MapMutasi(AsetMutasi m) => new(
+        m.Id, m.ObjectId, m.LokasiLama, m.LokasiBaru, m.KodeCcLama, m.WilayahLama, m.KodeCcBaru, m.WilayahBaru,
+        m.NilaiBukuSaatDiajukan, m.Alasan, m.Status, m.TglDibuat, m.TglDiubah);
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, ScanLine, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Loader2, ScanLine, CheckCircle2, Camera } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import { tgl, formatLingkupKategori, encodeAsetId, decodeAsetId, useConfirm } from './asetShared'
 import './AsetPage.css'
@@ -72,6 +72,16 @@ export default function AsetOpnameDetail() {
     setMsg({ t: 'ok', m: `Aset ${objectIdTercatat} tercatat discan.` })
     await load()
     setSaving(false)
+  }
+
+  // <a href> polos tidak bisa dipakai (endpoint foto butuh header Authorization Bearer) -
+  // fetch sebagai blob dulu baru dibuka di tab baru, sama seperti previewDokumen di Detail Aset.
+  async function previewFoto(scanId) {
+    try {
+      const { url } = await api.getAsetOpnameFoto(scanId)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal membuka foto.' }) }
   }
 
   async function selesaikan() {
@@ -151,7 +161,7 @@ export default function AsetOpnameDetail() {
           ) : (
             <div className="aset__tablewrap">
               <table className="aset__table">
-                <thead><tr><th>Kode Aset</th><th>Nama</th><th>Lokasi Aktual</th><th>Kondisi Aktual</th><th>Dicatat Oleh</th><th>Waktu</th></tr></thead>
+                <thead><tr><th>Kode Aset</th><th>Nama</th><th>Lokasi Aktual</th><th>Kondisi Aktual</th><th>Foto</th><th>Dicatat Oleh</th><th>Waktu</th></tr></thead>
                 <tbody>
                   {scan.map((s) => (
                     <tr key={s.id}>
@@ -159,6 +169,11 @@ export default function AsetOpnameDetail() {
                       <td>{s.namaAset || '—'}</td>
                       <td className="aset__muted">{s.lokasiAktual || '—'}</td>
                       <td className="aset__muted">{s.kondisiAktual || '—'}</td>
+                      <td>
+                        {s.fotoUrl
+                          ? <button type="button" className="aset__ibtn" title="Lihat foto" aria-label="Lihat foto" onClick={() => previewFoto(s.id)}><Camera size={14} /></button>
+                          : <span className="aset__muted">—</span>}
+                      </td>
                       <td className="aset__muted">{s.nikPemindai}</td>
                       <td className="aset__muted">{tgl(s.tglScan)}</td>
                     </tr>

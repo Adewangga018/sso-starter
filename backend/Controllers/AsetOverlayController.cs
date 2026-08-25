@@ -17,6 +17,7 @@ public class AsetOverlayController : ControllerBase
 {
     private readonly CurrentUserContext _currentUser;
     private readonly AsetOverlayService _overlay;
+    private const string AdminOnlyMsg = "Hanya Admin Aset (Departemen Kepatuhan) yang dapat mengakses data ini.";
 
     public AsetOverlayController(CurrentUserContext currentUser, AsetOverlayService overlay)
     {
@@ -129,6 +130,24 @@ public class AsetOverlayController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
+    [HttpPost("{objectId}/mutasi")]
+    public async Task<IActionResult> CatatMutasi(string objectId, [FromBody] SimpanMutasiRequest req)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var (ok, error, id) = await _overlay.CreateMutasiAsync(nik, objectId, req);
+        return ok ? Ok(new { id }) : BadRequest(new { message = error });
+    }
+
+    [HttpPost("mutasi/{id:long}/selesai")]
+    public async Task<IActionResult> SelesaikanMutasi(long id)
+    {
+        var nik = await NikAsync();
+        if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
+        var (ok, error) = await _overlay.SelesaikanMutasiAsync(nik, id);
+        return ok ? NoContent() : BadRequest(new { message = error });
+    }
+
     [HttpPost("{objectId}/aktivitas")]
     public async Task<IActionResult> BuatAktivitas(string objectId, [FromBody] SimpanAktivitasUmumRequest req)
     {
@@ -162,7 +181,10 @@ public class AsetOverlayController : ControllerBase
     {
         var nik = await NikAsync();
         if (string.IsNullOrWhiteSpace(nik)) return Unauthorized();
-        if (!await _overlay.IsAdminAsetAsync(nik)) return Forbid();
+        // BadRequest+message (bukan Forbid mentah) - konsisten dgn pola endpoint admin
+        // lain di controller ini, supaya frontend (Promise.all) dapat pesan yang bisa
+        // ditampilkan alih-alih 403 tanpa body yang menggagalkan seluruh Promise.all.
+        if (!await _overlay.IsAdminAsetAsync(nik)) return BadRequest(new { message = AdminOnlyMsg });
         return Ok(await _overlay.ListAktivitasOperatorAsync(nik));
     }
 
@@ -184,22 +206,27 @@ public class AsetOverlayController : ControllerBase
         return ok ? NoContent() : BadRequest(new { message = error });
     }
 
-    // Riwayat PIC lintas-aset (READ-ONLY) - filter opsional nik/idUnit/rentang tanggal.
+    // Riwayat PIC lintas-aset (READ-ONLY, admin-only - lihat riwayat penanggung jawab
+    // aset SIAPA PUN di perusahaan, bukan cuma milik pemanggil sendiri).
     [HttpGet("pic/riwayat")]
     public async Task<ActionResult<IReadOnlyList<AsetPicRiwayatDto>>> RiwayatPic(
         [FromQuery] string? nik, [FromQuery] int? idUnit, [FromQuery] DateOnly? dari, [FromQuery] DateOnly? sampai)
     {
         var caller = await NikAsync();
         if (string.IsNullOrWhiteSpace(caller)) return Unauthorized();
+        if (!await _overlay.IsAdminAsetAsync(caller)) return BadRequest(new { message = AdminOnlyMsg });
         return Ok(await _overlay.GetRiwayatPicAsync(nik, idUnit, dari, sampai));
     }
 
-    // Clearance sheet SDM: daftar aset yang masih jadi tanggungan seorang karyawan.
+    // Clearance sheet SDM (admin-only): daftar aset yang masih jadi tanggungan SEORANG
+    // KARYAWAN LAIN (mis. resign/pensiun) - bukan data milik pemanggil sendiri, jadi
+    // wajib Admin Aset, sama seperti aksi "tandai dikembalikan" di halaman yang sama.
     [HttpGet("clearance")]
     public async Task<ActionResult<AsetClearanceDto>> Clearance([FromQuery] string nik)
     {
         var caller = await NikAsync();
         if (string.IsNullOrWhiteSpace(caller)) return Unauthorized();
+        if (!await _overlay.IsAdminAsetAsync(caller)) return BadRequest(new { message = AdminOnlyMsg });
         if (string.IsNullOrWhiteSpace(nik)) return BadRequest(new { message = "NIK wajib diisi." });
         var dto = await _overlay.GetClearanceAsync(nik);
         return dto is null ? NotFound(new { message = $"NIK '{nik}' tidak ditemukan di data pegawai." }) : Ok(dto);
