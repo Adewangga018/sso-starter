@@ -17,7 +17,18 @@ public record SppdDto(
     IReadOnlyList<string> Tugas,
     // Bukti dinas (rentang km + foto lokasi) - null untuk baris lama sebelum fitur ini ada.
     string? RentangKm = null,
-    string? FotoUrl = null);
+    string? FotoUrl = null,
+    // Hubungan SAYA (yang minta daftar ini) dengan SPPD ini - "Pembuat" kalau saya yang
+    // mengajukan, atau "Ketua"/"Anggota" kalau saya cuma ditambahkan sbg peserta oleh orang
+    // lain (diminta 2026-08-24: peserta ikut melihat SPPD ini di akun mereka sendiri, bukan
+    // cuma pengaju). Menentukan apakah tombol Ubah/Hapus/Cetak boleh tampil di frontend.
+    string PeranSaya = "Pembuat",
+    // Status persetujuan MANAGER secara real-time dari approval.pengajuan (Menunggu/Disetujui/
+    // Ditolak) - BEDA dari Status di atas (status legacy "Di Buat" dari web_sdm_sppd, dipakai
+    // utk kunci ubah/hapus). Null kalau baris ini belum pernah tercatat di approval.pengajuan
+    // (sangat lawas, dari sebelum layer approval terpadu ada).
+    string? StatusPersetujuan = null,
+    DateTime? TglKeputusan = null);
 
 public record SppdListDto(IReadOnlyList<SppdDto> Items);
 

@@ -17,6 +17,12 @@ const EVENT_TYPES = [
 
 const isAnomaly = (t) => t.includes('failure') || t.includes('lockout')
 
+function formatWib(utcValue) {
+  return new Date(utcValue)
+    .toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' })
+    .replace('T', ' ')
+}
+
 export default function AdminAuditPage() {
   const { isAdmin } = useAuth()
   const [filters, setFilters] = useState({ email: '', eventType: '', from: '', to: '', take: 100 })
@@ -80,13 +86,13 @@ export default function AdminAuditPage() {
         <table className="audit__table">
           <thead>
             <tr>
-              <th>Waktu (UTC)</th><th>Event</th><th>Email</th><th>IP</th><th>Detail</th>
+              <th>Waktu (WIB)</th><th>Event</th><th>Email</th><th>IP</th><th>Detail</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className={isAnomaly(r.eventType) ? 'audit__row--warn' : ''}>
-                <td>{new Date(r.timestampUtc).toISOString().replace('T', ' ').slice(0, 19)}</td>
+                <td>{formatWib(r.timestampUtc)}</td>
                 <td><span className="audit__event">{r.eventType}</span></td>
                 <td>{r.email ?? '—'}</td>
                 <td>{r.ipAddress ?? '—'}</td>

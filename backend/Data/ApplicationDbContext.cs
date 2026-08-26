@@ -28,6 +28,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<DinasBukti> DinasBukti => Set<DinasBukti>();
+    public DbSet<UmdlAnggota> UmdlAnggota => Set<UmdlAnggota>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
     public DbSet<FeatureAccess> FeatureAccess => Set<FeatureAccess>();
@@ -199,6 +200,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Lat).HasColumnName("lat").HasPrecision(9, 6);
             e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(9, 6);
             e.Property(x => x.Accuracy).HasColumnName("accuracy").HasPrecision(9, 2);
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        // Ketua/anggota UMDL (schema dinas, db_mygcs) - lihat UmdlAnggota.cs. Tabel dikelola
+        // raw SQL (docs/dinas-umdl-anggota-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<UmdlAnggota>(e =>
+        {
+            e.ToTable("umdl_anggota", "dinas", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.RefId).HasColumnName("ref_id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.Posisi).HasColumnName("posisi");
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
         });
 

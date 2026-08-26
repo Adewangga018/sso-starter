@@ -278,8 +278,12 @@
 
 /* Memuat sampai empat tombol: cetak, rincian, ubah, hapus. */
 .sppd__col-aksi {
-  width: 168px;
+  width: 190px;
   text-align: center;
+}
+
+.sppd__col-appr {
+  width: 12%;
 }
 
 .sppd__th--sortable {
@@ -316,6 +320,30 @@
   color: var(--gcs-green-600);
 }
 
+/* Peran saya (Ketua/Anggota) - tampil hanya utk baris yg bukan saya sendiri yg ajukan
+   (diminta 2026-08-24, mirror UMDL). */
+.sppd__peran {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gcs-text-muted);
+}
+
+/* Badge status persetujuan MANAGER real-time (approval.pengajuan) - beda dari
+   .sppd__status (legacy, dipakai memilah tab Di Buat/Persetujuan). */
+.sppd__appr {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.sppd__appr--wait { background: rgba(244, 174, 70, 0.16); color: var(--gcs-gold-700); }
+.sppd__appr--ok { background: rgba(47, 108, 63, 0.14); color: var(--gcs-green-700); }
+.sppd__appr--reject { background: rgba(230, 72, 63, 0.12); color: #c8352c; }
+.sppd__appr--none { color: var(--gcs-text-muted); }
+
 .sppd__row-actions {
   display: flex;
   gap: 8px;
@@ -327,13 +355,14 @@
 .sppd__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  border-radius: 9px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -361,15 +390,13 @@
   background: #d63c32;
 }
 
-/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
-   sppd yang sudah disetujui pun tetap perlu dicetak. */
-.sppd__row-btn--print {
+.sppd__row-btn--camera {
   color: var(--gcs-green-600);
   border-color: rgba(47, 108, 63, 0.35);
   background: rgba(47, 108, 63, 0.1);
 }
 
-.sppd__row-btn--print:hover {
+.sppd__row-btn--camera:hover {
   color: #fff;
   border-color: var(--gcs-green-600);
   background: var(--gcs-green-600);
@@ -568,6 +595,7 @@
 .sppd__modal-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 .sppd__submit {
@@ -588,6 +616,21 @@
 .sppd__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.sppd__submit--ghost {
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-700);
+  border: 1px solid rgba(47, 108, 63, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sppd__submit--ghost:hover {
+  background: var(--gcs-green-600);
+  color: #fff;
+  border-color: var(--gcs-green-600);
 }
 
 @media (max-width: 640px) {
@@ -840,8 +883,8 @@
 
   /* Sasaran sentuh tombol aksi baris. */
   .sppd__row-btn {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
   }
 }
 

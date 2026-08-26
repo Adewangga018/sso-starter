@@ -41,6 +41,14 @@
 .agt__msg--ok { background: rgba(47,108,63,0.12); color: var(--gcs-green-600); }
 .agt__msg--err { background: rgba(192,57,43,0.1); color: #c0392b; }
 
+/* Badge status persetujuan MANAGER real-time (approval.pengajuan) - dipakai Verifikasi
+   Dinas (diminta 2026-08-24). */
+.agt__appr { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.agt__appr--wait { background: rgba(244, 174, 70, 0.16); color: var(--gcs-gold-700); }
+.agt__appr--ok { background: rgba(47, 108, 63, 0.14); color: var(--gcs-green-600); }
+.agt__appr--reject { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+.agt__appr--none { color: var(--gcs-text-muted); }
+
 .agt__loading { display: flex; align-items: center; gap: 10px; padding: 30px; color: var(--gcs-text-muted); }
 .agt__spin { animation: agt-spin 0.8s linear infinite; }
 @keyframes agt-spin { to { transform: rotate(360deg); } }

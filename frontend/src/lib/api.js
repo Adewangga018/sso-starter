@@ -505,6 +505,15 @@ export const api = {
   updateUmdl: (id, payload) =>
     apiFetch(`/api/personal/umdl/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteUmdl: (id) => apiFetch(`/api/personal/umdl/${id}`, { method: 'DELETE' }),
+  // Ketua/anggota UMDL - mirror SPPD, diminta 2026-08-24.
+  getUmdlDetail: (id) => apiFetch(`/api/personal/umdl/${id}/detail`),
+  addUmdlPeserta: (id, payload) =>
+    apiFetch(`/api/personal/umdl/${id}/detail`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateUmdlPeserta: (id, idDet, payload) =>
+    apiFetch(`/api/personal/umdl/${id}/detail/${idDet}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteUmdlPeserta: (id, idDet) =>
+    apiFetch(`/api/personal/umdl/${id}/detail/${idDet}`, { method: 'DELETE' }),
+  cariPegawaiUmdl: (q) => apiFetch(`/api/personal/umdl/pegawai?q=${encodeURIComponent(q ?? '')}`),
 
   getSppd: () => apiFetch('/api/personal/sppd'),
   createSppd: (payload) => apiFetch('/api/personal/sppd', { method: 'POST', body: JSON.stringify(payload) }),
@@ -533,6 +542,8 @@ export const api = {
     const qs = new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v)).toString()
     return apiFetch(`/api/personal/dinas/admin${qs ? `?${qs}` : ''}`)
   },
+  // Rincian satu bukti dinas (siapa Ketua/Anggota, tujuan, rentang tanggal) - diminta 2026-08-24.
+  getDinasAdminDetail: (jenis, refId) => apiFetch(`/api/personal/dinas/admin/${jenis}/${refId}/detail`),
 
   uploadSuratDokter: (id, file) => {
     const body = new FormData()

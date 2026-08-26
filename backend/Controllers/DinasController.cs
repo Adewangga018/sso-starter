@@ -65,7 +65,23 @@ public class DinasController : ControllerBase
         var isPenyetuju = !isPemilik && !isAdminSdm && await _db.ApprovalPengajuan.AsNoTracking()
             .AnyAsync(a => a.Jenis == jenis && a.RefId == refId && (a.IdManager == nik || a.IdAtasan == nik));
 
+        // Peserta (Ketua/Anggota, bukan cuma pengaju) ikut boleh lihat - diminta 2026-08-24,
+        // sejalan dgn peserta yg sekarang ikut melihat baris SPPD/UMDL ini di akun mereka
+        // sendiri (SppdController/UmdlController.GetAll).
+        var isPeserta = false;
         if (!isPemilik && !isAdminSdm && !isPenyetuju)
+        {
+            if (jenis == "SPPD" && int.TryParse(refId, out var sppdId))
+            {
+                isPeserta = await _gcs.WebSdmSppdDetail.AsNoTracking().AnyAsync(d => d.id == sppdId && d.id_user == nik);
+            }
+            else if (jenis == "UMDL")
+            {
+                isPeserta = await _db.UmdlAnggota.AsNoTracking().AnyAsync(a => a.RefId == refId && a.IdKaryawan == nik);
+            }
+        }
+
+        if (!isPemilik && !isAdminSdm && !isPenyetuju && !isPeserta)
         {
             return Forbid();
         }
@@ -121,19 +137,31 @@ public class DinasController : ControllerBase
         var umdlIds = rows.Where(r => r.Jenis == "UMDL").Select(r => decimal.Parse(r.RefId)).ToList();
         var umdlRows = umdlIds.Count == 0 ? []
             : await _gcs.WebSdmUmdl.Where(u => umdlIds.Contains(u.ID))
-                .ToDictionaryAsync(u => u.ID.ToString(), u => new { Ringkasan = u.KETERANGAN, u.STATUS });
+                .ToDictionaryAsync(u => u.ID.ToString(), u => u.KETERANGAN);
 
         var sppdIds = rows.Where(r => r.Jenis == "SPPD").Select(r => int.Parse(r.RefId)).ToList();
         var sppdRows = sppdIds.Count == 0 ? []
             : await _gcs.WebSdmSppd.Where(s => sppdIds.Contains(s.id))
-                .ToDictionaryAsync(s => s.id.ToString(), s => new { Ringkasan = s.tujuan_sppd, s.status });
+                .ToDictionaryAsync(s => s.id.ToString(), s => s.tujuan_sppd);
+
+        // Status PERSETUJUAN MANAGER real-time (approval.pengajuan), bukan status legacy
+        // web_sdm_umdl.STATUS/web_sdm_sppd.status - itu cuma menandai "Di Buat" vs sudah
+        // diproses dari sisi pemohon sendiri (dikunci ubah/hapus), TIDAK ikut berubah saat
+        // manager approve/reject lewat Kotak Persetujuan (diminta 2026-08-24, lihat
+        // ApprovalService.PutusanAsync - hanya approval.pengajuan.Status yg dibalik utk jenis
+        // SPPD/UMDL). Jadi ini satu-satunya sumber yg benar2 real-time.
+        var refIds = rows.Select(r => r.RefId).Distinct().ToList();
+        var approvalRows = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => (a.Jenis == "UMDL" || a.Jenis == "SPPD") && refIds.Contains(a.RefId))
+            .ToListAsync();
+        var approvalByKey = approvalRows.ToDictionary(a => (a.Jenis, a.RefId), a => a.Status);
 
         var items = rows.Select(r =>
         {
             string? ringkasan = null;
-            string? status = null;
-            if (r.Jenis == "UMDL" && umdlRows.TryGetValue(r.RefId, out var u)) { ringkasan = u.Ringkasan; status = u.STATUS; }
-            else if (r.Jenis == "SPPD" && sppdRows.TryGetValue(r.RefId, out var s)) { ringkasan = s.Ringkasan; status = s.status; }
+            if (r.Jenis == "UMDL") ringkasan = umdlRows.GetValueOrDefault(r.RefId);
+            else if (r.Jenis == "SPPD") ringkasan = sppdRows.GetValueOrDefault(r.RefId);
+            var status = approvalByKey.GetValueOrDefault((r.Jenis, r.RefId));
 
             return new DinasBuktiAdminDto(
                 r.Id, r.Jenis, r.RefId, r.IdKaryawan, nama.GetValueOrDefault(r.IdKaryawan),
@@ -142,5 +170,82 @@ public class DinasController : ControllerBase
         }).ToList();
 
         return Ok(new DinasBuktiAdminListDto(items));
+    }
+
+    // Rincian satu bukti dinas (Admin SDM) - siapa saja Ketua/Anggotanya, tujuan, dan
+    // rentang tanggal. Diminta 2026-08-24, dibuka lewat tombol "Rincian" di Verifikasi Dinas.
+    [HttpGet("admin/{jenis}/{refId}/detail")]
+    public async Task<ActionResult<DinasBuktiDetailDto>> AdminDetail(string jenis, string refId)
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        var myNik = pegawai?.ID_KARYAWAN;
+        if (string.IsNullOrWhiteSpace(myNik) || !await _access.IsSdmAdminAsync(myNik))
+        {
+            return Forbid();
+        }
+
+        if (!AllowedJenis.Contains(jenis))
+        {
+            return BadRequest(new { message = "Jenis tidak dikenal." });
+        }
+
+        var row = await _db.DinasBukti.AsNoTracking().FirstOrDefaultAsync(b => b.Jenis == jenis && b.RefId == refId);
+        if (row is null)
+        {
+            return NotFound(new { message = "Bukti dinas tidak ditemukan." });
+        }
+
+        string? ringkasan = null, status = null, tujuan = null;
+        DateTime? tglMulai = null, tglSelesai = null;
+        var peserta = new List<DinasPesertaDto>();
+
+        if (jenis == "SPPD" && int.TryParse(refId, out var sppdId))
+        {
+            var sppd = await _gcs.WebSdmSppd.AsNoTracking().FirstOrDefaultAsync(s => s.id == sppdId);
+            if (sppd is not null)
+            {
+                ringkasan = sppd.keterangan;
+                tujuan = sppd.tujuan_sppd;
+                tglMulai = sppd.tgl_berangkat;
+                tglSelesai = sppd.tgl_pulang;
+            }
+            var details = await _gcs.WebSdmSppdDetail.AsNoTracking()
+                .Where(d => d.id == sppdId)
+                .OrderBy(d => d.posisi == "Ketua" ? 0 : 1).ThenBy(d => d.id_det)
+                .ToListAsync();
+            var niks = details.Select(d => d.id_user).Distinct().ToList();
+            var nama = await _gcs.PegawaiSdm.Where(p => niks.Contains(p.Nik)).ToDictionaryAsync(p => p.Nik, p => p.nama);
+            peserta = details.Select(d => new DinasPesertaDto(d.id_user, nama.GetValueOrDefault(d.id_user), d.posisi)).ToList();
+        }
+        else if (jenis == "UMDL" && decimal.TryParse(refId, out var umdlId))
+        {
+            var umdl = await _gcs.WebSdmUmdl.AsNoTracking().FirstOrDefaultAsync(u => u.ID == umdlId);
+            if (umdl is not null)
+            {
+                ringkasan = umdl.KETERANGAN;
+                tglMulai = umdl.TGL_UMDL;
+            }
+            var details = await _db.UmdlAnggota.AsNoTracking()
+                .Where(a => a.RefId == refId)
+                .OrderBy(a => a.Posisi == "Ketua" ? 0 : 1).ThenBy(a => a.Id)
+                .ToListAsync();
+            var niks = details.Select(d => d.IdKaryawan).Distinct().ToList();
+            var nama = await _gcs.PegawaiSdm.Where(p => niks.Contains(p.Nik)).ToDictionaryAsync(p => p.Nik, p => p.nama);
+            peserta = details.Select(d => new DinasPesertaDto(d.IdKaryawan, nama.GetValueOrDefault(d.IdKaryawan), d.Posisi)).ToList();
+        }
+
+        status = await _db.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == jenis && a.RefId == refId)
+            .Select(a => a.Status)
+            .FirstOrDefaultAsync();
+
+        var namaPemohon = await _gcs.PegawaiSdm.AsNoTracking()
+            .Where(p => p.Nik == row.IdKaryawan)
+            .Select(p => p.nama)
+            .FirstOrDefaultAsync();
+
+        return Ok(new DinasBuktiDetailDto(
+            row.Id, row.Jenis, row.RefId, row.IdKaryawan, namaPemohon,
+            row.RentangKm, row.DibuatPada, ringkasan, status, tujuan, tglMulai, tglSelesai, peserta));
     }
 }

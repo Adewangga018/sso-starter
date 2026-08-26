@@ -54,7 +54,7 @@ export default function MyHrManagementLayout() {
     <div className="app-shell">
       <Sidebar
         logoSrc="/LOGO GCS.png"
-        title="HR Management"
+        title="Admin SDM"
         sections={buildSections()}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapsed}
@@ -65,7 +65,7 @@ export default function MyHrManagementLayout() {
       <div className="app-shell__main">
         <TopBar
           dark
-          title="HR Management"
+          title="Admin SDM"
           name={summary?.nama}
           subtitle={summary?.jabatan}
           onMenuClick={openMobile}

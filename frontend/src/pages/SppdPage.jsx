@@ -5,6 +5,14 @@ import { api, ApiError, isEmptyDataError } from '../lib/api'
 import DinasKameraCapture from '../components/DinasKameraCapture'
 import './SppdPage.css'
 
+// Badge status persetujuan MANAGER real-time (approval.pengajuan) - beda dari status
+// legacy (Di Buat/dst, dipakai memilah tab) - diminta 2026-08-24.
+function StatusPersetujuanBadge({ status }) {
+  if (!status) return <span className="sppd__appr sppd__appr--none">-</span>
+  const cls = status === 'Disetujui' ? 'sppd__appr--ok' : status === 'Ditolak' ? 'sppd__appr--reject' : 'sppd__appr--wait'
+  return <span className={`sppd__appr ${cls}`}>{status}</span>
+}
+
 // SPPD hanya utk jarak >150km (Pulang-Pergi) - di bawah itu diajukan lewat UMDL. Cuma satu
 // nilai valid, jadi tidak perlu dropdown pilihan, langsung dikunci di form.
 const RENTANG_KM_SPPD = '>150'
@@ -24,6 +32,7 @@ const TABS = [
 
 const COLUMNS = [
   { key: 'status', label: 'Status', className: 'sppd__col-status' },
+  { key: 'statusPersetujuan', label: 'Persetujuan', className: 'sppd__col-appr' },
   { key: 'tglInput', label: 'Tgl Input', className: 'sppd__col-tgl' },
   { key: 'kodeSppd', label: 'Kode SPPD', className: 'sppd__col-kode' },
   { key: 'tujuan', label: 'Tujuan', className: 'sppd__col-tujuan' },
@@ -84,6 +93,8 @@ export default function SppdPage() {
   // Rincian (peserta) - a separate modal, because travellers can only be attached after the
   // SPPD exists: the detail rows key off its id.
   const [detailFor, setDetailFor] = useState(null)
+  // Peserta (bukan pembuat) boleh buka Rincian ini juga, tapi read-only - diminta 2026-08-24.
+  const [detailBolehUbah, setDetailBolehUbah] = useState(true)
   const [peserta, setPeserta] = useState([])
   const [pesertaForm, setPesertaForm] = useState(emptyPeserta)
   const [pesertaError, setPesertaError] = useState('')
@@ -274,8 +285,9 @@ export default function SppdPage() {
     setPesertaForm(emptyPeserta)
   }
 
-  async function openDetail(row) {
+  async function openDetail(row, bolehUbah = true) {
     setDetailFor(row)
+    setDetailBolehUbah(bolehUbah)
     resetPesertaForm()
     setPesertaError('')
     try {
@@ -483,12 +495,18 @@ export default function SppdPage() {
               {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
                   sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
                   di ponsel - di lebar itu <thead> disembunyikan. */}
-              {pageRows.map((row) => (
+              {pageRows.map((row) => {
+                const bolehUbah = row.peranSaya === 'Pembuat'
+                return (
                 <tr key={row.id}>
                   <td className="sppd__col-status" data-label="Status">
                     <span className={`sppd__status${row.status === STATUS_DIBUAT ? '' : ' sppd__status--done'}`}>
                       {row.status}
                     </span>
+                    {!bolehUbah && <span className="sppd__peran">Saya: {row.peranSaya}</span>}
+                  </td>
+                  <td className="sppd__col-appr" data-label="Persetujuan">
+                    <StatusPersetujuanBadge status={row.statusPersetujuan} />
                   </td>
                   <td className="sppd__col-tgl" data-label="Tgl Input">{formatTanggal(row.tglInput)}</td>
                   <td className="sppd__col-kode" data-label="Kode SPPD">
@@ -526,43 +544,37 @@ export default function SppdPage() {
                       {row.fotoUrl && (
                         <button
                           type="button"
-                          className="sppd__row-btn"
+                          className="sppd__row-btn sppd__row-btn--camera"
                           onClick={() => viewBukti(row)}
                           title="Lihat foto bukti dinas"
                         >
-                          <Camera size={15} />
+                          <Camera size={16} />
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="sppd__row-btn sppd__row-btn--print"
-                        onClick={() => handlePrint(row)}
-                        title="Cetak SPPD"
-                      >
-                        <Printer size={15} />
-                      </button>
+                      {isDibuatTab && (
+                        <button
+                          type="button"
+                          className="sppd__row-btn sppd__row-btn--detail"
+                          onClick={() => openDetail(row)}
+                          title="Rincian peserta"
+                        >
+                          <ListChecks size={16} />
+                        </button>
+                      )}
                       {isDibuatTab && (
                         <>
-                          <button
-                            type="button"
-                            className="sppd__row-btn sppd__row-btn--detail"
-                            onClick={() => openDetail(row)}
-                            title="Rincian peserta"
-                          >
-                            <ListChecks size={15} />
-                          </button>
                           <button type="button" className="sppd__row-btn sppd__row-btn--edit" onClick={() => openEdit(row)} title="Ubah">
-                            <Pencil size={15} />
+                            <Pencil size={16} />
                           </button>
                           <button type="button" className="sppd__row-btn sppd__row-btn--delete" onClick={() => handleDelete(row)} title="Hapus">
-                            <Trash2 size={15} />
+                            <Trash2 size={16} />
                           </button>
                         </>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -676,6 +688,11 @@ export default function SppdPage() {
               {formError && <div className="sppd__error">{formError}</div>}
 
               <div className="sppd__modal-footer">
+                {editing && (
+                  <button type="button" className="sppd__submit sppd__submit--ghost" onClick={() => handlePrint(editing)}>
+                    <Printer size={15} /> Cetak
+                  </button>
+                )}
                 <button type="submit" className="sppd__submit" disabled={saving}>
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
@@ -695,6 +712,13 @@ export default function SppdPage() {
               </button>
             </div>
 
+            {!detailBolehUbah && (
+              <p className="sppd__window-hint" style={{ margin: '0 22px 8px' }}>
+                Anda ditambahkan sbg peserta di SPPD ini (bukan pembuatnya) - daftar di bawah untuk dilihat saja.
+              </p>
+            )}
+
+            {detailBolehUbah && (
             <form className="sppd__modal-body" onSubmit={handleSubmitPeserta}>
               <label className="sppd__field">
                 <span>NIK</span>
@@ -755,6 +779,7 @@ export default function SppdPage() {
                 </button>
               </div>
             </form>
+            )}
 
             <div className="sppd__peserta">
               <table className="sppd__table sppd__table--peserta">
@@ -764,13 +789,13 @@ export default function SppdPage() {
                     <th>NIK</th>
                     <th>Nama</th>
                     <th>Tugas</th>
-                    <th>Aksi</th>
+                    {detailBolehUbah && <th>Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {peserta.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="sppd__no-data">
+                      <td colSpan={detailBolehUbah ? 5 : 4} className="sppd__no-data">
                         Belum ada peserta. SPPD tidak bisa dicetak sebelum ada peserta.
                       </td>
                     </tr>
@@ -781,26 +806,28 @@ export default function SppdPage() {
                       <td>{p.nik}</td>
                       <td>{p.nama ?? '-'}</td>
                       <td>{p.tugas}</td>
-                      <td>
-                        <div className="sppd__row-actions">
-                          <button
-                            type="button"
-                            className="sppd__row-btn sppd__row-btn--edit"
-                            onClick={() => openEditPeserta(p)}
-                            title="Ubah peserta"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            className="sppd__row-btn sppd__row-btn--delete"
-                            onClick={() => handleDeletePeserta(p.idDet)}
-                            title="Hapus peserta"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
+                      {detailBolehUbah && (
+                        <td>
+                          <div className="sppd__row-actions">
+                            <button
+                              type="button"
+                              className="sppd__row-btn sppd__row-btn--edit"
+                              onClick={() => openEditPeserta(p)}
+                              title="Ubah peserta"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className="sppd__row-btn sppd__row-btn--delete"
+                              onClick={() => handleDeletePeserta(p.idDet)}
+                              title="Hapus peserta"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

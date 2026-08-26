@@ -2152,5 +2152,44 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [21] DINAS UMDL ANGGOTA - ketua/anggota UMDL ################';
+GO
+/* ============================================================================
+   dinas.umdl_anggota (2026-08-24): ketua/anggota UMDL, mirror dari
+   web_sdm_sppd_detail (SPPD) tapi ringkas - murni penanda "siapa saja yang ikut
+   dinas ini" supaya anggota juga melihat baris UMDL di halaman mereka sendiri.
+   Layer PARALEL, TIDAK menyentuh tabel legacy GCS (web_sdm_umdl).
+   Isi lengkap: docs/dinas-umdl-anggota-schema.sql
+   ============================================================================ */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF SCHEMA_ID('dinas') IS NULL EXEC('CREATE SCHEMA dinas');
+GO
+
+IF OBJECT_ID('dinas.umdl_anggota', 'U') IS NULL
+BEGIN
+    CREATE TABLE dinas.umdl_anggota (
+        id           INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_dinas_umdl_anggota PRIMARY KEY,
+        ref_id       NVARCHAR(50)   NOT NULL,
+        id_karyawan  NVARCHAR(50)   NOT NULL,
+        posisi       NVARCHAR(10)   NOT NULL,
+        dibuat_pada  DATETIME2      NOT NULL CONSTRAINT df_dinas_umdl_anggota_tgl DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT ck_dinas_umdl_anggota_posisi CHECK (posisi IN ('Ketua','Anggota')),
+        CONSTRAINT uq_dinas_umdl_anggota UNIQUE (ref_id, id_karyawan)
+    );
+    CREATE INDEX ix_dinas_umdl_anggota_karyawan ON dinas.umdl_anggota (id_karyawan);
+    PRINT 'dinas.umdl_anggota dibuat.';
+END
+ELSE PRINT 'LEWATI: dinas.umdl_anggota sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

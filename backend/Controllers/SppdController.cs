@@ -40,16 +40,18 @@ public class SppdController : ControllerBase
     private static readonly string[] AllowedPosisi = ["Ketua", "Anggota"];
 
     private readonly GcsDbContext _db;
+    private readonly ApplicationDbContext _appDb;
     private readonly CurrentUserContext _currentUser;
     private readonly ApprovalService _approval;
     private readonly DinasBuktiService _bukti;
     private readonly PosisiResolver _posisi;
 
     public SppdController(
-        GcsDbContext db, CurrentUserContext currentUser, ApprovalService approval, DinasBuktiService bukti,
-        PosisiResolver posisi)
+        GcsDbContext db, ApplicationDbContext appDb, CurrentUserContext currentUser, ApprovalService approval,
+        DinasBuktiService bukti, PosisiResolver posisi)
     {
         _db = db;
+        _appDb = appDb;
         _currentUser = currentUser;
         _approval = approval;
         _posisi = posisi;
@@ -65,8 +67,12 @@ public class SppdController : ControllerBase
             return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
+        // Bukan hanya SPPD yang saya ajukan - juga SPPD orang lain yang menambahkan saya
+        // sbg Ketua/Anggota (diminta 2026-08-24), supaya peserta ikut melihat SPPD ini di
+        // akun mereka sendiri, tidak cuma tersembunyi di akun pengaju.
+        var memberSppdIds = _db.WebSdmSppdDetail.Where(d => d.id_user == pegawai.ID_KARYAWAN).Select(d => d.id);
         var rows = await _db.WebSdmSppd
-            .Where(s => s.id_user == pegawai.ID_KARYAWAN)
+            .Where(s => s.id_user == pegawai.ID_KARYAWAN || memberSppdIds.Contains(s.id))
             .OrderByDescending(s => s.id)
             .ToListAsync();
 
@@ -88,6 +94,13 @@ public class SppdController : ControllerBase
         // legacy ini - dimuat sekaligus per (jenis="SPPD", refId) supaya tak N+1 query.
         var buktiByRefId = await _bukti.CariBanyakAsync("SPPD", rows.Select(r => r.id.ToString()).ToList());
 
+        // Status persetujuan MANAGER real-time (approval.pengajuan), lintas seluruh baris
+        // sekaligus supaya tak N+1 query - lihat catatan di SppdDto.StatusPersetujuan.
+        var refIds = rows.Select(r => r.id.ToString()).ToList();
+        var approvalByRefId = await _appDb.ApprovalPengajuan.AsNoTracking()
+            .Where(a => a.Jenis == "SPPD" && refIds.Contains(a.RefId))
+            .ToDictionaryAsync(a => a.RefId);
+
         var items = rows.Select(s =>
         {
             // Every traveller is listed, not just the leader: an SPPD routinely carries
@@ -100,6 +113,11 @@ public class SppdController : ControllerBase
                 .ToList();
 
             buktiByRefId.TryGetValue(s.id.ToString(), out var b);
+            approvalByRefId.TryGetValue(s.id.ToString(), out var appr);
+
+            var peranSaya = s.id_user == pegawai.ID_KARYAWAN
+                ? "Pembuat"
+                : pesertaSppd.FirstOrDefault(d => d.id_user == pegawai.ID_KARYAWAN)?.posisi ?? "Anggota";
 
             return new SppdDto(
                 s.id,
@@ -118,7 +136,10 @@ public class SppdController : ControllerBase
                     .ToList(),
                 pesertaSppd.Select(d => d.tugas).Distinct().ToList(),
                 b?.RentangKm,
-                b is null ? null : $"/api/personal/dinas/foto/SPPD/{s.id}");
+                b is null ? null : $"/api/personal/dinas/foto/SPPD/{s.id}",
+                peranSaya,
+                appr?.Status,
+                appr?.TglKeputusan);
         }).ToList();
 
         return Ok(new SppdListDto(items));
@@ -474,8 +495,13 @@ public class SppdController : ControllerBase
             return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
-        var sppd = await _db.WebSdmSppd
-            .FirstOrDefaultAsync(s => s.id == id && s.id_user == pegawai.ID_KARYAWAN);
+        // Pembuat ATAU peserta (Ketua/Anggota) boleh cetak - namanya ikut tercantum di surat
+        // (diminta 2026-08-24).
+        if (!await OwnsAsync(id, pegawai.ID_KARYAWAN))
+        {
+            return NotFound(new { message = "SPPD tidak ditemukan." });
+        }
+        var sppd = await _db.WebSdmSppd.FirstOrDefaultAsync(s => s.id == id);
         if (sppd is null)
         {
             return NotFound(new { message = "SPPD tidak ditemukan." });
@@ -577,14 +603,25 @@ public class SppdController : ControllerBase
             d.tugas)).ToList();
     }
 
-    private Task<bool> OwnsAsync(int id, string idKaryawan) =>
-        _db.WebSdmSppd.AnyAsync(s => s.id == id && s.id_user == idKaryawan);
+    // Boleh LIHAT (bukan ubah): pembuat ATAU peserta (Ketua/Anggota) - diminta 2026-08-24,
+    // supaya peserta yg ditambahkan orang lain ikut bisa buka Rincian/Cetak, tanpa bisa
+    // Ubah/Hapus (itu tetap FindOwnEditableAsync, pembuat saja).
+    private async Task<bool> OwnsAsync(int id, string idKaryawan)
+    {
+        if (await _db.WebSdmSppd.AnyAsync(s => s.id == id && s.id_user == idKaryawan)) return true;
+        return await _db.WebSdmSppdDetail.AnyAsync(d => d.id == id && d.id_user == idKaryawan);
+    }
 
-    // Only the employee's own SPPD that nobody has acted on yet may be edited or removed.
-    private Task<WebSdmSppd?> FindOwnEditableAsync(int id, string idKaryawan) =>
-        _db.WebSdmSppd
-            .AsTracking()
-            .FirstOrDefaultAsync(s => s.id == id && s.id_user == idKaryawan && s.status == StatusDibuat);
+    // Pembuat ATAU peserta (Ketua/Anggota) boleh Ubah/Hapus, SELAMA belum diproses (status
+    // masih "Di Buat") - diperluas dari pembuat-saja per permintaan 2026-08-24.
+    private async Task<WebSdmSppd?> FindOwnEditableAsync(int id, string idKaryawan)
+    {
+        var sppd = await _db.WebSdmSppd.AsTracking().FirstOrDefaultAsync(s => s.id == id && s.status == StatusDibuat);
+        if (sppd is null) return null;
+        if (sppd.id_user == idKaryawan) return sppd;
+        var ikutSerta = await _db.WebSdmSppdDetail.AnyAsync(d => d.id == id && d.id_user == idKaryawan);
+        return ikutSerta ? sppd : null;
+    }
 
     private async Task<string?> ResolveAtasanAsync(string idKaryawan) =>
         await _db.SdmApproval

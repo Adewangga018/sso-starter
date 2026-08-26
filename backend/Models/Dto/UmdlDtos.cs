@@ -10,9 +10,24 @@ public record UmdlDto(
     string? Source,
     // Bukti dinas (rentang km + foto lokasi) - null untuk baris lama sebelum fitur ini ada.
     string? RentangKm = null,
-    string? FotoUrl = null);
+    string? FotoUrl = null,
+    // Ketua/anggota (dinas.umdl_anggota) - mirror SPPD, diminta 2026-08-24. Kosong = belum
+    // ada yang ditambahkan (hanya pengajunya sendiri yang tercatat).
+    IReadOnlyList<UmdlDetailDto>? Peserta = null,
+    // Hubungan SAYA dengan UMDL ini - "Pembuat" kalau saya yang mengajukan, atau
+    // "Ketua"/"Anggota" kalau saya ditambahkan sbg peserta oleh orang lain.
+    string PeranSaya = "Pembuat",
+    // Status persetujuan MANAGER real-time dari approval.pengajuan - lihat catatan yg sama
+    // di SppdDto.
+    string? StatusPersetujuan = null,
+    DateTime? TglKeputusan = null);
 
 public record UmdlListDto(IReadOnlyList<UmdlDto> Items);
+
+// Satu peserta UMDL (dinas.umdl_anggota).
+public record UmdlDetailDto(int IdDet, string Nik, string? Nama, string Posisi);
+
+public record UmdlDetailRequest(string Nik, string Posisi);
 
 // Baris di pencarian "Cari Data SURAT IJIN": hanya izin yang berhak atas uang makan.
 public record IjinUmdlDto(

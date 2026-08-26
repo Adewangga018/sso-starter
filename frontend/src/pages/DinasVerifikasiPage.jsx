@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Camera, Loader2, MapPinned, RotateCw, ShieldAlert, X } from 'lucide-react'
+import { ArrowLeft, Camera, ListChecks, Loader2, MapPinned, RotateCw, ShieldAlert, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import './PayrollShared.css'
@@ -10,6 +10,13 @@ const JENIS_OPTIONS = [
   { value: 'UMDL', label: 'UMDL' },
   { value: 'SPPD', label: 'SPPD' },
 ]
+
+// Badge status persetujuan MANAGER real-time (approval.pengajuan) - diminta 2026-08-24.
+function StatusBadge({ status }) {
+  if (!status) return <span className="agt__appr agt__appr--none">-</span>
+  const cls = status === 'Disetujui' ? 'agt__appr--ok' : status === 'Ditolak' ? 'agt__appr--reject' : 'agt__appr--wait'
+  return <span className={`agt__appr ${cls}`}>{status}</span>
+}
 
 const pad = (n) => String(n).padStart(2, '0')
 function formatTgl(value) {
@@ -33,6 +40,9 @@ export default function DinasVerifikasiPage() {
   const [error, setError] = useState('')
   const [preview, setPreview] = useState(null) // { url } | null
   const [previewLoading, setPreviewLoading] = useState(null) // id lagi dimuat
+  const [detail, setDetail] = useState(null) // DinasBuktiDetailDto | null
+  const [detailLoading, setDetailLoading] = useState(null) // id lagi dimuat
+  const [detailError, setDetailError] = useState('')
 
   async function load() {
     setLoading(true); setError('')
@@ -64,6 +74,18 @@ export default function DinasVerifikasiPage() {
   function closePreview() {
     if (preview?.url) URL.revokeObjectURL(preview.url)
     setPreview(null)
+  }
+
+  async function lihatRincian(row) {
+    setDetailLoading(row.id)
+    setDetailError('')
+    try {
+      setDetail(await api.getDinasAdminDetail(row.jenis, row.refId))
+    } catch (err) {
+      setDetailError(err instanceof ApiError ? err.message : 'Gagal memuat rincian.')
+    } finally {
+      setDetailLoading(null)
+    }
   }
 
   if (!isAdminModulSdm) {
@@ -129,7 +151,7 @@ export default function DinasVerifikasiPage() {
                 <th>Nama</th>
                 <th>Rentang Km</th>
                 <th>Ringkasan</th>
-                <th>Status</th>
+                <th>Status Persetujuan</th>
                 <th>Foto</th>
               </tr>
             </thead>
@@ -142,14 +164,22 @@ export default function DinasVerifikasiPage() {
                   <td>{row.nama ?? '-'}</td>
                   <td>{row.rentangKm} km (PP)</td>
                   <td>{row.ringkasan ?? '-'}</td>
-                  <td>{row.status ?? '-'}</td>
+                  <td><StatusBadge status={row.status} /></td>
                   <td>
-                    <button
-                      type="button" className="agt__ibtn" onClick={() => lihatFoto(row)}
-                      disabled={previewLoading === row.id} title="Lihat foto bukti"
-                    >
-                      {previewLoading === row.id ? <Loader2 size={14} className="agt__spin" /> : <Camera size={14} />}
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        type="button" className="agt__ibtn" onClick={() => lihatRincian(row)}
+                        disabled={detailLoading === row.id} title="Lihat rincian"
+                      >
+                        {detailLoading === row.id ? <Loader2 size={14} className="agt__spin" /> : <ListChecks size={14} />}
+                      </button>
+                      <button
+                        type="button" className="agt__ibtn" onClick={() => lihatFoto(row)}
+                        disabled={previewLoading === row.id} title="Lihat foto bukti"
+                      >
+                        {previewLoading === row.id ? <Loader2 size={14} className="agt__spin" /> : <Camera size={14} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -166,6 +196,41 @@ export default function DinasVerifikasiPage() {
               <button type="button" className="agt__ibtn" onClick={closePreview} aria-label="Tutup"><X size={16} /></button>
             </div>
             <img src={preview.url} alt="Foto bukti dinas" style={{ width: '100%', borderRadius: 10 }} />
+          </div>
+        </div>
+      )}
+
+      {(detail || detailError) && (
+        <div className="agt__presensi" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', borderRadius: 0 }} onClick={() => { setDetail(null); setDetailError('') }}>
+          <div style={{ maxWidth: 520, width: '92%', background: 'var(--gcs-white)', borderRadius: 14, padding: 16 }} onClick={(e) => e.stopPropagation()}>
+            <div className="agt__presensi-head">
+              <span className="agt__presensi-nama">Rincian {detail?.jenis ?? ''}</span>
+              <button type="button" className="agt__ibtn" onClick={() => { setDetail(null); setDetailError('') }} aria-label="Tutup"><X size={16} /></button>
+            </div>
+            {detailError ? (
+              <div className="agt__msg agt__msg--err">{detailError}</div>
+            ) : detail && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10, fontSize: '0.86rem' }}>
+                <div><strong>Pemohon:</strong> {detail.nama ?? '-'} ({detail.nik})</div>
+                {detail.tujuan && <div><strong>Tujuan:</strong> {detail.tujuan}</div>}
+                {detail.ringkasan && <div><strong>Keterangan:</strong> {detail.ringkasan}</div>}
+                <div><strong>Rentang Km:</strong> {detail.rentangKm} km (PP)</div>
+                <div><strong>Status Persetujuan:</strong> <StatusBadge status={detail.status} /></div>
+                <div><strong>Tanggal:</strong> {formatTgl(detail.tglMulai)}{detail.tglSelesai ? ` s/d ${formatTgl(detail.tglSelesai)}` : ''}</div>
+                <div>
+                  <strong>Ketua &amp; Anggota:</strong>
+                  {detail.peserta.length === 0 ? (
+                    <div style={{ color: 'var(--gcs-text-muted)', marginTop: 4 }}>Belum ada yang ditambahkan.</div>
+                  ) : (
+                    <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                      {detail.peserta.map((p) => (
+                        <li key={p.nik}>{p.nama ?? p.nik} <span style={{ color: 'var(--gcs-text-muted)' }}>({p.posisi})</span></li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

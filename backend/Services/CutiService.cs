@@ -292,11 +292,7 @@ public class CutiService
         {
             return (false, "Tanggal selesai tidak boleh sebelum tanggal mulai.", null);
         }
-        var jumlah = HitungHariKerja(req.TglMulai, req.TglSelesai);
-        if (jumlah <= 0)
-        {
-            return (false, "Rentang tanggal tidak mengandung hari kerja (Senin–Jumat).", null);
-        }
+        var jumlah = HitungHariKalender(req.TglMulai, req.TglSelesai);
         var saldo = await _db.CutiSaldo.FirstOrDefaultAsync(s => s.IdKaryawan == nik);
         if (saldo is null)
         {
@@ -389,7 +385,8 @@ public class CutiService
         p.Id, p.IdKaryawan, p.Nama, p.TglMulai, p.TglSelesai, p.JumlahHari,
         p.Keterangan, p.Status, p.Komentar, p.TglPengajuan, p.TglKeputusan);
 
-    // Jumlah hari kerja (Senin–Jumat) dalam rentang inklusif.
+    // Jumlah hari kerja (Senin–Jumat) dalam rentang inklusif - dipakai untuk cuti
+    // bersama/nasional (mengurangi hak berbasis hari kerja).
     private static int HitungHariKerja(DateOnly dari, DateOnly sampai)
     {
         var n = 0;
@@ -399,6 +396,12 @@ public class CutiService
         }
         return n;
     }
+
+    // Jumlah hari kalender (termasuk Sabtu/Minggu) dalam rentang inklusif - dipakai untuk
+    // pengajuan cuti pribadi karyawan; weekend tetap boleh diajukan sebagai cuti, cuma
+    // ditandai sebagai cuti seperti hari lainnya (2026-08-26).
+    private static int HitungHariKalender(DateOnly dari, DateOnly sampai) =>
+        sampai.DayNumber - dari.DayNumber + 1;
 
     // Penyetuju = MANAGER TERKAIT: ancestor terdekat pada band Manager-ke-atas (urutan <= 2,
     // yaitu Manager/GM/Direksi) yang jabatannya terisi. Bila tak ada (mis. pemohon sudah
