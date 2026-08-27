@@ -20,16 +20,24 @@
     .\deploy.ps1 -BackendOnly     # hanya backend (+ migrasi DB)
     .\deploy.ps1 -SkipBuild       # deploy artifact yang sudah ada (tanpa build ulang)
     .\deploy.ps1 -SkipMigrate     # deploy tanpa menjalankan migrasi DB
+    .\deploy.ps1 -Mobile          # + build & deploy APK Android (mobile/) ke MobileApp__StoragePath
+    .\deploy.ps1 -BackendOnly -FrontendOnly -Mobile   # HANYA APK Android, tanpa sentuh backend/frontend
 #>
 [CmdletBinding()]
 param(
     # ---- SESUAIKAN PATH INI SEKALI SAJA ----
     [string]$BackendShare  = '\\192.168.100.240\web_apps$\backend-mygcs',
     [string]$FrontendShare = '\\192.168.100.240\web_apps$\mygcs',
+    # Share jaringan (UNC) ke folder yang di server dikenal sbg MobileApp__StoragePath di
+    # web.config (mis. "D:\web_apps\mobile-app-releases" di server == share ini dari laptop).
+    # HARUS folder yang SAMA (cuma dilihat dari dua sisi berbeda) - kalau path lokal server
+    # berubah, ganti juga default di sini.
+    [string]$MobileShare   = '\\192.168.100.240\web_apps$\mobile-app-releases',
     # ----------------------------------------
 
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
+    [switch]$Mobile,
     [switch]$SkipBuild,
     [switch]$SkipMigrate,
     [switch]$DryRun
@@ -39,8 +47,10 @@ $ErrorActionPreference = 'Stop'
 $root         = $PSScriptRoot
 $backendSrc   = Join-Path $root 'backend'
 $frontendSrc  = Join-Path $root 'frontend'
+$mobileSrc    = Join-Path $root 'mobile'
 $publishDir   = Join-Path $backendSrc 'publish'
 $distDir      = Join-Path $frontendSrc 'dist'
+$mobileApk    = Join-Path $mobileSrc 'build\app\outputs\flutter-apk\app-release.apk'
 $appOffline   = Join-Path $root 'app_offline.htm'
 $migrationSql = Join-Path $root 'docs\prod-migrasi.sql'
 
@@ -107,6 +117,11 @@ if ($doFrontend -and -not (Test-Path $FrontendShare)) {
 if ($doBackend -and -not (Test-Path $appOffline)) {
     throw "app_offline.htm tidak ditemukan di $appOffline"
 }
+# -Mobile butuh baca MobileApp__StoragePath dari web.config server, jadi tetap perlu share
+# backend terjangkau meski dipakai bersama -BackendOnly -FrontendOnly (mode "mobile saja").
+if ($Mobile -and -not (Test-Path $BackendShare)) {
+    throw "Folder backend di server tidak terjangkau (perlu baca web.config utk -Mobile): $BackendShare"
+}
 
 # ---------------------------------------------------------------- build
 if (-not $SkipBuild) {
@@ -129,6 +144,17 @@ if (-not $SkipBuild) {
             } finally { Pop-Location }
         }
         Ok 'Frontend ter-build.'
+    }
+    if ($Mobile) {
+        Info 'Build APK Android (flutter build apk --release)...'
+        if (-not $DryRun) {
+            Push-Location $mobileSrc
+            try {
+                & flutter build apk --release | Out-Null
+                if ($LASTEXITCODE -ne 0) { throw 'flutter build apk GAGAL.' }
+            } finally { Pop-Location }
+        }
+        Ok 'APK Android ter-build.'
     }
 }
 
@@ -196,6 +222,44 @@ if ($doFrontend) {
         Copy-Item -Path (Join-Path $distDir '*') -Destination $FrontendShare -Recurse -Force
     }
     Ok 'Frontend ter-deploy.'
+}
+
+# ---------------------------------------------------------------- mobile (APK Android) deploy
+# Tidak pernah menyentuh $BackendShare (folder itu DIHAPUS TOTAL tiap deploy backend di atas,
+# lihat $keep) - APK disalin ke $MobileShare (folder TERPISAH) supaya selamat dari deploy
+# backend/frontend berikutnya. Karena itu juga -Mobile TIDAK butuh app_offline - tidak ada
+# file backend yang terkunci/diganggu di sini.
+#
+# $MobileShare adalah path UNC (bisa diakses dari LAPTOP ini via jaringan) - BEDA dari
+# MobileApp__StoragePath di web.config, yang path LOKAL dari sudut pandang SERVER (mis.
+# "D:\web_apps\mobile-app-releases"). Keduanya harus menunjuk folder yang SAMA, cuma dilihat
+# dari dua sisi berbeda - web.config dibaca di sini HANYA utk memvalidasi keduanya benar-benar
+# sudah di-set (bukan sumber path yang dipakai copy, itu tidak bisa dipakai langsung dari
+# laptop - lihat riwayat error "Cannot find drive 'D'").
+if ($Mobile) {
+    if (-not (Test-Path $mobileApk)) {
+        throw "APK tidak ditemukan: $mobileApk (jangan pakai -SkipBuild kalau belum pernah build APK)"
+    }
+
+    Info 'Memeriksa MobileApp:StoragePath di web.config server...'
+    [xml]$cfgMobile = Get-Content -LiteralPath (Join-Path $BackendShare 'web.config') -Raw
+    $mobileNode = $cfgMobile.SelectSingleNode("//environmentVariable[@name='MobileApp__StoragePath']")
+    if (-not $mobileNode -or [string]::IsNullOrWhiteSpace($mobileNode.value)) {
+        throw "MobileApp__StoragePath belum di-set di web.config server. Set dulu ke folder PERSISTEN " +
+              "di luar $BackendShare (folder itu dihapus total tiap deploy backend), baru jalankan ulang -Mobile."
+    }
+    Info "  server (lokal): $($mobileNode.value)"
+    Info "  laptop (UNC):   $MobileShare"
+
+    Info "Menyalin APK ke $MobileShare ..."
+    if (-not $DryRun) {
+        if (-not (Test-Path $MobileShare)) {
+            Info '  folder tujuan belum ada, membuat...'
+            New-Item -ItemType Directory -Path $MobileShare -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $mobileApk -Destination (Join-Path $MobileShare 'mygcs-absensi.apk') -Force
+    }
+    Ok 'APK Android ter-deploy.'
 }
 
 Write-Host ''

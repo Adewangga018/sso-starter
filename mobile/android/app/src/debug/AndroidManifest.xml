@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The INTERNET permission is required for development. Specifically,
+         the Flutter tool needs it to communicate with the running application
+         to allow setting breakpoints, to provide hot reload, etc.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Izinkan cleartext HTTP ke backend dev lokal (10.0.2.2/localhost) - lihat
+         res/xml/network_security_config.xml. Merge tag ini menyatu ke <application>
+         di src/main/AndroidManifest.xml khusus untuk build debug. -->
+    <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:targetApi="28" />
+</manifest>

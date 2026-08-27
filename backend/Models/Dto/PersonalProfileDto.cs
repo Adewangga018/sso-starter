@@ -66,15 +66,17 @@ public record AbsensiDto(
     // "SDM" = baris resmi dari vw_web_sdm_absensi; "Kamera" = hasil absensi kamera (db_mygcs).
     string Sumber);
 
-// Payload absensi kamera dari SPA: foto (data URL base64), koordinat, akurasi GPS (meter),
-// tempat, dan tipe in/out.
+// Payload absensi kamera dari SPA/app mobile: foto (data URL base64), koordinat, akurasi GPS
+// (meter), tempat, tipe in/out, dan flag mock-location (dikirim app mobile native - hasil
+// deteksi GPS palsu dari OS; SPA web tidak bisa mendeteksi ini sehingga selalu null/false).
 public record AbsensiCheckInDto(
     string Foto,
     decimal Lat,
     decimal Lng,
     decimal? Accuracy,
     string? Tempat,
-    string Type);
+    string Type,
+    bool? IsMockLocation = null);
 
 // Titik geofence aktif yang dikembalikan ke SPA absensi kamera (bukan admin-only).
 public record LocationDto(

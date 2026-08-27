@@ -28,6 +28,7 @@ public class PersonalController : ControllerBase
     private readonly DocumentResolver _documentResolver;
     private readonly CurrentUserContext _currentUser;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
     private readonly ILogger<PersonalController> _logger;
     private readonly IAuditLogger _audit;
 
@@ -37,6 +38,7 @@ public class PersonalController : ControllerBase
         DocumentResolver documentResolver,
         CurrentUserContext currentUser,
         IConfiguration config,
+        IWebHostEnvironment env,
         ILogger<PersonalController> logger,
         IAuditLogger audit)
     {
@@ -45,6 +47,7 @@ public class PersonalController : ControllerBase
         _documentResolver = documentResolver;
         _currentUser = currentUser;
         _config = config;
+        _env = env;
         _logger = logger;
         _audit = audit;
     }
@@ -569,6 +572,31 @@ public class PersonalController : ControllerBase
         return Ok(items);
     }
 
+    // Unduh APK MyGCS Absensi (app mobile Android - deteksi fake-GPS, lihat mobile/README.md)
+    // dari halaman My Personal > Absensi. Tidak admin-only - semua karyawan login boleh unduh.
+    // Berkas diletakkan manual oleh IT di MobileApp:StoragePath tiap kali ada rilis baru
+    // (nama file harus persis "mygcs-absensi.apk").
+    [HttpGet("absensi/app/android")]
+    public async Task<IActionResult> DownloadAndroidApp()
+    {
+        var storagePath = _config["MobileApp:StoragePath"];
+        var basePath = string.IsNullOrWhiteSpace(storagePath)
+            ? Path.Combine(_env.ContentRootPath, "uploads", "mobile-app")
+            : storagePath;
+        var apkPath = Path.Combine(basePath, "mygcs-absensi.apk");
+
+        if (!System.IO.File.Exists(apkPath))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = "Aplikasi Android belum tersedia untuk diunduh. Hubungi Tim IT.",
+            });
+        }
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(apkPath);
+        return File(bytes, "application/vnd.android.package-archive", "MyGCS-Absensi.apk");
+    }
+
     [HttpPost("absensi")]
     public async Task<ActionResult<AbsensiDto>> PostAbsensi([FromBody] AbsensiCheckInDto dto)
     {
@@ -581,6 +609,15 @@ public class PersonalController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Foto))
         {
             return BadRequest(new { message = "Foto absensi wajib diambil terlebih dahulu." });
+        }
+
+        // Ditolak mentah-mentah - beda dari akurasi (yang cuma dicatat utk audit manual), ini
+        // sinyal tegas dari OS bahwa lokasi direkayasa (app fake-GPS/mock location provider).
+        // Hanya dikirim oleh app mobile native (SPA web tidak bisa mendeteksi mock location).
+        if (dto.IsMockLocation == true)
+        {
+            _logger.LogWarning("Absensi ditolak (mock location terdeteksi): {Nik}", pegawai.ID_KARYAWAN);
+            return BadRequest(new { message = "Lokasi terdeteksi menggunakan aplikasi fake GPS. Nonaktifkan mock location lalu coba lagi." });
         }
 
         // Akurasi GPS device di dalam gedung rutin buruk (puluhan-ratusan meter) walau posisinya

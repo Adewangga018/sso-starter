@@ -96,6 +96,50 @@ public class OidcSeeder : IHostedService
             // Keep the registration in sync with configuration (e.g. new redirect URIs).
             await appManager.UpdateAsync(existing, descriptor, cancellationToken);
         }
+
+        // App mobile Absensi (Flutter, Android/iOS) - client publik terpisah dari SPA: redirect
+        // URI-nya skema kustom (com.gcs.mygcs_absensi:/oauthredirect), bukan https, dan tidak
+        // butuh mygcs.api scope penuh - cukup identitas + endpoint absensi.
+        var mobileRedirectUris = _configuration.GetSection("Oidc:Mobile:RedirectUris").Get<string[]>() ?? [];
+        var mobileDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "mygcs-mobile",
+            ClientType = ClientTypes.Public,
+            ConsentType = ConsentTypes.Implicit,
+            DisplayName = "MyGCS Absensi (Mobile)",
+            Permissions =
+            {
+                Permissions.Endpoints.Authorization,
+                Permissions.Endpoints.Token,
+                Permissions.Endpoints.EndSession,
+                Permissions.GrantTypes.AuthorizationCode,
+                Permissions.GrantTypes.RefreshToken,
+                Permissions.ResponseTypes.Code,
+                Permissions.Scopes.Email,
+                Permissions.Scopes.Profile,
+                Permissions.Scopes.Roles,
+                Permissions.Prefixes.Scope + "mygcs.api"
+            },
+            Requirements =
+            {
+                Requirements.Features.ProofKeyForCodeExchange
+            }
+        };
+
+        foreach (var uri in mobileRedirectUris)
+        {
+            mobileDescriptor.RedirectUris.Add(new Uri(uri));
+        }
+
+        var existingMobile = await appManager.FindByClientIdAsync("mygcs-mobile", cancellationToken);
+        if (existingMobile is null)
+        {
+            await appManager.CreateAsync(mobileDescriptor, cancellationToken);
+        }
+        else
+        {
+            await appManager.UpdateAsync(existingMobile, mobileDescriptor, cancellationToken);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

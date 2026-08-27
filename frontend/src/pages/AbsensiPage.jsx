@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, Download, Smartphone } from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
-import AbsensiKamera from './AbsensiKamera'
 import './AbsensiPage.css'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
@@ -22,6 +21,42 @@ const COLUMNS = [
 function isWeekend(namaHari) {
   const v = (namaHari ?? '').trim().toLowerCase()
   return v === 'sabtu' || v === 'minggu'
+}
+
+// Jadwal kerja standar Senin-Jumat (sama dengan GajiService.JamMasukStandar/JamPulangStandar
+// di backend - dipakai di sana utk hitung Potongan Presensi "Datang Terlambat"/"Pulang Lebih
+// Awal"). Dipakai di sini murni utk tampilan label "Tepat waktu", tidak memengaruhi hitungan.
+const JAM_MASUK_STANDAR = '07:00'
+const JAM_PULANG_STANDAR = '16:00'
+
+function isTepatWaktu(row, weekend, hasCatatan) {
+  if (weekend || hasCatatan || !row.checkIn || !row.checkOut) return false
+  return formatJam(row.checkIn) <= JAM_MASUK_STANDAR && formatJam(row.checkOut) >= JAM_PULANG_STANDAR
+}
+
+// Catatan legacy (vw_web_sdm_absensi.catatan_mangkir) utk Datang Terlambat/Pulang Lebih Awal
+// menyertakan nominal potongan, mis. "Datang Terlambat (Rp 25.000)" - tidak relevan buat
+// karyawan lihat nominal potongannya sendiri di log ini, jadi bagian "(Rp ...)"-nya dibuang
+// khusus utk tampilan (tidak mengubah data / perhitungan potongan presensi di Payroll).
+function cleanCatatan(text) {
+  if (!text) return text
+  return text.replace(/\(\s*Rp\.?\s?[\d.,]+\s*\)/gi, '').trim()
+}
+
+function inRange(tanggal, mulai, selesai) {
+  const d = new Date(tanggal).setHours(0, 0, 0, 0)
+  const start = new Date(mulai).setHours(0, 0, 0, 0)
+  const end = new Date(selesai).setHours(0, 0, 0, 0)
+  return d >= start && d <= end
+}
+
+// Cuti Nasional/Cuti Bersama yang diinput Admin SDM (lihat CutiController - sama dgn yang
+// dipakai halaman Cuti) - dicocokkan ke tanggal baris log absensi ini.
+function cutiLabelFor(tanggal, cuti) {
+  if (!cuti) return null
+  if ((cuti.cutiNasionalList ?? []).some((c) => inRange(tanggal, c.tglMulai, c.tglSelesai))) return 'Cuti Nasional'
+  if ((cuti.cutiBersamaList ?? []).some((c) => inRange(tanggal, c.tglMulai, c.tglSelesai))) return 'Cuti Bersama'
+  return null
 }
 
 // "09:53:40" -> "09:53"; nilai vw yang sudah "HH:mm" dibiarkan apa adanya.
@@ -58,6 +93,27 @@ export default function AbsensiPage() {
   // Log ditampilkan per bulan. '' pada bulan = seluruh bulan pada tahun terpilih.
   const [bulan, setBulan] = useState('')
   const [tahun, setTahun] = useState('')
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+  // Daftar Cuti Nasional/Cuti Bersama (Admin SDM) - dipakai utk label Keterangan; gagal
+  // memuatnya bukan error fatal, label itu cuma tidak tampil.
+  const [cuti, setCuti] = useState(null)
+
+  useEffect(() => {
+    api.getCuti().then(setCuti).catch(() => {})
+  }, [])
+
+  async function handleDownloadApp() {
+    setDownloading(true)
+    setDownloadError('')
+    try {
+      await api.unduhAppAndroid()
+    } catch (err) {
+      setDownloadError(err instanceof ApiError ? err.message : 'Gagal mengunduh aplikasi.')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const loadRows = useCallback(() => {
     setLoadError('')
@@ -181,7 +237,26 @@ export default function AbsensiPage() {
 
   return (
     <div className="absensi">
-      <AbsensiKamera onSubmitted={loadRows} />
+      <div className="absensi__card absensi__app-card">
+        <div className="absensi__app-icon">
+          <Smartphone size={22} />
+        </div>
+        <div className="absensi__app-info">
+          <div className="absensi__section-title">Aplikasi MyGCS Absensi</div>
+          <p className="absensi__app-desc">
+            Absen masuk/keluar sekarang wajib lewat aplikasi mobile ini (bukan lagi dari halaman
+            web) - lokasi GPS Anda diverifikasi langsung oleh perangkat agar tidak bisa
+            direkayasa (fake GPS).
+          </p>
+          {downloadError && <div className="absensi__app-error">{downloadError}</div>}
+        </div>
+        <div className="absensi__app-actions">
+          <button type="button" className="absensi__app-btn" onClick={handleDownloadApp} disabled={downloading}>
+            <Download size={15} /> {downloading ? 'Menyiapkan...' : 'Unduh untuk Android'}
+          </button>
+          <span className="absensi__app-note">Versi iOS menyusul lewat TestFlight.</span>
+        </div>
+      </div>
 
       {loadError ? (
         <div className="absensi__card">
@@ -285,7 +360,9 @@ export default function AbsensiPage() {
               )}
               {pageRows.map((row, i) => {
                 const weekend = isWeekend(row.namaHari)
-                const hasCatatan = Boolean((row.catatanMangkir ?? '').trim())
+                const catatanBersih = cleanCatatan(row.catatanMangkir)
+                const hasCatatan = Boolean(catatanBersih)
+                const cutiLabel = !hasCatatan ? cutiLabelFor(row.tanggal, cuti) : null
                 return (
                   <tr key={`${row.tanggal}-${row._seq}`}>
                     {/* Nomor urut mengikuti baris yang tampil, bukan urutan global,
@@ -324,8 +401,16 @@ export default function AbsensiPage() {
                       )}
                     </td>
                     <td className="absensi__col-ket">
-                      {hasCatatan && (
-                        <span className="absensi__badge absensi__badge--yellow">{row.catatanMangkir}</span>
+                      {hasCatatan ? (
+                        <span className="absensi__badge absensi__badge--yellow">{catatanBersih}</span>
+                      ) : cutiLabel ? (
+                        <span className="absensi__badge absensi__badge--green">{cutiLabel}</span>
+                      ) : weekend ? (
+                        <span className="absensi__badge absensi__badge--red">Akhir Pekan</span>
+                      ) : (
+                        isTepatWaktu(row, weekend, hasCatatan) && (
+                          <span className="absensi__badge absensi__badge--green">Tepat waktu</span>
+                        )
                       )}
                     </td>
                   </tr>
