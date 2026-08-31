@@ -9,7 +9,7 @@ import {
   ClipboardList,
   Clock,
   Layers,
-  Map,
+  Map as MapIcon,
   Medal,
   MessageSquarePlus,
   PieChart,
@@ -29,6 +29,14 @@ export default function InovasiBeranda() {
   const base = ctx.base ?? '/my-innovation'
   const peran = ctx.peran ?? 'Karyawan'
   const isApprover = ctx.isApprover === true
+  // Direksi & Kabag 38/39 (globalViewer, lihat OrgResolver.IsGlobalInovasiViewerAsync) yang
+  // BUKAN Manager/GM: tetap dapat dashboard statistik lengkap (bukan tampilan karyawan biasa),
+  // tapi datanya perusahaan-lebar (endpoint /global), bukan cakupan pribadi - sebelumnya
+  // mereka jatuh ke tampilan "Sumbang Gagasan Saya" seperti karyawan biasa yang nyaris
+  // selalu kosong untuk Direksi (2026-08-28, diminta user: "akses seluruh fitur").
+  const globalViewer = ctx.globalViewer === true
+  const showDashboard = isApprover || globalViewer
+  const isExecutive = globalViewer && !isApprover
   const navigate = useNavigate()
   const [rows, setRows] = useState(null)
   const [gagasan, setGagasan] = useState(null)
@@ -37,14 +45,17 @@ export default function InovasiBeranda() {
 
   useEffect(() => {
     let live = true
-    api.listInovasi()
+    const listInovasiP = isExecutive ? api.listInovasiGlobal() : api.listInovasi()
+    const listGagasanP = isExecutive ? api.listGagasanGlobal() : api.listGagasan()
+    listInovasiP
       .then((d) => live && setRows(d.items))
       .catch((e) => { if (live) { if (isEmptyDataError(e)) setRows([]); else setErr(e instanceof ApiError ? e.message : 'Gagal memuat data risalah.') } })
-    api.listGagasan()
+    listGagasanP
       .then((d) => live && setGagasan(d.items))
       .catch((e) => { if (live && isEmptyDataError(e)) setGagasan([]) })
     return () => { live = false }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExecutive])
 
   const stats = useMemo(() => {
     const list = rows ?? []
@@ -58,10 +69,13 @@ export default function InovasiBeranda() {
         ? gList.filter((g) => g.status === 'Disetujui Verifikator' || g.status === 'Disetujui GM Kompartemen Asal').length
         : 0
 
-    // Hitung Sebaran Metodologi
-    const countGio = list.filter((r) => r.jenis === 'GIO').length + gList.filter((g) => g.metodologi === 'GIO' && !list.some((r) => r.idGagasan === g.id)).length
-    const countSs = list.filter((r) => r.jenis === 'SS').length + gList.filter((g) => g.metodologi === 'SS' && !list.some((r) => r.idGagasan === g.id)).length
-    const count5r = list.filter((r) => r.jenis === '5R').length + gList.filter((g) => g.metodologi === '5R' && !list.some((r) => r.idGagasan === g.id)).length
+    // Hitung Sebaran Metodologi. gList (Sumbang Gagasan) yang sudah didaftarkan jadi
+    // risalah (idGugus terisi) dihitung lewat `list` saja - dicek dari idGugus, bukan
+    // dicocokkan ke `list` (GugusRingkasDto tidak pernah membawa idGagasan) supaya tidak
+    // dihitung dobel.
+    const countGio = list.filter((r) => r.jenis === 'GIO').length + gList.filter((g) => g.metodologi === 'GIO' && !g.idGugus).length
+    const countSs = list.filter((r) => r.jenis === 'SS').length + gList.filter((g) => g.metodologi === 'SS' && !g.idGugus).length
+    const count5r = list.filter((r) => r.jenis === '5R').length + gList.filter((g) => g.metodologi === '5R' && !g.idGugus).length
     const countBelum = gList.filter((g) => !g.metodologi && g.status !== 'Ditolak').length
 
     const totalMetodologi = Math.max(1, countGio + countSs + count5r + countBelum)
@@ -169,26 +183,30 @@ export default function InovasiBeranda() {
       <p className="inv__subtitle">
         {isApprover
           ? `Ringkasan statistik data, persetujuan gagasan, dan pemantauan risalah di ${peran === 'GM' ? 'kompartemen' : 'departemen'} Anda.`
-          : 'Ringkasan aktivitas inovasi Anda (Sistem Saran, GIO, dan 5R) pada periode berjalan.'}
+          : isExecutive
+            ? 'Ringkasan statistik data Sumbang Gagasan dan Inovasi (SS/GIO/5R) di seluruh perusahaan, lintas kompartemen dan departemen.'
+            : 'Ringkasan aktivitas inovasi Anda (Sistem Saran, GIO, dan 5R) pada periode berjalan.'}
       </p>
 
       {err && <div className="inv__banner inv__banner--err">{err}</div>}
 
-      {isApprover ? (
+      {showDashboard ? (
         <>
           {/* Ringkasan Indikator Utama */}
           <div className="inv__stats">
-            <div className="inv__stat">
-              <div className="inv__stat-num" style={{ color: stats.pending > 0 ? '#b91c1c' : '#1f4f2c' }}>{stats.pending}</div>
-              <div className="inv__stat-label">Gagasan Perlu Tindakan</div>
-            </div>
+            {!isExecutive && (
+              <div className="inv__stat">
+                <div className="inv__stat-num" style={{ color: stats.pending > 0 ? '#b91c1c' : '#1f4f2c' }}>{stats.pending}</div>
+                <div className="inv__stat-label">Gagasan Perlu Tindakan</div>
+              </div>
+            )}
             <div className="inv__stat">
               <div className="inv__stat-num">{stats.gagasanSaya}</div>
-              <div className="inv__stat-label">Gagasan di Lingkup Anda</div>
+              <div className="inv__stat-label">{isExecutive ? 'Total Gagasan Perusahaan' : 'Gagasan di Lingkup Anda'}</div>
             </div>
             <div className="inv__stat">
               <div className="inv__stat-num">{stats.totalRisalah}</div>
-              <div className="inv__stat-label">Risalah di Lingkup Anda</div>
+              <div className="inv__stat-label">{isExecutive ? 'Total Risalah Perusahaan' : 'Risalah di Lingkup Anda'}</div>
             </div>
             <div className="inv__stat">
               <div className="inv__stat-num">{stats.disahkan}</div>
@@ -200,13 +218,20 @@ export default function InovasiBeranda() {
           <div className="inv__card">
             <div className="inv__section-head"><span className="inv__section-tag">Aksi Cepat</span></div>
             <div className="inv__actions-bar" style={{ justifyContent: 'flex-start' }}>
-              <button type="button" className="inv__btn inv__btn--primary" onClick={() => navigate(`${base}/gagasan`)}>
-                {peran === 'Manager' ? <ClipboardCheck size={16} /> : <CheckSquare size={16} />}
-                {peran === 'Manager' ? ' Verifikasi Gagasan' : ' Persetujuan Gagasan'}
-                {stats.pending > 0 && (
-                  <span style={{ marginLeft: 6, background: 'rgba(255,255,255,0.28)', borderRadius: 999, padding: '1px 8px', fontSize: 12, fontWeight: 700 }}>{stats.pending}</span>
-                )}
-              </button>
+              {!isExecutive && (
+                <button type="button" className="inv__btn inv__btn--primary" onClick={() => navigate(`${base}/gagasan`)}>
+                  {peran === 'Manager' ? <ClipboardCheck size={16} /> : <CheckSquare size={16} />}
+                  {peran === 'Manager' ? ' Verifikasi Gagasan' : ' Persetujuan Gagasan'}
+                  {stats.pending > 0 && (
+                    <span style={{ marginLeft: 6, background: 'rgba(255,255,255,0.28)', borderRadius: 999, padding: '1px 8px', fontSize: 12, fontWeight: 700 }}>{stats.pending}</span>
+                  )}
+                </button>
+              )}
+              {isExecutive && (
+                <button type="button" className="inv__btn inv__btn--primary" onClick={() => navigate(`${base}/global`)}>
+                  <PieChart size={16} /> Ringkasan Data Lengkap <ArrowRight size={14} />
+                </button>
+              )}
               <button type="button" className="inv__btn inv__btn--ghost" onClick={() => navigate(`${base}/daftar`)}>
                 <ClipboardList size={16} /> Daftar Inovasi <ArrowRight size={14} />
               </button>
@@ -214,7 +239,9 @@ export default function InovasiBeranda() {
             <p className="inv__hint" style={{ marginTop: 10, marginBottom: 0 }}>
               {peran === 'Manager'
                 ? 'Sebagai Verifikator, Anda menilai gagasan yang diajukan bawahan: setujui untuk meneruskan ke GM Kompartemen, minta revisi, atau tolak. Risalah bawahan dapat Anda pantau di Daftar Inovasi.'
-                : 'Sebagai GM Kompartemen, Anda menyetujui gagasan yang telah diverifikasi Manager dan menetapkan metodologinya (SS/GIO/5R). Risalah di kompartemen Anda dapat dipantau di Daftar Inovasi.'}
+                : peran === 'GM'
+                  ? 'Sebagai GM Kompartemen, Anda menyetujui gagasan yang telah diverifikasi Manager dan menetapkan metodologinya (SS/GIO/5R). Risalah di kompartemen Anda dapat dipantau di Daftar Inovasi.'
+                  : 'Sebagai Direksi, Anda memantau seluruh Sumbang Gagasan dan Inovasi perusahaan secara read-only, lintas kompartemen dan departemen. Buka Ringkasan Data Lengkap untuk melihat & memfilter tiap data secara rinci, atau Daftar Inovasi untuk membuka detail tiap risalah.'}
             </p>
           </div>
 
@@ -453,7 +480,7 @@ export default function InovasiBeranda() {
               </div>
             </div>
             <div className="inv__shortcut-card" onClick={() => navigate(`${base}/roadmap`)}>
-              <div className="inv__shortcut-icon"><Map size={20} /></div>
+              <div className="inv__shortcut-icon"><MapIcon size={20} /></div>
               <div className="inv__shortcut-info">
                 <h4>Roadmap Inovasi</h4>
                 <p>Peta jalan risalah, nilai akhir & penghargaan</p>

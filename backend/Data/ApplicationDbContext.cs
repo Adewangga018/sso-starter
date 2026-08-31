@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SsoBackend.Models;
+using SsoBackend.Models.Absensi;
 using SsoBackend.Models.Approval;
 using SsoBackend.Models.Aset;
 using SsoBackend.Models.Coaching;
@@ -27,9 +28,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    // Nama DbSet sengaja "AbsensiMobileLog" (bukan "AbsensiLog") supaya tidak rancu dibaca
+    // di samping GcsDbContext.AbsensiLog (fingerprint IoT lobby - tabel & sumber yg beda sama
+    // sekali, lihat Models/Absensi/AbsensiLogEntry.cs).
+    public DbSet<AbsensiLogEntry> AbsensiMobileLog => Set<AbsensiLogEntry>();
+    public DbSet<LokasiKaryawan> LokasiKaryawan => Set<LokasiKaryawan>();
     public DbSet<DinasBukti> DinasBukti => Set<DinasBukti>();
     public DbSet<UmdlAnggota> UmdlAnggota => Set<UmdlAnggota>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<AdminOverride> AdminOverrides => Set<AdminOverride>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
     public DbSet<FeatureAccess> FeatureAccess => Set<FeatureAccess>();
     public DbSet<Tugas> Tugas => Set<Tugas>();
@@ -148,6 +155,52 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => new { x.KodePegawai, x.Tanggal });
         });
 
+        // Log absensi app mobile (schema absensi, db_mygcs) - lihat AbsensiLogEntry.cs. Tabel
+        // dikelola raw SQL (docs/absensi-mobile-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<AbsensiLogEntry>(e =>
+        {
+            e.ToTable("log", "absensi", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.NamaKaryawan).HasColumnName("nama_karyawan");
+            e.Property(x => x.Tanggal).HasColumnName("tanggal");
+            e.Property(x => x.NamaHari).HasColumnName("nama_hari");
+            e.Property(x => x.CheckIn).HasColumnName("check_in");
+            e.Property(x => x.CheckOut).HasColumnName("check_out");
+            e.Property(x => x.Foto).HasColumnName("foto");
+            e.Property(x => x.Lat).HasColumnName("lat").HasPrecision(10, 7);
+            e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(10, 7);
+            e.Property(x => x.Accuracy).HasColumnName("accuracy").HasPrecision(10, 2);
+            e.Property(x => x.Type).HasColumnName("type");
+            e.Property(x => x.Tempat).HasColumnName("tempat");
+            e.Property(x => x.PeringatanAnomali).HasColumnName("peringatan_anomali");
+            e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
+        });
+
+        // Titik absen pribadi karyawan (schema absensi, db_mygcs) - lihat LokasiKaryawan.cs.
+        // Tabel dikelola raw SQL (docs/absensi-mobile-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<LokasiKaryawan>(e =>
+        {
+            e.ToTable("lokasi_karyawan", "absensi", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.NamaKaryawan).HasColumnName("nama_karyawan");
+            e.Property(x => x.Lat).HasColumnName("lat").HasPrecision(10, 7);
+            e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(10, 7);
+            e.Property(x => x.Keterangan).HasColumnName("keterangan");
+            e.Property(x => x.Alamat).HasColumnName("alamat");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Sumber).HasColumnName("sumber");
+            e.Property(x => x.DiajukanOleh).HasColumnName("diajukan_oleh");
+            e.Property(x => x.TglDiajukan).HasColumnName("tgl_diajukan");
+            e.Property(x => x.DiputuskanOleh).HasColumnName("diputuskan_oleh");
+            e.Property(x => x.TglDiputuskan).HasColumnName("tgl_diputuskan");
+            e.Property(x => x.CatatanAdmin).HasColumnName("catatan_admin");
+        });
+
         // Titik geofence kantor/gudang (lihat Location.cs). Dikelola dari halaman admin;
         // PersonalController mencari lokasi Aktif terdekat pada tiap absen.
         builder.Entity<Location>(e =>
@@ -158,6 +211,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Lat).HasPrecision(10, 7);
             e.Property(x => x.Lng).HasPrecision(11, 7);
             e.HasIndex(x => x.Aktif);
+        });
+
+        // Toggle manual Admin SDM/Kepatuhan per karyawan (lihat AdminOverride.cs) - Admin IT
+        // saja yang bisa kelola (AdminOverrideController). Tabel dikelola raw SQL
+        // (docs/admin-override-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<AdminOverride>(e =>
+        {
+            e.ToTable("admin_override", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.IdKaryawan).HasColumnName("id_karyawan");
+            e.Property(x => x.NamaKaryawan).HasColumnName("nama_karyawan");
+            e.Property(x => x.Modul).HasColumnName("modul");
+            e.Property(x => x.Aktif).HasColumnName("aktif");
+            e.Property(x => x.DiberikanOleh).HasColumnName("diberikan_oleh");
+            e.Property(x => x.DiberikanPada).HasColumnName("diberikan_pada");
+            e.Property(x => x.DiperbaruiPada).HasColumnName("diperbarui_pada");
         });
 
         // Akses modul portal (lihat ModuleAccess.cs). Hanya berisi modul yang pernah diubah

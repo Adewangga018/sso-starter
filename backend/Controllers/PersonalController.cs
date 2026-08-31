@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using SsoBackend.Data;
 using SsoBackend.Models;
+using SsoBackend.Models.Absensi;
 using SsoBackend.Models.Dto;
 using SsoBackend.Models.Gcs;
 using SsoBackend.Services;
@@ -31,6 +32,7 @@ public class PersonalController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<PersonalController> _logger;
     private readonly IAuditLogger _audit;
+    private readonly ReverseGeocodingService _geocoding;
 
     public PersonalController(
         GcsDbContext db,
@@ -40,7 +42,8 @@ public class PersonalController : ControllerBase
         IConfiguration config,
         IWebHostEnvironment env,
         ILogger<PersonalController> logger,
-        IAuditLogger audit)
+        IAuditLogger audit,
+        ReverseGeocodingService geocoding)
     {
         _db = db;
         _appDb = appDb;
@@ -48,6 +51,7 @@ public class PersonalController : ControllerBase
         _currentUser = currentUser;
         _config = config;
         _env = env;
+        _geocoding = geocoding;
         _logger = logger;
         _audit = audit;
     }
@@ -485,6 +489,10 @@ public class PersonalController : ControllerBase
     // setelah diambil - jaga2 tanggal tak berimpit persis antar dua sumber.
     private const int AbsensiLimit = 50;
 
+    // Log Absensi di My Personal SENGAJA hanya menampilkan data resmi SDM (fingerprint IoT
+    // lobby, via vw_web_sdm_absensi) - diminta manager 2026-08-27, supaya data lama ini tidak
+    // berubah/tercampur oleh sumber lain. Absen dari app mobile (absensi.log) TIDAK digabung
+    // ke sini lagi (dulu sempat digabung waktu masih fitur selfie web - lihat AbsensiLogEntry.cs).
     [HttpGet("absensi")]
     public async Task<ActionResult<IReadOnlyList<AbsensiDto>>> GetAbsensi()
     {
@@ -494,65 +502,19 @@ public class PersonalController : ControllerBase
             return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
         }
 
-        // Baris resmi dari SDM (read-only; view GCS tidak pernah diubah). Diindeks per tanggal.
-        var sdmRows = await _db.AbsensiLog
+        var logs = await _db.AbsensiLog
             .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
             .OrderByDescending(a => a.Tanggal)
-            .Take(AbsensiLimit * 3)
-            .Select(a => new
-            {
-                a.Tanggal,
+            .Take(AbsensiLimit)
+            .Select(a => new AbsensiDto(
                 a.NamaPegawai,
+                DateOnly.FromDateTime(a.Tanggal),
                 a.NamaHari,
                 a.CheckIn,
                 a.CheckOut,
                 a.CatatanMangkir,
-            })
+                "SDM"))
             .ToListAsync();
-
-        var sdmByDate = sdmRows
-            .GroupBy(a => DateOnly.FromDateTime(a.Tanggal))
-            .ToDictionary(g => g.Key, g => g.First());
-
-        // Hasil absensi kamera (db_mygcs), digabung per tanggal: jam masuk = check-in paling
-        // awal, jam keluar = check-out paling akhir pada hari itu.
-        var kameraRows = await _appDb.Attendances
-            .Where(a => a.KodePegawai == pegawai.ID_KARYAWAN)
-            .OrderByDescending(a => a.Tanggal)
-            .Take(AbsensiLimit * 3)
-            .ToListAsync();
-
-        var kameraByDate = kameraRows
-            .GroupBy(a => a.Tanggal)
-            .ToDictionary(g => g.Key, g => new
-            {
-                NamaPegawai = g.First().NamaPegawai,
-                NamaHari = g.First().NamaHari,
-                CheckIn = g.Where(x => x.CheckIn != null).OrderBy(x => x.CheckIn).Select(x => x.CheckIn).FirstOrDefault(),
-                CheckOut = g.Where(x => x.CheckOut != null).OrderByDescending(x => x.CheckOut).Select(x => x.CheckOut).FirstOrDefault(),
-            });
-
-        // Satu tanggal = satu baris. Kamera = data terbaru (dipakai bila ada, jika kosong pakai
-        // nilai vw). Keterangan mengikuti logika vw (catatan_mangkir); kosong bila tanggal itu
-        // hanya berasal dari kamera. Tidak ada nilai yang ditulis balik ke GCS.
-        var logs = sdmByDate.Keys
-            .Union(kameraByDate.Keys)
-            .Select(d =>
-            {
-                sdmByDate.TryGetValue(d, out var s);
-                kameraByDate.TryGetValue(d, out var k);
-                return new AbsensiDto(
-                    s?.NamaPegawai ?? k?.NamaPegawai ?? pegawai.NAMA_LENGKAP,
-                    d,
-                    s?.NamaHari ?? k?.NamaHari,
-                    k?.CheckIn ?? s?.CheckIn,
-                    k?.CheckOut ?? s?.CheckOut,
-                    s?.CatatanMangkir,
-                    k != null ? "Kamera" : "SDM");
-            })
-            .OrderByDescending(x => x.Tanggal)
-            .Take(AbsensiLimit)
-            .ToList();
 
         return Ok(logs);
     }
@@ -620,6 +582,22 @@ public class PersonalController : ControllerBase
             return BadRequest(new { message = "Lokasi terdeteksi menggunakan aplikasi fake GPS. Nonaktifkan mock location lalu coba lagi." });
         }
 
+        // Lapisan tambahan (2026-08-28) - device_integrity_service.dart di app mobile mendeteksi
+        // root & app fake-GPS/cloning-container (mis. Parallel Space) yang bisa memalsukan lokasi
+        // TANPA memicu IsMockLocation sama sekali, karena lokasi "dipalsukan" di luar jalur
+        // mock-provider resmi Android. Ditolak mentah-mentah sama seperti IsMockLocation.
+        if (dto.IsRooted == true)
+        {
+            _logger.LogWarning("Absensi ditolak (device root terdeteksi): {Nik}", pegawai.ID_KARYAWAN);
+            return BadRequest(new { message = "Perangkat terdeteksi ter-root. Absen tidak dapat dilakukan dari perangkat ini demi keamanan data." });
+        }
+        if (dto.SpoofAppsFound is { Count: > 0 })
+        {
+            _logger.LogWarning("Absensi ditolak (app fake-GPS/cloning terdeteksi: {Apps}): {Nik}",
+                string.Join(", ", dto.SpoofAppsFound), pegawai.ID_KARYAWAN);
+            return BadRequest(new { message = "Terdeteksi aplikasi yang berpotensi memalsukan lokasi/sensor perangkat. Copot aplikasi tersebut lalu coba lagi." });
+        }
+
         // Akurasi GPS device di dalam gedung rutin buruk (puluhan-ratusan meter) walau posisinya
         // benar - jadi TIDAK dipakai untuk menolak absen (dulu sempat begitu, tapi malah
         // memblokir pegawai yang sah sedang berada di kantor). Nilainya tetap disimpan di
@@ -630,27 +608,49 @@ public class PersonalController : ControllerBase
             return BadRequest(new { message = "Akurasi lokasi tidak terbaca. Pastikan GPS aktif lalu coba lagi." });
         }
 
-        // Geofence: hanya boleh absen dalam radius salah satu lokasi Aktif (kantor/gudang).
-        // Divalidasi ulang di server agar tidak bisa ditembus dari klien.
-        var lokasiAktif = await _appDb.Locations.Where(l => l.Aktif).ToListAsync();
-        if (lokasiAktif.Count == 0)
+        // Geofence: titik pribadi (Disetujui Admin SDM, "Kelola Lokasi Absensi") diprioritaskan
+        // kalau ada - dipakai karyawan bengkel/gudang/sopir/dll yg tidak beraktivitas di
+        // kantor. Selama belum ada/belum Disetujui, jatuh ke default lokasi Aktif (Kantor
+        // Pusat dkk, dikelola Admin IT) seperti semula. Radius SAMA (AbsensiRadius.StandarMeter)
+        // di kedua jalur - diminta user 2026-08-27 ("radius tetap saja").
+        var lokasiPribadi = await _appDb.LokasiKaryawan
+            .FirstOrDefaultAsync(l => l.IdKaryawan == pegawai.ID_KARYAWAN && l.Status == "Disetujui");
+
+        string namaTitik;
+        double jarakKeTitik;
+        double radiusTitik;
+        if (lokasiPribadi is not null)
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            namaTitik = string.IsNullOrWhiteSpace(lokasiPribadi.Keterangan) ? "Titik Absen Pribadi" : lokasiPribadi.Keterangan;
+            jarakKeTitik = DistanceMeters((double)dto.Lat, (double)dto.Lng, (double)lokasiPribadi.Lat, (double)lokasiPribadi.Lng);
+            radiusTitik = AbsensiRadius.StandarMeter;
+        }
+        else
+        {
+            // Divalidasi ulang di server agar tidak bisa ditembus dari klien.
+            var lokasiAktif = await _appDb.Locations.Where(l => l.Aktif).ToListAsync();
+            if (lokasiAktif.Count == 0)
             {
-                message = "Konfigurasi lokasi kantor belum tersedia. Hubungi admin IT.",
-            });
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    message = "Konfigurasi lokasi kantor belum tersedia. Hubungi admin IT.",
+                });
+            }
+
+            var terdekat = lokasiAktif
+                .Select(l => new { Lokasi = l, Jarak = DistanceMeters((double)dto.Lat, (double)dto.Lng, (double)l.Lat, (double)l.Lng) })
+                .OrderBy(x => x.Jarak)
+                .First();
+            namaTitik = terdekat.Lokasi.Nama;
+            jarakKeTitik = terdekat.Jarak;
+            radiusTitik = AbsensiRadius.StandarMeter;
         }
 
-        var terdekat = lokasiAktif
-            .Select(l => new { Lokasi = l, Jarak = DistanceMeters((double)dto.Lat, (double)dto.Lng, (double)l.Lat, (double)l.Lng) })
-            .OrderBy(x => x.Jarak)
-            .First();
-
-        if (terdekat.Jarak > terdekat.Lokasi.RadiusMeters)
+        if (jarakKeTitik > radiusTitik)
         {
             return BadRequest(new
             {
-                message = $"Anda berada di luar radius {terdekat.Lokasi.Nama} (~{terdekat.Jarak:0} m). Absensi hanya dapat dilakukan dalam radius {terdekat.Lokasi.RadiusMeters:0} meter.",
+                message = $"Anda berada di luar radius {namaTitik} (~{jarakKeTitik:0} m). Absensi hanya dapat dilakukan dalam radius {radiusTitik:0} meter.",
             });
         }
 
@@ -672,14 +672,14 @@ public class PersonalController : ControllerBase
         // Satu tombol: sistem menentukan masuk/keluar dari status absensi hari ini, bukan dari
         // jam. Belum ada absen masuk hari itu -> tap ini dihitung "masuk" (termasuk yang telat).
         // Sudah absen masuk -> tap berikutnya dihitung "keluar". Tidak mungkin "keluar" tercatat
-        // sebelum "masuk". "Sudah absen masuk" dicek di KEDUA sumber - kamera (db_mygcs.Attendances)
-        // maupun fingerprint/SDM (GCS.vw_web_sdm_absensi via AbsensiLog) - supaya check-in fingerprint
-        // pagi ini tidak diabaikan lalu tercatat dobel sebagai "masuk" lagi di sini.
-        var startOfDayWib = tanggalWib.ToDateTime(TimeOnly.MinValue);
-        var endOfDayWib = startOfDayWib.AddDays(1);
-        var sudahAbsenMasuk =
-            await _appDb.Attendances.AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null) ||
-            await _db.AbsensiLog.AnyAsync(a => a.KodePegawai == pegawai.ID_KARYAWAN && a.Tanggal >= startOfDayWib && a.Tanggal < endOfDayWib && a.CheckIn != null);
+        // sebelum "masuk". "Sudah absen masuk" HANYA dicek dari absensi.log (app mobile) sendiri -
+        // TIDAK lagi ikut mengintip fingerprint/SDM (GCS.vw_web_sdm_absensi). Dulu sempat begitu
+        // waktu app & fingerprint masih tergabung di satu Log Absensi, tapi sejak keduanya
+        // dipisah jadi dua sistem independen (2026-08-27), app fingerprint pagi tidak boleh lagi
+        // membuat tap PERTAMA di app otomatis dianggap "keluar" - membingungkan karyawan yang
+        // sudah fingerprint tapi belum pernah absen lewat app hari itu.
+        var sudahAbsenMasuk = await _appDb.AbsensiMobileLog
+            .AnyAsync(a => a.IdKaryawan == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null);
         var type = sudahAbsenMasuk ? "out" : "in";
 
         // Foto (sudah bertempel timestamp dari klien) disimpan sebagai file di share EASy;
@@ -713,36 +713,172 @@ public class PersonalController : ControllerBase
             });
         }
 
-        var row = new Attendance
+        // Anomali audit server-side (TIDAK memblokir - sama pola dgn Accuracy, keputusan
+        // tindak lanjut ada di Admin SDM) - dua sinyal saling melengkapi, TIDAK bisa
+        // dibohongi client manapun (device root/APK dimodifikasi/dsb) karena murni dihitung
+        // dari riwayat absen tersimpan di server, bukan dari apa yg dilaporkan app:
+        //
+        // 1) "Impossible travel" - jarak & selisih waktu dari absen SEBELUMNYA (tanggal
+        //    berapa pun) menyiratkan kecepatan mustahil (>150 km/jam). Menangkap pelaku yg
+        //    berpindah-pindah titik palsu.
+        // 2) "Koordinat identik persis" - GPS asli nyaris tidak pernah menghasilkan koordinat
+        //    SAMA PERSIS (presisi 7 desimal, ~1 cm) dari sesi berbeda (selalu ada jitter
+        //    alami). Kalau identik bit-per-bit dgn submission SEBELUMNYA, itu tanda kuat
+        //    lokasinya di-replay dari nilai yg di-hardcode alat fake-GPS - menangkap pola
+        //    KEBALIKAN dari (1): pelaku yg SELALU memalsukan ke titik yg SAMA (mis. selalu
+        //    "absen dari kantor" walau sebenarnya duduk di rumah, tanpa pernah pindah sama
+        //    sekali - diminta user 2026-08-28, (1) saja tidak menangkap kasus ini).
+        const double kecepatanMustahilKmj = 150.0;
+        var peringatan = new List<string>();
+        var absenSebelumnya = await _appDb.AbsensiMobileLog
+            .Where(a => a.IdKaryawan == pegawai.ID_KARYAWAN)
+            .OrderByDescending(a => a.DibuatPada)
+            .FirstOrDefaultAsync();
+        if (absenSebelumnya is not null)
         {
-            KodePegawai = pegawai.ID_KARYAWAN ?? string.Empty,
-            NamaPegawai = pegawai.NAMA_LENGKAP,
+            var jarakKm = DistanceMeters((double)dto.Lat, (double)dto.Lng, (double)absenSebelumnya.Lat, (double)absenSebelumnya.Lng) / 1000.0;
+            var selisihJam = (nowUtc - absenSebelumnya.DibuatPada).TotalHours;
+            if (selisihJam > 0.0166 && jarakKm > 5) // abaikan selisih <1 menit / jarak <5km (noise GPS wajar)
+            {
+                var kecepatanKmj = jarakKm / selisihJam;
+                if (kecepatanKmj > kecepatanMustahilKmj)
+                {
+                    peringatan.Add(
+                        $"Jarak {jarakKm:0} km dari absen sebelumnya ({absenSebelumnya.DibuatPada.AddHours(7):HH:mm} WIB) " +
+                        $"dalam {(selisihJam < 1 ? $"{selisihJam * 60:0} menit" : $"{selisihJam:0.0} jam")} - ~{kecepatanKmj:0} km/jam.");
+                }
+            }
+
+            if (absenSebelumnya.Lat == dto.Lat && absenSebelumnya.Lng == dto.Lng)
+            {
+                peringatan.Add(
+                    $"Koordinat identik persis dgn absen sebelumnya ({absenSebelumnya.DibuatPada.AddHours(7):dd/MM HH:mm} WIB) " +
+                    "sampai presisi 7 desimal - GPS asli nyaris tidak pernah menghasilkan ini dua kali.");
+            }
+        }
+        var peringatanAnomali = peringatan.Count == 0 ? null : string.Join(" ", peringatan);
+        if (peringatanAnomali is not null)
+        {
+            _logger.LogWarning("Absensi: anomali terdeteksi ({Peringatan}): {Nik}", peringatanAnomali, pegawai.ID_KARYAWAN);
+        }
+
+        var row = new AbsensiLogEntry
+        {
+            IdKaryawan = pegawai.ID_KARYAWAN ?? string.Empty,
+            NamaKaryawan = pegawai.NAMA_LENGKAP,
             Tanggal = DateOnly.FromDateTime(nowWib),
             NamaHari = HariIndonesia(nowWib.DayOfWeek),
             CheckIn = type == "in" ? jam : null,
             CheckOut = type == "out" ? jam : null,
-            CatatanMangkir = null,
             Foto = "attendances/" + fileName,
             Lat = dto.Lat,
             Lng = dto.Lng,
             Accuracy = dto.Accuracy,
             Type = type,
-            Tempat = dto.Tempat,
-            CreatedAt = nowUtc,
-            UpdatedAt = nowUtc,
+            Tempat = namaTitik,
+            PeringatanAnomali = peringatanAnomali,
+            DibuatPada = nowUtc,
+            DiperbaruiPada = nowUtc,
         };
 
-        _appDb.Attendances.Add(row);
+        _appDb.AbsensiMobileLog.Add(row);
         await _appDb.SaveChangesAsync();
 
         return Ok(new AbsensiDto(
-            row.NamaPegawai,
+            row.NamaKaryawan,
             row.Tanggal,
             row.NamaHari,
             row.CheckIn,
             row.CheckOut,
-            row.CatatanMangkir,
-            "Kamera"));
+            null,
+            "Mobile"));
+    }
+
+    // Status absen HARI INI dari absensi.log (app mobile) - dipakai layar beranda app,
+    // TERPISAH dari GetAbsensi() di atas (yang sengaja cuma menampilkan data SDM lama).
+    [HttpGet("absensi/hari-ini")]
+    public async Task<ActionResult<AbsensiDto?>> GetAbsensiHariIni()
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null)
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+        }
+
+        var nowWib = DateTime.UtcNow.AddHours(7);
+        var tanggalWib = DateOnly.FromDateTime(nowWib);
+
+        var rows = await _appDb.AbsensiMobileLog
+            .Where(a => a.IdKaryawan == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib)
+            .ToListAsync();
+
+        if (rows.Count == 0) return Ok(null);
+
+        return Ok(new AbsensiDto(
+            rows[0].NamaKaryawan,
+            tanggalWib,
+            rows[0].NamaHari,
+            rows.Where(r => r.CheckIn != null).OrderBy(r => r.CheckIn).Select(r => r.CheckIn).FirstOrDefault(),
+            rows.Where(r => r.CheckOut != null).OrderByDescending(r => r.CheckOut).Select(r => r.CheckOut).FirstOrDefault(),
+            null,
+            "Mobile"));
+    }
+
+    // ---- Titik absen pribadi saya (bengkel/gudang/sopir/dll) ----
+
+    [HttpGet("absensi/lokasi")]
+    public async Task<ActionResult<LokasiKaryawanSayaDto>> GetLokasiSaya()
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null)
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+        }
+
+        var lok = await _appDb.LokasiKaryawan.FirstOrDefaultAsync(l => l.IdKaryawan == pegawai.ID_KARYAWAN);
+        if (lok is null)
+        {
+            return Ok(new LokasiKaryawanSayaDto(null, null, null, null, null, null, null, null, AbsensiRadius.StandarMeter));
+        }
+
+        return Ok(new LokasiKaryawanSayaDto(
+            lok.Status, lok.Lat, lok.Lng, lok.Keterangan, lok.Alamat, lok.CatatanAdmin,
+            lok.TglDiajukan, lok.TglDiputuskan, AbsensiRadius.StandarMeter));
+    }
+
+    // Mengajukan/mengajukan-ulang titik absen pribadi - selalu jadi status Menunggu (menimpa
+    // baris lama, satu titik aktif per karyawan) sampai di-Setujui/Tolak Admin SDM.
+    [HttpPost("absensi/lokasi")]
+    public async Task<IActionResult> AjukanLokasi([FromBody] AjukanLokasiRequest req)
+    {
+        var (_, pegawai) = await _currentUser.ResolveAsync(User);
+        if (pegawai is null || string.IsNullOrWhiteSpace(pegawai.ID_KARYAWAN))
+        {
+            return NotFound(new { message = "Data pegawai tidak ditemukan untuk akun ini." });
+        }
+
+        var lok = await _appDb.LokasiKaryawan.FirstOrDefaultAsync(l => l.IdKaryawan == pegawai.ID_KARYAWAN);
+        var now = DateTime.UtcNow;
+        if (lok is null)
+        {
+            lok = new LokasiKaryawan { IdKaryawan = pegawai.ID_KARYAWAN };
+            _appDb.LokasiKaryawan.Add(lok);
+        }
+        lok.NamaKaryawan = pegawai.NAMA_LENGKAP;
+        lok.Lat = req.Lat;
+        lok.Lng = req.Lng;
+        lok.Keterangan = req.Keterangan;
+        lok.Alamat = await _geocoding.ResolveAsync(req.Lat, req.Lng);
+        lok.Status = "Menunggu";
+        lok.Sumber = "Karyawan";
+        lok.DiajukanOleh = pegawai.ID_KARYAWAN;
+        lok.TglDiajukan = now;
+        lok.DiputuskanOleh = null;
+        lok.TglDiputuskan = null;
+        lok.CatatanAdmin = null;
+
+        await _appDb.SaveChangesAsync();
+        return NoContent();
     }
 
     // Streams the employee's OWN document. The file physically lives on the WCP-GCS share;

@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
+import '../services/device_integrity_service.dart';
 import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 
@@ -69,12 +70,31 @@ class _AbsensiScreenState extends State<AbsensiScreen> {
         return;
       }
 
+      final integrity = await DeviceIntegrityService.instance.check();
+      if (integrity.isRooted) {
+        setState(() {
+          _step = _Step.error;
+          _error = 'Perangkat terdeteksi ter-root. Absen tidak dapat dilakukan dari perangkat ini demi keamanan data.';
+        });
+        return;
+      }
+      if (integrity.spoofAppsFound.isNotEmpty) {
+        setState(() {
+          _step = _Step.error;
+          _error = 'Terdeteksi aplikasi yang berpotensi memalsukan lokasi/sensor perangkat.\n'
+              'Copot aplikasi tersebut lalu coba lagi.';
+        });
+        return;
+      }
+
       final result = await ApiClient.instance.submitAbsensi(
         fotoDataUrl: dataUrl,
         lat: location.lat,
         lng: location.lng,
         accuracy: location.accuracy,
         isMockLocation: location.isMocked,
+        isRooted: integrity.isRooted,
+        spoofAppsFound: integrity.spoofAppsFound,
       );
 
       if (!mounted) return;

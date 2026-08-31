@@ -11,6 +11,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'absensi_screen.dart';
+import 'lokasi_saya_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,22 +46,16 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final results = await Future.wait([
         ApiClient.instance.getProfile(),
-        ApiClient.instance.getAbsensi(),
+        ApiClient.instance.getAbsensiHariIni(),
         ApiClient.instance.getLocations(),
       ]);
       final profile = results[0] as PersonalProfile;
-      final absensi = results[1] as List<AbsensiEntry>;
+      final today = results[1] as AbsensiEntry?;
       final locations = results[2] as List<OfficeLocation>;
 
       Uint8List? photo;
       if (profile.hasPhoto) {
         try { photo = await ApiClient.instance.getProfilePhoto(); } catch (_) { photo = null; }
-      }
-
-      final now = DateTime.now();
-      AbsensiEntry? today;
-      for (final e in absensi) {
-        if (e.isSameDate(now)) { today = e; break; }
       }
 
       if (!mounted) return;
@@ -122,12 +117,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == true) _loadAll();
   }
 
+  void _goLokasiSaya() {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LokasiSayaScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MyGCS Absensi'),
         actions: [
+          IconButton(tooltip: 'Titik Absen Saya', icon: const Icon(Icons.edit_location_alt_outlined), onPressed: _goLokasiSaya),
           IconButton(tooltip: 'Keluar', icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),

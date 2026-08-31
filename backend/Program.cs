@@ -60,6 +60,14 @@ builder.Services.AddScoped<GajiService>();
 builder.Services.AddScoped<OrgStrukturService>();
 builder.Services.AddScoped<OrgVersiService>();
 builder.Services.AddScoped<DinasBuktiService>();
+// Reverse-geocoding titik absen pribadi (OpenStreetMap Nominatim, gratis) - lihat
+// ReverseGeocodingService.cs. User-Agent wajib diisi jelas oleh kebijakan pemakaian Nominatim.
+builder.Services.AddHttpClient<ReverseGeocodingService>(client =>
+{
+    client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("MyGCS-Absensi/1.0 (+https://my.gcs-gresik.com)");
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
 // Hak "Admin Modul SDM" (berbasis grading).
 builder.Services.AddScoped<ModuleAccessService>();
 builder.Services.AddScoped<KpiService>();

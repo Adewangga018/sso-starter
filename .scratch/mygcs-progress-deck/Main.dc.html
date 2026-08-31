@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  a { color: #f4ae46; }
+  a:hover { color: #daa628; }
+</style>
+</helmet>
+
+<div style="width:1280px; height:720px; background:#0f261f; position:relative; overflow:hidden; font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:#ffffff;">
+
+  <!-- Decorative frame lines -->
+  <div style="position:absolute; inset:56px; border:1px solid rgba(244,174,70,0.35);"></div>
+  <div style="position:absolute; top:0; right:0; width:420px; height:420px; background:radial-gradient(circle at top right, rgba(244,174,70,0.16), transparent 70%);"></div>
+
+  <!-- Top row: logo + kicker -->
+  <div style="position:absolute; top:88px; left:96px; right:96px; display:flex; align-items:center; justify-content:space-between;">
+    <img src="logo-gcs.png" alt="Logo GCS" style="height:46px; width:auto; display:block;">
+    <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:13px; letter-spacing:0.28em; color:#f4ae46;">LAPORAN PROGRESS</div>
+  </div>
+
+  <!-- Main title block -->
+  <div style="position:absolute; left:96px; right:96px; top:270px;">
+    <div style="font-family:'Montserrat',sans-serif; font-weight:900; font-size:96px; line-height:0.98; letter-spacing:-0.01em; color:#ffffff;">MyGCS</div>
+    <div style="margin-top:22px; width:72px; height:4px; background:#f4ae46;"></div>
+    <div style="margin-top:26px; font-size:22px; font-weight:500; color:rgba(255,255,255,0.82); max-width:760px; line-height:1.5;">
+      Sistem Single Sign-On &amp; Super App Operasional<br>PT Gresik Cipta Sejahtera
+    </div>
+  </div>
+
+  <!-- Bottom meta -->
+  <div style="position:absolute; left:96px; right:96px; bottom:80px; display:flex; align-items:flex-end; justify-content:space-between;">
+    <div style="font-size:15px; color:rgba(255,255,255,0.6);">Disampaikan kepada Direksi</div>
+    <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:17px; color:#f4ae46;">Senin, 31 Agustus 2026</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -5,6 +5,7 @@ import { api, ApiError } from '../../lib/api'
 import { jenisLabel, statusClass } from './statusClass'
 import { METODOLOGI, cocokCari } from './rekapUtils'
 import { BatangHorizontal } from './InvCharts'
+import { DetailModal as GagasanDetailModal } from './GagasanList'
 import './inovasi.css'
 
 const NAMA_BULAN = [
@@ -41,6 +42,7 @@ export default function InovasiGlobalOverview() {
   const [gagasan, setGagasan] = useState(null)
   const [inovasi, setInovasi] = useState(null)
   const [err, setErr] = useState('')
+  const [detailGagasanId, setDetailGagasanId] = useState(null)
 
   // Filter Bulan, Tahun, Departemen & Kompartemen berlaku global (statistik, grafik, dan
   // kedua tabel di bawah mengikutinya), di luar filter status/metodologi/pencarian
@@ -55,18 +57,20 @@ export default function InovasiGlobalOverview() {
   const [searchInovasi, setSearchInovasi] = useState('')
   const [statusInovasi, setStatusInovasi] = useState('')
 
-  useEffect(() => {
-    Promise.all([api.listGagasanGlobal(), api.listInovasiGlobal()])
+  function load() {
+    return Promise.all([api.listGagasanGlobal(), api.listInovasiGlobal()])
       .then(([g, i]) => { setGagasan(g.items); setInovasi(i.items) })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 403) {
-          setErr('Menu ini khusus Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/Pengembangan SDM dan Inovasi.')
+          setErr('Menu ini khusus Kepala Bagian Sekretariat/Umum & Kepala Bagian Administrasi/Pengembangan SDM dan Inovasi serta Direksi.')
         } else {
           setErr(e instanceof ApiError ? e.message : 'Gagal memuat data.')
         }
         setGagasan([]); setInovasi([])
       })
-  }, [])
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [])
 
   const tahunOpsi = useMemo(() => {
     const years = new Set()
@@ -237,13 +241,13 @@ export default function InovasiGlobalOverview() {
               <h3 className="inv__chart-title">Sumbang Gagasan per Departemen</h3>
               {gagasanPerDept.length === 0
                 ? <p className="inv__subtitle">Belum ada data pada filter ini.</p>
-                : <BatangHorizontal data={gagasanPerDept} />}
+                : <BatangHorizontal data={gagasanPerDept} onBarClick={(d) => setFilterDept(d.label === 'Lainnya' ? '' : d.label)} />}
             </div>
             <div className="inv__chart-card">
               <h3 className="inv__chart-title">Sumbang Gagasan per Kompartemen</h3>
               {gagasanPerKomp.length === 0
                 ? <p className="inv__subtitle">Belum ada data pada filter ini.</p>
-                : <BatangHorizontal data={gagasanPerKomp} />}
+                : <BatangHorizontal data={gagasanPerKomp} onBarClick={(d) => setFilterKomp(d.label === 'Lainnya' ? '' : d.label)} />}
             </div>
           </div>
           <div className="inv__chart-row" style={{ marginTop: 20 }}>
@@ -251,13 +255,13 @@ export default function InovasiGlobalOverview() {
               <h3 className="inv__chart-title">Inovasi per Departemen</h3>
               {inovasiPerDept.length === 0
                 ? <p className="inv__subtitle">Belum ada data pada filter ini.</p>
-                : <BatangHorizontal data={inovasiPerDept} />}
+                : <BatangHorizontal data={inovasiPerDept} onBarClick={(d) => setFilterDept(d.label === 'Lainnya' ? '' : d.label)} />}
             </div>
             <div className="inv__chart-card">
               <h3 className="inv__chart-title">Inovasi per Kompartemen</h3>
               {inovasiPerKomp.length === 0
                 ? <p className="inv__subtitle">Belum ada data pada filter ini.</p>
-                : <BatangHorizontal data={inovasiPerKomp} />}
+                : <BatangHorizontal data={inovasiPerKomp} onBarClick={(d) => setFilterKomp(d.label === 'Lainnya' ? '' : d.label)} />}
             </div>
           </div>
 
@@ -287,7 +291,7 @@ export default function InovasiGlobalOverview() {
                   <tr><td className="inv__no-data" colSpan={6}>Belum ada gagasan pada filter ini.</td></tr>
                 )}
                 {filteredGagasan.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => setDetailGagasanId(r.id)}>
                     <td data-label="Status"><span className={`inv__status ${statusClass(r.status)}`}>{r.status}</span></td>
                     <td data-label="No. Registrasi">{r.noRegistrasi ?? '-'}</td>
                     <td data-label="Judul" className="inv__cell--wide">{r.judul}</td>
@@ -340,6 +344,15 @@ export default function InovasiGlobalOverview() {
             </table>
           </div>
         </>
+      )}
+
+      {detailGagasanId && (
+        <GagasanDetailModal
+          id={detailGagasanId}
+          onClose={() => setDetailGagasanId(null)}
+          onChanged={load}
+          navigate={navigate}
+        />
       )}
     </div>
   )

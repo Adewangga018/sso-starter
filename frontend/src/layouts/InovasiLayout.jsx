@@ -138,13 +138,18 @@ export default function InovasiLayout() {
   // approver/GM yang mungkin tidak punya baris MST_PEGAWAI lengkap) dan bekerja
   // cukup dari klaim NIK - berbeda dengan My Personal yang butuh profil lengkap.
   const isApprover = peran?.bolehApprove === true
+  const globalViewer = peran?.globalViewer === true
 
   return (
     <div className="app-shell">
       <Sidebar
         logoSrc="/LOGO GCS.png"
         title="My Innovation"
-        subtitle={isApprover ? `${peran.peran} - ${peran.peran === 'Manager' ? 'Verifikasi' : 'Persetujuan'}` : 'SS / GIO / 5R'}
+        subtitle={
+          isApprover ? `${peran.peran} - ${peran.peran === 'Manager' ? 'Verifikasi' : 'Persetujuan'}`
+            : globalViewer ? 'Direksi - Ringkasan Perusahaan'
+            : 'SS / GIO / 5R'
+        }
         sections={buildSections(peran?.peran ?? 'Karyawan', isJuri, peran?.globalViewer === true)}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapsed}
@@ -163,7 +168,7 @@ export default function InovasiLayout() {
           onLogout={logout}
         />
         <div className="app-shell__content">
-          <Outlet context={{ base: BASE, summary, peran: peran?.peran ?? 'Karyawan', isApprover }} />
+          <Outlet context={{ base: BASE, summary, peran: peran?.peran ?? 'Karyawan', isApprover, globalViewer }} />
         </div>
       </div>
     </div>

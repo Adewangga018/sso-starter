@@ -221,7 +221,7 @@ function CreateModal({ onClose, onDone }) {
 }
 
 // ---------- Detail + Approval + Daftar ----------
-function DetailModal({ id, onClose, onChanged, navigate }) {
+export function DetailModal({ id, onClose, onChanged, navigate }) {
   const dialog = useDialog()
   const [g, setG] = useState(null)
   const [err, setErr] = useState('')

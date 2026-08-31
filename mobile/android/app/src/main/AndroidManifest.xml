@@ -45,5 +45,38 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- Deteksi app fake-GPS/cloning-container (lihat MainActivity.kt, spoofPackages) -
+             wajib dideklarasikan di sini agar PackageManager.getPackageInfo() bisa melihat
+             paket-paket ini di Android 11+ (package visibility) tanpa perlu izin
+             QUERY_ALL_PACKAGES. -->
+        <package android:name="com.lexa.fakegps"/>
+        <package android:name="com.incorporateapps.fakegps.fre"/>
+        <package android:name="com.blogspot.newapphorizons.fakegps"/>
+        <package android:name="com.fly.gps"/>
+        <package android:name="com.gsmartstudio.fakegps"/>
+        <package android:name="com.theappninjas.fakegpsjoystick"/>
+        <package android:name="com.jmelabs.fakegps"/>
+        <package android:name="com.evezzon.mockgps"/>
+        <package android:name="com.rosteam.gpsemulator"/>
+        <package android:name="com.lexa.fakegps.pro"/>
+        <package android:name="com.rechild.advancedtaskkiller.fakegps"/>
+        <package android:name="com.hopto.tonyw.fakegps"/>
+        <package android:name="com.franco.simplemockapp"/>
+        <package android:name="app.greyshirts.fakegps"/>
+        <package android:name="com.andropermission.fakegps"/>
+        <package android:name="com.lbe.parallel.intl"/>
+        <package android:name="com.lbe.parallel"/>
+        <package android:name="com.excelliance.dualaid"/>
+        <package android:name="com.jiubang.dm.pro"/>
+        <package android:name="com.parallel.space.pro"/>
+        <package android:name="com.parallel.space.lite"/>
+        <package android:name="com.dual.space.parallel.app"/>
+        <package android:name="com.apps.appcloner"/>
+        <package android:name="com.android.vxp"/>
+        <package android:name="io.va.exposed"/>
+        <package android:name="org.meowcat.edxposed.manager"/>
+        <package android:name="de.robv.android.xposed.installer"/>
+        <package android:name="com.topjohnwu.magisk"/>
     </queries>
 </manifest>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+</helmet>
+
+<div style="width:1280px; height:720px; background:#f4f5f4; position:relative; overflow:hidden; font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:#3e3430;">
+
+  <div style="height:150px; background:#0f261f; display:flex; align-items:center; padding:0 96px; justify-content:space-between;">
+    <div>
+      <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:13px; letter-spacing:0.24em; color:#f4ae46;">04 &nbsp;·&nbsp; ASET</div>
+      <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:34px; color:#ffffff; margin-top:6px;">My Asset</div>
+    </div>
+    <img src="logo-gcs.png" alt="Logo GCS" style="height:40px; width:auto;">
+  </div>
+
+  <div style="padding:40px 96px 0 96px;">
+    <div style="font-size:15px; color:rgba(62,52,48,0.65); max-width:760px; margin-bottom:26px;">
+      Mengelola siklus hidup aset perusahaan dari pendaftaran, penomoran, hingga serah-terima dan penghapusan.
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:18px;">
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"></rect><rect x="13" y="4" width="7" height="7" rx="1"></rect><rect x="4" y="13" width="7" height="7" rx="1"></rect><rect x="13" y="13" width="7" height="7" rx="1"></rect></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Inventaris Aset</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Daftar induk seluruh aset perusahaan dan pendaftaran aset baru</div>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"></rect><rect x="14" y="4" width="6" height="6"></rect><rect x="4" y="14" width="6" height="6"></rect><path d="M14 14h2.5v2.5H14zM17.5 14H20M14 17.5h6M17.5 17.5V20"></path></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Nomor Aset &amp; QR</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Penomoran internal dengan label QR siap cetak untuk pelacakan fisik</div>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1"></rect><path d="M9 8h6M9 12h6M9 16h3.5"></path><circle cx="17" cy="17.5" r="3.2" fill="#f4ae46" stroke="none"></circle><path d="M15.6 17.5l1 1 1.9-2" stroke="#0f261f" stroke-width="1.4"></path></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Dokumen Jatuh Tempo</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Pemantauan izin/garansi aset yang mendekati masa berakhir</div>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"></path><path d="M20 4v4h-4"></path></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Stock Opname</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Pencocokan fisik berkala dengan catatan rinci per lokasi</div>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="2.8"></circle><path d="M3.8 19c.8-3.1 2.7-4.6 5.2-4.6s4.4 1.5 5.2 4.6"></path><path d="M16 4.5c1.6.3 2.8 1.7 2.8 3.4S17.6 11 16 11.3"></path><path d="M15.2 14.6c2 .5 3.3 2 3.9 4.4"></path></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Riwayat PIC</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Jejak serah-terima penanggung jawab aset dari waktu ke waktu</div>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid rgba(15,38,31,0.1); padding:20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6c3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3.2v5c0 4.7-3 8.9-7 10-4-1.1-7-5.3-7-10v-5Z"></path><path d="M9.3 12l1.9 1.9 3.5-3.9"></path></svg>
+        <div style="font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; color:#0f261f; margin-top:12px;">Clearance Aset</div>
+        <div style="font-size:12.5px; color:rgba(62,52,48,0.6); margin-top:5px; line-height:1.5;">Proses pembebasan aset saat karyawan keluar/mutasi</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="position:absolute; bottom:32px; right:96px; font-size:13px; color:rgba(62,52,48,0.4); font-weight:600;">06</div>
+</div>
+</x-dc>
+</body>
+</html>

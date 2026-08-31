@@ -456,6 +456,21 @@ export const api = {
   setPgAkselerasi: (idKaryawan, payload) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'PUT', body: JSON.stringify(payload ?? {}) }),
   hapusPgAkselerasi: (idKaryawan) => apiFetch(`/api/org/person-grade/${encodeURIComponent(idKaryawan)}/akselerasi`, { method: 'DELETE' }),
 
+  // Kelola Lokasi Absensi (Admin SDM) - titik absen pribadi karyawan (bengkel/gudang/sopir/dll).
+  getAbsensiLokasiList: () => apiFetch('/api/org/absensi-lokasi'),
+  putusanAbsensiLokasi: (id, payload) => apiFetch(`/api/org/absensi-lokasi/${id}/putusan`, { method: 'POST', body: JSON.stringify(payload) }),
+  tetapkanAbsensiLokasi: (payload) => apiFetch('/api/org/absensi-lokasi', { method: 'POST', body: JSON.stringify(payload) }),
+  hapusAbsensiLokasi: (id) => apiFetch(`/api/org/absensi-lokasi/${id}`, { method: 'DELETE' }),
+  cariPegawaiAbsensiLokasi: (q) => apiFetch(`/api/org/absensi-lokasi/cari-pegawai?q=${encodeURIComponent(q ?? '')}`),
+
+  // Audit Log Absensi Mobile (Admin SDM, Bearer)
+  listAbsensiLogAdmin: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== '' && v != null),
+    ).toString()
+    return apiFetch('/api/org/absensi-log' + (q ? `?${q}` : ''))
+  },
+
   // Riwayat Versi Struktur Organisasi terikat SK direksi (diminta 2026-08-24) -
   // lihat OrgVersiService. Minor/Major dipilih admin sendiri saat menerbitkan.
   getOrgVersiList: () => apiFetch('/api/org/versi'),
@@ -703,6 +718,14 @@ export const api = {
   updateLocation: (id, payload) =>
     apiFetch(`/api/admin/locations/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteLocation: (id) => apiFetch(`/api/admin/locations/${id}`, { method: 'DELETE' }),
+
+  // admin: toggle manual Admin SDM/Admin Kepatuhan per karyawan (Admin IT, Bearer)
+  getAdminOverrides: () => apiFetch('/api/admin/overrides'),
+  cariPegawaiAdminOverride: (q) => apiFetch(`/api/admin/overrides/cari-pegawai?q=${encodeURIComponent(q ?? '')}`),
+  buatAdminOverride: (payload) => apiFetch('/api/admin/overrides', { method: 'POST', body: JSON.stringify(payload) }),
+  setAktifAdminOverride: (id, aktif) =>
+    apiFetch(`/api/admin/overrides/${id}/aktif`, { method: 'PUT', body: JSON.stringify({ aktif }) }),
+  hapusAdminOverride: (id) => apiFetch(`/api/admin/overrides/${id}`, { method: 'DELETE' }),
 
   // audit (Admin, Bearer)
   getAuditLogs: (params = {}) => {

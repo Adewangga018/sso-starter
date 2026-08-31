@@ -20,10 +20,12 @@ public record UnitDenganInduk(int Id, string Nama, string? NamaInduk);
 public class OrgResolver
 {
     private readonly InovasiDbContext _db;
+    private readonly ApplicationDbContext _appDb;
 
-    public OrgResolver(InovasiDbContext db)
+    public OrgResolver(InovasiDbContext db, ApplicationDbContext appDb)
     {
         _db = db;
+        _appDb = appDb;
     }
 
     public async Task<OrgUnit> ResolveAsync(string? idKaryawan)
@@ -257,6 +259,62 @@ public class OrgResolver
             orderby j.IdBand, j.IdJabatan
             select new { p.IdKaryawan, p.Nama }).FirstOrDefaultAsync();
         return kepala is null ? null : (kepala.IdKaryawan, kepala.Nama);
+    }
+
+    // GM Kompartemen yang jabatannya sedang di-cover PTS (Pemangku Tugas Sementara,
+    // grading.pejabat_sementara - ditandai lewat panel Struktur Organisasi) - dipakai rantai
+    // persetujuan Sumbang Gagasan My Innovation, supaya PTS-nya ikut berhak menyetujui step
+    // "GM Kompartemen Asal/Tujuan" (2026-08-28, diminta user: "PTS GM aktif menggantikan
+    // peran persetujuan setelah manager"). PTS diprioritaskan drpd hasil ResolveKepalaUnitAsync
+    // biasa - kalau ada PTS aktif utk jabatan GM kompartemen ini, PTS-lah GM-nya, BUKAN
+    // pemegang jabatan band terendah berikutnya yang kebetulan terisi di kompartemen itu
+    // (yang salah - bisa saja Manager departemen, bukan GM).
+    //
+    // Nama PTS diambil dari penempatan AKTIF-nya SENDIRI (jabatan aslinya, band di bawah
+    // GM) - grading.pejabat_sementara tidak menyimpan nama, dan InovasiDbContext tidak bisa
+    // JOIN lintas DbContext ke GradingPejabatSementara (ApplicationDbContext) dalam satu
+    // query, makanya dua query terpisah lalu digabung di C# (pola sama dgn PosisiResolver).
+    public async Task<(string? Nik, string? Nama)?> ResolvePtsGmKompartemenAsync(int? idKompartemen)
+    {
+        if (idKompartemen is null) return null;
+
+        var jabatanGmIds = await _db.Jabatan.AsNoTracking()
+            .Where(j => j.IdUnit == idKompartemen && j.IdBand == 1)
+            .Select(j => j.IdJabatan)
+            .ToListAsync();
+        if (jabatanGmIds.Count == 0) return null;
+
+        var ptsNik = await _appDb.GradingPejabatSementara.AsNoTracking()
+            .Where(x => jabatanGmIds.Contains(x.IdJabatanPengganti) && x.Status == "Aktif")
+            .OrderByDescending(x => x.DibuatPada)
+            .Select(x => x.IdKaryawan)
+            .FirstOrDefaultAsync();
+        if (ptsNik is null) return null;
+
+        var nama = await _db.Penempatan.AsNoTracking()
+            .Where(p => p.IdKaryawan == ptsNik && p.Status == "Aktif")
+            .Select(p => p.Nama)
+            .FirstOrDefaultAsync();
+        return (ptsNik, nama);
+    }
+
+    // Kebalikan dari ResolvePtsGmKompartemenAsync: kompartemen mana (kalau ada) yang NIK ini
+    // SEDANG di-PTS-kan sebagai GM-nya - dipakai memperluas cakupan (scope) "Sumbang Gagasan"/
+    // "Daftar Inovasi" milik seorang PTS GM, disamakan dengan GM definitif (band 1).
+    public async Task<int?> ResolveKompartemenPtsGmSayaAsync(string? nik)
+    {
+        if (string.IsNullOrWhiteSpace(nik)) return null;
+
+        var idJabatanPengganti = await _appDb.GradingPejabatSementara.AsNoTracking()
+            .Where(x => x.IdKaryawan == nik && x.Status == "Aktif")
+            .Select(x => (int?)x.IdJabatanPengganti)
+            .FirstOrDefaultAsync();
+        if (idJabatanPengganti is null) return null;
+
+        return await _db.Jabatan.AsNoTracking()
+            .Where(j => j.IdJabatan == idJabatanPengganti && j.IdBand == 1)
+            .Select(j => (int?)j.IdUnit)
+            .FirstOrDefaultAsync();
     }
 
     // Direktorat yang menaungi sebuah unit, ditelusuri naik lewat id_unit_induk

@@ -14,6 +14,7 @@ import AdminDocumentsPage from './pages/AdminDocumentsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminLocationsPage from './pages/AdminLocationsPage'
+import AdminOverridePage from './pages/AdminOverridePage'
 import AdminModulesPage from './pages/AdminModulesPage'
 import AdminJuriPage from './pages/AdminJuriPage'
 import DashboardLayout from './layouts/DashboardLayout'
@@ -43,6 +44,8 @@ import OrgStrukturPage from './pages/OrgStrukturPage'
 import OrgPenempatanPage from './pages/OrgPenempatanPage'
 import PegawaiDirektoriPage from './pages/PegawaiDirektoriPage'
 import PersonGradePage from './pages/PersonGradePage'
+import AbsensiLokasiAdminPage from './pages/AbsensiLokasiAdminPage'
+import AbsensiLogAdminPage from './pages/AbsensiLogAdminPage'
 import OrgVersiPage from './pages/OrgVersiPage'
 import MyHrManagementLayout from './layouts/MyHrManagementLayout'
 import MyProsedurLayout from './layouts/MyProsedurLayout'
@@ -114,6 +117,7 @@ export default function App() {
             <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/admin/documents" element={<AdminDocumentsPage />} />
             <Route path="/admin/locations" element={<AdminLocationsPage />} />
+            <Route path="/admin/overrides" element={<AdminOverridePage />} />
             <Route path="/admin/modules" element={<AdminModulesPage />} />
             {/* Panel Juri berdiri sendiri (di luar /admin): pengelola stream juri
                 belum tentu Admin IT. Rute lama /admin/juri diarahkan ke sini. */}
@@ -135,6 +139,8 @@ export default function App() {
                 <Route path="penempatan" element={<OrgPenempatanPage />} />
                 <Route path="pegawai" element={<PegawaiDirektoriPage />} />
                 <Route path="person-grade" element={<PersonGradePage />} />
+                <Route path="absensi-lokasi" element={<AbsensiLokasiAdminPage />} />
+                <Route path="absensi-log" element={<AbsensiLogAdminPage />} />
                 <Route element={<RequireFeature featureKey="org:versi" />}><Route path="versi" element={<OrgVersiPage />} /></Route>
               </Route>
             </Route>

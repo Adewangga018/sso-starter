@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Agenda.dc.html", "x": 1360, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Profil.dc.html", "x": 2720, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Absensi.dc.html", "x": 4080, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "AdminSdm.dc.html", "x": 5440, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "MyAsset.dc.html", "x": 6800, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Roadmap.dc.html", "x": 8160, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Closing.dc.html", "x": 9520, "y": 0, "w": 1280, "h": 720, "print": "fixed" }
+  ],
+  "launch": { "view": "focused", "file": "Main.dc.html" }
+}

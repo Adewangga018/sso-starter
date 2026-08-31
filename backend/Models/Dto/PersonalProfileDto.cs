@@ -69,6 +69,9 @@ public record AbsensiDto(
 // Payload absensi kamera dari SPA/app mobile: foto (data URL base64), koordinat, akurasi GPS
 // (meter), tempat, tipe in/out, dan flag mock-location (dikirim app mobile native - hasil
 // deteksi GPS palsu dari OS; SPA web tidak bisa mendeteksi ini sehingga selalu null/false).
+// IsRooted/SpoofAppsFound: lapisan tambahan (device_integrity_service.dart, 2026-08-28) -
+// device root atau app fake-GPS/cloning-container yang bisa memalsukan lokasi TANPA memicu
+// flag IsMockLocation sama sekali (di luar jalur mock-provider resmi Android).
 public record AbsensiCheckInDto(
     string Foto,
     decimal Lat,
@@ -76,7 +79,9 @@ public record AbsensiCheckInDto(
     decimal? Accuracy,
     string? Tempat,
     string Type,
-    bool? IsMockLocation = null);
+    bool? IsMockLocation = null,
+    bool? IsRooted = null,
+    List<string>? SpoofAppsFound = null);
 
 // Titik geofence aktif yang dikembalikan ke SPA absensi kamera (bukan admin-only).
 public record LocationDto(

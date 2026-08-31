@@ -50,19 +50,29 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
-        // Jabatan & tingkatan hanya pelengkap tampilan: kalau pegawainya belum tertaut,
-        // dashboard tetap tampil tanpa baris jabatan - bukan alasan menggagalkan halaman.
+        // Jabatan & tingkatan hanya pelengkap tampilan: kalau NIK-nya tidak diketahui sama
+        // sekali, dashboard tetap tampil tanpa baris jabatan - bukan alasan menggagalkan halaman.
         //
         // Sumber jabatan/level: SISTEM GRADING BERBASIS BAND (PosisiResolver), sesuai
         // dokumen "Data 85 Pegawai Organik". Untuk pegawai yang ADA di grading, jabatan
         // struktural & tingkatan diambil dari sana (bersih; tidak ada "Lakma"/"Pjs ...").
         // Untuk yang di luar grading (mis. TKNO), pakai jabatan legacy SDM setelah
         // dibersihkan dari awalan pejabat sementara / label tanpa makna.
+        //
+        // NIK dipakai untuk resolusi ini adalah NIK dari TOKEN LOGIN (user.Nik), BUKAN
+        // disyaratkan sudah ada baris MST_PEGAWAI (pegawai != null) - keduanya independen.
+        // MST_PEGAWAI hanya terisi kalau orangnya pernah menyimpan My Personal > Profil
+        // (lihat PersonalController.UpdateProfile, "doubles as self-registration"); Direksi/
+        // eksekutif yang tak pernah menyentuh My Personal tetap harus dapat jabatannya tampil
+        // di header selama sudah ditempatkan di Struktur Organisasi - ditemukan 2026-08-28,
+        // kasus Nugroho Iman Prakosa (Direktur Keuangan, grading.penempatan aktif & benar,
+        // tapi header tampil "Pegawai Organik" krn belum pernah isi profil -> pegawai null).
         string? jabatan = null, tingkatan = null;
         int? band = null;
-        if (pegawai is not null)
+        var nikUntukPosisi = pegawai?.ID_KARYAWAN ?? user.Nik;
+        if (!string.IsNullOrWhiteSpace(nikUntukPosisi))
         {
-            var posisi = await _posisi.ResolveAsync(pegawai.ID_KARYAWAN);
+            var posisi = await _posisi.ResolveAsync(nikUntukPosisi);
             tingkatan = posisi.Tingkatan;
             band = posisi.Band;
 
@@ -73,7 +83,7 @@ public class DashboardController : ControllerBase
             else
             {
                 var legacy = await _db.PegawaiSdm
-                    .Where(p => p.Nik == pegawai.ID_KARYAWAN)
+                    .Where(p => p.Nik == nikUntukPosisi)
                     .Select(p => p.nm_jabatan)
                     .FirstOrDefaultAsync();
                 jabatan = PosisiResolver.BersihkanJabatanLegacy(legacy);
@@ -86,15 +96,19 @@ public class DashboardController : ControllerBase
 
         var profileComplete = pegawai is not null && ProfileRules.IsComplete(pegawai);
         // IsSdmAdminAsync kini otomatis true utk Admin IT jg (bypass di ModuleAccessService,
-        // tak lagi bergantung pegawai != null - Admin IT bisa saja tak tertaut NIK).
-        var isAdminModulSdm = await _access.IsSdmAdminAsync(pegawai?.ID_KARYAWAN);
+        // tak lagi bergantung pegawai != null - Admin IT bisa saja tak tertaut NIK). Dipakai
+        // nikUntukPosisi (NIK token, BUKAN pegawai?.ID_KARYAWAN) - Direksi tidak pernah
+        // mengisi MST_PEGAWAI (form itu untuk karyawan, bukan mereka - diklarifikasi user
+        // 2026-08-28), jadi pegawai selalu null utk mereka meski penempatan grading-nya
+        // benar; pakai pegawai?.ID_KARYAWAN di sini membuat mrk selalu gagal cek admin-modul
+        // walau band Direksi-nya sudah diizinkan di ModuleAccessService.IsDeptAdminAsync.
+        var isAdminModulSdm = await _access.IsSdmAdminAsync(nikUntukPosisi);
 
         // Kartu modul mengikuti Panel Admin IT > Akses Modul. Daftarnya selalu lengkap;
         // modul yang dikunci ke Admin IT dikirim sebagai kartu terkunci ("Coming Soon"),
         // bukan dihilangkan - lihat ModuleSettingsService.GetTilesForAsync.
         var isAdmin = User.HasClaim(c => (c.Type == "role" || c.Type == ClaimTypes.Role) && c.Value == AdminRole);
-        var nik = pegawai?.ID_KARYAWAN;
-        var modules = await _modules.GetTilesForAsync(isAdmin, key => _access.IsModuleAdminAsync(key, nik));
+        var modules = await _modules.GetTilesForAsync(isAdmin, key => _access.IsModuleAdminAsync(key, nikUntukPosisi));
 
         // Modul "HR Management" (gabungan Payroll + Struktur Organisasi, 2026-08-20) khusus
         // Admin Modul SDM. Tidak ada di katalog modul umum; kartunya hanya ditambahkan untuk

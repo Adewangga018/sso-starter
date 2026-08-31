@@ -53,7 +53,7 @@ export function BatangVertikal({ data, warna = HIJAU }) {
   )
 }
 
-export function BatangHorizontal({ data, warna = HIJAU }) {
+export function BatangHorizontal({ data, warna = HIJAU, onBarClick }) {
   // Hitung panjang teks label terpanjang untuk penyesuaian area label
   const maxLabelLen = Math.max(0, ...data.map((d) => (d?.label ?? '').length))
 
@@ -82,7 +82,7 @@ export function BatangHorizontal({ data, warna = HIJAU }) {
         const w = Math.max(2, (d.nilai / maks) * plotW)
         const labelTampil = formatLabelText(d.label)
         return (
-          <g key={d.label}>
+          <g key={d.label} style={onBarClick ? { cursor: 'pointer' } : undefined} onClick={onBarClick ? () => onBarClick(d) : undefined}>
             <text x={LABEL - 8} y={y + BAR / 2 + 4} textAnchor="end" fontSize={11} fill="#5c6b60">
               {labelTampil}
             </text>
@@ -90,7 +90,7 @@ export function BatangHorizontal({ data, warna = HIJAU }) {
             <text x={LABEL + w + 7} y={y + BAR / 2 + 4} fontSize={11} fontWeight={700} fill="#2c3a30">
               {d.nilai}
             </text>
-            <title>{`${d.label}: ${d.nilai}`}</title>
+            <title>{`${d.label}: ${d.nilai}${onBarClick ? ' (klik untuk filter)' : ''}`}</title>
           </g>
         )
       })}

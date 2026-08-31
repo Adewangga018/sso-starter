@@ -61,6 +61,15 @@ public class GagasanController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
 
         var peran = band switch { 1 => "GM", 2 => "Manager", _ => "Karyawan" };
+
+        // Belum GM definitif (band != 1), tapi sedang PTS menggantikan GM sebuah kompartemen
+        // -> tetap dapat peran "GM" (menu Persetujuan Gagasan, dashboard Beranda approver,
+        // dst) - lihat OrgResolver.ResolveKompartemenPtsGmSayaAsync.
+        if (peran != "GM" && await _org.ResolveKompartemenPtsGmSayaAsync(nik) is not null)
+        {
+            peran = "GM";
+        }
+
         var globalViewer = await _org.IsGlobalInovasiViewerAsync(nik);
         return Ok(new InovasiPeranDto(peran, peran is "GM" or "Manager", globalViewer));
     }
@@ -118,11 +127,14 @@ public class GagasanController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         int? scopeDept = band == 2 ? org.IdDepartemen : null;   // Manager -> seluruh departemen
         int? scopeKomp = band == 1 ? org.IdKompartemen : null;  // GM -> seluruh kompartemen
+        // PTS GM (belum band 1 definitif) -> dapat cakupan kompartemen yg sama seperti GM.
+        var scopeKompPts = scopeKomp is null ? await _org.ResolveKompartemenPtsGmSayaAsync(nik) : null;
 
         var rows = await _db.Gagasan.AsNoTracking()
             .Where(g => g.CreatedByNik == nik || g.Approval.Any(a => a.Nik == nik) ||
                 (scopeDept != null && (g.IdDepartemenAsal == scopeDept || g.IdDepartemenTujuan == scopeDept)) ||
-                (scopeKomp != null && (g.IdKompartemenAsal == scopeKomp || g.IdKompartemenTujuan == scopeKomp)))
+                (scopeKomp != null && (g.IdKompartemenAsal == scopeKomp || g.IdKompartemenTujuan == scopeKomp)) ||
+                (scopeKompPts != null && (g.IdKompartemenAsal == scopeKompPts || g.IdKompartemenTujuan == scopeKompPts)))
             .OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt)
             .Select(g => new
             {
@@ -222,12 +234,18 @@ public class GagasanController : ControllerBase
         var manager = asal.NamaDepartemen == "Departemen SDM"
             ? await _org.ResolveVerifikatorRotasiSdmAsync()
             : await _org.ResolveKepalaUnitAsync(asal.IdDepartemen);   // Manager departemen asal
-        var gmAsal = await _org.ResolveKepalaUnitAsync(asal.IdKompartemen);   // GM kompartemen asal
+        // PTS (Pemangku Tugas Sementara) yg sedang menggantikan GM kompartemen ini
+        // diprioritaskan drpd hasil ResolveKepalaUnitAsync biasa (lihat komentar
+        // OrgResolver.ResolvePtsGmKompartemenAsync) - kalau tak ada PTS aktif, jatuh
+        // ke GM definitif seperti semula.
+        var gmAsal = await _org.ResolvePtsGmKompartemenAsync(asal.IdKompartemen)
+            ?? await _org.ResolveKepalaUnitAsync(asal.IdKompartemen);   // GM kompartemen asal
         g.Approval.Add(new GagasanApproval { Urutan = 0, Peran = RoleVerifikator, Nik = manager?.Nik, Nama = manager?.Nama, Status = "Menunggu" });
         g.Approval.Add(new GagasanApproval { Urutan = 1, Peran = RoleGmAsal, Nik = gmAsal?.Nik, Nama = gmAsal?.Nama, Status = "Menunggu" });
         if (antarKomp)
         {
-            var gmTujuan = await _org.ResolveKepalaUnitAsync(idKompTujuan);
+            var gmTujuan = await _org.ResolvePtsGmKompartemenAsync(idKompTujuan)
+                ?? await _org.ResolveKepalaUnitAsync(idKompTujuan);
             g.Approval.Add(new GagasanApproval { Urutan = 2, Peran = RoleGmTujuan, Nik = gmTujuan?.Nik, Nama = gmTujuan?.Nama, Status = "Menunggu" });
         }
 
@@ -245,7 +263,14 @@ public class GagasanController : ControllerBase
 
         var g = await _db.Gagasan.Include(x => x.Approval).FirstOrDefaultAsync(x => x.Id == id);
         if (g is null) return NotFound(new { message = "Gagasan tidak ditemukan." });
-        if (g.CreatedByNik != nik && !g.Approval.Any(a => a.Nik == nik) && !await _org.IsGlobalInovasiViewerAsync(nik))
+
+        // PTS GM kompartemen asal/tujuan juga boleh membuka detailnya (bukan cuma menandatangani)
+        // walau belum ada baris Approval yg Nik-nya cocok (mis. PTS baru mulai setelahnya) -
+        // lihat BisaTandaTanganAsync.
+        var ptsAsal = await _org.ResolvePtsGmKompartemenAsync(g.IdKompartemenAsal);
+        var ptsTujuan = await _org.ResolvePtsGmKompartemenAsync(g.IdKompartemenTujuan);
+        var isPtsTerkait = ptsAsal?.Nik == nik || ptsTujuan?.Nik == nik;
+        if (g.CreatedByNik != nik && !g.Approval.Any(a => a.Nik == nik) && !isPtsTerkait && !await _org.IsGlobalInovasiViewerAsync(nik))
             return Forbid();
 
         var steps = g.Approval.OrderBy(a => a.Urutan).ToList();
@@ -253,9 +278,13 @@ public class GagasanController : ControllerBase
         var bisaEdit = isOwner && (g.Status is "Dikirim" or "Revisi Verifikator" or "Revisi GM");
         var siapDaftar = isOwner && g.IdGugus is null && steps.Count > 0 && steps.All(a => a.Status == "Disetujui");
 
-        var approvalDtos = steps.Select(a => new GagasanApprovalDto(
-            a.Id, a.Urutan, a.Peran, a.Nik, a.Nama, a.Status, a.Komentar, a.Metodologi, a.Tgl,
-            BisaSaya: BisaTandaTangan(steps, a, nik))).ToList();
+        var approvalDtos = new List<GagasanApprovalDto>(steps.Count);
+        foreach (var a in steps)
+        {
+            approvalDtos.Add(new GagasanApprovalDto(
+                a.Id, a.Urutan, a.Peran, a.Nik, a.Nama, a.Status, a.Komentar, a.Metodologi, a.Tgl,
+                BisaSaya: await BisaTandaTanganAsync(g, steps, a, nik)));
+        }
 
         // Setelah terdaftar, tampilkan nomor registrasi risalah agar sama dengan Daftar Inovasi.
         var noReg = g.IdGugus is null ? g.NoRegistrasi
@@ -303,15 +332,28 @@ public class GagasanController : ControllerBase
     [HttpPost("{id:int}/approval")]
     public async Task<IActionResult> Act(int id, GagasanApprovalActionRequest req)
     {
-        var (nik, _) = await IdentitasAsync();
+        var (nik, nama) = await IdentitasAsync();
         if (nik is null) return Unauthorized();
 
         var g = await _db.Gagasan.Include(x => x.Approval).FirstOrDefaultAsync(x => x.Id == id);
         if (g is null) return NotFound(new { message = "Gagasan tidak ditemukan." });
 
         var steps = g.Approval.OrderBy(a => a.Urutan).ToList();
-        var mine = steps.FirstOrDefault(a => a.Nik == nik && a.Status == "Menunggu" && BisaTandaTangan(steps, a, nik));
+        GagasanApproval? mine = null;
+        foreach (var a in steps.Where(a => a.Status == "Menunggu"))
+        {
+            if (await BisaTandaTanganAsync(g, steps, a, nik)) { mine = a; break; }
+        }
         if (mine is null) return Forbid();
+
+        // PTS menandatangani step yg row.Nik-nya masih menunjuk GM lama/definitif (belum
+        // pernah disentuh sejak PTS mulai) - catat PTS-nya sbg penandatangan sesungguhnya,
+        // supaya riwayat/History Approval menunjukkan siapa yg benar-benar memproses.
+        if (mine.Nik != nik)
+        {
+            mine.Nik = nik;
+            mine.Nama = nama;
+        }
 
         var aksi = req.Aksi?.Trim();
         if (aksi is not ("Disetujui" or "Revisi" or "Ditolak")) return BadRequest(new { message = "Aksi tidak dikenal." });
@@ -448,10 +490,24 @@ public class GagasanController : ControllerBase
         return (string.IsNullOrWhiteSpace(nik) ? null : nik, nama);
     }
 
-    private static bool BisaTandaTangan(List<GagasanApproval> steps, GagasanApproval row, string nik)
+    // Dinamis (bukan cuma cocokkan row.Nik yg di-snapshot saat gagasan dibuat) - kalau step-nya
+    // "GM Kompartemen Asal/Tujuan", PTS yg SEDANG AKTIF menggantikan GM kompartemen itu juga
+    // berhak menandatangani, walau row.Nik masih menunjuk GM definitif/PTS lama (mis. PTS
+    // baru mulai SETELAH gagasan ini diajukan - lihat OrgResolver.ResolvePtsGmKompartemenAsync,
+    // diminta user 2026-08-28: "PTS GM aktif menggantikan peran persetujuan setelah manager").
+    private async Task<bool> BisaTandaTanganAsync(Gagasan g, List<GagasanApproval> steps, GagasanApproval row, string nik)
     {
-        if (row.Nik != nik || row.Status != "Menunggu") return false;
-        return steps.Where(a => a.Urutan < row.Urutan).All(a => a.Status == "Disetujui");
+        if (row.Status != "Menunggu") return false;
+        if (steps.Where(a => a.Urutan < row.Urutan).Any(a => a.Status != "Disetujui")) return false;
+        if (row.Nik == nik) return true;
+
+        if (row.Peran is RoleGmAsal or RoleGmTujuan)
+        {
+            var idKomp = row.Peran == RoleGmAsal ? g.IdKompartemenAsal : g.IdKompartemenTujuan;
+            var pts = await _org.ResolvePtsGmKompartemenAsync(idKomp);
+            return pts?.Nik == nik;
+        }
+        return false;
     }
 
     // Status keseluruhan gagasan diturunkan dari langkah-langkahnya.

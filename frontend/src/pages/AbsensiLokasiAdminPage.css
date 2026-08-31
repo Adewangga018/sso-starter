@@ -1,0 +1,62 @@
+.alp__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+}
+
+.alp__field input {
+  padding: 9px 10px;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--gcs-ink);
+}
+
+.alp__picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  background: var(--gcs-white);
+  font-size: 14px;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.alp__picker-btn:hover {
+  border-color: var(--gcs-green-600);
+}
+
+.alp__link-btn {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: var(--gcs-green-700);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.alp__picker-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 8px;
+  border: none;
+  border-bottom: 1px solid var(--gcs-border);
+  background: none;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--gcs-ink);
+}
+
+.alp__picker-row:hover {
+  background: var(--gcs-line-soft, rgba(0, 0, 0, 0.03));
+}

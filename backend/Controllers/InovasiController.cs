@@ -67,6 +67,8 @@ public class InovasiController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         int? scopeDept = band == 2 ? org.IdDepartemen : null;   // Manager -> seluruh departemen
         int? scopeKomp = band == 1 ? org.IdKompartemen : null;  // GM -> seluruh kompartemen
+        // PTS GM (belum band 1 definitif) -> dapat cakupan kompartemen yg sama seperti GM.
+        var scopeKompPts = scopeKomp is null ? await _org.ResolveKompartemenPtsGmSayaAsync(nik) : null;
 
         IQueryable<Models.Inovasi.Gugus> q = _db.Gugus.AsNoTracking();
         if (!semua) q = q.Where(g => g.Jenis == jn);
@@ -78,6 +80,7 @@ public class InovasiController : ControllerBase
                 g.Pengesahan.Any(p => p.Nik == nik) ||
                 (scopeDept != null && g.IdDepartemen == scopeDept) ||
                 (scopeKomp != null && g.IdKompartemen == scopeKomp) ||
+                (scopeKompPts != null && g.IdKompartemen == scopeKompPts) ||
                 // Juri panel yang ditugaskan menilai risalah ini juga melihatnya.
                 _db.PenilaianPenugasan.Any(pp => pp.IdGugus == g.Id
                     && _db.PenilaianStreamAnggota.Any(a => a.IdStream == pp.IdStream && a.Nik == nik)))
@@ -107,7 +110,7 @@ public class InovasiController : ControllerBase
                 g.CreatedByNik == nik ? "Pengaju"
                 : g.PeranAnggota ?? g.PeranPengesah
                     ?? (scopeDept != null && g.IdDepartemen == scopeDept ? "Verifikator"
-                        : scopeKomp != null && g.IdKompartemen == scopeKomp ? "GM"
+                        : (scopeKomp != null && g.IdKompartemen == scopeKomp) || (scopeKompPts != null && g.IdKompartemen == scopeKompPts) ? "GM"
                         : g.SayaJuri ? "Juri" : "-"),
             g.KetuaNama, g.CreatedAt, g.UpdatedAt, g.GagasanJudul, g.SudahDinilai)).ToList();
 
@@ -229,10 +232,13 @@ public class InovasiController : ControllerBase
 
         var (idTujuan, namaTujuan) = await DepartemenTujuanAsync(g);
 
-        var pengesahan = g.Pengesahan.OrderBy(p => p.Tahap).ThenBy(p => p.Urutan)
-            .Select(p => new PengesahanDto(p.Id, p.Tahap, p.Peran, p.Nik, p.Nama, p.Urutan, p.Status, p.Komentar, p.Tgl,
-                BisaSaya: BisaTandaTangan(g, p, nik)))
-            .ToList();
+        var pengesahanUrut = g.Pengesahan.OrderBy(p => p.Tahap).ThenBy(p => p.Urutan).ToList();
+        var pengesahan = new List<PengesahanDto>(pengesahanUrut.Count);
+        foreach (var p in pengesahanUrut)
+        {
+            pengesahan.Add(new PengesahanDto(p.Id, p.Tahap, p.Peran, p.Nik, p.Nama, p.Urutan, p.Status, p.Komentar, p.Tgl,
+                BisaSaya: await BisaTandaTanganAsync(g, p, nik)));
+        }
 
         return Ok(new GugusDetailDto(
             g.Id, g.Jenis, g.NoRegistrasi, g.NamaGugus, g.TemaKe, g.Periode,
@@ -355,7 +361,11 @@ public class InovasiController : ControllerBase
 
         var fasil = g.Anggota.FirstOrDefault(a => a.Peran == "Fasilitator");
         var pembinaDept = await _org.ResolveKepalaUnitAsync(g.IdDepartemen);
-        var pembinaKomp = await _org.ResolveKepalaUnitAsync(g.IdKompartemen);
+        // PTS GM kompartemen ini diprioritaskan drpd GM definitif (lihat GagasanController
+        // & OrgResolver.ResolvePtsGmKompartemenAsync) - diminta user 2026-08-28, disamakan
+        // dgn Sumbang Gagasan.
+        var pembinaKomp = await _org.ResolvePtsGmKompartemenAsync(g.IdKompartemen)
+            ?? await _org.ResolveKepalaUnitAsync(g.IdKompartemen);
 
         g.Pengesahan.Add(new Pengesahan { Tahap = "PLAN", Peran = "Ketua Gugus", Nik = nik, Nama = nama ?? nik, Urutan = 0, Status = "Disetujui", Tgl = DateTime.Now });
         g.Pengesahan.Add(new Pengesahan { Tahap = "PLAN", Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Urutan = 1, Status = "Menunggu" });
@@ -402,7 +412,11 @@ public class InovasiController : ControllerBase
 
         var fasil = g.Anggota.FirstOrDefault(a => a.Peran == "Fasilitator");
         var pembinaDept = await _org.ResolveKepalaUnitAsync(g.IdDepartemen);
-        var pembinaKomp = await _org.ResolveKepalaUnitAsync(g.IdKompartemen);
+        // PTS GM kompartemen ini diprioritaskan drpd GM definitif (lihat GagasanController
+        // & OrgResolver.ResolvePtsGmKompartemenAsync) - diminta user 2026-08-28, disamakan
+        // dgn Sumbang Gagasan.
+        var pembinaKomp = await _org.ResolvePtsGmKompartemenAsync(g.IdKompartemen)
+            ?? await _org.ResolveKepalaUnitAsync(g.IdKompartemen);
 
         g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Ketua Gugus", Nik = nik, Nama = nama ?? nik, Urutan = 0, Status = "Disetujui", Tgl = DateTime.Now });
         g.Pengesahan.Add(new Pengesahan { Tahap = "FINAL", Peran = "Fasilitator", Nik = fasil?.Nik, Nama = fasil?.Nama, Urutan = 1, Status = "Menunggu" });
@@ -465,7 +479,7 @@ public class InovasiController : ControllerBase
     [HttpPost("gugus/{id:int}/pengesahan/{pid:int}")]
     public async Task<IActionResult> ActPengesahan(int id, int pid, PengesahanActionRequest req)
     {
-        var (nik, _) = await IdentitasAsync();
+        var (nik, nama) = await IdentitasAsync();
         if (nik is null) return Unauthorized();
 
         var g = await LoadFullAsync(id, tracking: true);
@@ -473,8 +487,16 @@ public class InovasiController : ControllerBase
 
         var row = g.Pengesahan.FirstOrDefault(p => p.Id == pid);
         if (row is null) return NotFound(new { message = "Baris pengesahan tidak ditemukan." });
-        if (!BisaTandaTangan(g, row, nik))
+        if (!await BisaTandaTanganAsync(g, row, nik))
             return Forbid();
+
+        // PTS menandatangani baris yg row.Nik-nya masih menunjuk GM lama/definitif - catat
+        // PTS-nya sbg penandatangan sesungguhnya, sama pola dgn GagasanController.Act.
+        if (row.Nik != nik)
+        {
+            row.Nik = nik;
+            row.Nama = nama;
+        }
 
         var aksi = req.Aksi?.Trim();
         if (aksi is not ("Disetujui" or "Ditolak" or "Revisi"))
@@ -927,6 +949,8 @@ public class InovasiController : ControllerBase
             select (byte?)j.IdBand).FirstOrDefaultAsync();
         if (band == 2 && g.IdDepartemen != null && g.IdDepartemen == org.IdDepartemen) return true;
         if (band == 1 && g.IdKompartemen != null && g.IdKompartemen == org.IdKompartemen) return true;
+        // PTS GM kompartemen ini juga boleh melihat (read-only), sama seperti GM definitif.
+        if (g.IdKompartemen != null && await _org.ResolveKompartemenPtsGmSayaAsync(nik) == g.IdKompartemen) return true;
         // Global viewer (id_jabatan 38/39 atau Band 0/Direksi) boleh melihat risalah apa pun (read-only).
         if (await _org.IsGlobalInovasiViewerAsync(nik)) return true;
         // Juri yang ditugaskan menilai gugus ini boleh melihat risalah (read-only).
@@ -943,12 +967,24 @@ public class InovasiController : ControllerBase
 
     // Boleh menandatangani jika baris ini miliknya, masih Menunggu, dan seluruh
     // baris tahap sama dengan urutan lebih kecil sudah Disetujui (giliran).
-    private static bool BisaTandaTangan(Gugus g, Pengesahan row, string nik)
+    //
+    // Dinamis untuk baris "Pembina Tk. Kompartemen" (peran setingkat GM) - PTS yang SEDANG
+    // AKTIF menggantikan GM kompartemen itu juga berhak menandatangani, walau row.Nik masih
+    // menunjuk GM definitif/PTS lama (mis. PTS baru mulai setelah PLAN/FINAL diajukan) -
+    // sama pola dgn GagasanController.BisaTandaTanganAsync, diminta user 2026-08-28.
+    private async Task<bool> BisaTandaTanganAsync(Gugus g, Pengesahan row, string nik)
     {
-        if (row.Nik != nik || row.Status != "Menunggu") return false;
-        return g.Pengesahan
-            .Where(p => p.Tahap == row.Tahap && p.Urutan < row.Urutan)
-            .All(p => p.Status == "Disetujui");
+        if (row.Status != "Menunggu") return false;
+        if (!g.Pengesahan.Where(p => p.Tahap == row.Tahap && p.Urutan < row.Urutan).All(p => p.Status == "Disetujui"))
+            return false;
+        if (row.Nik == nik) return true;
+
+        if (row.Peran == "Pembina Tk. Kompartemen" && g.IdKompartemen != null)
+        {
+            var pts = await _org.ResolvePtsGmKompartemenAsync(g.IdKompartemen);
+            return pts?.Nik == nik;
+        }
+        return false;
     }
 
     // Gate umum untuk simpan DO/CHECK/ACTION: hanya pemilik & hanya setelah

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/absensi_entry.dart';
+import '../models/lokasi_saya.dart';
 import '../models/office_location.dart';
 import '../models/personal_profile.dart';
 import 'app_config.dart';
@@ -28,12 +29,23 @@ class ApiClient {
     return PersonalProfile.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  /// Riwayat absensi (terbaru dulu) - dipakai untuk cari entri HARI INI dan menentukan
-  /// langkah berikutnya (Check-in / Check-out / sudah selesai).
-  Future<List<AbsensiEntry>> getAbsensi() async {
-    final res = await _get('/personal/absensi');
-    final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => AbsensiEntry.fromJson(e as Map<String, dynamic>)).toList();
+  /// Status absen HARI INI dari absensi.log (app mobile) - TERPISAH dari Log Absensi web
+  /// (yang sengaja cuma menampilkan data SDM lama). null = belum absen sama sekali hari ini.
+  Future<AbsensiEntry?> getAbsensiHariIni() async {
+    final res = await _get('/personal/absensi/hari-ini');
+    if (res.body == 'null' || res.body.isEmpty) return null;
+    return AbsensiEntry.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<LokasiSaya> getLokasiSaya() async {
+    final res = await _get('/personal/absensi/lokasi');
+    return LokasiSaya.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Mengajukan/mengajukan-ulang titik absen pribadi - status jadi Menunggu sampai
+  /// disetujui/ditolak Admin SDM (menu "Kelola Lokasi Absensi").
+  Future<void> ajukanLokasi({required double lat, required double lng, String? keterangan}) async {
+    await _post('/personal/absensi/lokasi', jsonEncode({'lat': lat, 'lng': lng, 'keterangan': keterangan}));
   }
 
   Future<List<OfficeLocation>> getLocations() async {
@@ -83,6 +95,8 @@ class ApiClient {
     required double lng,
     required double accuracy,
     required bool isMockLocation,
+    bool isRooted = false,
+    List<String> spoofAppsFound = const [],
     String? tempat,
   }) async {
     final body = jsonEncode({
@@ -93,6 +107,8 @@ class ApiClient {
       'tempat': tempat,
       'type': 'auto', // server yang menentukan masuk/keluar - lihat PersonalController.PostAbsensi
       'isMockLocation': isMockLocation,
+      'isRooted': isRooted,
+      'spoofAppsFound': spoofAppsFound,
     });
 
     final res = await _post('/personal/absensi', body);

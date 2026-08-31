@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { FileClock, LayoutGrid, MapPinned, Network, SlidersHorizontal, UserCog, UserCog2, UserSquare2, UsersRound } from 'lucide-react'
+import { FileClock, LayoutGrid, MapPin, MapPinned, Network, SlidersHorizontal, TriangleAlert, UserCog, UserCog2, UserSquare2, UsersRound } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +36,8 @@ function buildSections() {
       items: [
         { key: 'pegawai', feature: 'org:pegawai', label: 'Direktori Karyawan', icon: UserSquare2, to: '/org/pegawai' },
         { key: 'person-grade', feature: 'org:person-grade', label: 'Person Grade (PG)', icon: UserCog2, to: '/org/person-grade' },
+        { key: 'absensi-lokasi', feature: 'org:absensi-lokasi', label: 'Kelola Lokasi Absensi', icon: MapPin, to: '/org/absensi-lokasi' },
+        { key: 'absensi-log', feature: 'org:absensi-log', label: 'Audit Log Absensi Mobile', icon: TriangleAlert, to: '/org/absensi-log' },
       ],
     },
   ]

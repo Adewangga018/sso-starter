@@ -51,10 +51,10 @@ const TILES = [
     soon: 'Segera hadir',
   },
   {
+    to: '/admin/overrides',
     icon: ShieldCheck,
-    title: 'Admin Modul',
-    desc: 'Penunjukan admin per modul (SDM, Sekretariat, K3/Klinik).',
-    soon: 'Menunggu struktur organisasi',
+    title: 'Admin Modul (Toggle Manual)',
+    desc: 'Beri/cabut status Admin SDM & Admin Kepatuhan per karyawan, terlepas dari jabatannya.',
   },
 ]
 

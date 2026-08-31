@@ -64,6 +64,8 @@ public static class FeatureCatalog
         new("org:versi",               "hr-management", "Riwayat Versi (SK)"),
         new("org:pegawai",             "hr-management", "Direktori Karyawan"),
         new("org:person-grade",        "hr-management", "Person Grade (PG)"),
+        new("org:absensi-lokasi",      "hr-management", "Kelola Lokasi Absensi"),
+        new("org:absensi-log",         "hr-management", "Audit Log Absensi Mobile"),
     ];
 
     public static FeatureDefinition? Find(string? key) =>

@@ -2188,6 +2188,107 @@ END
 ELSE PRINT 'LEWATI: dinas.umdl_anggota sudah ada.';
 GO
 
+PRINT '################ [22] ABSENSI MOBILE - log app + lokasi pribadi karyawan ################';
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF SCHEMA_ID('absensi') IS NULL EXEC('CREATE SCHEMA absensi');
+GO
+
+IF OBJECT_ID('absensi.log', 'U') IS NULL
+BEGIN
+    CREATE TABLE absensi.log
+    (
+        id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_absensi_log PRIMARY KEY,
+        id_karyawan     NVARCHAR(20)  NOT NULL,
+        nama_karyawan   NVARCHAR(150) NOT NULL,
+        tanggal         DATE NOT NULL,
+        nama_hari       NVARCHAR(20) NULL,
+        check_in        NVARCHAR(8) NULL,
+        check_out       NVARCHAR(8) NULL,
+        foto            NVARCHAR(255) NULL,
+        lat             DECIMAL(10,7) NOT NULL,
+        lng             DECIMAL(10,7) NOT NULL,
+        accuracy        DECIMAL(10,2) NULL,
+        type            NVARCHAR(5) NOT NULL,
+        tempat          NVARCHAR(150) NULL,
+        dibuat_pada     DATETIME2 NOT NULL CONSTRAINT df_absensi_log_dibuat DEFAULT (SYSUTCDATETIME()),
+        diperbarui_pada DATETIME2 NOT NULL CONSTRAINT df_absensi_log_update DEFAULT (SYSUTCDATETIME())
+    );
+    CREATE INDEX ix_absensi_log_karyawan_tanggal ON absensi.log (id_karyawan, tanggal);
+    PRINT 'Tabel absensi.log dibuat.';
+END
+ELSE PRINT 'LEWATI: absensi.log sudah ada.';
+GO
+
+IF OBJECT_ID('absensi.lokasi_karyawan', 'U') IS NULL
+BEGIN
+    CREATE TABLE absensi.lokasi_karyawan
+    (
+        id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT pk_absensi_lokasi_karyawan PRIMARY KEY,
+        id_karyawan     NVARCHAR(20) NOT NULL,
+        nama_karyawan   NVARCHAR(150) NULL,
+        lat             DECIMAL(10,7) NOT NULL,
+        lng             DECIMAL(10,7) NOT NULL,
+        keterangan      NVARCHAR(255) NULL,
+        status          NVARCHAR(20) NOT NULL CONSTRAINT df_absensi_lok_status DEFAULT ('Menunggu'),
+        sumber          NVARCHAR(20) NOT NULL,
+        diajukan_oleh   NVARCHAR(20) NOT NULL,
+        tgl_diajukan    DATETIME2 NOT NULL CONSTRAINT df_absensi_lok_diajukan DEFAULT (SYSUTCDATETIME()),
+        diputuskan_oleh NVARCHAR(20) NULL,
+        tgl_diputuskan  DATETIME2 NULL,
+        catatan_admin   NVARCHAR(255) NULL,
+        CONSTRAINT uq_absensi_lokasi_karyawan_nik UNIQUE (id_karyawan),
+        CONSTRAINT ck_absensi_lok_status CHECK (status IN ('Menunggu','Disetujui','Ditolak')),
+        CONSTRAINT ck_absensi_lok_sumber CHECK (sumber IN ('Karyawan','AdminSdm'))
+    );
+    PRINT 'Tabel absensi.lokasi_karyawan dibuat.';
+END
+ELSE PRINT 'LEWATI: absensi.lokasi_karyawan sudah ada.';
+GO
+
+IF COL_LENGTH('absensi.lokasi_karyawan', 'alamat') IS NULL
+    ALTER TABLE absensi.lokasi_karyawan ADD alamat NVARCHAR(500) NULL;
+GO
+
+PRINT '################ [23] ADMIN OVERRIDE - toggle manual Admin SDM/Kepatuhan (Admin IT) ################';
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF OBJECT_ID('dbo.admin_override', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.admin_override
+    (
+        id              INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_admin_override PRIMARY KEY,
+        id_karyawan     NVARCHAR(20)  NOT NULL,
+        nama_karyawan   NVARCHAR(150) NULL,
+        modul           NVARCHAR(20)  NOT NULL,
+        aktif           BIT NOT NULL CONSTRAINT df_admin_override_aktif DEFAULT (1),
+        diberikan_oleh  NVARCHAR(20)  NOT NULL,
+        diberikan_pada  DATETIME2 NOT NULL CONSTRAINT df_admin_override_diberikan DEFAULT (SYSUTCDATETIME()),
+        diperbarui_pada DATETIME2 NOT NULL CONSTRAINT df_admin_override_ubah DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT uq_admin_override UNIQUE (id_karyawan, modul),
+        CONSTRAINT ck_admin_override_modul CHECK (modul IN ('SDM','Kepatuhan'))
+    );
+    PRINT 'Tabel dbo.admin_override dibuat.';
+END
+ELSE PRINT 'LEWATI: dbo.admin_override sudah ada.';
+GO
+
+PRINT '################ [24] ABSENSI - peringatan anomali (impossible travel + koordinat identik) ################';
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF COL_LENGTH('absensi.log', 'peringatan_anomali') IS NULL
+    ALTER TABLE absensi.log ADD peringatan_anomali NVARCHAR(400) NULL;
+GO
+
 SET NOEXEC OFF;
 GO
 

@@ -70,11 +70,22 @@ public class ModuleAccessService
     }
 
     // True bila jabatan aktif berada di subtree departemen `deptName` dengan band
-    // urutan <= 3, ATAU GM Kompartemen SKP (band urutan <= 1).
+    // urutan <= 3, ATAU GM Kompartemen SKP (band urutan <= 1), ATAU Direksi (band urutan
+    // 0 - Direktur Utama & Direktur, lihat grading.band; berada DI ATAS seluruh departemen
+    // jadi tidak pernah masuk subtree manapun secara unit, makanya dicek terpisah dari dua
+    // kondisi lain di atas - diminta user 2026-08-28: "direksi akses ke Admin SDM"),
+    // ATAU ada toggle manual aktif dari Admin IT (dbo.admin_override - "fleksibilitas
+    // penugasan", lepas dari jabatan Struktur Organisasi, lihat AdminOverride.cs).
     private async Task<bool> IsDeptAdminAsync(string? nik, string deptName)
     {
         if (IsAdminIt()) return true;
         if (string.IsNullOrWhiteSpace(nik)) return false;
+
+        var modul = deptName == "Departemen SDM" ? "SDM" : "Kepatuhan";
+        if (await _db.AdminOverrides.AnyAsync(o => o.IdKaryawan == nik && o.Modul == modul && o.Aktif))
+        {
+            return true;
+        }
 
         var conn = _db.Database.GetDbConnection();
         var mustClose = conn.State != ConnectionState.Open;
@@ -92,6 +103,7 @@ public class ModuleAccessService
                 SELECT TOP 1 CASE WHEN (
                         (b.urutan <= 3 AND j.id_unit IN (SELECT id_unit FROM dept))
                      OR (b.urutan <= 1 AND u.nama LIKE N'Kompartemen SDM%')
+                     OR b.urutan = 0
                     ) THEN 1 ELSE 0 END
                 FROM grading.penempatan p
                 JOIN grading.jabatan j ON j.id_jabatan = p.id_jabatan
