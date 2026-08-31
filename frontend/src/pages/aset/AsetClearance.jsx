@@ -49,8 +49,8 @@ export default function AsetClearance() {
         </div>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); cariNik(nik) }} style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="aset__search" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 280, cursor: 'pointer', textAlign: 'left' }} onClick={() => setPickerOpen(true)}>
+      <form onSubmit={(e) => { e.preventDefault(); cariNik(nik) }} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className="aset__search" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 280, flex: '1 1 280px', cursor: 'pointer', textAlign: 'left' }} onClick={() => setPickerOpen(true)}>
           <Search size={14} />
           {namaTampil ? <span>{namaTampil} ({nik})</span> : <span className="aset__muted">Cari pegawai (NIK atau nama)…</span>}
         </button>

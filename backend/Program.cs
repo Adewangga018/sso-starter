@@ -75,6 +75,7 @@ builder.Services.AddScoped<AsetService>();
 builder.Services.AddScoped<AsetOverlayService>();
 builder.Services.AddScoped<AsetDokumenService>();
 builder.Services.AddScoped<AsetOpnameService>();
+builder.Services.AddScoped<AsetExportService>();
 builder.Services.AddScoped<CoachingService>();
 builder.Services.AddScoped<ProsedurService>();
 builder.Services.AddScoped<HealthService>();

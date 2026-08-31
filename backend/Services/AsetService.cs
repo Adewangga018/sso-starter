@@ -2,23 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using SsoBackend.Data;
 using SsoBackend.Models.Aset;
 using SsoBackend.Models.Dto;
-using AsetEntity = SsoBackend.Models.Aset.Aset;
-using MaintEntity = SsoBackend.Models.Aset.AsetMaintenance;
 using TidakProduktifEntity = SsoBackend.Models.Aset.AsetTidakProduktif;
 using AktivitasEntity = SsoBackend.Models.Aset.AsetTidakProduktifAktivitas;
 using SsoBackend.Models.Gcs;
 
 namespace SsoBackend.Services;
 
-// My Asset. Inventaris + jadwal maintenance. Semua karyawan dapat MELIHAT inventaris
-// & jadwal; hanya Admin Aset (Departemen Kepatuhan Kabag ke atas s/d GM SKP) yang
-// boleh input/ubah/hapus.
+// My Asset. Inventaris. Semua karyawan dapat MELIHAT inventaris; hanya Admin Aset
+// (Departemen Kepatuhan Kabag ke atas s/d GM SKP) yang boleh input/ubah/hapus.
 //
-// CATATAN ARSITEKTUR (Aug 2026): Inventaris sekarang sumber datanya GCS.dbo.assets
-// (modul Aktiva Tetap ERP), BUKAN lagi aset.aset - lihat GetErpListAsync/GetErpDetailAsync
-// di bawah & Models/Gcs/AsetErp.cs. aset.aset & method Get/Create/Update/DeleteAsync di
-// bawah SENGAJA dibiarkan (tidak dihapus, tidak dipanggil controller lagi) sesuai
-// keputusan: tabel db_mygcs yang sudah ada tidak diubah/dimigrasikan.
+// CATATAN ARSITEKTUR (Aug 2026): Inventaris sumber datanya GCS.dbo.assets (modul Aktiva
+// Tetap ERP) - lihat GetErpListAsync/GetErpDetailAsync di bawah & Models/Gcs/AsetErp.cs.
+// Tabel lama aset.aset & aset.maintenance (beserta CRUD/fitur Maintenance-nya) DIHAPUS
+// total (bukan cuma disembunyikan) setelah dikonfirmasi kosong (0 baris) - lihat
+// 16-drop-legacy-aset-maintenance.sql.
 public class AsetService
 {
     private readonly ApplicationDbContext _db;
@@ -69,6 +66,21 @@ public class AsetService
         return new AsetErpListDto(items, items.Count);
     }
 
+    // Untuk export Excel/PDF - filter q SAMA seperti GetErpListAsync (query ke ERP), lalu
+    // 4 filter dropdown (kelompok/lokasi/pic/klasifikasi) diterapkan di memori persis
+    // seperti logika client-side di Inventaris.jsx, supaya hasil export sama persis dengan
+    // yang tampil di layar tanpa menduplikasi query ERP-nya.
+    public async Task<IReadOnlyList<AsetErpDto>> GetErpExportRowsAsync(
+        string? q, string? kelompok, string? lokasi, string? pic, string? klasifikasi)
+    {
+        var items = (await GetErpListAsync(q)).Items;
+        if (!string.IsNullOrWhiteSpace(kelompok) && kelompok != "Semua") items = items.Where(a => a.Kelompok == kelompok).ToList();
+        if (!string.IsNullOrWhiteSpace(lokasi) && lokasi != "Semua") items = items.Where(a => a.Lokasi == lokasi).ToList();
+        if (!string.IsNullOrWhiteSpace(pic) && pic != "Semua") items = items.Where(a => a.PicSaatIni == pic).ToList();
+        if (!string.IsNullOrWhiteSpace(klasifikasi) && klasifikasi != "Semua") items = items.Where(a => a.Klasifikasi == klasifikasi).ToList();
+        return items;
+    }
+
     public async Task<AsetErpDto?> GetErpDetailAsync(string objectId)
     {
         var a = await _gcs.AsetErp.FirstOrDefaultAsync(x => x.OBJECTID == objectId);
@@ -76,17 +88,23 @@ public class AsetService
         var (groups, kelompok, cc) = await ErpLookupsAsync();
         var nomor = await _db.AsetNomorInternal.AsNoTracking().FirstOrDefaultAsync(x => x.ObjectId == objectId);
         var nomorInternal = nomor is null ? new Dictionary<string, string>() : new Dictionary<string, string> { [objectId] = nomor.NomorAset };
-        var picAktif = await PicAktifMapAsync();
-        var klasifikasi = await KlasifikasiRowsAsync();
+        // Difilter per objectId (bukan tarik seluruh tabel se-perusahaan) - halaman Detail
+        // Aset cuma butuh 1 baris, tapi sebelumnya PicAktifMapAsync/KlasifikasiRowsAsync
+        // tanpa filter menarik SEMUA baris PIC/klasifikasi tiap kali 1 aset dibuka.
+        var picAktif = await PicAktifMapAsync(objectId);
+        var klasifikasi = await KlasifikasiRowsAsync(objectId);
         return MapErp(a, groups, kelompok, cc, nomorInternal, picAktif, klasifikasi);
     }
 
     // objectid -> baris aset.klasifikasi (mis. status "Tidak Bergerak" + detail sertifikat/
     // appraisal/perijinan ke pemegang saham). Kalau 1 objectid suatu saat punya >1 baris,
     // status digabung "A, B" (KlasifikasiStatus) tapi detail cuma diambil dari baris pertama.
-    private async Task<Dictionary<string, List<AsetKlasifikasi>>> KlasifikasiRowsAsync()
+    // objectId opsional - kalau diisi, cuma tarik baris aset itu (dipakai GetErpDetailAsync).
+    private async Task<Dictionary<string, List<AsetKlasifikasi>>> KlasifikasiRowsAsync(string? objectId = null)
     {
-        var rows = await _db.AsetKlasifikasi.AsNoTracking().ToListAsync();
+        var query = _db.AsetKlasifikasi.AsNoTracking().AsQueryable();
+        if (objectId is not null) query = query.Where(x => x.ObjectId == objectId);
+        var rows = await query.ToListAsync();
         return rows.GroupBy(x => x.ObjectId).ToDictionary(g => g.Key, g => g.ToList());
     }
 
@@ -147,55 +165,105 @@ public class AsetService
             await _db.AsetNomorInternal.AnyAsync(x => x.NomorAset == req.NomorInternal.Trim()))
             return (false, $"Nomor aset internal '{req.NomorInternal.Trim()}' sudah dipakai aset lain.", null);
 
-        // Cari OBJECTID belum dipakai, mulai dari basis (max counter global + 1), naik
-        // terus sampai ketemu yang kosong - jaring pengaman kalau ada input bersamaan.
-        var basis = await MaxObjectIdCounterAsync();
-        string? objectId = null;
-        for (var offset = 1; offset <= 20; offset++)
-        {
-            var kandidat = DateTime.Now.ToString("yyyyMM") + (basis + offset).ToString("0000");
-            if (!await _gcs.AsetErp.AnyAsync(a => a.OBJECTID == kandidat)) { objectId = kandidat; break; }
-        }
-        if (objectId is null) return (false, "Gagal membuat nomor aset unik, coba lagi.", null);
-
-        var row = new AsetErp
-        {
-            OBJECTID = objectId,
-            DESC_OBJECT = req.Nama.Trim(),
-            LOKASI = req.Lokasi.Trim(),
-            GROUP_ASSET = groupAsset,
-            KELOMPOK = kelompok,
-            TANGGAL = req.Tanggal.ToDateTime(TimeOnly.MinValue),
-            KODE_CC = kodeCc,
-            SATUAN = req.Satuan.Trim(),
-            AKTIF = "Y",   // pola mayoritas aset aktif baru (508/925 baris = 'Y')
-            STATUS = "U",  // 918/925 baris existing = 'U'
-            PROSES = "T",  // 919/925 baris existing = 'T'
-            METODE = "S",  // 924/925 baris existing = 'S'
-            LAST_UPDATED = DateTime.Now,
-        };
-
+        // Cari OBJECTID belum dipakai lalu insert - dilindungi application lock
+        // (sp_getapplock) supaya 2 submit "Daftar Aset Baru" dari MyGCS sendiri yang
+        // hampir bersamaan tidak berebut nomor yang sama. dbo.assets TIDAK punya primary
+        // key/unique constraint sama sekali (diverifikasi lewat sys.indexes) dan MyGCS
+        // TIDAK PERNAH mengubah skema ERP - jadi tanpa lock ini, cek "belum dipakai" di
+        // bawah murni percuma di bawah beban bersamaan (check-then-insert klasik).
+        // CATATAN: lock ini cuma melindungi antar-request MyGCS - TIDAK melindungi dari
+        // tabrakan dengan aplikasi ERP akunting yang insert langsung ke dbo.assets di
+        // luar MyGCS. Itu di luar kendali kita, sudah diketahui & tidak bisa dihilangkan
+        // 100% tanpa constraint di level ERP (yang sengaja tidak kita sentuh).
+        string? objectId;
+        var conn = _gcs.Database.GetDbConnection();
+        var mustCloseConn = conn.State != System.Data.ConnectionState.Open;
+        if (mustCloseConn) await conn.OpenAsync();
         try
         {
-            _gcs.AsetErp.Add(row);
-            await _gcs.SaveChangesAsync();
+            await using (var lockCmd = conn.CreateCommand())
+            {
+                lockCmd.CommandText = "EXEC @result = sp_getapplock @Resource = 'mygcs-aset-daftar-baru-objectid', @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 10000";
+                var resultParam = lockCmd.CreateParameter();
+                resultParam.ParameterName = "@result";
+                resultParam.DbType = System.Data.DbType.Int32;
+                resultParam.Direction = System.Data.ParameterDirection.Output;
+                lockCmd.Parameters.Add(resultParam);
+                await lockCmd.ExecuteNonQueryAsync();
+                if (Convert.ToInt32(resultParam.Value) < 0)
+                    return (false, "Sistem sedang sibuk mendaftarkan aset lain, coba lagi sebentar.", null);
+            }
+
+            var basis = await MaxObjectIdCounterAsync();
+            objectId = null;
+            for (var offset = 1; offset <= 20; offset++)
+            {
+                var kandidat = DateTime.Now.ToString("yyyyMM") + (basis + offset).ToString("0000");
+                if (!await _gcs.AsetErp.AnyAsync(a => a.OBJECTID == kandidat)) { objectId = kandidat; break; }
+            }
+            if (objectId is null) return (false, "Gagal membuat nomor aset unik, coba lagi.", null);
+
+            var row = new AsetErp
+            {
+                OBJECTID = objectId,
+                DESC_OBJECT = req.Nama.Trim(),
+                LOKASI = req.Lokasi.Trim(),
+                GROUP_ASSET = groupAsset,
+                KELOMPOK = kelompok,
+                TANGGAL = req.Tanggal.ToDateTime(TimeOnly.MinValue),
+                KODE_CC = kodeCc,
+                SATUAN = req.Satuan.Trim(),
+                AKTIF = "Y",   // pola mayoritas aset aktif baru (508/925 baris = 'Y')
+                STATUS = "U",  // 918/925 baris existing = 'U'
+                PROSES = "T",  // 919/925 baris existing = 'T'
+                METODE = "S",  // 924/925 baris existing = 'S'
+                LAST_UPDATED = DateTime.Now,
+            };
+
+            try
+            {
+                _gcs.AsetErp.Add(row);
+                await _gcs.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Gagal mendaftarkan aset baru {ObjectId} ke dbo.assets", objectId);
+                return (false, "Gagal menyimpan aset baru ke ERP. Coba lagi; kalau berulang, hubungi admin.", null);
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Gagal mendaftarkan aset baru {ObjectId} ke dbo.assets", objectId);
-            return (false, "Gagal menyimpan aset baru ke ERP. Coba lagi; kalau berulang, hubungi admin.", null);
+            await using (var unlockCmd = conn.CreateCommand())
+            {
+                unlockCmd.CommandText = "IF APPLOCK_MODE('public', 'mygcs-aset-daftar-baru-objectid', 'Session') <> 'NoLock' EXEC sp_releaseapplock @Resource = 'mygcs-aset-daftar-baru-objectid', @LockOwner = 'Session'";
+                try { await unlockCmd.ExecuteNonQueryAsync(); } catch { /* lock mungkin belum sempat didapat - aman diabaikan */ }
+            }
+            if (mustCloseConn) await conn.CloseAsync();
         }
 
+        // Nomor Internal (opsional) - kegagalan di sini TIDAK membatalkan aset yang sudah
+        // kadung tersimpan di ERP (tidak ada transaksi lintas 2 database yang mungkin).
+        // Kalau gagal, aset TETAP dianggap berhasil didaftarkan (ObjectId dikembalikan) -
+        // supaya user tidak retry seluruh form dan bikin aset ERP duplikat; nomor internal
+        // tinggal dilengkapi manual lewat Detail Aset.
         if (!string.IsNullOrWhiteSpace(req.NomorInternal))
         {
-            _db.AsetNomorInternal.Add(new Models.Aset.AsetNomorInternal
+            try
             {
-                ObjectId = objectId,
-                NomorAset = req.NomorInternal.Trim(),
-                IdPengubah = nik,
-                TglDiubah = DateTime.UtcNow,
-            });
-            await _db.SaveChangesAsync();
+                _db.AsetNomorInternal.Add(new Models.Aset.AsetNomorInternal
+                {
+                    ObjectId = objectId,
+                    NomorAset = req.NomorInternal.Trim(),
+                    IdPengubah = nik,
+                    TglDiubah = DateTime.UtcNow,
+                });
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Aset {ObjectId} berhasil didaftarkan ke ERP tapi gagal simpan Nomor Internal '{NomorInternal}'", objectId, req.NomorInternal);
+                return (true, $"Aset berhasil didaftarkan (kode {objectId}), tapi Nomor Aset Internal '{req.NomorInternal.Trim()}' gagal disimpan (mungkin sudah dipakai). Lengkapi manual lewat Detail Aset.", objectId);
+            }
         }
 
         return (true, null, objectId);
@@ -244,11 +312,13 @@ public class AsetService
     }
 
     // objectid -> nama PIC aktif saat ini (orang atau bagian), untuk kolom/filter PIC di Inventaris.
-    private async Task<Dictionary<string, string>> PicAktifMapAsync()
+    // objectId opsional - kalau diisi, cuma tarik PIC aktif aset itu (dipakai GetErpDetailAsync)
+    // alih-alih PIC aktif SEMUA aset se-perusahaan.
+    private async Task<Dictionary<string, string>> PicAktifMapAsync(string? objectId = null)
     {
-        var rows = await _db.AsetPicAssignment.AsNoTracking()
-            .Where(x => x.Status == "Aktif")
-            .ToListAsync();
+        var query = _db.AsetPicAssignment.AsNoTracking().Where(x => x.Status == "Aktif");
+        if (objectId is not null) query = query.Where(x => x.ObjectId == objectId);
+        var rows = await query.ToListAsync();
         return rows.ToDictionary(x => x.ObjectId, x => x.JenisPic == "Bagian" ? (x.NamaUnit ?? "") : (x.NamaPic ?? ""));
     }
 
@@ -292,168 +362,6 @@ public class AsetService
         klasifikasi.TryGetValue(a.OBJECTID, out var klsRows) ? KlasifikasiStatus(klsRows) : null,
         a.NOTE?.Trim(),
         KlasifikasiDetail(klasifikasi, a.OBJECTID));
-
-    // ---- di bawah ini: aset.aset lama (db_mygcs) - lihat catatan arsitektur di atas ----
-    public async Task<AsetListDto> GetListAsync(string nik, string? q)
-    {
-        var query = _db.Aset.AsNoTracking().Where(a => a.Status != "Dihapus");
-        if (!string.IsNullOrWhiteSpace(q))
-        {
-            var term = q.Trim();
-            query = query.Where(a => a.Nama.Contains(term) || a.Kode.Contains(term)
-                || (a.Kategori != null && a.Kategori.Contains(term))
-                || (a.NamaPic != null && a.NamaPic.Contains(term)));
-        }
-        var rows = await query.OrderBy(a => a.Kode).ToListAsync();
-
-        var next = await NextMaintenanceMapAsync(rows.Select(r => r.Id).ToList());
-        var isAdmin = await _access.IsAsetAdminAsync(nik);
-        return new AsetListDto(rows.Select(a => Map(a, next.GetValueOrDefault(a.Id))).ToList(), isAdmin);
-    }
-
-    public async Task<AsetDetailDto?> GetDetailAsync(string nik, long id)
-    {
-        var a = await _db.Aset.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        if (a is null) return null;
-        var maint = await _db.AsetMaintenance.AsNoTracking()
-            .Where(m => m.IdAset == id)
-            .OrderByDescending(m => m.TglJadwal).ThenByDescending(m => m.Id)
-            .ToListAsync();
-        var next = maint.Where(m => m.Status == "Terjadwal").OrderBy(m => m.TglJadwal).Select(m => (DateOnly?)m.TglJadwal).FirstOrDefault();
-        var isAdmin = await _access.IsAsetAdminAsync(nik);
-        return new AsetDetailDto(Map(a, next), maint.Select(MapMaint).ToList(), isAdmin);
-    }
-
-    // Jadwal maintenance global (semua aset), untuk halaman "Maintenance".
-    public async Task<MaintenanceListDto> GetMaintenanceListAsync(string nik)
-    {
-        var rows = await (from m in _db.AsetMaintenance.AsNoTracking()
-                          join a in _db.Aset.AsNoTracking() on m.IdAset equals a.Id
-                          orderby m.Status, m.TglJadwal
-                          select new MaintenanceRowDto(
-                              m.Id, m.IdAset, a.Kode, a.Nama, m.Jenis, m.TglJadwal, m.TglSelesai,
-                              m.Status, m.Pelaksana, m.Biaya, m.Catatan)).ToListAsync();
-        var isAdmin = await _access.IsAsetAdminAsync(nik);
-        return new MaintenanceListDto(rows, isAdmin);
-    }
-
-    // ---- mutasi (Admin Aset) ----
-    public async Task<(bool Ok, string? Error, long Id)> CreateAsync(string nik, SimpanAsetRequest req)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, 0);
-        if (string.IsNullOrWhiteSpace(req.Kode)) return (false, "Kode aset wajib diisi.", 0);
-        if (string.IsNullOrWhiteSpace(req.Nama)) return (false, "Nama aset wajib diisi.", 0);
-        var kode = req.Kode.Trim();
-        if (await _db.Aset.AnyAsync(a => a.Kode == kode)) return (false, $"Kode aset '{kode}' sudah dipakai.", 0);
-
-        var a = new AsetEntity
-        {
-            Kode = kode,
-            Nama = req.Nama.Trim(),
-            Kategori = Clean(req.Kategori),
-            Merk = Clean(req.Merk),
-            NomorSeri = Clean(req.NomorSeri),
-            Lokasi = Clean(req.Lokasi),
-            IdPic = Clean(req.IdPic),
-            NamaPic = Clean(req.NamaPic),
-            Kondisi = ValidKondisi(req.Kondisi),
-            Status = ValidStatus(req.Status),
-            Nilai = req.Nilai,
-            TglPerolehan = req.TglPerolehan,
-            Catatan = Clean(req.Catatan),
-            IdPembuat = nik,
-            TglDibuat = DateTime.UtcNow,
-        };
-        _db.Aset.Add(a);
-        await _db.SaveChangesAsync();
-        return (true, null, a.Id);
-    }
-
-    public async Task<(bool Ok, string? Error)> UpdateAsync(string nik, long id, SimpanAsetRequest req)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
-        var a = await _db.Aset.FirstOrDefaultAsync(x => x.Id == id);
-        if (a is null) return (false, "Aset tidak ditemukan.");
-        if (string.IsNullOrWhiteSpace(req.Kode)) return (false, "Kode aset wajib diisi.");
-        var kode = req.Kode.Trim();
-        if (await _db.Aset.AnyAsync(x => x.Kode == kode && x.Id != id)) return (false, $"Kode aset '{kode}' sudah dipakai.");
-
-        a.Kode = kode;
-        a.Nama = req.Nama.Trim();
-        a.Kategori = Clean(req.Kategori);
-        a.Merk = Clean(req.Merk);
-        a.NomorSeri = Clean(req.NomorSeri);
-        a.Lokasi = Clean(req.Lokasi);
-        a.IdPic = Clean(req.IdPic);
-        a.NamaPic = Clean(req.NamaPic);
-        a.Kondisi = ValidKondisi(req.Kondisi);
-        a.Status = ValidStatus(req.Status);
-        a.Nilai = req.Nilai;
-        a.TglPerolehan = req.TglPerolehan;
-        a.Catatan = Clean(req.Catatan);
-        a.TglDiubah = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
-        return (true, null);
-    }
-
-    public async Task<(bool Ok, string? Error)> DeleteAsync(string nik, long id)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
-        var a = await _db.Aset.FirstOrDefaultAsync(x => x.Id == id);
-        if (a is null) return (false, "Aset tidak ditemukan.");
-        var maint = await _db.AsetMaintenance.Where(m => m.IdAset == id).ToListAsync();
-        _db.AsetMaintenance.RemoveRange(maint);
-        _db.Aset.Remove(a);
-        await _db.SaveChangesAsync();
-        return (true, null);
-    }
-
-    public async Task<(bool Ok, string? Error)> AddMaintenanceAsync(string nik, long idAset, SimpanMaintenanceRequest req)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
-        if (!await _db.Aset.AnyAsync(a => a.Id == idAset)) return (false, "Aset tidak ditemukan.");
-        _db.AsetMaintenance.Add(new MaintEntity
-        {
-            IdAset = idAset,
-            Jenis = ValidJenis(req.Jenis),
-            TglJadwal = req.TglJadwal,
-            TglSelesai = req.TglSelesai,
-            Status = ValidMaintStatus(req.Status),
-            Pelaksana = Clean(req.Pelaksana),
-            Biaya = req.Biaya,
-            Catatan = Clean(req.Catatan),
-            IdPembuat = nik,
-            TglDibuat = DateTime.UtcNow,
-        });
-        await _db.SaveChangesAsync();
-        return (true, null);
-    }
-
-    public async Task<(bool Ok, string? Error)> UpdateMaintenanceAsync(string nik, long id, SimpanMaintenanceRequest req)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
-        var m = await _db.AsetMaintenance.FirstOrDefaultAsync(x => x.Id == id);
-        if (m is null) return (false, "Data maintenance tidak ditemukan.");
-        m.Jenis = ValidJenis(req.Jenis);
-        m.TglJadwal = req.TglJadwal;
-        m.TglSelesai = req.TglSelesai;
-        m.Status = ValidMaintStatus(req.Status);
-        m.Pelaksana = Clean(req.Pelaksana);
-        m.Biaya = req.Biaya;
-        m.Catatan = Clean(req.Catatan);
-        await _db.SaveChangesAsync();
-        return (true, null);
-    }
-
-    public async Task<(bool Ok, string? Error)> DeleteMaintenanceAsync(string nik, long id)
-    {
-        if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg);
-        var m = await _db.AsetMaintenance.FirstOrDefaultAsync(x => x.Id == id);
-        if (m is null) return (false, "Data maintenance tidak ditemukan.");
-        _db.AsetMaintenance.Remove(m);
-        await _db.SaveChangesAsync();
-        return (true, null);
-    }
 
     // ---- aset tidak produktif (register terpisah, lihat AsetEntities.cs) ----
     public async Task<AsetTidakProduktifListDto> GetTidakProduktifListAsync(string nik)
@@ -631,29 +539,7 @@ public class AsetService
         $"{a.Jenis} — {(string.IsNullOrWhiteSpace(a.Lokasi) ? (a.Nama ?? $"Aset #{a.Id}") : a.Lokasi)}";
 
     // ---- helpers ----
-    private const string ForbidMsg = "Hanya Admin Aset (Departemen Kepatuhan) yang dapat mengelola aset.";
-
-    private async Task<Dictionary<long, DateOnly?>> NextMaintenanceMapAsync(List<long> ids)
-    {
-        if (ids.Count == 0) return new();
-        var grouped = await _db.AsetMaintenance.AsNoTracking()
-            .Where(m => m.Status == "Terjadwal" && ids.Contains(m.IdAset))
-            .GroupBy(m => m.IdAset)
-            .Select(g => new { Id = g.Key, Tgl = g.Min(x => x.TglJadwal) })
-            .ToListAsync();
-        return grouped.ToDictionary(x => x.Id, x => (DateOnly?)x.Tgl);
-    }
+    private const string ForbidMsg = AsetShared.ForbidMsg;
 
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-    private static string ValidKondisi(string? s) => s is "Baik" or "Rusak Ringan" or "Rusak Berat" or "Hilang" ? s : "Baik";
-    private static string ValidStatus(string? s) => s is "Aktif" or "Dipinjam" or "Perbaikan" or "Dihapus" ? s : "Aktif";
-    private static string ValidJenis(string? s) => s is "Rutin" or "Perbaikan" or "Inspeksi" ? s : "Rutin";
-    private static string ValidMaintStatus(string? s) => s is "Terjadwal" or "Selesai" or "Batal" ? s : "Terjadwal";
-
-    private static AsetDto Map(AsetEntity a, DateOnly? next) => new(
-        a.Id, a.Kode, a.Nama, a.Kategori, a.Merk, a.NomorSeri, a.Lokasi, a.IdPic, a.NamaPic,
-        a.Kondisi, a.Status, a.Nilai, a.TglPerolehan, a.Catatan, next, a.TglDibuat, a.TglDiubah);
-
-    private static AsetMaintenanceDto MapMaint(MaintEntity m) => new(
-        m.Id, m.IdAset, m.Jenis, m.TglJadwal, m.TglSelesai, m.Status, m.Pelaksana, m.Biaya, m.Catatan, m.TglDibuat);
 }

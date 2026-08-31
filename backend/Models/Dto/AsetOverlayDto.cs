@@ -76,7 +76,27 @@ public record AsetOverlayDto(
     IReadOnlyList<AsetAktivitasUmumDto> Aktivitas,
     IReadOnlyList<AsetDokumenDto> Dokumen,
     bool IsAdminAset,
-    bool CanCatatAktivitas); // admin, ATAU Operator Aktivitas yg juga PIC aktif aset ini
+    bool CanCatatAktivitas, // admin, ATAU Operator Aktivitas yg juga PIC aktif aset ini
+    IReadOnlyList<AsetMutasiDto> RiwayatMutasi);
+
+// Pengajuan mutasi lokasi/wilayah aset - overlay MURNI, TIDAK mengubah dbo.assets. Lihat
+// catatan arsitektur di AsetEntities.AsetMutasi & AsetOverlayService.CreateMutasiAsync.
+public record AsetMutasiDto(
+    long Id,
+    string ObjectId,
+    string? LokasiLama,
+    string LokasiBaru,
+    string? KodeCcLama,
+    string? WilayahLama,
+    string? KodeCcBaru,
+    string? WilayahBaru,
+    decimal? NilaiBukuSaatDiajukan,
+    string? Alasan,
+    string Status,
+    DateTime TglDibuat,
+    DateTime? TglDiubah);
+
+public record SimpanMutasiRequest(string LokasiBaru, string? KodeCcBaru, string? Alasan);
 
 // Operator Aktivitas: pegawai dgn hak terbatas "Catat Aktivitas SAJA" (bukan Admin Aset
 // penuh), wajib PIC aktif atas aset bersangkutan tiap kali dipakai. Lihat aset.aktivitas_operator.

@@ -65,6 +65,7 @@ import AsetNomorInternal from './pages/aset/AsetNomorInternal'
 import AsetClearance from './pages/aset/AsetClearance'
 import AsetAktivitasOperator from './pages/aset/AsetAktivitasOperator'
 import AsetQrCetak from './pages/aset/AsetQrCetak'
+import AsetCetakList from './pages/aset/AsetCetakList'
 import AsetDokumenJatuhTempo from './pages/aset/AsetDokumenJatuhTempo'
 import AsetOpname from './pages/aset/AsetOpname'
 import AsetOpnameDetail from './pages/aset/AsetOpnameDetail'
@@ -262,6 +263,7 @@ export default function App() {
             {/* Outside MyPersonalLayout on purpose: the printed letter must be a bare page,
                 with no sidebar or header bleeding into the print output. */}
             <Route path="/cetak/aset-qr" element={<AsetQrCetak />} />
+            <Route path="/cetak/aset-list" element={<AsetCetakList />} />
             <Route path="/cetak/izin/:id" element={<IzinCetakPage />} />
             <Route path="/cetak/sppd/:id" element={<SppdCetakPage />} />
             <Route path="/cetak/tiket/:id" element={<TiketCetakPage />} />

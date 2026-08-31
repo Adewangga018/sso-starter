@@ -97,15 +97,6 @@ export function KondisiBadge({ kondisi }) {
   const map = { Baik: 'ok', 'Rusak Ringan': 'warn', 'Rusak Berat': 'bad', Hilang: 'bad' }
   return <span className={`aset__badge aset__badge--${map[kondisi] || 'off'}`}>{kondisi}</span>
 }
-export function StatusBadge({ status }) {
-  const map = { Aktif: 'ok', Dipinjam: 'info', Perbaikan: 'warn', Dihapus: 'off' }
-  return <span className={`aset__badge aset__badge--${map[status] || 'off'}`}>{status}</span>
-}
-export function MaintStatusBadge({ status }) {
-  const map = { Terjadwal: 'info', Selesai: 'ok', Batal: 'off' }
-  return <span className={`aset__badge aset__badge--${map[status] || 'off'}`}>{status}</span>
-}
-
 function Modal({ title, onClose, children, onSubmit, saving, err }) {
   return (
     <div className="aset__overlay" onClick={onClose}>
@@ -121,91 +112,6 @@ function Modal({ title, onClose, children, onSubmit, saving, err }) {
         </div>
       </form>
     </div>
-  )
-}
-
-const EMPTY_ASET = { kode: '', nama: '', kategori: '', merk: '', nomorSeri: '', lokasi: '', idPic: '', namaPic: '', kondisi: 'Baik', status: 'Aktif', nilai: '', tglPerolehan: '', catatan: '' }
-
-export function AsetFormModal({ initial, onClose, onSubmit }) {
-  const [form, setForm] = useState(() => ({ ...EMPTY_ASET, ...pick(initial, EMPTY_ASET) }))
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  async function submit(e) {
-    e.preventDefault()
-    if (!form.kode.trim() || !form.nama.trim()) { setErr('Kode & nama aset wajib diisi.'); return }
-    setSaving(true); setErr('')
-    try {
-      await onSubmit({
-        ...form,
-        kode: form.kode.trim(), nama: form.nama.trim(),
-        kategori: n(form.kategori), merk: n(form.merk), nomorSeri: n(form.nomorSeri),
-        lokasi: n(form.lokasi), idPic: n(form.idPic), namaPic: n(form.namaPic), catatan: n(form.catatan),
-        nilai: form.nilai === '' ? null : Number(form.nilai),
-        tglPerolehan: form.tglPerolehan || null,
-      })
-    } catch (e2) { setErr(e2?.message || 'Gagal menyimpan.'); setSaving(false) }
-  }
-
-  return (
-    <Modal title={initial ? 'Ubah Aset' : 'Tambah Aset'} onClose={onClose} onSubmit={submit} saving={saving} err={err}>
-      <label className="aset__f">Kode<input value={form.kode} onChange={set('kode')} placeholder="AST-001" /></label>
-      <label className="aset__f">Kategori<input value={form.kategori} onChange={set('kategori')} placeholder="Elektronik, Kendaraan…" /></label>
-      <label className="aset__f aset__f--full">Nama<input value={form.nama} onChange={set('nama')} /></label>
-      <label className="aset__f">Merk / Model<input value={form.merk} onChange={set('merk')} /></label>
-      <label className="aset__f">Nomor Seri<input value={form.nomorSeri} onChange={set('nomorSeri')} /></label>
-      <label className="aset__f">Lokasi<input value={form.lokasi} onChange={set('lokasi')} /></label>
-      <label className="aset__f">Penanggung Jawab (nama)<input value={form.namaPic} onChange={set('namaPic')} /></label>
-      <label className="aset__f">NIK PIC<input value={form.idPic} onChange={set('idPic')} placeholder="opsional" /></label>
-      <label className="aset__f">Kondisi
-        <select value={form.kondisi} onChange={set('kondisi')}>{['Baik', 'Rusak Ringan', 'Rusak Berat', 'Hilang'].map((k) => <option key={k}>{k}</option>)}</select>
-      </label>
-      <label className="aset__f">Status
-        <select value={form.status} onChange={set('status')}>{['Aktif', 'Dipinjam', 'Perbaikan', 'Dihapus'].map((k) => <option key={k}>{k}</option>)}</select>
-      </label>
-      <label className="aset__f">Nilai (Rp)<input type="number" step="any" value={form.nilai} onChange={set('nilai')} /></label>
-      <label className="aset__f">Tgl Perolehan<input type="date" value={form.tglPerolehan} onChange={set('tglPerolehan')} /></label>
-      <label className="aset__f aset__f--full">Catatan<textarea rows={2} value={form.catatan} onChange={set('catatan')} /></label>
-    </Modal>
-  )
-}
-
-const EMPTY_MAINT = { jenis: 'Rutin', tglJadwal: '', tglSelesai: '', status: 'Terjadwal', pelaksana: '', biaya: '', catatan: '' }
-
-export function MaintenanceFormModal({ initial, namaAset, onClose, onSubmit }) {
-  const [form, setForm] = useState(() => ({ ...EMPTY_MAINT, ...pick(initial, EMPTY_MAINT) }))
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  async function submit(e) {
-    e.preventDefault()
-    if (!form.tglJadwal) { setErr('Tanggal jadwal wajib diisi.'); return }
-    setSaving(true); setErr('')
-    try {
-      await onSubmit({
-        jenis: form.jenis, tglJadwal: form.tglJadwal, tglSelesai: form.tglSelesai || null,
-        status: form.status, pelaksana: n(form.pelaksana), catatan: n(form.catatan),
-        biaya: form.biaya === '' ? null : Number(form.biaya),
-      })
-    } catch (e2) { setErr(e2?.message || 'Gagal menyimpan.'); setSaving(false) }
-  }
-
-  return (
-    <Modal title={`${initial ? 'Ubah' : 'Tambah'} Maintenance${namaAset ? ` — ${namaAset}` : ''}`} onClose={onClose} onSubmit={submit} saving={saving} err={err}>
-      <label className="aset__f">Jenis
-        <select value={form.jenis} onChange={set('jenis')}>{['Rutin', 'Perbaikan', 'Inspeksi'].map((k) => <option key={k}>{k}</option>)}</select>
-      </label>
-      <label className="aset__f">Status
-        <select value={form.status} onChange={set('status')}>{['Terjadwal', 'Selesai', 'Batal'].map((k) => <option key={k}>{k}</option>)}</select>
-      </label>
-      <label className="aset__f">Tgl Jadwal<input type="date" value={form.tglJadwal} onChange={set('tglJadwal')} /></label>
-      <label className="aset__f">Tgl Selesai<input type="date" value={form.tglSelesai} onChange={set('tglSelesai')} /></label>
-      <label className="aset__f">Pelaksana / Vendor<input value={form.pelaksana} onChange={set('pelaksana')} /></label>
-      <label className="aset__f">Biaya (Rp)<input type="number" step="any" value={form.biaya} onChange={set('biaya')} /></label>
-      <label className="aset__f aset__f--full">Catatan<textarea rows={2} value={form.catatan} onChange={set('catatan')} /></label>
-    </Modal>
   )
 }
 
@@ -490,6 +396,47 @@ export function PicFormModal({ onClose, onSubmit }) {
   )
 }
 
+const EMPTY_MUTASI = { lokasiBaru: '', kodeCcBaru: '', alasan: '' }
+
+// Catat pengajuan mutasi lokasi/wilayah aset - MURNI catatan di MyGCS, TIDAK mengubah data
+// ERP (lokasi/nilai buku asli tetap diubah tim akunting langsung di ERP setelah mereka
+// proses approval-nya di sana). aset/nama dipakai di judul modal biar konteksnya jelas.
+export function MutasiFormModal({ aset, onClose, onSubmit }) {
+  const [form, setForm] = useState(EMPTY_MUTASI)
+  const [ccList, setCcList] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  useEffect(() => { api.listKodeCcErp().then(setCcList).catch(() => setCcList([])) }, [])
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!form.lokasiBaru.trim()) { setErr('Lokasi baru wajib diisi.'); return }
+    setSaving(true); setErr('')
+    try {
+      await onSubmit({ lokasiBaru: form.lokasiBaru.trim(), kodeCcBaru: n(form.kodeCcBaru), alasan: n(form.alasan) })
+    } catch (e2) { setErr(e2?.message || 'Gagal menyimpan.'); setSaving(false) }
+  }
+
+  return (
+    <Modal title={`Catat Mutasi Lokasi${aset ? ` — ${aset}` : ''}`} onClose={onClose} onSubmit={submit} saving={saving} err={err}>
+      <label className="aset__f aset__f--full">Lokasi Baru<input value={form.lokasiBaru} onChange={set('lokasiBaru')} placeholder="mis. Gudang Wilayah Malang" /></label>
+      <label className="aset__f aset__f--full">Kode CC / Wilayah Baru (ERP)
+        <select value={form.kodeCcBaru} onChange={set('kodeCcBaru')}>
+          <option value="">— opsional, kalau sudah tahu kode CC tujuan —</option>
+          {ccList.map((c) => <option key={c.kodeCc} value={c.kodeCc}>{c.wilayah} ({c.kodeCc})</option>)}
+        </select>
+      </label>
+      <label className="aset__f aset__f--full">Alasan/Catatan<textarea rows={2} value={form.alasan} onChange={set('alasan')} placeholder="opsional" /></label>
+      <p className="aset__muted" style={{ gridColumn: '1 / -1', fontSize: '0.78rem', margin: 0 }}>
+        Ini murni catatan pengajuan di MyGCS — lokasi &amp; nilai buku ASLI di ERP tetap diubah tim akunting
+        secara manual setelah mereka proses approval-nya di ERP. Tandai "Selesai" di sini setelah dikonfirmasi sudah diproses.
+      </p>
+    </Modal>
+  )
+}
+
 const EMPTY_AKTIVITAS_UMUM = { jenis: '', tglAktivitas: '', deskripsi: '', vendorPelaksana: '', biaya: '', status: 'Selesai' }
 
 // groupAssetKode: kode GROUP_ASSET aset yang sedang dibuka (mis. "A04") - dipakai
@@ -564,22 +511,27 @@ const JENIS_DOKUMEN_UMUM = ['Polis Asuransi', 'Kontrak/PO', 'Lainnya']
 // Jenis dokumen relevan per kategori aset (GROUP_ASSET) - supaya mis. Kendaraan tidak
 // menawarkan "Sertifikat Tanah"/"IMB/PBG". Kategori tak dikenal/null -> semua jenis tampil.
 const JENIS_DOKUMEN_PER_KATEGORI = {
-  A01: ['Sertifikat Tanah', ...JENIS_DOKUMEN_UMUM],                    // Tanah
-  A02: ['Sertifikat Tanah', 'IMB/PBG', ...JENIS_DOKUMEN_UMUM],         // Bangunan & Instalasi Listrik
+  A01: ['Sertifikat Tanah', 'SHGB', ...JENIS_DOKUMEN_UMUM],            // Tanah
+  A02: ['Sertifikat Tanah', 'SHGB', 'IMB/PBG', ...JENIS_DOKUMEN_UMUM], // Bangunan & Instalasi Listrik
   A03: [...JENIS_DOKUMEN_UMUM],                                       // Mesin & Peralatan Pabrik
   A04: ['BPKB', 'STNK', ...JENIS_DOKUMEN_UMUM],                       // Kendaraan & Alat Berat
   A05: [...JENIS_DOKUMEN_UMUM],                                       // Inventaris Kantor
   A06: [...JENIS_DOKUMEN_UMUM],                                       // Aktiva Tak Berwujud
 }
-const JENIS_DOKUMEN_SEMUA = ['Sertifikat Tanah', 'IMB/PBG', 'BPKB', 'STNK', ...JENIS_DOKUMEN_UMUM]
+const JENIS_DOKUMEN_SEMUA = ['Sertifikat Tanah', 'SHGB', 'IMB/PBG', 'BPKB', 'STNK', ...JENIS_DOKUMEN_UMUM]
 export const MAX_DOKUMEN_BYTES = 15 * 1024 * 1024
+export const JENIS_FOTO_ASET = 'Foto Aset'
 
 // onSubmit dipanggil dengan (fields, file) - beda dari modal lain (JSON payload saja) karena
 // dokumen butuh multipart/form-data. Parent (AsetDetail) yang memanggil api.uploadAsetDokumen.
 // groupAssetKode: kode GROUP_ASSET aset yang sedang dibuka - menyaring pilihan Jenis Dokumen
 // supaya cuma yang relevan utk kategori aset ini yang tampil.
-export function DokumenFormModal({ groupAssetKode, onClose, onSubmit }) {
-  const [form, setForm] = useState(EMPTY_DOKUMEN)
+// mode 'foto': dipakai tombol "Tambah Foto" - jenisDokumen langsung terkunci ke "Foto Aset",
+// field yang tidak relevan buat foto (Nomor/Tgl Terbit/Tgl Jatuh Tempo) disembunyikan, dan
+// input berkas pakai capture="environment" supaya di HP langsung buka kamera (bukan galeri).
+export function DokumenFormModal({ groupAssetKode, mode, onClose, onSubmit }) {
+  const isFoto = mode === 'foto'
+  const [form, setForm] = useState(() => (isFoto ? { ...EMPTY_DOKUMEN, jenisDokumen: JENIS_FOTO_ASET } : EMPTY_DOKUMEN))
   const [file, setFile] = useState(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -601,6 +553,7 @@ export function DokumenFormModal({ groupAssetKode, onClose, onSubmit }) {
   async function submit(e) {
     e.preventDefault()
     if (!form.jenisDokumen) { setErr('Jenis dokumen wajib diisi.'); return }
+    if (isFoto && !file) { setErr('Pilih atau ambil foto terlebih dahulu.'); return }
     if (file && file.size > MAX_DOKUMEN_BYTES) { setErr('Berkas melebihi batas 15 MB — pilih berkas lain atau hapus lampirannya.'); return }
     setSaving(true); setErr('')
     try {
@@ -615,21 +568,29 @@ export function DokumenFormModal({ groupAssetKode, onClose, onSubmit }) {
   }
 
   return (
-    <Modal title="Tambah Dokumen Aset" onClose={onClose} onSubmit={submit} saving={saving} err={err}>
-      <label className="aset__f">Jenis Dokumen
-        <select value={form.jenisDokumen} onChange={set('jenisDokumen')}>
-          <option value="">— pilih jenis dokumen —</option>
-          {jenisOpsi.map((k) => <option key={k}>{k}</option>)}
-        </select>
-      </label>
-      <label className="aset__f">Nomor Dokumen<input value={form.nomorDokumen} onChange={set('nomorDokumen')} placeholder="opsional" /></label>
-      <label className="aset__f">Tgl Terbit<input type="date" value={form.tglTerbit} onChange={set('tglTerbit')} /></label>
-      <label className="aset__f">Tgl Jatuh Tempo<input type="date" value={form.tglJatuhTempo} onChange={set('tglJatuhTempo')} placeholder="opsional" /></label>
-      <label className="aset__f aset__f--full">Berkas
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={pilihFile} />
+    <Modal title={isFoto ? 'Tambah Foto Aset' : 'Tambah Dokumen Aset'} onClose={onClose} onSubmit={submit} saving={saving} err={err}>
+      {!isFoto && (
+        <label className="aset__f">Jenis Dokumen
+          <select value={form.jenisDokumen} onChange={set('jenisDokumen')}>
+            <option value="">— pilih jenis dokumen —</option>
+            {jenisOpsi.map((k) => <option key={k}>{k}</option>)}
+          </select>
+        </label>
+      )}
+      {!isFoto && (
+        <>
+          <label className="aset__f">Nomor Dokumen<input value={form.nomorDokumen} onChange={set('nomorDokumen')} placeholder="opsional" /></label>
+          <label className="aset__f">Tgl Terbit<input type="date" value={form.tglTerbit} onChange={set('tglTerbit')} /></label>
+          <label className="aset__f">Tgl Jatuh Tempo<input type="date" value={form.tglJatuhTempo} onChange={set('tglJatuhTempo')} placeholder="opsional" /></label>
+        </>
+      )}
+      <label className={`aset__f${isFoto ? ' aset__f--full' : ' aset__f--full'}`}>{isFoto ? 'Foto' : 'Berkas'}
+        {isFoto
+          ? <input type="file" accept="image/*" capture="environment" onChange={pilihFile} />
+          : <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={pilihFile} />}
       </label>
       <p className="aset__muted" style={{ gridColumn: '1 / -1', fontSize: '0.78rem', margin: 0 }}>
-        Format PDF, JPG, atau PNG — ukuran berkas maksimal 15 MB.
+        {isFoto ? 'Di HP akan langsung membuka kamera — bisa juga pilih dari galeri. Maks 15 MB.' : 'Format PDF, JPG, atau PNG — ukuran berkas maksimal 15 MB.'}
       </p>
       <label className="aset__f aset__f--full">Catatan<textarea rows={2} value={form.catatan} onChange={set('catatan')} placeholder="opsional" /></label>
     </Modal>

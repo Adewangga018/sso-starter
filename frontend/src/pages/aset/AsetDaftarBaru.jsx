@@ -101,6 +101,7 @@ export default function AsetDaftarBaru() {
           <CheckCircle2 size={40} color="#1f7a3a" style={{ marginBottom: 10 }} />
           <h3 className="aset__card-title" style={{ fontSize: '1.05rem' }}>Aset berhasil didaftarkan</h3>
           <p className="aset__muted" style={{ margin: '4px 0 20px' }}>Kode aset (OBJECTID): <b style={{ color: 'var(--gcs-green-900)' }}>{hasil.objectId}</b></p>
+          {hasil.warning && <div className="aset__msg aset__msg--err" style={{ textAlign: 'left', marginBottom: 16 }}>{hasil.warning}</div>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link className="aset__btn" to={`/my-asset/detail/${encodeAsetId(hasil.objectId)}`}>Buka Detail Aset</Link>
             <button type="button" className="aset__btn aset__btn--ghost" onClick={() => window.open(`/cetak/aset-qr?ids=${encodeURIComponent(encodeAsetId(hasil.objectId))}`, '_blank')}>

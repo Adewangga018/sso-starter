@@ -269,6 +269,16 @@ export const api = {
 
   // My Asset > Inventaris - sumber datanya GCS.dbo.assets (ERP Aktiva Tetap), read-only.
   getAsetList: (q) => apiFetch(`/api/aset${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  exportAsetExcel: ({ q, kelompok, lokasi, pic, klasifikasi } = {}) => {
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (kelompok) p.set('kelompok', kelompok)
+    if (lokasi) p.set('lokasi', lokasi)
+    if (pic) p.set('pic', pic)
+    if (klasifikasi) p.set('klasifikasi', klasifikasi)
+    const qs = p.toString()
+    return apiDownload(`/api/aset/export/excel${qs ? `?${qs}` : ''}`, 'Inventaris-Aset.xlsx')
+  },
   getAsetDetail: (objectId) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}`),
   // My Asset > Pendaftaran Aset Baru (MyGCS -> dbo.assets, SSOT tetap ERP).
   listGroupAssetErp: () => apiFetch('/api/aset/group-asset'),
@@ -293,6 +303,8 @@ export const api = {
   setAsetNomorInternal: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/nomor`, { method: 'PUT', body: JSON.stringify(payload) }),
   assignAsetPic: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/pic`, { method: 'POST', body: JSON.stringify(payload) }),
   kembalikanAsetPic: (id) => apiFetch(`/api/aset/pic/${id}/kembalikan`, { method: 'POST' }),
+  catatAsetMutasi: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/mutasi`, { method: 'POST', body: JSON.stringify(payload) }),
+  selesaikanAsetMutasi: (id) => apiFetch(`/api/aset/mutasi/${id}/selesai`, { method: 'POST' }),
   buatAsetAktivitas: (objectId, payload) => apiFetch(`/api/aset/${encodeURIComponent(objectId)}/aktivitas`, { method: 'POST', body: JSON.stringify(payload) }),
   ubahAsetAktivitas: (id, payload) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   hapusAsetAktivitas: (id) => apiFetch(`/api/aset/aktivitas/${id}`, { method: 'DELETE' }),
@@ -337,6 +349,7 @@ export const api = {
     if (foto) body.append('foto', foto)
     return apiFetch(`/api/aset/opname-sesi/${idSesi}/scan`, { method: 'POST', body })
   },
+  getAsetOpnameFoto: (scanId) => apiBlob(`/api/aset/opname-sesi/scan/${scanId}/foto`),
 
   // My Progress (KPI)
   getKpiSaya: () => apiFetch('/api/progress'),

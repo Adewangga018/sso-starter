@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import {
-  ArrowLeft, Loader2, Pencil, UserPlus, UserMinus, Plus, Trash2, Printer, User, Building2, FileText, Upload, X, FileCheck2,
+  ArrowLeft, Loader2, Pencil, UserPlus, UserMinus, Plus, Trash2, Printer, User, Building2, FileText, Upload, X, FileCheck2, Camera, MapPin, CheckCircle2,
 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import {
   rupiah, tgl, KondisiBadge, PicBadge, AktivitasStatusBadge, DokumenStatusBadge,
-  KondisiFormModal, PicFormModal, AktivitasUmumFormModal, NomorInternalFormModal, DokumenFormModal,
+  KondisiFormModal, PicFormModal, AktivitasUmumFormModal, NomorInternalFormModal, DokumenFormModal, MutasiFormModal,
   encodeAsetId, decodeAsetId, useConfirm,
 } from './asetShared'
 import './AsetPage.css'
@@ -82,6 +82,15 @@ export default function AsetDetail() {
     if (!(await confirm(`Hapus aktivitas "${row.jenis}"? Data akan hilang permanen.`, { danger: true }))) return
     try { await api.hapusAsetAktivitas(row.id); setMsg({ t: 'ok', m: 'Aktivitas dihapus.' }); await load() }
     catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal menghapus.' }) }
+  }
+  async function simpanMutasi(payload) {
+    await api.catatAsetMutasi(objectId, payload)
+    setModal(null); setMsg({ t: 'ok', m: 'Mutasi lokasi dicatat.' }); await load()
+  }
+  async function selesaikanMutasi(row) {
+    if (!(await confirm(`Tandai mutasi ke "${row.lokasiBaru}" sudah diproses akunting di ERP?`))) return
+    try { await api.selesaikanAsetMutasi(row.id); setMsg({ t: 'ok', m: 'Mutasi ditandai selesai.' }); await load() }
+    catch (err) { setMsg({ t: 'err', m: err instanceof ApiError ? err.message : 'Gagal menandai selesai.' }) }
   }
   async function simpanDokumen(fields, file) {
     await api.uploadAsetDokumen(objectId, fields, file)
@@ -260,6 +269,38 @@ export default function AsetDetail() {
         </div>
       )}
 
+      <div className="aset__card aset__card--wide">
+        <div className="aset__mhead">
+          <h3 className="aset__card-title"><MapPin size={16} style={{ verticalAlign: '-3px' }} /> Mutasi Lokasi</h3>
+          {isAdmin && <button type="button" className="aset__btn" onClick={() => setModal('mutasi')}><Plus size={14} /> Catat Mutasi</button>}
+        </div>
+        {!overlay || overlay.riwayatMutasi.length === 0 ? (
+          <div className="aset__muted" style={{ fontSize: '0.84rem' }}>Belum ada pengajuan mutasi lokasi.</div>
+        ) : (
+          <div className="aset__mlist">
+            {overlay.riwayatMutasi.map((m) => (
+              <div className="aset__mrow" key={m.id}>
+                <span>
+                  <b>{m.lokasiLama || '—'}</b> → <b>{m.lokasiBaru}</b>
+                  {m.wilayahBaru ? <small> ({m.wilayahBaru})</small> : null}
+                  <small> · diajukan {tgl(m.tglDibuat)}</small>
+                  {m.alasan ? <><br /><small>{m.alasan}</small></> : null}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className={`aset__badge aset__badge--${m.status === 'Selesai' ? 'ok' : 'warn'}`}>{m.status}</span>
+                  {isAdmin && m.status === 'Diajukan' && (
+                    <button type="button" className="aset__ibtn" title="Tandai Selesai" aria-label="Tandai Selesai" onClick={() => selesaikanMutasi(m)}><CheckCircle2 size={14} /></button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="aset__muted" style={{ fontSize: '0.74rem', marginTop: 10 }}>
+          Murni catatan pengajuan — lokasi &amp; nilai buku ASLI di ERP diubah tim akunting secara manual setelah diproses di sana.
+        </p>
+      </div>
+
       <div className="aset__card">
         <div className="aset__mhead">
           <h3 className="aset__card-title">Riwayat Aktivitas</h3>
@@ -300,7 +341,12 @@ export default function AsetDetail() {
       <div className="aset__card">
         <div className="aset__mhead">
           <h3 className="aset__card-title">Dokumen Aset</h3>
-          {isAdmin && <button type="button" className="aset__btn" onClick={() => setModal('dokumen')}><Upload size={14} /> Tambah Dokumen</button>}
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="aset__btn aset__btn--ghost" onClick={() => setModal('foto')}><Camera size={14} /> Tambah Foto</button>
+              <button type="button" className="aset__btn" onClick={() => setModal('dokumen')}><Upload size={14} /> Tambah Dokumen</button>
+            </div>
+          )}
         </div>
         {!overlay || overlay.dokumen.length === 0 ? (
           <div className="aset__muted" style={{ fontSize: '0.84rem' }}>Belum ada dokumen terlampir.</div>
@@ -329,6 +375,8 @@ export default function AsetDetail() {
 
       {modal === 'kondisi' && <KondisiFormModal initial={overlay?.kondisi} onClose={() => setModal(null)} onSubmit={simpanKondisi} />}
       {modal === 'dokumen' && <DokumenFormModal groupAssetKode={aset.kategoriKode} onClose={() => setModal(null)} onSubmit={simpanDokumen} />}
+      {modal === 'foto' && <DokumenFormModal mode="foto" groupAssetKode={aset.kategoriKode} onClose={() => setModal(null)} onSubmit={simpanDokumen} />}
+      {modal === 'mutasi' && <MutasiFormModal aset={aset.nama || aset.objectId} onClose={() => setModal(null)} onSubmit={simpanMutasi} />}
       {modal === 'nomor' && <NomorInternalFormModal initial={overlay?.nomorInternal} onClose={() => setModal(null)} onSubmit={simpanNomor} />}
       {modal === 'pic' && <PicFormModal onClose={() => setModal(null)} onSubmit={assignPic} />}
       {modal?.mode === 'aktivitas-buat' && <AktivitasUmumFormModal groupAssetKode={aset.kategoriKode} onClose={() => setModal(null)} onSubmit={simpanAktivitas} />}

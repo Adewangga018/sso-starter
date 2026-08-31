@@ -14,8 +14,11 @@ public class AsetDokumenService
     private static readonly string[] AllowedExt = [".pdf", ".png", ".jpg", ".jpeg"];
     public const long MaxUploadBytes = 15 * 1024 * 1024;
 
+    // "SHGB" dipisah dari "Sertifikat Tanah" (bukan cuma nama beda) - beda dari SHM, SHGB
+    // punya masa berlaku dan wajib diperpanjang, makanya butuh filter jatuh tempo H-750
+    // (2 tahun) tersendiri di halaman Dokumen Jatuh Tempo.
     private static readonly string[] JenisDikenal =
-        ["Sertifikat Tanah", "IMB/PBG", "BPKB", "STNK", "Polis Asuransi", "Kontrak/PO", "Lainnya"];
+        ["Sertifikat Tanah", "SHGB", "IMB/PBG", "BPKB", "STNK", "Polis Asuransi", "Kontrak/PO", "Foto Aset", "Lainnya"];
 
     private readonly ApplicationDbContext _db;
     private readonly GcsDbContext _gcs;
@@ -42,6 +45,11 @@ public class AsetDokumenService
         objectId = objectId.Trim();
 
         if (!await _access.IsAsetAdminAsync(nik)) return (false, ForbidMsg, null);
+        // objectId dipakai langsung sbg nama folder (Path.Combine di bawah) - dbo.assets.OBJECTID
+        // TIDAK punya constraint format sama sekali (kolom ERP bebas diisi aplikasi lain), jadi
+        // filter karakter path-traversal di sini, sama seperti guard di sisi baca (ResolveFileAsync).
+        if (objectId.Contains("..") || Path.IsPathRooted(objectId) || objectId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return (false, "Kode aset tidak valid.", null);
         if (!await AsetExistsAsync(objectId)) return (false, "Aset tidak ditemukan.", null);
         if (string.IsNullOrWhiteSpace(form.JenisDokumen)) return (false, "Jenis dokumen wajib diisi.", null);
 
@@ -78,7 +86,7 @@ public class AsetDokumenService
         };
         _db.AsetDokumen.Add(row);
         await _db.SaveChangesAsync();
-        return (true, null, MapDokumen(row));
+        return (true, null, AsetShared.MapDokumen(row));
     }
 
     public async Task<(bool Ok, string? Error)> UpdateAsync(string nik, long id, SimpanDokumenRequest req)
@@ -168,10 +176,6 @@ public class AsetDokumenService
         _ => "application/octet-stream",
     };
 
-    private const string ForbidMsg = "Hanya Admin Aset (Departemen Kepatuhan) yang dapat mengelola aset.";
+    private const string ForbidMsg = AsetShared.ForbidMsg;
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-
-    private static AsetDokumenDto MapDokumen(AsetDokumen d) => new(
-        d.Id, d.ObjectId, d.JenisDokumen, d.NomorDokumen, d.TglTerbit, d.TglJatuhTempo,
-        d.FilePath is null ? null : $"/api/aset/dokumen/{d.Id}/file", d.FileNamaAsli, d.Catatan, d.Status, d.TglDibuat);
 }
