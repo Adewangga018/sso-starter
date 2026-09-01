@@ -483,6 +483,7 @@ export const api = {
     ).toString()
     return apiFetch('/api/org/absensi-log' + (q ? `?${q}` : ''))
   },
+  getAbsensiLogFoto: (id) => apiBlob(`/api/org/absensi-log/${id}/foto`),
 
   // Riwayat Versi Struktur Organisasi terikat SK direksi (diminta 2026-08-24) -
   // lihat OrgVersiService. Minor/Major dipilih admin sendiri saat menerbitkan.

@@ -86,9 +86,22 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!await Geolocator.isLocationServiceEnabled()) {
         throw Exception('GPS tidak aktif.');
       }
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
-      );
+
+      Position pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 30)),
+        );
+      } on TimeoutException {
+        // Sinyal GPS murni lemah (umum di dalam gedung, apalagi sesaat setelah mock-location
+        // app dicopot - fix GPS asli yg pertama kali ("cold start") bisa lebih lambat dari fix
+        // palsu yg instan). Coba sekali lagi dgn akurasi lebih rendah (dibantu WiFi/seluler,
+        // jauh lebih cepat dari GPS murni) sebelum benar-benar menyerah.
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium, timeLimit: Duration(seconds: 15)),
+        );
+      }
+
       if (!mounted) return;
       setState(() {
         _position = pos;
@@ -97,7 +110,12 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _locationError = '$e'; _locationLoading = false; });
+      setState(() {
+        _locationError = e is TimeoutException
+            ? 'Sinyal GPS lemah/belum ditemukan. Coba dekat jendela atau area terbuka, lalu tekan ikon muat ulang.'
+            : '$e';
+        _locationLoading = false;
+      });
     }
   }
 

@@ -18,7 +18,19 @@ class AuthService {
   static const _kIdToken = 'id_token';
   static const _kAccessTokenExpiry = 'access_token_expiry';
 
-  Future<String?> get accessToken async => _storage.read(key: _kAccessToken);
+  // Kegagalan baca/dekripsi Keystore (mis. "BadPaddingException" - kunci Keystore tidak
+  // lagi cocok dgn data terenkripsi lama, umum terjadi setelah restore data/clone HP) tidak
+  // boleh membuat app macet selamanya di layar loading (lihat main.dart, _AuthGate) - kalau
+  // itu terjadi, anggap saja belum login & bersihkan sisa data yang sudah tidak terbaca,
+  // supaya percobaan berikutnya bersih (ditemukan 2026-09-01, kasus nyata di device Xiaomi).
+  Future<String?> get accessToken async {
+    try {
+      return await _storage.read(key: _kAccessToken);
+    } catch (_) {
+      await _storage.deleteAll().catchError((_) {});
+      return null;
+    }
+  }
 
   Future<bool> get isLoggedIn async => (await accessToken) != null;
 
@@ -43,8 +55,16 @@ class AuthService {
   /// Ambil access token yang valid, refresh dulu kalau sudah/hampir kedaluwarsa.
   /// Dipakai ApiClient sebelum tiap panggilan API.
   Future<String?> validAccessToken() async {
-    final expiry = await _storage.read(key: _kAccessTokenExpiry);
-    final token = await _storage.read(key: _kAccessToken);
+    // Sama spt accessToken getter - kegagalan baca Keystore dianggap belum login,
+    // bukan macet/lempar exception ke pemanggil (ApiClient).
+    String? expiry, token;
+    try {
+      expiry = await _storage.read(key: _kAccessTokenExpiry);
+      token = await _storage.read(key: _kAccessToken);
+    } catch (_) {
+      await _storage.deleteAll().catchError((_) {});
+      return null;
+    }
     if (token == null) return null;
 
     final expiryDate = expiry != null ? DateTime.tryParse(expiry) : null;

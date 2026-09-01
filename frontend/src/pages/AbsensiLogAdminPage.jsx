@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, Loader2, RotateCw, ShieldAlert, TriangleAlert } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ImageOff, Loader2, RotateCw, ShieldAlert, TriangleAlert, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import './PayrollShared.css'
@@ -21,6 +21,29 @@ export default function AbsensiLogAdminPage() {
   const [error, setError] = useState('')
   const [hanyaPeringatan, setHanyaPeringatan] = useState(true)
   const [nik, setNik] = useState('')
+
+  const [fotoOpen, setFotoOpen] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState(null)
+  const [fotoLoading, setFotoLoading] = useState(false)
+  const [fotoError, setFotoError] = useState('')
+
+  async function lihatFoto(row) {
+    setFotoOpen(true); setFotoLoading(true); setFotoError(''); setFotoUrl(null)
+    try {
+      const { url } = await api.getAbsensiLogFoto(row.id)
+      setFotoUrl(url)
+    } catch (err) {
+      setFotoError(err instanceof ApiError ? err.message : 'Gagal memuat foto.')
+    } finally {
+      setFotoLoading(false)
+    }
+  }
+
+  function tutupFoto() {
+    setFotoOpen(false)
+    if (fotoUrl) URL.revokeObjectURL(fotoUrl)
+    setFotoUrl(null); setFotoError('')
+  }
 
   async function load() {
     setLoading(true); setError('')
@@ -105,6 +128,7 @@ export default function AbsensiLogAdminPage() {
                 <th>Titik</th>
                 <th>Akurasi</th>
                 <th>Peringatan</th>
+                <th>Foto</th>
               </tr>
             </thead>
             <tbody>
@@ -128,10 +152,51 @@ export default function AbsensiLogAdminPage() {
                       <span style={{ color: 'var(--gcs-text-muted)', fontSize: 12.5 }}>-</span>
                     )}
                   </td>
+                  <td>
+                    <button type="button" className="agt__ibtn" title="Lihat foto" onClick={() => lihatFoto(row)}>
+                      Lihat
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {fotoOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)' }}
+          onClick={tutupFoto}
+        >
+          <div
+            style={{ maxWidth: '92vw', maxHeight: '88vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+              <button
+                type="button" onClick={tutupFoto} aria-label="Tutup"
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, color: '#fff', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {fotoLoading ? (
+              <div style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Loader2 className="agt__spin" size={20} /> Memuat foto…
+              </div>
+            ) : fotoError ? (
+              <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 24 }}>
+                <ImageOff size={32} />
+                <span>{fotoError}</span>
+              </div>
+            ) : (
+              <img
+                src={fotoUrl} alt="Foto bukti absen"
+                style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 8, display: 'block' }}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

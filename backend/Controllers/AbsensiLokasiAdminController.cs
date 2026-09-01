@@ -25,16 +25,18 @@ public class AbsensiLokasiAdminController : ControllerBase
     private readonly ApplicationDbContext _appDb;
     private readonly GcsDbContext _db;
     private readonly ReverseGeocodingService _geocoding;
+    private readonly IConfiguration _config;
 
     public AbsensiLokasiAdminController(
         CurrentUserContext currentUser, ModuleAccessService access, ApplicationDbContext appDb,
-        GcsDbContext db, ReverseGeocodingService geocoding)
+        GcsDbContext db, ReverseGeocodingService geocoding, IConfiguration config)
     {
         _currentUser = currentUser;
         _access = access;
         _appDb = appDb;
         _db = db;
         _geocoding = geocoding;
+        _config = config;
     }
 
     // Picker karyawan utk "Tetapkan Langsung" - seluruh perusahaan (Admin SDM, bukan
@@ -165,6 +167,32 @@ public class AbsensiLokasiAdminController : ControllerBase
             .ToListAsync();
 
         return Ok(rows);
+    }
+
+    // Foto bukti absen (dgn watermark tanggal/jam server - lihat WatermarkService &
+    // PersonalController.PostAbsensi) - dilayani sbg stream file, bukan dicatat di database
+    // (path fisik langsung dari kolom Foto). Admin SDM saja.
+    [HttpGet("/org/absensi-log/{id:long}/foto")]
+    public async Task<IActionResult> GetFoto(long id)
+    {
+        if (!await IsSdmAdminAsync()) return Forbid();
+
+        var relPath = await _appDb.AbsensiMobileLog
+            .Where(a => a.Id == id)
+            .Select(a => a.Foto)
+            .FirstOrDefaultAsync();
+        if (string.IsNullOrWhiteSpace(relPath)) return NotFound(new { message = "Foto tidak ditemukan." });
+
+        var basePath = _config["Attendance:PhotoPath"];
+        if (string.IsNullOrWhiteSpace(basePath)) return NotFound(new { message = "Penyimpanan foto belum dikonfigurasi." });
+
+        // relPath tersimpan sbg "attendances/<file>.jpg" - foto ada langsung di basePath
+        // (basePath itu sendiri sudah folder "attendances", lihat PersonalController.PostAbsensi).
+        var fileName = Path.GetFileName(relPath);
+        var fullPath = Path.Combine(basePath, fileName);
+        if (!System.IO.File.Exists(fullPath)) return NotFound(new { message = "Berkas foto tidak ditemukan di penyimpanan." });
+
+        return PhysicalFile(fullPath, "image/jpeg");
     }
 
     private async Task<string?> CurrentNikAsync()

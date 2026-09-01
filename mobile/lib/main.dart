@@ -38,8 +38,14 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
+    // catchError sengaja dipasang lagi di sini (selain penanganan di AuthService sendiri) -
+    // lapisan jaga terakhir supaya layar ini TIDAK PERNAH macet selamanya di loading kalau
+    // ada kegagalan tak terduga di baliknya; anggap belum login (tampilkan layar login)
+    // daripada spinner tanpa akhir.
     AuthService.instance.isLoggedIn.then((v) {
       if (mounted) setState(() => _loggedIn = v);
+    }).catchError((_) {
+      if (mounted) setState(() => _loggedIn = false);
     });
   }
 
