@@ -1,461 +1,1213 @@
-.izin__empty {
-  padding: 60px 0;
-  text-align: center;
-  color: var(--gcs-text-muted);
-  font-size: 14px;
-}
+/* ===========================================================================
+   IzinPage Styling - Modern Executive GCS Theme (Dense & Compact Layout)
+   =========================================================================== */
 
-.izin__page-title {
-  font-size: 22px;
-  margin-bottom: 16px;
-}
-
-.izin__tabs {
+.izin {
   display: flex;
-  gap: 4px;
-}
-
-.izin__tab {
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  background: var(--gcs-bg);
-  color: var(--gcs-text-muted);
-  border-radius: 10px 10px 0 0;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.izin__tab--active {
-  background: var(--gcs-white);
-  color: var(--gcs-ink);
-}
-
-.izin__actionbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  padding: 12px 14px;
-  border-radius: 0 10px 0 0;
-}
-
-.izin__filter {
-  position: relative;
-  flex: 1;
-  display: flex;
-}
-
-.izin__filter input {
-  width: 100%;
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  background: var(--gcs-bg);
-  padding: 9px 44px 9px 12px;
-  font-size: 13.5px;
-  color: var(--gcs-ink);
-  outline: none;
-}
-
-.izin__filter input:focus {
-  background: var(--gcs-white);
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.izin__filter-icon {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  color: var(--gcs-text-muted);
-  pointer-events: none;
-}
-
-.izin__actionbar-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.izin__icon-btn {
-  border: none;
-  border-radius: 8px;
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  cursor: pointer;
-}
-
-.izin__icon-btn--add {
-  background: var(--gcs-green-600);
-}
-
-.izin__icon-btn--refresh {
-  background: var(--gcs-green-500);
-}
-
-.izin__icon-btn:hover {
-  opacity: 0.9;
-}
-
-.izin__card {
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-radius: 0 0 14px 14px;
-  padding: 20px 24px;
-}
-
-.izin__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.izin__page-size,
-.izin__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--gcs-text-muted);
-}
+/* ===========================================================================
+   1. State Cards (Loading / Error)
+   =========================================================================== */
 
-.izin__page-size select,
-.izin__search input {
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  color: var(--gcs-ink);
-  background: var(--gcs-white);
-  outline: none;
-}
-
-.izin__search input {
-  min-width: 220px;
-}
-
-.izin__search input:focus {
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.izin__table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--gcs-border);
-  border-radius: 12px;
-}
-
-/* Tabel izin punya satu kolom lebih banyak daripada SPL (Kepentingan), jadi butuh ruang
-   lebih lebar - di bawah ini kolom Jam mulai berdesakan dan pembungkusnya menggulir. */
-.izin__table {
-  width: 100%;
-  table-layout: fixed;
-  min-width: 1180px;
-  border-collapse: collapse;
-  font-size: 13.5px;
-}
-
-/* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .izin__table-wrap). */
-.izin__table th,
-.izin__table td {
-  padding: 14px 20px;
+.izin__state-card {
+  padding: 48px 20px;
   text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gcs-border);
-  border-right: 1px solid var(--gcs-border);
-}
-
-.izin__table th:last-child,
-.izin__table td:last-child {
-  border-right: none;
-}
-
-/* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.izin__table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.izin__table thead th {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--gcs-ink);
-  background: rgba(15, 38, 31, 0.035);
-  border-bottom: 2px solid var(--gcs-border);
-  white-space: nowrap;
-}
-
-.izin__table tbody tr:hover td {
-  background: rgba(244, 174, 70, 0.06);
-}
-
-/* Lebar kolom dijaga agar totalnya tidak melebihi 100% - itu penyebab kolom jam terjepit:
-   lebar warisan SPL (13+15+30+15+15+12) masih ditambah kolom Kepentingan yang baru. */
-.izin__col-status {
-  width: 10%;
-}
-
-.izin__col-kode {
-  width: 11%;
-}
-
-.izin__col-ket {
-  width: 23%;
-}
-
-/* Tanggal + jam ("06-07-2026 07:00") harus muat dalam satu baris. */
-.izin__col-jam {
-  width: 15%;
-  white-space: nowrap;
-}
-
-.izin__col-jenis {
-  width: 12%;
-}
-
-.izin__col-kepentingan {
-  width: 10%;
-}
-
-/* Lebih lebar dari SPL: kolom ini memuat tiga tombol (cetak, ubah, hapus). */
-.izin__col-aksi {
-  width: 132px;
-  text-align: center;
-}
-
-.izin__th--sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.izin__th--sortable:hover {
-  color: var(--gcs-green-600);
-}
-
-.izin__th-content {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.izin__sort-icon--idle {
-  opacity: 0.35;
-}
-
-.izin__status {
-  font-weight: 600;
-}
-
-.izin__status--done {
-  color: var(--gcs-green-600);
-}
-
-.izin__row-actions {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 
-/* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
-   terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
-.izin__row-btn {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  border-radius: 8px;
+.izin__loading-spinner {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  border: 3px solid rgba(47, 108, 63, 0.15);
+  border-top-color: var(--gcs-green-600);
+  border-radius: 50%;
+  animation: izin-spin 0.8s linear infinite;
+  margin-bottom: 12px;
 }
 
-.izin__row-btn--edit {
-  color: var(--gcs-gold-700);
-  border-color: rgba(244, 174, 70, 0.45);
-  background: rgba(244, 174, 70, 0.12);
+@keyframes izin-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.izin__row-btn--edit:hover {
-  color: #fff;
-  border-color: var(--gcs-gold-600);
-  background: var(--gcs-gold-600);
+.izin__state-icon {
+  margin-bottom: 12px;
 }
 
-.izin__row-btn--delete {
-  color: #c8352c;
-  border-color: rgba(230, 72, 63, 0.4);
-  background: rgba(230, 72, 63, 0.1);
+.izin__state-icon--err {
+  color: #dc2626;
 }
 
-.izin__row-btn--delete:hover {
-  color: #fff;
-  border-color: #c8352c;
-  background: #d63c32;
+.izin__state-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  margin: 0 0 4px;
 }
 
-/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
-   izin yang sudah disetujui pun tetap perlu dicetak. */
-.izin__row-btn--print {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
-}
-
-.izin__row-btn--print:hover {
-  color: #fff;
-  border-color: var(--gcs-green-600);
-  background: var(--gcs-green-600);
-}
-
-.izin__row-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.izin__source {
-  color: var(--gcs-text-muted);
-  font-size: 12px;
-  margin-top: 2px;
-}
-
-.izin__no-data {
-  text-align: center;
-  color: var(--gcs-text-muted);
-  padding: 24px;
-}
-
-.izin__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 16px;
+.izin__state-desc {
   font-size: 13px;
   color: var(--gcs-text-muted);
-}
-
-.izin__pagination {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.izin__pagination button {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
-  color: var(--gcs-ink);
-  cursor: pointer;
-}
-
-.izin__pagination button:hover:not(:disabled) {
-  border-color: var(--gcs-green-600);
-  color: var(--gcs-green-600);
-}
-
-.izin__pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.izin__page-indicator {
-  font-weight: 600;
-  color: var(--gcs-ink);
+  margin: 0;
 }
 
 .izin__error {
   margin-bottom: 12px;
   font-size: 12.5px;
-  color: #b3261e;
-  background: rgba(230, 72, 63, 0.1);
+  font-weight: 500;
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 8px 12px;
 }
 
-/* Modal */
-.izin__modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 38, 31, 0.5);
+/* ===========================================================================
+   2. Page Header
+   =========================================================================== */
+
+.izin__page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.izin__page-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.izin__page-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  z-index: 50;
+  flex-shrink: 0;
+}
+
+.izin__page-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.izin__page-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+.izin__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  border-radius: 9px;
+  padding: 8px 15px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px -2px rgba(15, 38, 31, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.izin__btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #16382b 0%, #255c49 100%);
+  box-shadow: 0 5px 14px -2px rgba(15, 38, 31, 0.4);
+}
+
+.izin__btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ===========================================================================
+   3. Quick Statistics Summary Grid (Compact)
+   =========================================================================== */
+
+.izin__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.izin__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 38, 31, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.izin__stat-card:hover {
+  border-color: rgba(47, 108, 63, 0.25);
+}
+
+.izin__stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.izin__stat-icon--total {
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-green-900);
+}
+
+.izin__stat-icon--draft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.izin__stat-icon--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.izin__stat-icon--monthly {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.izin__stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.izin__stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.izin__stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.izin__stat-val--draft {
+  color: #d97706;
+}
+
+.izin__stat-val--approved {
+  color: #059669;
+}
+
+.izin__stat-val--monthly {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   4. Main Card & Tab Navigation
+   =========================================================================== */
+
+.izin__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px -3px rgba(15, 38, 31, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.izin__nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.izin__tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.izin__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: rgba(15, 38, 31, 0.03);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__tab:hover:not(.izin__tab--active) {
+  background: rgba(15, 38, 31, 0.06);
+  color: var(--gcs-ink);
+}
+
+.izin__tab--active {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.2);
+}
+
+.izin__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-text-muted);
+}
+
+.izin__tab--active .izin__tab-count {
+  background: rgba(244, 174, 70, 0.25);
+  color: var(--gcs-gold-500);
+}
+
+.izin__nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.izin__icon-btn {
+  border: 1px solid var(--gcs-border);
+  border-radius: 7px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gcs-white);
+  color: var(--gcs-green-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__icon-btn:hover {
+  background: rgba(47, 108, 63, 0.08);
+  border-color: var(--gcs-green-600);
+}
+
+/* ===========================================================================
+   5. Toolbar (Search & Page Size)
+   =========================================================================== */
+
+.izin__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.izin__search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 380px;
+}
+
+.izin__search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gcs-text-muted);
+  pointer-events: none;
+}
+
+.izin__search-box input {
+  width: 100%;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 6px 30px 6px 32px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.izin__search-box input:focus {
+  background: var(--gcs-white);
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
+.izin__search-box input::placeholder {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
+}
+
+.izin__search-clear {
+  position: absolute;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gcs-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.izin__search-clear:hover {
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+}
+
+.izin__page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.izin__page-size-label {
+  font-weight: 600;
+}
+
+.izin__page-size-wrap select {
+  appearance: none;
+  background: var(--gcs-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%233e3430' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center;
+  border: 1px solid var(--gcs-border);
+  border-radius: 6px;
+  padding: 5px 22px 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  outline: none;
+  cursor: pointer;
+}
+
+.izin__page-size-wrap select:focus {
+  border-color: var(--gcs-gold-500);
+}
+
+/* ===========================================================================
+   6. Dense Table Layout (Fit without horizontal scroll on desktop)
+   =========================================================================== */
+
+.izin__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  border-radius: 10px;
+  background: var(--gcs-white);
+  box-shadow: 0 1px 3px rgba(15, 38, 31, 0.02);
+}
+
+.izin__table {
+  width: 100%;
+  table-layout: fixed;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+/* Column Width Proportions (Total 100%) */
+.izin__col-status {
+  width: 11%;
+  text-align: center;
+}
+
+.izin__col-kode {
+  width: 13%;
+  text-align: left;
+}
+
+.izin__col-jam {
+  width: 14%;
+  text-align: left;
+}
+
+.izin__col-jenis-kep {
+  width: 19%;
+  text-align: left;
+}
+
+.izin__col-ket {
+  width: 30%;
+  text-align: left;
+}
+
+.izin__col-aksi {
+  width: 13%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Header */
+.izin__table thead th {
+  padding: 8px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-green-900);
+  background: #f8faf9;
+  border-bottom: 2px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+}
+
+.izin__th--sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.izin__th--sortable:hover {
+  background: #f0f4f2;
+  color: var(--gcs-green-600);
+}
+
+.izin__th--active {
+  color: var(--gcs-green-700);
+}
+
+.izin__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.izin__col-status .izin__th-content,
+.izin__col-aksi .izin__th-content {
+  justify-content: center;
+}
+
+.izin__sort-indicator {
+  display: inline-flex;
+  align-items: center;
+}
+
+.izin__sort-icon--idle {
+  opacity: 0.3;
+}
+
+.izin__sort-icon--active {
+  color: var(--gcs-green-600);
+}
+
+/* Rows & Cells */
+.izin__row {
+  transition: background-color 0.12s ease;
+}
+
+.izin__row--clickable {
+  cursor: pointer;
+}
+
+.izin__table tbody tr:nth-child(even) {
+  background-color: rgba(15, 38, 31, 0.015);
+}
+
+.izin__row--clickable:hover {
+  background-color: rgba(244, 174, 70, 0.1) !important;
+}
+
+.izin__table tbody td {
+  padding: 8px 8px;
+  border-bottom: 1px solid rgba(15, 38, 31, 0.06);
+  vertical-align: top;
+}
+
+/* Spacing khusus pemisah antara kolom jenis & kepentingan dengan kolom keterangan */
+.izin__table tbody td.izin__col-jenis-kep,
+.izin__table thead th.izin__col-jenis-kep {
+  padding-right: 16px;
+}
+
+.izin__table tbody td.izin__col-ket,
+.izin__table thead th.izin__col-ket {
+  padding-left: 12px;
+}
+
+.izin__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Cell specifics */
+.izin__kode-badge {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+}
+
+.izin__datetime-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.izin__date-text {
+  font-weight: 600;
+  color: var(--gcs-ink);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.izin__time-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gcs-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Combined Jenis & Kepentingan */
+.izin__jenis-kepentingan {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.izin__badge-label-truncate {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.izin__sub-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.izin__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.izin__chip--dinas {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.izin__chip--pribadi {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+}
+
+.izin__source-chip {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+  padding: 1px 5px;
+  background: rgba(15, 38, 31, 0.05);
+  border-radius: 4px;
+}
+
+.izin__ket-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--gcs-ink);
+  line-height: 1.35;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.izin__dash {
+  color: var(--gcs-text-muted);
+  font-weight: 500;
+}
+
+/* ===========================================================================
+   7. Badges
+   =========================================================================== */
+
+.izin__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.izin__badge--sm {
+  padding: 2px 7px;
+  font-size: 10.5px;
+}
+
+.izin__badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.izin__badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.izin__badge--danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.izin__badge--warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.izin__badge--purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #6d28d9;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.izin__badge--dinas {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.izin__badge--pribadi {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+}
+
+/* ===========================================================================
+   8. Row Actions (Dense)
+   =========================================================================== */
+
+.izin__row-actions {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.izin__row-btn {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__row-btn--print {
+  color: var(--gcs-green-600);
+  border-color: rgba(47, 108, 63, 0.25);
+  background: rgba(47, 108, 63, 0.06);
+}
+
+.izin__row-btn--print:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--gcs-green-600);
+  background: var(--gcs-green-600);
+  box-shadow: 0 2px 5px rgba(47, 108, 63, 0.3);
+}
+
+.izin__row-btn--edit {
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.izin__row-btn--edit:hover {
+  color: #ffffff;
+  border-color: #d97706;
+  background: #d97706;
+  box-shadow: 0 2px 5px rgba(217, 119, 6, 0.3);
+}
+
+.izin__row-btn--delete {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.izin__row-btn--delete:hover {
+  color: #ffffff;
+  border-color: #dc2626;
+  background: #dc2626;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3);
+}
+
+.izin__row-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ===========================================================================
+   9. Empty State
+   =========================================================================== */
+
+.izin__no-data {
+  padding: 40px 20px !important;
+  text-align: center;
+}
+
+.izin__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.izin__empty-icon {
+  color: var(--gcs-text-muted);
+  opacity: 0.6;
+}
+
+.izin__empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+}
+
+.izin__empty-sub {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+  max-width: 420px;
+}
+
+/* ===========================================================================
+   10. Footer & Pagination
+   =========================================================================== */
+
+.izin__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.izin__footer-info {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+.izin__footer-info strong {
+  color: var(--gcs-ink);
+  font-weight: 700;
+}
+
+.izin__pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.izin__page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__page-nav:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+  background: #f8faf9;
+}
+
+.izin__page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.izin__page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.izin__page-num {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__page-num:hover:not(.is-active) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+}
+
+.izin__page-num.is-active {
+  background: var(--gcs-green-900);
+  border-color: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(15, 38, 31, 0.25);
+}
+
+.izin__page-ellipsis {
+  padding: 0 3px;
+  color: var(--gcs-text-muted);
+  font-size: 11px;
+}
+
+/* ===========================================================================
+   11. Modal Form & Detail Modal Styling
+   =========================================================================== */
+
+.izin__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 38, 31, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
 }
 
 .izin__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -18px rgba(15, 38, 31, 0.45);
+  overflow: hidden;
+}
+
+.izin__modal--detail {
+  max-width: 580px;
 }
 
 .izin__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 22px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  border-radius: 14px 14px 0 0;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
 }
 
-.izin__modal-header h3 {
-  font-size: 17px;
-  color: #fff;
+.izin__modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gcs-gold-500);
+}
+
+.izin__modal-header-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: var(--font-heading);
 }
 
 .izin__modal-close {
   border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .izin__modal-close:hover {
-  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
 }
 
+/* Detail Modal Body */
+.izin__detail-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.izin__detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.izin__detail-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.izin__detail-kode {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gcs-border);
+}
+
+.izin__detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.izin__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--gcs-bg);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gcs-border);
+}
+
+.izin__detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.izin__detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+}
+
+.izin__detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.izin__detail-val--date {
+  font-variant-numeric: tabular-nums;
+}
+
+.izin__detail-box {
+  margin-top: 2px;
+}
+
+.izin__detail-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gcs-ink);
+  white-space: pre-wrap;
+}
+
+.izin__detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.izin__detail-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.izin__btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(47, 108, 63, 0.35);
+  background: var(--gcs-white);
+  color: var(--gcs-green-700);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__btn-outline:hover:not(:disabled) {
+  background: var(--gcs-green-600);
+  color: #ffffff;
+  border-color: var(--gcs-green-600);
+}
+
+.izin__btn-outline--edit {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #b45309;
+}
+
+.izin__btn-outline--edit:hover {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
+.izin__btn-outline--danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #dc2626;
+}
+
+.izin__btn-outline--danger:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.izin__btn-outline:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Modal Form Elements */
 .izin__modal-body {
-  padding: 22px;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.izin__modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .izin__field {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .izin__field > span {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--gcs-ink);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
 }
 
 .izin__field input,
@@ -463,13 +1215,14 @@
 .izin__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13.5px;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--gcs-ink);
   background: var(--gcs-white);
   outline: none;
+  transition: all 0.15s ease;
 }
 
 .izin__field input:focus,
@@ -479,56 +1232,77 @@
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.izin__field--textarea {
-  align-items: start;
-}
-
-.izin__field--berkas {
-  align-items: start;
-}
-
-.izin__field--berkas input[type='file'] {
-  width: 100%;
-  font-size: 13px;
-}
-
-.izin__berkas-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--gcs-text-muted);
+.izin__field--full {
+  grid-column: 1 / -1;
 }
 
 .izin__field textarea {
   resize: vertical;
+  min-height: 64px;
 }
 
-.izin__window-hint {
-  font-size: 12.5px;
-  color: var(--gcs-text-muted);
+.izin__field--berkas {
   background: var(--gcs-bg);
+  border: 1px dashed var(--gcs-border);
   border-radius: 8px;
-  padding: 9px 12px;
-  margin-bottom: 14px;
+  padding: 10px;
+}
+
+.izin__berkas-hint {
+  font-size: 11.5px;
+  color: var(--gcs-text-muted);
+  margin-top: 3px;
+}
+
+.izin__berkas-selected {
+  margin-top: 3px;
+  color: var(--gcs-green-700);
+  font-weight: 600;
 }
 
 .izin__modal-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+}
+
+.izin__btn-secondary {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 7px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.izin__btn-secondary:hover {
+  background: var(--gcs-bg);
+  color: var(--gcs-ink);
 }
 
 .izin__submit {
   border: none;
-  border-radius: 8px;
-  background: var(--gcs-gold-500);
-  color: var(--gcs-green-900);
-  font-size: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f4ae46 0%, #e19c35 100%);
+  color: #0f261f;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 10px 26px;
+  padding: 7px 18px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(244, 174, 70, 0.3);
+  transition: all 0.15s ease;
 }
 
 .izin__submit:hover:not(:disabled) {
   opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .izin__submit:disabled {
@@ -537,55 +1311,72 @@
 }
 
 /* ===========================================================================
-   Responsif
+   12. Responsive Breakpoints
    =========================================================================== */
 
-/* Tablet: bilah aksi & toolbar mulai berdesakan, tabel masih berupa tabel
-   (menggulir mendatar di dalam .izin__table-wrap). */
-@media (max-width: 900px) {
-  .izin__actionbar {
-    flex-wrap: wrap;
-  }
-
-  .izin__filter {
-    flex-basis: 100%;
-    order: -1;
+@media (max-width: 960px) {
+  .izin__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .izin__toolbar {
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .izin__search input {
-    min-width: 0;
-  }
-
-  .izin__search {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .izin__search input {
-    flex: 1;
+  .izin__search-box {
+    max-width: none;
   }
 }
 
-/* Ponsel & tablet kecil: tabel 8 kolom (min-width 1180px) tidak layak digulir
-   mendatar di layar 360px - tiap baris diubah menjadi kartu bertumpuk dengan
-   judul kolom diambil dari atribut data-label pada <td> (lihat IzinPage.jsx). */
 @media (max-width: 720px) {
+  .izin__card {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .izin__page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .izin__btn-primary {
+    justify-content: center;
+  }
+
+  .izin__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .izin__stat-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .izin__stat-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .izin__stat-val {
+    font-size: 15px;
+  }
+
+  /* Card mode for table on mobile */
   .izin__table-wrap {
     overflow-x: visible;
     border: none;
     border-radius: 0;
     background: none;
+    box-shadow: none;
   }
 
   .izin__table {
     display: block;
     min-width: 0;
     table-layout: auto;
-    font-size: 13px;
   }
 
   .izin__table thead {
@@ -600,43 +1391,33 @@
     display: block;
     background: var(--gcs-white);
     border: 1px solid var(--gcs-border);
-    border-radius: 12px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
     overflow: hidden;
-  }
-
-  .izin__table tbody tr:last-child {
-    margin-bottom: 0;
+    box-shadow: 0 1px 3px rgba(15, 38, 31, 0.04);
   }
 
   .izin__table td {
-    /* width dari .izin__col-* dinetralkan: di mode kartu lebar diatur flex.
-       Selektor ini (.izin__table td) lebih spesifik daripada .izin__col-ket
-       sehingga tidak perlu !important. */
     width: auto;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 9px 12px;
+    gap: 10px;
+    padding: 8px 10px;
     text-align: right;
-    border-right: none;
     border-bottom: 1px dashed var(--gcs-border);
   }
 
   .izin__table td::before {
     content: attr(data-label);
-    flex: 0 0 38%;
+    flex: 0 0 40%;
     text-align: left;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--gcs-text-muted);
   }
 
-  /* Aturan dasar menghapus garis bawah seluruh sel di baris terakhir; di mode
-     kartu garis itu justru pemisah antar-isi, jadi dipasang kembali dan hanya
-     sel terakhir tiap kartu yang bersih. */
   .izin__table tbody tr:last-child td {
     border-bottom: 1px dashed var(--gcs-border);
   }
@@ -645,125 +1426,51 @@
     border-bottom: none;
   }
 
-  /* Baris "Tidak ada data" bukan kartu - tanpa label dan melebar penuh. */
   .izin__table td.izin__no-data {
     display: block;
     text-align: center;
-    padding: 22px 12px;
+    padding: 20px 10px;
   }
 
   .izin__table td.izin__no-data::before {
     content: none;
   }
 
-  .izin__table tbody tr:hover td {
-    background: none;
-  }
-
-  .izin__col-jam {
-    white-space: normal;
-  }
-
   .izin__row-actions {
     justify-content: flex-end;
   }
 
-  /* Sasaran sentuh tombol aksi baris. */
-  .izin__row-btn {
-    width: 38px;
-    height: 38px;
-  }
-}
-
-@media (max-width: 640px) {
-  .izin__page-title {
-    font-size: 18px;
+  .izin__detail-grid,
+  .izin__modal-grid {
+    grid-template-columns: 1fr;
   }
 
-  .izin__card {
-    padding: 14px;
-    border-radius: 0 0 12px 12px;
-  }
-
-  .izin__actionbar {
-    padding: 10px;
-  }
-
-  /* Tab bisa lebih banyak dari lebar layar - digulir mendatar, bukan menumpuk
-     (menumpuk membuat bingkai tab kehilangan bentuknya). */
-  .izin__tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .izin__tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .izin__tab {
-    flex: 0 0 auto;
-    padding: 9px 14px;
-    font-size: 13px;
-  }
-
-  .izin__toolbar {
+  .izin__detail-footer {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 12px;
   }
 
-  .izin__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .izin__detail-actions-left {
+    justify-content: stretch;
   }
 
-  /* Modal: hampir layar penuh, dan tinggi memakai dvh supaya tombol Simpan di
-     dasar modal tidak tertutup bilah URL. */
-  .izin__modal-backdrop {
-    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
-    align-items: flex-end;
-  }
-
-  .izin__modal {
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: 14px;
-  }
-
-  .izin__modal-header {
-    padding: 14px 16px;
-  }
-
-  .izin__modal-header h3 {
-    font-size: 15.5px;
-  }
-
-  .izin__modal-body {
-    padding: 16px;
-  }
-
-  .izin__modal-footer {
-    /* Tombol kirim selebar modal - lebih mudah dijangkau jempol. */
-    padding-top: 4px;
-  }
-
-  .izin__submit {
-    width: 100%;
-    padding: 13px 20px;
+  .izin__detail-actions-left button {
+    flex: 1;
+    justify-content: center;
   }
 
   .izin__footer {
     flex-direction: column;
     align-items: stretch;
+    text-align: center;
     gap: 10px;
   }
 
   .izin__pagination {
-    justify-content: space-between;
+    justify-content: center;
   }
 
-  .izin__pagination button {
-    padding: 9px 16px;
+  .izin__nav-text {
+    display: none;
   }
 }

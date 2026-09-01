@@ -1,507 +1,1293 @@
-.umdl__empty {
-  padding: 60px 0;
-  text-align: center;
-  color: var(--gcs-text-muted);
-  font-size: 14px;
-}
+/* ===========================================================================
+   UmdlPage Styling - Modern Executive GCS Theme (Dense & Compact Layout)
+   =========================================================================== */
 
-.umdl__page-title {
-  font-size: 22px;
-  margin-bottom: 16px;
-}
-
-.umdl__tabs {
+.umdl {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.umdl__tab {
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  background: var(--gcs-bg);
-  color: var(--gcs-text-muted);
-  border-radius: 10px 10px 0 0;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+/* ===========================================================================
+   1. State Cards (Loading / Error)
+   =========================================================================== */
+
+.umdl__state-card {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.umdl__tab--active {
-  background: var(--gcs-white);
+.umdl__loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(47, 108, 63, 0.15);
+  border-top-color: var(--gcs-green-600);
+  border-radius: 50%;
+  animation: umdl-spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes umdl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.umdl__state-icon--err {
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.umdl__state-title {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--gcs-ink);
+  margin: 0 0 4px;
 }
 
-.umdl__actionbar {
+.umdl__state-desc {
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+  margin: 0;
+}
+
+.umdl__error {
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.umdl__hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(244, 174, 70, 0.1);
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  color: #8a6d3b;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.umdl__hint-card svg {
+  color: var(--gcs-gold-700);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.umdl__hint-card--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #1e40af;
+}
+
+.umdl__hint-card--info svg {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   2. Page Header
+   =========================================================================== */
+
+.umdl__page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.umdl__page-header-info {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  padding: 12px 14px;
-  border-radius: 0 10px 0 0;
 }
 
-.umdl__filter {
-  position: relative;
-  flex: 1;
-  display: flex;
-}
-
-.umdl__filter input {
-  width: 100%;
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  background: var(--gcs-bg);
-  padding: 9px 44px 9px 12px;
-  font-size: 13.5px;
-  color: var(--gcs-ink);
-  outline: none;
-}
-
-.umdl__filter input:focus {
-  background: var(--gcs-white);
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.umdl__filter-icon {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  color: var(--gcs-text-muted);
-  pointer-events: none;
-}
-
-.umdl__actionbar-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.umdl__icon-btn {
-  border: none;
-  border-radius: 8px;
-  width: 38px;
-  height: 38px;
+.umdl__page-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  flex-shrink: 0;
+}
+
+.umdl__page-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.umdl__page-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+.umdl__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  border-radius: 9px;
+  padding: 8px 15px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 3px 10px -2px rgba(15, 38, 31, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.umdl__icon-btn--add {
-  background: var(--gcs-green-600);
+.umdl__btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #16382b 0%, #255c49 100%);
+  box-shadow: 0 5px 14px -2px rgba(15, 38, 31, 0.4);
 }
 
-.umdl__icon-btn--refresh {
-  background: var(--gcs-green-500);
+/* ===========================================================================
+   3. Quick Statistics Summary Grid (Compact)
+   =========================================================================== */
+
+.umdl__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
-.umdl__icon-btn:hover {
-  opacity: 0.9;
+.umdl__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 38, 31, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
+
+.umdl__stat-card:hover {
+  border-color: rgba(47, 108, 63, 0.25);
+}
+
+.umdl__stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.umdl__stat-icon--total {
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-green-900);
+}
+
+.umdl__stat-icon--draft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.umdl__stat-icon--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.umdl__stat-icon--monthly {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.umdl__stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.umdl__stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.umdl__stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.umdl__stat-val--draft {
+  color: #d97706;
+}
+
+.umdl__stat-val--approved {
+  color: #059669;
+}
+
+.umdl__stat-val--monthly {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   4. Main Card & Tab Navigation
+   =========================================================================== */
 
 .umdl__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
-  border-radius: 0 0 14px 14px;
-  padding: 20px 24px;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px -3px rgba(15, 38, 31, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
+
+.umdl__nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.umdl__tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.umdl__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: rgba(15, 38, 31, 0.03);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.umdl__tab:hover:not(.umdl__tab--active) {
+  background: rgba(15, 38, 31, 0.06);
+  color: var(--gcs-ink);
+}
+
+.umdl__tab--active {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.2);
+}
+
+.umdl__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-text-muted);
+}
+
+.umdl__tab--active .umdl__tab-count {
+  background: rgba(244, 174, 70, 0.25);
+  color: var(--gcs-gold-500);
+}
+
+.umdl__nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.umdl__icon-btn {
+  border: 1px solid var(--gcs-border);
+  border-radius: 7px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gcs-white);
+  color: var(--gcs-green-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.umdl__icon-btn:hover {
+  background: rgba(47, 108, 63, 0.08);
+  border-color: var(--gcs-green-600);
+}
+
+/* ===========================================================================
+   5. Toolbar (Search & Page Size)
+   =========================================================================== */
 
 .umdl__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
-.umdl__page-size,
-.umdl__search {
+.umdl__search-box {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--gcs-text-muted);
+  flex: 1;
+  max-width: 380px;
 }
 
-.umdl__page-size select,
-.umdl__search input {
+.umdl__search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gcs-text-muted);
+  pointer-events: none;
+}
+
+.umdl__search-box input {
+  width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 30px 6px 32px;
+  font-size: 12.5px;
   color: var(--gcs-ink);
-  background: var(--gcs-white);
+  background: var(--gcs-bg);
   outline: none;
+  transition: all 0.15s ease;
 }
 
-.umdl__search input {
-  min-width: 220px;
-}
-
-.umdl__search input:focus {
+.umdl__search-box input:focus {
+  background: var(--gcs-white);
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.umdl__table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--gcs-border);
-  border-radius: 12px;
+.umdl__search-box input::placeholder {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
 }
 
-/* Sembilan kolom - butuh ruang paling lebar di antara tabel My Personal. Di bawah lebar ini
-   pembungkusnya menggulir horizontal, bukan memampatkan isi kolom. */
+.umdl__search-clear {
+  position: absolute;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gcs-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.umdl__search-clear:hover {
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+}
+
+.umdl__page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.umdl__page-size-label {
+  font-weight: 600;
+}
+
+.umdl__page-size-wrap select {
+  appearance: none;
+  background: var(--gcs-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%233e3430' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center;
+  border: 1px solid var(--gcs-border);
+  border-radius: 6px;
+  padding: 5px 22px 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  outline: none;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   6. Dense Table Layout (Fit without horizontal scroll)
+   =========================================================================== */
+
+.umdl__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  border-radius: 10px;
+  background: var(--gcs-white);
+  box-shadow: 0 1px 3px rgba(15, 38, 31, 0.02);
+}
+
 .umdl__table {
   width: 100%;
   table-layout: fixed;
-  min-width: 820px;
+  min-width: 0;
   border-collapse: collapse;
-  font-size: 13.5px;
-}
-
-/* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .umdl__table-wrap). */
-/* Padding kiri-kanan dibuat lega untuk SEMUA sel, bukan ditambal per kolom: isi kolom mana
-   pun (kode SPPD, tanggal, transportasi) sama-sama tidak boleh menempel ke sekat. */
-.umdl__table th,
-.umdl__table td {
-  padding: 14px 20px;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gcs-border);
-  border-right: 1px solid var(--gcs-border);
-}
-
-.umdl__table th:last-child,
-.umdl__table td:last-child {
-  border-right: none;
-}
-
-/* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.umdl__table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.umdl__table thead th {
   font-size: 12.5px;
-  font-weight: 700;
-  color: var(--gcs-ink);
-  background: rgba(15, 38, 31, 0.035);
-  border-bottom: 2px solid var(--gcs-border);
-  white-space: nowrap;
 }
 
-.umdl__table tbody tr:hover td {
-  background: rgba(244, 174, 70, 0.06);
-}
-
-/* Empat kolom saja, jadi tidak perlu tabel selebar SPPD. */
+/* Column Proportions (Total 100%) */
 .umdl__col-status {
   width: 14%;
-}
-
-.umdl__col-tgl {
-  width: 16%;
-  white-space: nowrap;
+  text-align: left;
 }
 
 .umdl__col-kode {
-  width: 26%;
+  width: 16%;
+  text-align: left;
+}
+
+.umdl__col-tgl {
+  width: 14%;
+  text-align: left;
 }
 
 .umdl__col-ket {
-  width: 30%;
-}
-
-.umdl__col-aksi {
-  width: 170px;
-  text-align: center;
-}
-
-.umdl__col-appr {
-  width: 12%;
+  width: 24%;
+  text-align: left;
 }
 
 .umdl__col-peserta {
   width: 18%;
+  text-align: left;
+}
+
+.umdl__col-aksi {
+  width: 14%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Header */
+.umdl__table thead th {
+  padding: 10px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-green-900);
+  background: #f8faf9;
+  border-bottom: 2px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
 }
 
 .umdl__th--sortable {
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .umdl__th--sortable:hover {
+  background: #f0f4f2;
   color: var(--gcs-green-600);
 }
 
-/* Judul kolom SPPD panjang-panjang ("Tugas yang dilaksanakan"), jadi ikon sort mudah
-   menempel ke hurufnya. Jarak dilebarkan dan ikon dijaga agar tidak ikut menyusut. */
+.umdl__th--active {
+  color: var(--gcs-green-700);
+}
+
 .umdl__th-content {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.umdl__th-content svg {
-  flex-shrink: 0;
+.umdl__sort-indicator {
+  display: inline-flex;
+  align-items: center;
 }
-
 
 .umdl__sort-icon--idle {
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
-.umdl__status {
-  font-weight: 600;
-}
-
-.umdl__status--done {
+.umdl__sort-icon--active {
   color: var(--gcs-green-600);
 }
 
-/* Peran saya (Ketua/Anggota) - tampil di bawah status legacy hanya utk baris yg bukan
-   saya sendiri yg ajukan (diminta 2026-08-24, biar tau kenapa baris ini muncul). */
-.umdl__peran {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 600;
+/* Rows & Cells */
+.umdl__row {
+  transition: background-color 0.12s ease;
+}
+
+.umdl__row--clickable {
+  cursor: pointer;
+}
+
+.umdl__table tbody tr:nth-child(even) {
+  background-color: rgba(15, 38, 31, 0.015);
+}
+
+.umdl__row--clickable:hover {
+  background-color: rgba(244, 174, 70, 0.1) !important;
+}
+
+.umdl__table tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(15, 38, 31, 0.06);
+  vertical-align: middle;
+}
+
+.umdl__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Cell Specifics */
+.umdl__status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.umdl__peran-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--gcs-text-muted);
+  background: rgba(15, 38, 31, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.umdl__appr {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.umdl__appr--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+}
+
+.umdl__appr--reject {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.umdl__appr--wait {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.umdl__appr--none {
   color: var(--gcs-text-muted);
 }
 
-/* Badge status persetujuan MANAGER real-time (approval.pengajuan) - beda dari
-   .umdl__status (legacy, dipakai memilah tab Di Buat/Persetujuan). */
-.umdl__appr {
+.umdl__kode-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.umdl__kode-badge {
   display: inline-block;
+  font-family: monospace;
   font-size: 11.5px;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
 }
-.umdl__appr--wait { background: rgba(244, 174, 70, 0.16); color: var(--gcs-gold-700); }
-.umdl__appr--ok { background: rgba(47, 108, 63, 0.14); color: var(--gcs-green-700); }
-.umdl__appr--reject { background: rgba(230, 72, 63, 0.12); color: #c8352c; }
-.umdl__appr--none { color: var(--gcs-text-muted); }
 
-.umdl__list { margin: 0; padding-left: 16px; }
-.umdl__peserta-posisi { color: var(--gcs-text-muted); font-size: 11.5px; }
+.umdl__source-tag {
+  font-size: 10px;
+  color: var(--gcs-text-muted);
+  font-weight: 600;
+}
+
+.umdl__date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.umdl__date-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.umdl__date-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+}
+
+.umdl__date-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.umdl__km-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.umdl__ket-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--gcs-ink);
+  line-height: 1.35;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.umdl__peserta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.umdl__peserta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.umdl__peserta-chip {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.umdl__peserta-chip--ketua {
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-900);
+  font-weight: 600;
+}
+
+.umdl__role-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gcs-green-700);
+  background: rgba(47, 108, 63, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.umdl__chip--izin {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.umdl__dash {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
+}
+
+/* Badges */
+.umdl__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.umdl__badge--sm {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.umdl__badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.umdl__badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.umdl__badge--primary {
+  background: rgba(47, 108, 63, 0.12);
+  color: var(--gcs-green-700);
+  border: 1px solid rgba(47, 108, 63, 0.25);
+}
+
+.umdl__badge--neutral {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* ===========================================================================
+   7. Row Actions (Dense)
+   =========================================================================== */
 
 .umdl__row-actions {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-/* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
-   terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
 .umdl__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 9px;
-  width: 36px;
-  height: 36px;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: all 0.15s ease;
+}
+
+.umdl__row-btn--print {
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.umdl__row-btn--print:hover {
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.3);
 }
 
 .umdl__row-btn--camera {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
+  color: #7c3aed;
+  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(124, 58, 237, 0.08);
 }
 
 .umdl__row-btn--camera:hover {
-  color: #fff;
+  color: #ffffff;
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
+.umdl__row-btn--detail {
+  color: var(--gcs-green-700);
+  border-color: rgba(47, 108, 63, 0.3);
+  background: rgba(47, 108, 63, 0.08);
+}
+
+.umdl__row-btn--detail:hover {
+  color: #ffffff;
   border-color: var(--gcs-green-600);
   background: var(--gcs-green-600);
 }
 
 .umdl__row-btn--edit {
-  color: var(--gcs-gold-700);
-  border-color: rgba(244, 174, 70, 0.45);
-  background: rgba(244, 174, 70, 0.12);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .umdl__row-btn--edit:hover {
-  color: #fff;
-  border-color: var(--gcs-gold-600);
-  background: var(--gcs-gold-600);
+  color: #ffffff;
+  border-color: #d97706;
+  background: #d97706;
 }
 
 .umdl__row-btn--delete {
-  color: #c8352c;
-  border-color: rgba(230, 72, 63, 0.4);
-  background: rgba(230, 72, 63, 0.1);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .umdl__row-btn--delete:hover {
-  color: #fff;
-  border-color: #c8352c;
-  background: #d63c32;
+  color: #ffffff;
+  border-color: #dc2626;
+  background: #dc2626;
 }
 
-/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
-   umdl yang sudah disetujui pun tetap perlu dicetak. */
-.umdl__row-btn--print {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
+.umdl__row-btn--pick {
+  color: var(--gcs-green-700);
+  border-color: var(--gcs-green-600);
   background: rgba(47, 108, 63, 0.1);
 }
 
-.umdl__row-btn--print:hover {
-  color: #fff;
-  border-color: var(--gcs-green-600);
+.umdl__row-btn--pick:hover {
+  color: #ffffff;
   background: var(--gcs-green-600);
 }
 
-.umdl__row-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.umdl__source {
-  color: var(--gcs-text-muted);
-  font-size: 12px;
-  margin-top: 2px;
-}
+/* ===========================================================================
+   8. Empty State & Footer
+   =========================================================================== */
 
 .umdl__no-data {
+  padding: 36px 16px !important;
   text-align: center;
+}
+
+.umdl__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  gap: 6px;
+}
+
+.umdl__empty-icon {
   color: var(--gcs-text-muted);
-  padding: 24px;
+  opacity: 0.6;
+}
+
+.umdl__empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+}
+
+.umdl__empty-sub {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+  max-width: 420px;
+  text-align: center;
 }
 
 .umdl__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
-  font-size: 13px;
+  padding-top: 2px;
+}
+
+.umdl__footer-info {
+  font-size: 12.5px;
   color: var(--gcs-text-muted);
+}
+
+.umdl__footer-info strong {
+  color: var(--gcs-ink);
+  font-weight: 700;
 }
 
 .umdl__pagination {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.umdl__pagination button {
+.umdl__page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--gcs-ink);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.umdl__pagination button:hover:not(:disabled) {
+.umdl__page-nav:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+  background: #f8faf9;
+}
+
+.umdl__page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.umdl__page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.umdl__page-num {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.umdl__page-num:hover:not(.is-active) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.umdl__pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.umdl__page-num.is-active {
+  background: var(--gcs-green-900);
+  border-color: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(15, 38, 31, 0.25);
 }
 
-.umdl__page-indicator {
-  font-weight: 600;
-  color: var(--gcs-ink);
+.umdl__page-ellipsis {
+  padding: 0 3px;
+  color: var(--gcs-text-muted);
+  font-size: 11px;
 }
 
-.umdl__error {
-  margin-bottom: 12px;
-  font-size: 12.5px;
-  color: #b3261e;
-  background: rgba(230, 72, 63, 0.1);
-  border-radius: 8px;
-  padding: 9px 12px;
-}
+/* ===========================================================================
+   9. Modals (Detail, Form, Tim Peserta, Picker, Photo)
+   =========================================================================== */
 
-/* Modal */
 .umdl__modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 38, 31, 0.5);
+  background: rgba(15, 38, 31, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  z-index: 50;
+  padding: 16px;
+  z-index: 100;
 }
 
 .umdl__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -18px rgba(15, 38, 31, 0.45);
+  overflow: hidden;
+}
+
+.umdl__modal--detail {
+  max-width: 560px;
+}
+
+.umdl__modal--wide {
+  max-width: 620px;
+}
+
+.umdl__modal--picker {
+  max-width: 560px;
+}
+
+.umdl__modal--photo {
+  max-width: 680px;
 }
 
 .umdl__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 22px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  border-radius: 14px 14px 0 0;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
 }
 
-.umdl__modal-header h3 {
-  font-size: 17px;
-  color: #fff;
+.umdl__modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gcs-gold-500);
+}
+
+.umdl__modal-header-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: var(--font-heading);
 }
 
 .umdl__modal-close {
   border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .umdl__modal-close:hover {
-  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
 }
 
+/* Detail Modal */
+.umdl__detail-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.umdl__detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.umdl__detail-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.umdl__detail-kode {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gcs-border);
+}
+
+.umdl__detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.umdl__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--gcs-bg);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gcs-border);
+}
+
+.umdl__detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.umdl__detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+}
+
+.umdl__detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.umdl__detail-peserta-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+  line-height: 1.5;
+}
+
+.umdl__detail-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gcs-ink);
+  white-space: pre-wrap;
+}
+
+.umdl__detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.umdl__detail-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.umdl__btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.umdl__btn-outline--print {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #2563eb;
+}
+
+.umdl__btn-outline--print:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.umdl__btn-outline--photo {
+  border-color: rgba(124, 58, 237, 0.35);
+  color: #7c3aed;
+}
+
+.umdl__btn-outline--photo:hover {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.umdl__btn-outline--peserta {
+  border-color: rgba(47, 108, 63, 0.35);
+  color: var(--gcs-green-700);
+}
+
+.umdl__btn-outline--peserta:hover {
+  background: var(--gcs-green-600);
+  color: #ffffff;
+}
+
+/* Modal Form Elements */
 .umdl__modal-body {
-  padding: 22px;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.umdl__modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .umdl__field {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .umdl__field > span {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--gcs-ink);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
 }
 
 .umdl__field input,
@@ -509,13 +1295,14 @@
 .umdl__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13.5px;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--gcs-ink);
   background: var(--gcs-white);
   outline: none;
+  transition: all 0.15s ease;
 }
 
 .umdl__field input:focus,
@@ -525,56 +1312,64 @@
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.umdl__field--textarea {
-  align-items: start;
-}
-
-.umdl__field--berkas {
-  align-items: start;
-}
-
-.umdl__field--berkas input[type='file'] {
-  width: 100%;
-  font-size: 13px;
-}
-
-.umdl__berkas-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--gcs-text-muted);
+.umdl__field--full {
+  grid-column: 1 / -1;
 }
 
 .umdl__field textarea {
   resize: vertical;
-}
-
-.umdl__window-hint {
-  font-size: 12.5px;
-  color: var(--gcs-text-muted);
-  background: var(--gcs-bg);
-  border-radius: 8px;
-  padding: 9px 12px;
-  margin-bottom: 14px;
+  min-height: 60px;
 }
 
 .umdl__modal-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+}
+
+.umdl__btn-secondary {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 7px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.umdl__btn-secondary:hover {
+  background: var(--gcs-bg);
+  color: var(--gcs-ink);
 }
 
 .umdl__submit {
   border: none;
-  border-radius: 8px;
-  background: var(--gcs-gold-500);
-  color: var(--gcs-green-900);
-  font-size: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f4ae46 0%, #e19c35 100%);
+  color: #0f261f;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 10px 26px;
+  padding: 7px 18px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(244, 174, 70, 0.3);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .umdl__submit:hover:not(:disabled) {
   opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .umdl__submit:disabled {
@@ -582,341 +1377,217 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
-  .umdl__card {
-    padding: 16px;
-  }
-
-  .umdl__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
-
-/* --- Tambahan khusus SPPD --- */
-
-/* Modal rincian & pencari pegawai memuat tabel, jadi lebih lebar dari modal form biasa. */
-.umdl__modal--wide {
-  max-width: 860px;
-}
-
-.umdl__peserta {
-  padding: 0 24px 20px;
-  overflow-x: auto;
-}
-
-/* Tabel di dalam modal: lebih ringkas dan tidak perlu lebar minimum halaman. */
-.umdl__table--peserta {
-  min-width: 0;
-  table-layout: auto;
-  border: 1px solid var(--gcs-border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* Kolom NIK: input hanya-baca + tombol pencarian di sampingnya. */
-.umdl__nik {
+/* Peserta & Picker Elements */
+.umdl__nik-picker {
   display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.umdl__nik input {
-  flex: 1;
-}
-
-.umdl__nik button {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  border-radius: 8px;
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gcs-green-600);
-  cursor: pointer;
-}
-
-.umdl__nik button:hover {
-  background: var(--gcs-green-600);
-  border-color: var(--gcs-green-600);
-  color: #fff;
-}
-
-/* Rincian peserta: biru, dibedakan dari cetak (hijau), ubah (kuning), hapus (merah). */
-.umdl__row-btn--detail {
-  color: #1f6fb2;
-  border-color: rgba(31, 111, 178, 0.4);
-  background: rgba(31, 111, 178, 0.1);
-}
-
-.umdl__row-btn--detail:hover {
-  color: #fff;
-  border-color: #1f6fb2;
-  background: #2a80c8;
-}
-
-.umdl__row-btn--pick {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
-}
-
-.umdl__row-btn--pick:hover {
-  color: #fff;
-  border-color: var(--gcs-green-600);
-  background: var(--gcs-green-600);
-}
-
-.umdl__submit {
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
 }
 
+.umdl__picker-btn {
+  border: 1px solid var(--gcs-border);
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-700);
+  border-radius: 7px;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.umdl__picker-btn:hover {
+  background: var(--gcs-green-600);
+  color: #ffffff;
+}
+
+.umdl__peserta-table-wrap,
+.umdl__picker-table-wrap {
+  overflow-y: auto;
+  max-height: 280px;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  margin: 0 18px 14px;
+}
+
+.umdl__table--peserta,
+.umdl__table--picker {
+  min-width: 100%;
+}
+
+.umdl__row--picker {
+  cursor: pointer;
+}
+
+.umdl__row--picker:hover {
+  background: rgba(244, 174, 70, 0.1) !important;
+}
+
+.umdl__row--editing {
+  background: rgba(244, 174, 70, 0.15) !important;
+}
+
 /* ===========================================================================
-   Responsif
+   10. Responsive Breakpoints
    =========================================================================== */
 
-/* Tablet: bilah aksi & toolbar mulai berdesakan, tabel masih berupa tabel
-   (menggulir mendatar di dalam .umdl__table-wrap). */
-@media (max-width: 900px) {
-  .umdl__actionbar {
-    flex-wrap: wrap;
-  }
-
-  .umdl__filter {
-    flex-basis: 100%;
-    order: -1;
+@media (max-width: 960px) {
+  .umdl__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .umdl__toolbar {
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .umdl__search {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .umdl__search input {
-    min-width: 0;
-    flex: 1;
+  .umdl__search-box {
+    max-width: none;
   }
 }
 
-/* Ponsel & tablet kecil: tabel utama terlalu lebar untuk digulir mendatar di
-   layar 360px - tiap baris diubah menjadi kartu bertumpuk, judul kolom diambil
-   dari atribut data-label pada <td>. Tabel peserta di dalam modal dikecualikan
-   (tabel peserta modal tetap tabel yang menggulir). */
 @media (max-width: 720px) {
+  .umdl__card {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .umdl__page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .umdl__btn-primary {
+    justify-content: center;
+  }
+
+  .umdl__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .umdl__stat-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .umdl__stat-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .umdl__stat-val {
+    font-size: 15px;
+  }
+
+  /* Table Card Transformation on Mobile */
   .umdl__table-wrap {
     overflow-x: visible;
     border: none;
     border-radius: 0;
     background: none;
+    box-shadow: none;
   }
 
-  .umdl__table:not(.umdl__table--peserta) {
+  .umdl__table {
     display: block;
     min-width: 0;
     table-layout: auto;
-    font-size: 13px;
   }
 
-  .umdl__table:not(.umdl__table--peserta) thead {
+  .umdl__table thead {
     display: none;
   }
 
-  .umdl__table:not(.umdl__table--peserta) tbody {
+  .umdl__table tbody {
     display: block;
   }
 
-  .umdl__table:not(.umdl__table--peserta) tbody tr {
+  .umdl__table tbody tr {
     display: block;
     background: var(--gcs-white);
     border: 1px solid var(--gcs-border);
-    border-radius: 12px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 38, 31, 0.04);
   }
 
-  .umdl__table:not(.umdl__table--peserta) tbody tr:last-child {
-    margin-bottom: 0;
-  }
-
-  .umdl__table:not(.umdl__table--peserta) td {
-    /* width & white-space dari .umdl__col-* dinetralkan: di mode kartu lebar
-       diatur flex dan teks harus boleh membungkus. Selektor ini lebih spesifik
-       daripada .umdl__col-* sehingga tidak perlu !important. */
+  .umdl__table td {
     width: auto;
-    white-space: normal;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 9px 12px;
+    gap: 10px;
+    padding: 8px 10px;
     text-align: right;
-    border-right: none;
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .umdl__table:not(.umdl__table--peserta) td::before {
+  .umdl__table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
     text-align: left;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--gcs-text-muted);
   }
 
-  /* Isi sel (mis. daftar peserta) harus boleh menyusut di bawah lebar
-     alaminya - tanpa ini flex item menolak membungkus. */
-  .umdl__table:not(.umdl__table--peserta) td > * {
-    min-width: 0;
-  }
-
-  /* Aturan dasar menghapus garis bawah seluruh sel di baris terakhir; di mode
-     kartu garis itu justru pemisah antar-isi, jadi dipasang kembali dan hanya
-     sel terakhir tiap kartu yang bersih. */
-  .umdl__table:not(.umdl__table--peserta) tbody tr:last-child td {
+  .umdl__table tbody tr:last-child td {
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .umdl__table:not(.umdl__table--peserta) td:last-child {
+  .umdl__table td:last-child {
     border-bottom: none;
   }
 
-  /* Baris "Tidak ada data" bukan kartu - tanpa label dan melebar penuh. */
-  .umdl__table:not(.umdl__table--peserta) td.umdl__no-data {
+  .umdl__table td.umdl__no-data {
     display: block;
     text-align: center;
-    padding: 22px 12px;
+    padding: 20px 10px;
   }
 
-  .umdl__table:not(.umdl__table--peserta) td.umdl__no-data::before {
+  .umdl__table td.umdl__no-data::before {
     content: none;
-  }
-
-  .umdl__table:not(.umdl__table--peserta) tbody tr:hover td {
-    background: none;
   }
 
   .umdl__row-actions {
     justify-content: flex-end;
-    flex-wrap: wrap;
   }
 
-  /* Sasaran sentuh tombol aksi baris. */
-  .umdl__row-btn {
-    width: 40px;
-    height: 40px;
-  }
-}
-
-@media (max-width: 640px) {
-  .umdl__page-title {
-    font-size: 18px;
+  .umdl__detail-grid,
+  .umdl__modal-grid {
+    grid-template-columns: 1fr;
   }
 
-  .umdl__card {
-    padding: 14px;
-    border-radius: 0 0 12px 12px;
-  }
-
-  .umdl__actionbar {
-    padding: 10px;
-  }
-
-  /* Tab digulir mendatar, bukan menumpuk - menumpuk membuat bingkai tab
-     kehilangan bentuknya. */
-  .umdl__tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .umdl__tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .umdl__tab {
-    flex: 0 0 auto;
-    padding: 9px 14px;
-    font-size: 13px;
-  }
-
-  .umdl__toolbar {
+  .umdl__detail-footer {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 12px;
   }
 
-  .umdl__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .umdl__detail-actions-left {
+    justify-content: stretch;
   }
 
-  /* Modal: hampir layar penuh, tinggi memakai dvh supaya tombol Simpan di dasar
-     modal tidak tertutup bilah URL browser ponsel. */
-  .umdl__modal-backdrop {
-    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
-    align-items: flex-end;
-  }
-
-  .umdl__modal {
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: 14px;
-  }
-
-  .umdl__modal-header {
-    padding: 14px 16px;
-  }
-
-  .umdl__modal-header h3 {
-    font-size: 15.5px;
-  }
-
-  .umdl__modal-body {
-    padding: 16px;
-  }
-
-  .umdl__submit {
-    width: 100%;
-    padding: 13px 20px;
+  .umdl__detail-actions-left button {
+    flex: 1;
+    justify-content: center;
   }
 
   .umdl__footer {
     flex-direction: column;
     align-items: stretch;
+    text-align: center;
     gap: 10px;
   }
 
   .umdl__pagination {
-    justify-content: space-between;
+    justify-content: center;
   }
 
-  .umdl__pagination button {
-    padding: 9px 16px;
-  }
-}
-
-/* Tabel peserta di dalam modal tetap berbentuk tabel (kolomnya sedikit dan
-   saling terkait), hanya tepinya dipersempit agar area gulir mendatarnya lebih
-   lega di ponsel. */
-@media (max-width: 640px) {
-  .umdl__peserta {
-    padding: 0 14px 16px;
-  }
-
-  .umdl__table--peserta {
-    font-size: 12.5px;
-  }
-
-  .umdl__table--peserta th,
-  .umdl__table--peserta td {
-    padding: 9px 10px;
+  .umdl__nav-text {
+    display: none;
   }
 }

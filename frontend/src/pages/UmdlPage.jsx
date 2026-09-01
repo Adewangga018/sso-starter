@@ -1,20 +1,63 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDialog } from '../components/DialogProvider'
-import { ArrowUp, ArrowDown, ArrowUpDown, Camera, Check, ListChecks, Pencil, Plus, RotateCw, Search, Trash2, X } from 'lucide-react'
+import {
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Camera,
+  Check,
+  ListChecks,
+  Pencil,
+  Plus,
+  Printer,
+  RotateCw,
+  Search,
+  Trash2,
+  X,
+  Wallet,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  MapPin,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  FileQuestion,
+  Info,
+} from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import DinasKameraCapture from '../components/DinasKameraCapture'
 import './UmdlPage.css'
 
-// Badge status persetujuan MANAGER real-time (approval.pengajuan) - beda dari status
-// legacy (Di Buat/dst, dipakai memilah tab) - diminta 2026-08-24.
+// Badge status persetujuan MANAGER real-time
 function StatusPersetujuanBadge({ status }) {
   if (!status) return <span className="umdl__appr umdl__appr--none">-</span>
-  const cls = status === 'Disetujui' ? 'umdl__appr--ok' : status === 'Ditolak' ? 'umdl__appr--reject' : 'umdl__appr--wait'
-  return <span className={`umdl__appr ${cls}`}>{status}</span>
+  const s = (status ?? '').toLowerCase()
+  if (s.includes('setuju')) {
+    return (
+      <span className="umdl__appr umdl__appr--ok">
+        <CheckCircle2 size={11} />
+        <span>{status}</span>
+      </span>
+    )
+  }
+  if (s.includes('tolak')) {
+    return (
+      <span className="umdl__appr umdl__appr--reject">
+        <AlertCircle size={11} />
+        <span>{status}</span>
+      </span>
+    )
+  }
+  return (
+    <span className="umdl__appr umdl__appr--wait">
+      <Clock size={11} />
+      <span>{status}</span>
+    </span>
+  )
 }
 
-// Sesuai aturan: UMDL hanya utk jarak <75km atau 75-150km (Pulang-Pergi). Di atas itu
-// wajib lewat SPPD - jadi opsi >150km SENGAJA tidak muncul di sini.
 const RENTANG_KM_OPTIONS = [
   { value: '<75', label: '< 75 km (Pulang-Pergi)' },
   { value: '75-150', label: '75 - 150 km (Pulang-Pergi)' },
@@ -25,20 +68,19 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 const STATUS_DIBUAT = 'Di Buat'
 
 const TABS = [
-  { key: 'dibuat', label: 'Di Buat' },
+  { key: 'dibuat', label: 'Di Buat (Draft)' },
   { key: 'persetujuan', label: 'Persetujuan' },
 ]
 
 const COLUMNS = [
-  { key: 'status', label: 'Status', className: 'umdl__col-status' },
-  { key: 'statusPersetujuan', label: 'Persetujuan', className: 'umdl__col-appr' },
-  { key: 'tglUmdl', label: 'Tgl UMDL', className: 'umdl__col-tgl' },
-  { key: 'kodeUmdl', label: 'Kode UMDL', className: 'umdl__col-kode' },
-  { key: 'keterangan', label: 'Keterangan', className: 'umdl__col-ket' },
+  { key: 'status', label: 'Status & Approval', className: 'umdl__col-status' },
+  { key: 'kodeUmdl', label: 'Kode UMDL & Izin', className: 'umdl__col-kode' },
+  { key: 'tglUmdl', label: 'Tanggal & Jarak', className: 'umdl__col-tgl' },
+  { key: 'keterangan', label: 'Keterangan Dinas', className: 'umdl__col-ket' },
   { key: 'peserta', label: 'Ketua & Anggota', className: 'umdl__col-peserta' },
 ]
 
-const FILTER_PLACEHOLDER = 'Cari kode UMDL, kode izin, atau keterangan...'
+const FILTER_PLACEHOLDER = 'Cari kode UMDL, izin, keterangan, atau peserta...'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -59,6 +101,21 @@ function isoDate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+  const pages = []
+  if (currentPage <= 3) {
+    pages.push(1, 2, 3, 4, '...', totalPages)
+  } else if (currentPage >= totalPages - 2) {
+    pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+  } else {
+    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+  }
+  return pages
+}
+
 const emptyForm = { idIjin: null, kodeIjin: '', tglUmdl: '', keterangan: '', rentangKm: '', bukti: null }
 const emptyUmdlPeserta = { nik: '', nama: '', posisi: 'Anggota' }
 const POSISI_OPTIONS = ['Ketua', 'Anggota']
@@ -73,6 +130,8 @@ export default function UmdlPage() {
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState({ key: 'tglUmdl', direction: 'desc' })
 
+  // Modal State
+  const [detailModalRow, setDetailModalRow] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -83,10 +142,8 @@ export default function UmdlPage() {
   const [pickerRows, setPickerRows] = useState([])
   const [pickerError, setPickerError] = useState('')
 
-  // Rincian (ketua/anggota) - mirror SppdPage, diminta 2026-08-24. Modal terpisah dari
-  // "Cari Data Surat Ijin" (pickerOpen di atas) - butuh state pencarian pegawai sendiri.
+  // Rincian (ketua/anggota)
   const [detailFor, setDetailFor] = useState(null)
-  // Peserta (bukan pembuat) boleh buka Rincian ini juga, tapi read-only - diminta 2026-08-24.
   const [detailBolehUbah, setDetailBolehUbah] = useState(true)
   const [peserta, setPeserta] = useState([])
   const [pesertaForm, setPesertaForm] = useState(emptyUmdlPeserta)
@@ -97,7 +154,7 @@ export default function UmdlPage() {
   const [pesertaPickerQuery, setPesertaPickerQuery] = useState('')
   const [pesertaPickerRows, setPesertaPickerRows] = useState([])
 
-  const [buktiPreview, setBuktiPreview] = useState(null) // { url } | null
+  const [buktiPreview, setBuktiPreview] = useState(null)
 
   async function load() {
     try {
@@ -117,6 +174,42 @@ export default function UmdlPage() {
   useEffect(() => {
     load()
   }, [])
+
+  // Ringkasan metrik statistik UMDL
+  const stats = useMemo(() => {
+    if (!rows || rows.length === 0) {
+      return { total: 0, dibuat: 0, disetujui: 0, bulanIni: 0 }
+    }
+    const now = new Date()
+    const curMonth = now.getMonth()
+    const curYear = now.getFullYear()
+
+    let dibuat = 0
+    let disetujui = 0
+    let bulanIni = 0
+
+    for (const r of rows) {
+      if (r.status === STATUS_DIBUAT) {
+        dibuat++
+      }
+      if ((r.statusPersetujuan ?? '').toLowerCase().includes('setuju')) {
+        disetujui++
+      }
+      if (r.tglUmdl) {
+        const d = new Date(r.tglUmdl)
+        if (!Number.isNaN(d.getTime()) && d.getMonth() === curMonth && d.getFullYear() === curYear) {
+          bulanIni++
+        }
+      }
+    }
+
+    return {
+      total: rows.length,
+      dibuat,
+      disetujui,
+      bulanIni,
+    }
+  }, [rows])
 
   const tabRows = useMemo(() => {
     if (!rows) return []
@@ -197,8 +290,6 @@ export default function UmdlPage() {
     setModalOpen(true)
   }
 
-  // Foto perlu Bearer token (bukan <img src> biasa) - diambil sbg blob, ditampilkan di modal
-  // preview, lalu object URL-nya di-revoke saat modal ditutup.
   async function viewBukti(row) {
     try {
       const { url } = await api.getBlob(row.fotoUrl)
@@ -215,6 +306,124 @@ export default function UmdlPage() {
     setBuktiPreview(null)
   }
 
+  function handlePrint(row) {
+    const w = window.open('', '_blank')
+    if (!w) return false
+
+    const tglFormatted = formatTanggal(row.tglUmdl)
+    const pesertaList = (row.peserta ?? [])
+      .map(
+        (p, i) =>
+          `<tr><td style="text-align:center;width:40px;">${i + 1}</td><td style="font-family:monospace;">${p.nik || '-'}</td><td><b>${p.nama || p.nik || '-'}</b></td><td style="text-align:center;">${p.posisi || 'Anggota'}</td></tr>`
+      )
+      .join('')
+
+    w.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>UMDL_${row.kodeUmdl || 'Dokumen'}</title>
+  <style>
+    @page { size: A4 portrait; margin: 18mm 20mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #1a1f1b; font-size: 10.5pt; line-height: 1.5; }
+    .kop { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f261f; padding-bottom: 10px; margin-bottom: 18px; }
+    .kop-title { font-size: 14pt; font-weight: 800; color: #0f261f; margin: 0; }
+    .kop-sub { font-size: 9pt; color: #556; margin: 2px 0 0; }
+    .doc-title { text-align: center; font-size: 13pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; margin: 16px 0 4px; }
+    .doc-no { text-align: center; font-size: 10pt; font-weight: 600; color: #445; margin-bottom: 20px; }
+    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .meta-table td { padding: 5px 8px; vertical-align: top; font-size: 10pt; }
+    .meta-table td:first-child { width: 160px; font-weight: 600; color: #334; }
+    .peserta-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; }
+    .peserta-table th, .peserta-table td { border: 1px solid #99a; padding: 6px 10px; font-size: 9.5pt; }
+    .peserta-table th { background: #f0f4f2; font-weight: 700; text-align: left; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 9pt; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .ttd-wrap { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+    .ttd-box { text-align: center; width: 200px; font-size: 9.5pt; }
+    .ttd-space { height: 60px; }
+    .ttd-name { font-weight: 700; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="kop">
+    <div>
+      <div class="kop-title">PT GERBANG CITRA SUKSES</div>
+      <div class="kop-sub">Sistem Manajemen Sumber Daya Manusia (HRIS)</div>
+    </div>
+    <div style="text-align:right;">
+      <span class="badge">${row.statusPersetujuan || row.status || 'Disetujui'}</span>
+    </div>
+  </div>
+
+  <div class="doc-title">SURAT PERINTAH UANG MUKA DINAS LUAR (UMDL)</div>
+  <div class="doc-no">Nomor: ${row.kodeUmdl || '-'}</div>
+
+  <table class="meta-table">
+    <tr>
+      <td>Tanggal Pelaksanaan</td>
+      <td>: ${tglFormatted}</td>
+    </tr>
+    <tr>
+      <td>Rentang Jarak (PP)</td>
+      <td>: ${row.rentangKm ? `${row.rentangKm} km (Pulang-Pergi)` : '-'}</td>
+    </tr>
+    <tr>
+      <td>Surat Izin Terkait</td>
+      <td>: ${row.kodeIjin || '-'}</td>
+    </tr>
+    <tr>
+      <td>Keperluan / Agenda</td>
+      <td>: ${row.keterangan || '-'}</td>
+    </tr>
+    <tr>
+      <td>Status Persetujuan</td>
+      <td>: <b>${row.statusPersetujuan || 'Disetujui'}</b></td>
+    </tr>
+  </table>
+
+  <div style="font-weight:700;font-size:10pt;margin-top:14px;">Daftar Tim Pelaksana (Ketua & Anggota):</div>
+  <table class="peserta-table">
+    <thead>
+      <tr>
+        <th style="width:40px;text-align:center;">No</th>
+        <th style="width:140px;">NIK</th>
+        <th>Nama Pegawai</th>
+        <th style="width:100px;text-align:center;">Posisi</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${pesertaList || '<tr><td colspan="4" style="text-align:center;font-style:italic;">Belum ada anggota terdaftar</td></tr>'}
+    </tbody>
+  </table>
+
+  <div class="ttd-wrap">
+    <div class="ttd-box">
+      <div>Pembuat Pengajuan,</div>
+      <div class="ttd-space"></div>
+      <div class="ttd-name">${(row.peserta?.find((p) => p.posisi === 'Ketua') || row.peserta?.[0])?.nama || 'Pemohon'}</div>
+      <div>Tim Pelaksana</div>
+    </div>
+    <div class="ttd-box">
+      <div>Mengetahui / Menyetujui,</div>
+      <div class="ttd-space"></div>
+      <div class="ttd-name">Manager Terkait</div>
+      <div>Atasan Langsung</div>
+    </div>
+  </div>
+</body>
+</html>`)
+
+    w.document.close()
+    const cetak = () => {
+      w.focus()
+      w.print()
+    }
+    if (w.document.readyState === 'complete') setTimeout(cetak, 200)
+    else w.addEventListener('load', () => setTimeout(cetak, 200))
+    return true
+  }
+
   async function openPicker() {
     setPickerOpen(true)
     setPickerError('')
@@ -227,7 +436,6 @@ export default function UmdlPage() {
     }
   }
 
-  // Tanggal UMDL mengikuti tanggal izinnya - itu hari saat dinas luar benar-benar terjadi.
   function pickIjin(izin) {
     setForm((prev) => ({
       ...prev,
@@ -244,7 +452,7 @@ export default function UmdlPage() {
     setFormError('')
 
     if (!editing && !form.idIjin) {
-      setFormError('Pilih surat izin terlebih dahulu.')
+      setFormError('Pilih surat izin dinas terlebih dahulu.')
       return
     }
     if (!form.rentangKm) {
@@ -283,7 +491,15 @@ export default function UmdlPage() {
   }
 
   async function handleDelete(row) {
-    if (!(await dialog.confirm({ title: 'Hapus UMDL', message: `Hapus UMDL ${row.kodeUmdl}?`, danger: true, confirmText: 'Hapus' }))) return
+    if (
+      !(await dialog.confirm({
+        title: 'Hapus UMDL',
+        message: `Hapus pengajuan UMDL ${row.kodeUmdl}?`,
+        danger: true,
+        confirmText: 'Hapus',
+      }))
+    )
+      return
     try {
       await api.deleteUmdl(row.id)
       await load()
@@ -291,8 +507,6 @@ export default function UmdlPage() {
       setLoadError(err instanceof ApiError ? err.message : 'Gagal menghapus UMDL.')
     }
   }
-
-  // --- Rincian ketua/anggota (mirror SppdPage) ---
 
   function resetPesertaForm() {
     setEditingPeserta(null)
@@ -375,65 +589,164 @@ export default function UmdlPage() {
   }
 
   if (loadError && !rows) {
-    return <div className="umdl__empty">{loadError}</div>
+    return (
+      <div className="umdl">
+        <div className="umdl__card umdl__state-card">
+          <AlertCircle size={36} className="umdl__state-icon umdl__state-icon--err" />
+          <h4 className="umdl__state-title">Gagal Memuat Data UMDL</h4>
+          <p className="umdl__state-desc">{loadError}</p>
+        </div>
+      </div>
+    )
   }
 
   if (!rows) {
-    return <div className="umdl__empty">Memuat data UMDL...</div>
+    return (
+      <div className="umdl">
+        <div className="umdl__card umdl__state-card">
+          <div className="umdl__loading-spinner" />
+          <h4 className="umdl__state-title">Memuat Data UMDL</h4>
+          <p className="umdl__state-desc">Sedang mengambil riwayat uang muka dinas luar Anda...</p>
+        </div>
+      </div>
+    )
   }
 
   const isDibuatTab = tab === 'dibuat'
 
   return (
     <div className="umdl">
-      <h2 className="umdl__page-title">Uang Makan Dinas Luar</h2>
-
-      <div className="umdl__tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`umdl__tab${tab === t.key ? ' umdl__tab--active' : ''}`}
-            onClick={() => switchTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="umdl__actionbar">
-        <div className="umdl__filter">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
-            }}
-            placeholder={FILTER_PLACEHOLDER}
-          />
-          <span className="umdl__filter-icon">
-            <Search size={16} />
-          </span>
+      {/* Header Halaman */}
+      <div className="umdl__page-header">
+        <div className="umdl__page-header-info">
+          <div className="umdl__page-header-icon">
+            <Wallet size={24} />
+          </div>
+          <div>
+            <h2 className="umdl__page-title">Uang Muka Dinas Luar (UMDL)</h2>
+            <p className="umdl__page-subtitle">
+              Pengajuan uang makan & akomodasi dinas luar kota jarak dekat (&lt;150 km PP), alokasi tim, dan bukti foto dinas
+            </p>
+          </div>
         </div>
-        <div className="umdl__actionbar-buttons">
+        <div className="umdl__page-header-actions">
           {isDibuatTab && (
-            <button type="button" className="umdl__icon-btn umdl__icon-btn--add" onClick={openCreate} title="Ajukan UMDL">
-              <Plus size={18} />
+            <button type="button" className="umdl__btn-primary" onClick={openCreate}>
+              <Plus size={16} /> <span>Ajukan UMDL Baru</span>
             </button>
           )}
-          <button type="button" className="umdl__icon-btn umdl__icon-btn--refresh" onClick={load} title="Muat ulang">
-            <RotateCw size={16} />
-          </button>
         </div>
       </div>
 
+      {/* Ringkasan Metrik Statistik */}
+      <div className="umdl__stats-grid">
+        <div className="umdl__stat-card">
+          <div className="umdl__stat-icon umdl__stat-icon--total">
+            <Wallet size={18} />
+          </div>
+          <div className="umdl__stat-body">
+            <span className="umdl__stat-label">Total UMDL</span>
+            <span className="umdl__stat-val">{stats.total}</span>
+          </div>
+        </div>
+
+        <div className="umdl__stat-card">
+          <div className="umdl__stat-icon umdl__stat-icon--draft">
+            <Clock size={18} />
+          </div>
+          <div className="umdl__stat-body">
+            <span className="umdl__stat-label">Di Buat (Draft)</span>
+            <span className="umdl__stat-val umdl__stat-val--draft">{stats.dibuat}</span>
+          </div>
+        </div>
+
+        <div className="umdl__stat-card">
+          <div className="umdl__stat-icon umdl__stat-icon--approved">
+            <CheckCircle2 size={18} />
+          </div>
+          <div className="umdl__stat-body">
+            <span className="umdl__stat-label">Disetujui Manager</span>
+            <span className="umdl__stat-val umdl__stat-val--approved">{stats.disetujui}</span>
+          </div>
+        </div>
+
+        <div className="umdl__stat-card">
+          <div className="umdl__stat-icon umdl__stat-icon--monthly">
+            <Calendar size={18} />
+          </div>
+          <div className="umdl__stat-body">
+            <span className="umdl__stat-label">Bulan Ini</span>
+            <span className="umdl__stat-val umdl__stat-val--monthly">{stats.bulanIni}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Card */}
       <div className="umdl__card">
+        {/* Tab Selector & Navigation */}
+        <div className="umdl__nav-bar">
+          <div className="umdl__tabs">
+            {TABS.map((t) => {
+              const count = t.key === 'dibuat' ? stats.dibuat : stats.total - stats.dibuat
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`umdl__tab${tab === t.key ? ' umdl__tab--active' : ''}`}
+                  onClick={() => switchTab(t.key)}
+                >
+                  <span>{t.label}</span>
+                  <span className="umdl__tab-count">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="umdl__nav-actions">
+            <button
+              type="button"
+              className="umdl__icon-btn umdl__icon-btn--refresh"
+              onClick={load}
+              title="Muat ulang data"
+              aria-label="Muat ulang data"
+            >
+              <RotateCw size={15} />
+            </button>
+          </div>
+        </div>
+
         {loadError && <div className="umdl__error">{loadError}</div>}
 
+        {/* Toolbar Pencarian & Ukuran Halaman */}
         <div className="umdl__toolbar">
-          <label className="umdl__page-size">
-            Tampilkan
+          <div className="umdl__search-box">
+            <Search size={15} className="umdl__search-icon" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              placeholder={FILTER_PLACEHOLDER}
+            />
+            {search && (
+              <button
+                type="button"
+                className="umdl__search-clear"
+                onClick={() => {
+                  setSearch('')
+                  setPage(1)
+                }}
+                aria-label="Bersihkan pencarian"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="umdl__page-size-wrap">
+            <span className="umdl__page-size-label">Tampilkan:</span>
             <select
               value={pageSize}
               onChange={(e) => {
@@ -443,209 +756,530 @@ export default function UmdlPage() {
             >
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <option key={n} value={n}>
-                  {n}
+                  {n} baris
                 </option>
               ))}
             </select>
-            entri
-          </label>
-
-          <label className="umdl__search">
-            Cari:
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-            />
-          </label>
+          </div>
         </div>
 
+        {/* Tabel UMDL (Padat, Pas Layar, Baris Bisa Diklik) */}
         <div className="umdl__table-wrap">
           <table className="umdl__table">
             <thead>
               <tr>
-                {COLUMNS.map((col) => (
-                  <th key={col.key} className={`${col.className} umdl__th--sortable`} onClick={() => toggleSort(col.key)}>
-                    <span className="umdl__th-content">
-                      {col.label}
-                      {sort.key === col.key ? (
-                        sort.direction === 'asc' ? (
-                          <ArrowUp size={13} />
-                        ) : (
-                          <ArrowDown size={13} />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="umdl__sort-icon--idle" />
-                      )}
-                    </span>
-                  </th>
-                ))}
-                {isDibuatTab && <th className="umdl__col-aksi">Aksi</th>}
+                {COLUMNS.map((col) => {
+                  const isSorted = sort.key === col.key
+                  return (
+                    <th
+                      key={col.key}
+                      className={`${col.className} umdl__th--sortable ${isSorted ? 'umdl__th--active' : ''}`}
+                      onClick={() => toggleSort(col.key)}
+                    >
+                      <div className="umdl__th-content">
+                        <span>{col.label}</span>
+                        <span className="umdl__sort-indicator">
+                          {isSorted ? (
+                            sort.direction === 'asc' ? (
+                              <ArrowUp size={12} className="sppd__sort-icon--active" />
+                            ) : (
+                              <ArrowDown size={12} className="sppd__sort-icon--active" />
+                            )
+                          ) : (
+                            <ArrowUpDown size={12} className="sppd__sort-icon--idle" />
+                          )}
+                        </span>
+                      </div>
+                    </th>
+                  )
+                })}
+                <th className="umdl__col-aksi">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {pageRows.length === 0 && (
+              {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={COLUMNS.length + (isDibuatTab ? 1 : 0)} className="umdl__no-data">
-                    Tidak ada data.
+                  <td colSpan={COLUMNS.length + 1} className="umdl__no-data">
+                    <div className="umdl__empty-state">
+                      <FileQuestion size={36} className="umdl__empty-icon" />
+                      <span className="umdl__empty-title">Tidak ada permohonan UMDL</span>
+                      <span className="umdl__empty-sub">
+                        {search
+                          ? `Tidak ditemukan data UMDL yang sesuai dengan "${search}".`
+                          : isDibuatTab
+                          ? 'Belum ada draf pengajuan UMDL yang dibuat.'
+                          : 'Belum ada pengajuan UMDL yang telah diproses persetujuan.'}
+                      </span>
+                    </div>
                   </td>
                 </tr>
-              )}
-              {/* data-label pada tiap <td> dipakai CSS (@media max-width: 720px)
-                  sebagai judul baris ketika tabel berubah menjadi kartu bertumpuk
-                  di ponsel - di lebar itu <thead> disembunyikan. */}
-              {pageRows.map((row) => {
-                const bolehUbah = row.peranSaya === 'Pembuat'
-                return (
-                <tr key={row.id}>
-                  <td className="umdl__col-status" data-label="Status">
-                    <span className={`umdl__status${row.status === STATUS_DIBUAT ? '' : ' umdl__status--done'}`}>
-                      {row.status}
-                    </span>
-                    {!bolehUbah && <span className="umdl__peran">Saya: {row.peranSaya}</span>}
-                  </td>
-                  <td className="umdl__col-appr" data-label="Persetujuan">
-                    <StatusPersetujuanBadge status={row.statusPersetujuan} />
-                  </td>
-                  <td className="umdl__col-tgl" data-label="Tgl UMDL">{formatTanggal(row.tglUmdl)}</td>
-                  <td className="umdl__col-kode" data-label="Kode UMDL">
-                    <div>{row.kodeUmdl}</div>
-                    {row.kodeIjin && <div className="umdl__source">Izin: {row.kodeIjin}</div>}
-                  </td>
-                  <td className="umdl__col-ket" data-label="Keterangan">{row.keterangan}</td>
-                  <td className="umdl__col-peserta" data-label="Ketua & Anggota">
-                    {row.peserta?.length ? (
-                      <ol className="umdl__list">
-                        {row.peserta.map((p) => (
-                          <li key={p.idDet}>{p.nama ?? p.nik} <span className="umdl__peserta-posisi">({p.posisi})</span></li>
-                        ))}
-                      </ol>
-                    ) : '-'}
-                  </td>
-                  {isDibuatTab && (
-                    <td className="umdl__col-aksi" data-label="Aksi">
-                      <div className="umdl__row-actions">
-                        {row.fotoUrl && (
-                          <button type="button" className="umdl__row-btn umdl__row-btn--camera" onClick={() => viewBukti(row)} title="Lihat foto bukti dinas">
-                            <Camera size={16} />
+              ) : (
+                pageRows.map((row) => {
+                  const bolehUbah = row.peranSaya === 'Pembuat'
+                  const isDibuat = row.status === STATUS_DIBUAT
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className="umdl__row umdl__row--clickable"
+                      onClick={() => setDetailModalRow(row)}
+                      title="Klik untuk melihat detail lengkap UMDL"
+                    >
+                      {/* Status & Approval */}
+                      <td className="umdl__col-status" data-label="Status">
+                        <div className="umdl__status-group">
+                          <span
+                            className={`umdl__badge ${
+                              isDibuat ? 'umdl__badge--pending' : 'umdl__badge--success'
+                            } umdl__badge--sm`}
+                          >
+                            {row.status}
+                          </span>
+                          <StatusPersetujuanBadge status={row.statusPersetujuan} />
+                          {!bolehUbah && row.peranSaya && (
+                            <span className="umdl__peran-tag">Saya: {row.peranSaya}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Kode UMDL & Izin */}
+                      <td className="umdl__col-kode" data-label="Kode UMDL">
+                        <div className="umdl__kode-cell">
+                          <span className="umdl__kode-badge">{row.kodeUmdl || '-'}</span>
+                          {row.kodeIjin ? (
+                            <span className="umdl__source-tag">Izin: {row.kodeIjin}</span>
+                          ) : (
+                            row.source && <span className="umdl__source-tag">{row.source}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Tanggal & Jarak */}
+                      <td className="umdl__col-tgl" data-label="Tanggal & Jarak">
+                        <div className="umdl__date-cell">
+                          <div className="umdl__date-row">
+                            <Calendar size={11} className="umdl__date-icon" />
+                            <span className="umdl__date-text">{formatTanggal(row.tglUmdl)}</span>
+                          </div>
+                          {row.rentangKm && (
+                            <span className="umdl__km-chip">
+                              <MapPin size={9} /> {row.rentangKm} km (PP)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Keterangan Dinas */}
+                      <td className="umdl__col-ket" data-label="Keterangan">
+                        <span className="umdl__ket-text" title={row.keterangan}>
+                          {row.keterangan || '-'}
+                        </span>
+                      </td>
+
+                      {/* Ketua & Anggota */}
+                      <td className="umdl__col-peserta" data-label="Ketua & Anggota">
+                        <div className="umdl__peserta-cell">
+                          {row.peserta?.length ? (
+                            <div className="umdl__peserta-list">
+                              {row.peserta.map((p) => (
+                                <span
+                                  key={p.idDet}
+                                  className={`umdl__peserta-chip ${
+                                    p.posisi === 'Ketua' ? 'umdl__peserta-chip--ketua' : ''
+                                  }`}
+                                  title={`${p.nama ?? p.nik} (${p.posisi})`}
+                                >
+                                  <b>{p.posisi === 'Ketua' ? 'K:' : 'A:'}</b> {p.nama ?? p.nik}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="umdl__dash">Belum ada peserta</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Aksi */}
+                      <td
+                        className="umdl__col-aksi"
+                        data-label="Aksi"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="umdl__row-actions">
+                          {/* Cetak Dokumen UMDL (muncul jika sudah disetujui atau di tab persetujuan) */}
+                          {((row.statusPersetujuan ?? '').toLowerCase().includes('setuju') || !isDibuatTab) && (
+                            <button
+                              type="button"
+                              className="umdl__row-btn umdl__row-btn--print"
+                              onClick={() => handlePrint(row)}
+                              title="Cetak Dokumen UMDL"
+                              aria-label="Cetak Dokumen UMDL"
+                            >
+                              <Printer size={14} />
+                            </button>
+                          )}
+
+                          {/* Foto Bukti */}
+                          {row.fotoUrl && (
+                            <button
+                              type="button"
+                              className="umdl__row-btn umdl__row-btn--camera"
+                              onClick={() => viewBukti(row)}
+                              title="Lihat Foto Bukti Lokasi"
+                              aria-label="Lihat Foto Bukti Lokasi"
+                            >
+                              <Camera size={14} />
+                            </button>
+                          )}
+
+                          {/* Rincian Peserta */}
+                          <button
+                            type="button"
+                            className="umdl__row-btn umdl__row-btn--detail"
+                            onClick={() => openDetail(row, bolehUbah)}
+                            title="Kelola Ketua & Anggota"
+                            aria-label="Kelola Ketua & Anggota"
+                          >
+                            <ListChecks size={14} />
                           </button>
-                        )}
-                        <button type="button" className="umdl__row-btn umdl__row-btn--detail" onClick={() => openDetail(row)} title="Rincian ketua/anggota">
-                          <ListChecks size={16} />
-                        </button>
-                        <button type="button" className="umdl__row-btn umdl__row-btn--edit" onClick={() => openEdit(row)} title="Ubah">
-                          <Pencil size={16} />
-                        </button>
-                        <button type="button" className="umdl__row-btn umdl__row-btn--delete" onClick={() => handleDelete(row)} title="Hapus">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              )})}
+
+                          {/* Ubah & Hapus (Draft Tab) */}
+                          {isDibuatTab && bolehUbah && (
+                            <>
+                              <button
+                                type="button"
+                                className="umdl__row-btn umdl__row-btn--edit"
+                                onClick={() => openEdit(row)}
+                                title="Ubah UMDL"
+                                aria-label="Ubah UMDL"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                className="umdl__row-btn umdl__row-btn--delete"
+                                onClick={() => handleDelete(row)}
+                                title="Hapus UMDL"
+                                aria-label="Hapus UMDL"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
 
+        {/* Footer & Paginasi */}
         <div className="umdl__footer">
-          <div>
-            {totalEntries === 0
-              ? 'Menampilkan 0 entri'
-              : `Menampilkan ${startIdx + 1} sampai ${Math.min(startIdx + pageSize, totalEntries)} dari ${totalEntries} entri`}
+          <div className="umdl__footer-info">
+            {totalEntries === 0 ? (
+              '0 entri UMDL'
+            ) : (
+              <>
+                Menampilkan <strong>{startIdx + 1}</strong>–
+                <strong>{Math.min(startIdx + pageSize, totalEntries)}</strong> dari{' '}
+                <strong>{totalEntries}</strong> entri
+              </>
+            )}
           </div>
+
           <div className="umdl__pagination">
-            <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-              Sebelumnya
+            <button
+              type="button"
+              className="umdl__page-nav"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
+              aria-label="Halaman sebelumnya"
+            >
+              <ChevronLeft size={15} />
+              <span className="umdl__nav-text">Sebelumnya</span>
             </button>
-            <span className="umdl__page-indicator">{currentPage}</span>
-            <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
-              Selanjutnya
+
+            <div className="umdl__page-numbers">
+              {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} className="umdl__page-ellipsis">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`umdl__page-num ${currentPage === p ? 'is-active' : ''}`}
+                    onClick={() => setPage(Number(p))}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="umdl__page-nav"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+              aria-label="Halaman berikutnya"
+            >
+              <span className="umdl__nav-text">Berikutnya</span>
+              <ChevronRight size={15} />
             </button>
           </div>
         </div>
       </div>
 
+      {/* Modal Detail Lengkap UMDL (Muncul Saat Baris Diklik) */}
+      {detailModalRow && (
+        <div className="umdl__modal-backdrop" onClick={() => setDetailModalRow(null)}>
+          <div className="umdl__modal umdl__modal--detail" onClick={(e) => e.stopPropagation()}>
+            <div className="umdl__modal-header">
+              <div className="umdl__modal-header-title">
+                <Wallet size={18} />
+                <h3>Detail Uang Muka Dinas Luar {detailModalRow.kodeUmdl ? `#${detailModalRow.kodeUmdl}` : ''}</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={() => setDetailModalRow(null)}
+                aria-label="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="umdl__detail-body">
+              {/* Top Status & Code Banner */}
+              <div className="umdl__detail-top">
+                <div className="umdl__detail-ident">
+                  <span className="umdl__detail-kode">{detailModalRow.kodeUmdl || '-'}</span>
+                  {detailModalRow.kodeIjin && (
+                    <span className="umdl__chip umdl__chip--izin">Izin: {detailModalRow.kodeIjin}</span>
+                  )}
+                  <span
+                    className={`umdl__badge ${
+                      detailModalRow.status === STATUS_DIBUAT ? 'umdl__badge--pending' : 'umdl__badge--success'
+                    }`}
+                  >
+                    {detailModalRow.status}
+                  </span>
+                </div>
+                <StatusPersetujuanBadge status={detailModalRow.statusPersetujuan} />
+              </div>
+
+              {/* Detail Items Grid */}
+              <div className="umdl__detail-grid">
+                <div className="umdl__detail-item">
+                  <span className="umdl__detail-label">Tanggal Dinas</span>
+                  <div className="umdl__detail-val sppd__detail-val--date">
+                    <Calendar size={13} />
+                    <span>{formatTanggal(detailModalRow.tglUmdl)}</span>
+                  </div>
+                </div>
+
+                <div className="umdl__detail-item">
+                  <span className="umdl__detail-label">Rentang Jarak (KM)</span>
+                  <div className="umdl__detail-val">
+                    <MapPin size={13} />
+                    <span>{detailModalRow.rentangKm ? `${detailModalRow.rentangKm} km (PP)` : '-'}</span>
+                  </div>
+                </div>
+
+                <div className="umdl__detail-item umdl__detail-item--full">
+                  <span className="umdl__detail-label">Tim Pelaksana (Ketua & Anggota)</span>
+                  <div className="umdl__detail-box">
+                    {detailModalRow.peserta?.length ? (
+                      <ul className="umdl__detail-peserta-list">
+                        {detailModalRow.peserta.map((p) => (
+                          <li key={p.idDet}>
+                            <b>{p.nama ?? p.nik}</b> — <span className="umdl__role-tag">{p.posisi}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="umdl__dash">Belum ada rincian ketua/anggota.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="umdl__detail-item umdl__detail-item--full">
+                  <span className="umdl__detail-label">Keterangan / Keperluan Dinas</span>
+                  <div className="umdl__detail-box">
+                    {detailModalRow.keterangan ? (
+                      <p className="umdl__detail-desc">{detailModalRow.keterangan}</p>
+                    ) : (
+                      <span className="umdl__dash">Tidak ada keterangan tambahan.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="umdl__modal-footer umdl__detail-footer">
+              <div className="umdl__detail-actions-left">
+                {((detailModalRow.statusPersetujuan ?? '').toLowerCase().includes('setuju') || detailModalRow.status !== STATUS_DIBUAT) && (
+                  <button
+                    type="button"
+                    className="umdl__btn-outline umdl__btn-outline--print"
+                    onClick={() => handlePrint(detailModalRow)}
+                    title="Cetak Dokumen UMDL"
+                  >
+                    <Printer size={14} /> <span>Cetak Dokumen</span>
+                  </button>
+                )}
+                {detailModalRow.fotoUrl && (
+                  <button
+                    type="button"
+                    className="umdl__btn-outline umdl__btn-outline--photo"
+                    onClick={() => viewBukti(detailModalRow)}
+                    title="Lihat Foto Bukti"
+                  >
+                    <Camera size={14} /> <span>Foto Lokasi</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="umdl__btn-outline umdl__btn-outline--peserta"
+                  onClick={() => {
+                    const row = detailModalRow
+                    const bolehUbah = row.peranSaya === 'Pembuat'
+                    setDetailModalRow(null)
+                    openDetail(row, bolehUbah)
+                  }}
+                  title="Kelola Tim"
+                >
+                  <ListChecks size={14} /> <span>Kelola Tim</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                className="umdl__btn-secondary"
+                onClick={() => setDetailModalRow(null)}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Form Pengajuan / Edit UMDL */}
       {modalOpen && (
         <div className="umdl__modal-backdrop" onClick={() => setModalOpen(false)}>
           <div className="umdl__modal" onClick={(e) => e.stopPropagation()}>
             <div className="umdl__modal-header">
-              <h3>{editing ? `UMDL # ${editing.kodeUmdl}` : 'Ajukan UMDL'}</h3>
-              <button type="button" className="umdl__modal-close" onClick={() => setModalOpen(false)} aria-label="Tutup">
+              <div className="umdl__modal-header-title">
+                <Wallet size={18} />
+                <h3>{editing ? `Ubah UMDL #${editing.kodeUmdl}` : 'Ajukan UMDL Baru'}</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={() => setModalOpen(false)}
+                aria-label="Tutup"
+              >
                 <X size={18} />
               </button>
             </div>
 
             <form className="umdl__modal-body" onSubmit={handleSubmit}>
-              <label className="umdl__field">
-                <span>No. Surat Ijin</span>
-                <div className="umdl__nik">
-                  <input type="text" value={form.kodeIjin} placeholder="Pilih surat izin..." readOnly />
-                  {/* Surat izin asal tidak bisa diganti saat mengubah: izin itulah yang
-                      menentukan hak uang makannya. */}
-                  {!editing && (
-                    <button type="button" onClick={openPicker} title="Cari data surat ijin">
-                      <Search size={16} />
-                    </button>
-                  )}
-                </div>
-              </label>
+              <div className="umdl__modal-grid">
+                {!editing && (
+                  <label className="umdl__field umdl__field--full">
+                    <span>Surat Izin Terkait *</span>
+                    <div className="umdl__nik-picker">
+                      <input
+                        type="text"
+                        value={form.kodeIjin ? `${form.kodeIjin}${form.tglUmdl ? ` (${formatTanggal(form.tglUmdl)})` : ''}` : ''}
+                        placeholder="Klik tombol cari untuk memilih surat izin..."
+                        readOnly
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="umdl__picker-btn"
+                        onClick={openPicker}
+                        title="Pilih Surat Izin"
+                      >
+                        <Search size={15} />
+                      </button>
+                    </div>
+                  </label>
+                )}
 
-              <label className="umdl__field">
-                <span>Tgl UMDL</span>
-                <input
-                  type="date"
-                  value={form.tglUmdl}
-                  onChange={(e) => setForm((p) => ({ ...p, tglUmdl: e.target.value }))}
-                  required
-                />
-              </label>
+                <label className="umdl__field">
+                  <span>Tanggal Dinas *</span>
+                  <input
+                    type="date"
+                    value={form.tglUmdl}
+                    onChange={(e) => setForm((p) => ({ ...p, tglUmdl: e.target.value }))}
+                    required
+                  />
+                </label>
 
-              <label className="umdl__field umdl__field--textarea">
-                <span>Keterangan</span>
-                <textarea
-                  rows={3}
-                  value={form.keterangan}
-                  maxLength={254}
-                  onChange={(e) => setForm((p) => ({ ...p, keterangan: e.target.value }))}
-                />
-              </label>
+                <label className="umdl__field">
+                  <span>Rentang Jarak (KM) *</span>
+                  <select
+                    value={form.rentangKm}
+                    onChange={(e) => setForm((p) => ({ ...p, rentangKm: e.target.value }))}
+                    required
+                  >
+                    <option value="">Pilih Rentang Jarak</option>
+                    {RENTANG_KM_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="umdl__field">
-                <span>Rentang Jarak (km)</span>
-                <select
-                  value={form.rentangKm}
-                  onChange={(e) => setForm((p) => ({ ...p, rentangKm: e.target.value }))}
-                  required
-                >
-                  <option value="" disabled>Pilih rentang jarak...</option>
-                  {RENTANG_KM_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
+                <label className="umdl__field umdl__field--full">
+                  <span>Keterangan Dinas *</span>
+                  <textarea
+                    rows={3}
+                    value={form.keterangan}
+                    maxLength={254}
+                    placeholder="Tuliskan tujuan dan keperluan dinas luar..."
+                    onChange={(e) => setForm((p) => ({ ...p, keterangan: e.target.value }))}
+                    required
+                  />
+                </label>
+              </div>
 
-              <div className="umdl__window-hint">
-                UMDL hanya bisa diajukan dari surat izin berjenis <b>Meninggalkan Pekerjaan</b> dengan
-                kepentingan <b>Dinas</b>. Satu surat izin hanya bisa dipakai sekali. Jarak di atas 150 km
-                wajib diajukan lewat <b>SPPD</b>.
+              <div className="umdl__hint-card">
+                <Info size={15} />
+                <span>
+                  UMDL hanya untuk dinas luar jarak dekat <b>kurang dari 150 km (PP)</b>. Perjalanan dinas di atas 150 km wajib diajukan melalui modul <b>SPPD</b>.
+                </span>
               </div>
 
               {editing && editing.fotoUrl && !form.bukti && (
-                <div className="umdl__window-hint">
-                  Foto bukti sudah tersimpan. Ambil foto baru di bawah hanya jika ingin menggantinya.
+                <div className="umdl__hint-card umdl__hint-card--info">
+                  <Camera size={15} />
+                  <span>Foto bukti dinas sebelumnya sudah tersimpan. Ambil foto baru di bawah hanya bila ingin menggantinya.</span>
                 </div>
               )}
+
               <DinasKameraCapture value={form.bukti} onChange={(v) => setForm((p) => ({ ...p, bukti: v }))} />
 
               {formError && <div className="umdl__error">{formError}</div>}
 
               <div className="umdl__modal-footer">
+                <button
+                  type="button"
+                  className="umdl__btn-secondary"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Batal
+                </button>
                 <button type="submit" className="umdl__submit" disabled={saving}>
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                  {saving ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Simpan & Kelola Tim'}
                 </button>
               </div>
             </form>
@@ -653,63 +1287,68 @@ export default function UmdlPage() {
         </div>
       )}
 
+      {/* Modal Picker Surat Izin */}
       {pickerOpen && (
         <div className="umdl__modal-backdrop" onClick={() => setPickerOpen(false)}>
-          <div className="umdl__modal umdl__modal--wide" onClick={(e) => e.stopPropagation()}>
+          <div className="umdl__modal umdl__modal--picker" onClick={(e) => e.stopPropagation()}>
             <div className="umdl__modal-header">
-              <h3>Cari Data Surat Ijin</h3>
-              <button type="button" className="umdl__modal-close" onClick={() => setPickerOpen(false)} aria-label="Tutup">
+              <div className="umdl__modal-header-title">
+                <Search size={18} />
+                <h3>Pilih Surat Izin Dinas</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={() => setPickerOpen(false)}
+                aria-label="Tutup"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="umdl__peserta">
-              {pickerError && <div className="umdl__error">{pickerError}</div>}
+            {pickerError && <div className="umdl__error" style={{ margin: '14px 18px 0' }}>{pickerError}</div>}
 
-              <table className="umdl__table umdl__table--peserta">
+            <div className="umdl__picker-table-wrap">
+              <table className="umdl__table umdl__table--picker">
                 <thead>
                   <tr>
-                    <th>Kode Ijin</th>
-                    <th>Kepentingan</th>
+                    <th>Kode Izin</th>
+                    <th>Tanggal Izin</th>
+                    <th>Jam</th>
                     <th>Keterangan</th>
-                    <th>Aksi</th>
+                    <th style={{ width: '60px', textAlign: 'center' }}>Pilih</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pickerRows.length === 0 && (
+                  {pickerRows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="umdl__no-data">
-                        Tidak ada surat izin yang memenuhi syarat. Izin harus berjenis &quot;Meninggalkan
-                        Pekerjaan&quot; dengan kepentingan &quot;Dinas&quot; dan belum dipakai untuk UMDL lain.
+                      <td colSpan={5} className="umdl__no-data">
+                        Tidak ada data surat izin dinas yang tersedia.
                       </td>
                     </tr>
+                  ) : (
+                    pickerRows.map((izin) => (
+                      <tr key={izin.idIjin} className="umdl__row--picker" onClick={() => pickIjin(izin)}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{izin.kodeIjin}</td>
+                        <td>{formatTanggal(izin.tglIjin)}</td>
+                        <td>{formatJam(izin.jamMulai)} - {formatJam(izin.jamSelesai)}</td>
+                        <td>{izin.keterangan || '-'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="umdl__row-btn umdl__row-btn--pick"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              pickIjin(izin)
+                            }}
+                            title="Pilih Izin Ini"
+                          >
+                            <Check size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   )}
-                  {pickerRows.map((i) => (
-                    <tr key={i.idIjin}>
-                      <td>
-                        <div>{i.kodeIjin}</div>
-                        <div className="umdl__source">{formatTanggal(i.tglIjin)}</div>
-                      </td>
-                      <td>
-                        <div>{i.kepentinganIjin}</div>
-                        <div>{i.jenisIjin}</div>
-                        <div className="umdl__source">
-                          jam : {formatJam(i.tglIjin)} s.d {formatJam(i.jamSelesai)}
-                        </div>
-                      </td>
-                      <td>{i.keterangan}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="umdl__row-btn umdl__row-btn--pick"
-                          onClick={() => pickIjin(i)}
-                          title="Pilih surat izin ini"
-                        >
-                          <Check size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
                 </tbody>
               </table>
             </div>
@@ -717,153 +1356,242 @@ export default function UmdlPage() {
         </div>
       )}
 
+      {/* Modal Rincian Ketua / Anggota */}
       {detailFor && (
         <div className="umdl__modal-backdrop" onClick={() => setDetailFor(null)}>
           <div className="umdl__modal umdl__modal--wide" onClick={(e) => e.stopPropagation()}>
             <div className="umdl__modal-header">
-              <h3>Rincian UMDL # {detailFor.kodeUmdl}</h3>
-              <button type="button" className="umdl__modal-close" onClick={() => setDetailFor(null)} aria-label="Tutup">
+              <div className="umdl__modal-header-title">
+                <Users size={18} />
+                <h3>Kelola Tim UMDL #{detailFor.kodeUmdl}</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={() => setDetailFor(null)}
+                aria-label="Tutup"
+              >
                 <X size={18} />
               </button>
             </div>
 
             {!detailBolehUbah && (
-              <p className="umdl__window-hint" style={{ margin: '0 22px 8px' }}>
-                Anda ditambahkan sbg peserta di UMDL ini (bukan pembuatnya) - daftar di bawah untuk dilihat saja.
-              </p>
+              <div className="umdl__hint-card umdl__hint-card--info" style={{ margin: '14px 18px 0' }}>
+                <Info size={15} />
+                <span>Anda terdaftar sebagai anggota pada UMDL ini (bukan pembuat) — daftar tim di bawah bersifat hanya-baca (*read-only*).</span>
+              </div>
             )}
 
             {detailBolehUbah && (
-            <form className="umdl__modal-body" onSubmit={handleSubmitPeserta}>
-              <label className="umdl__field">
-                <span>NIK</span>
-                <div className="umdl__nik">
-                  <input type="text" value={pesertaForm.nama ? `${pesertaForm.nik} - ${pesertaForm.nama}` : ''} placeholder="Pilih pegawai..." readOnly />
-                  {!editingPeserta && (
-                    <button type="button" onClick={openPesertaPicker} title="Cari data pegawai">
-                      <Search size={16} />
+              <form className="umdl__modal-body umdl__peserta-form" onSubmit={handleSubmitPeserta}>
+                <div className="umdl__modal-grid">
+                  <label className="umdl__field">
+                    <span>Pilih Pegawai *</span>
+                    <div className="umdl__nik-picker">
+                      <input
+                        type="text"
+                        value={pesertaForm.nama ? `${pesertaForm.nik} - ${pesertaForm.nama}` : ''}
+                        placeholder="Klik tombol cari untuk memilih pegawai..."
+                        readOnly
+                      />
+                      {!editingPeserta && (
+                        <button
+                          type="button"
+                          className="umdl__picker-btn"
+                          onClick={openPesertaPicker}
+                          title="Cari Pegawai"
+                        >
+                          <Search size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </label>
+
+                  <label className="umdl__field">
+                    <span>Posisi Tim *</span>
+                    <select
+                      value={pesertaForm.posisi}
+                      onChange={(e) => setPesertaForm((p) => ({ ...p, posisi: e.target.value }))}
+                    >
+                      {POSISI_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {pesertaError && <div className="umdl__error">{pesertaError}</div>}
+
+                <div className="umdl__modal-footer umdl__peserta-form-foot">
+                  {editingPeserta && (
+                    <button type="button" className="umdl__btn-secondary" onClick={resetPesertaForm}>
+                      Batal Ubah
                     </button>
                   )}
+                  <button type="submit" className="umdl__submit">
+                    {editingPeserta ? (
+                      <>
+                        <Pencil size={14} /> <span>Simpan Perubahan</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={14} /> <span>Tambahkan Anggota</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              </label>
-
-              <label className="umdl__field">
-                <span>Posisi</span>
-                <select value={pesertaForm.posisi} onChange={(e) => setPesertaForm((p) => ({ ...p, posisi: e.target.value }))}>
-                  {POSISI_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </label>
-
-              {pesertaError && <div className="umdl__error">{pesertaError}</div>}
-
-              <div className="umdl__modal-footer">
-                {editingPeserta && (
-                  <button type="button" className="umdl__cancel" onClick={resetPesertaForm}>Batal</button>
-                )}
-                <button type="submit" className="umdl__submit">
-                  {editingPeserta ? (<><Pencil size={15} /> Simpan Perubahan</>) : (<><Plus size={15} /> Tambah Peserta</>)}
-                </button>
-              </div>
-            </form>
+              </form>
             )}
 
-            <div className="umdl__peserta">
+            {/* Tabel Daftar Tim */}
+            <div className="umdl__peserta-table-wrap">
               <table className="umdl__table umdl__table--peserta">
                 <thead>
                   <tr>
-                    <th>Posisi</th>
-                    <th>NIK</th>
-                    <th>Nama</th>
-                    {detailBolehUbah && <th>Aksi</th>}
+                    <th style={{ width: '20%' }}>Posisi</th>
+                    <th style={{ width: '25%' }}>NIK</th>
+                    <th style={{ width: '40%' }}>Nama</th>
+                    {detailBolehUbah && <th style={{ width: '15%', textAlign: 'center' }}>Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {peserta.length === 0 && (
+                  {peserta.length === 0 ? (
                     <tr>
-                      <td colSpan={detailBolehUbah ? 4 : 3} className="umdl__no-data">Belum ada ketua/anggota ditambahkan.</td>
+                      <td colSpan={detailBolehUbah ? 4 : 3} className="umdl__no-data">
+                        Belum ada anggota tim terdaftar.
+                      </td>
                     </tr>
-                  )}
-                  {peserta.map((p) => (
-                    <tr key={p.idDet} className={editingPeserta?.idDet === p.idDet ? 'umdl__row--editing' : undefined}>
-                      <td>{p.posisi}</td>
-                      <td>{p.nik}</td>
-                      <td>{p.nama ?? '-'}</td>
-                      {detailBolehUbah && (
+                  ) : (
+                    peserta.map((p) => (
+                      <tr key={p.idDet} className={editingPeserta?.idDet === p.idDet ? 'umdl__row--editing' : undefined}>
                         <td>
-                          <div className="umdl__row-actions">
-                            <button type="button" className="umdl__row-btn umdl__row-btn--edit" onClick={() => openEditPeserta(p)} title="Ubah peserta">
-                              <Pencil size={16} />
-                            </button>
-                            <button type="button" className="umdl__row-btn umdl__row-btn--delete" onClick={() => handleDeletePeserta(p.idDet)} title="Hapus peserta">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
+                          <span
+                            className={`umdl__badge ${
+                              p.posisi === 'Ketua' ? 'umdl__badge--primary' : 'umdl__badge--neutral'
+                            } umdl__badge--sm`}
+                          >
+                            {p.posisi}
+                          </span>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.nik}</td>
+                        <td>
+                          <b>{p.nama ?? '-'}</b>
+                        </td>
+                        {detailBolehUbah && (
+                          <td style={{ textAlign: 'center' }}>
+                            <div className="umdl__row-actions">
+                              <button
+                                type="button"
+                                className="umdl__row-btn umdl__row-btn--edit"
+                                onClick={() => openEditPeserta(p)}
+                                title="Ubah posisi"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                className="umdl__row-btn umdl__row-btn--delete"
+                                onClick={() => handleDeletePeserta(p.idDet)}
+                                title="Hapus anggota"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="umdl__modal-footer">
+              <button
+                type="button"
+                className="umdl__btn-secondary"
+                onClick={() => setDetailFor(null)}
+              >
+                Selesai & Tutup
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal Picker Pegawai UMDL */}
       {pesertaPickerOpen && (
         <div className="umdl__modal-backdrop" onClick={() => setPesertaPickerOpen(false)}>
-          <div className="umdl__modal umdl__modal--wide" onClick={(e) => e.stopPropagation()}>
+          <div className="umdl__modal umdl__modal--picker" onClick={(e) => e.stopPropagation()}>
             <div className="umdl__modal-header">
-              <h3>Cari Data Pegawai</h3>
-              <button type="button" className="umdl__modal-close" onClick={() => setPesertaPickerOpen(false)} aria-label="Tutup">
+              <div className="umdl__modal-header-title">
+                <Users size={18} />
+                <h3>Pilih Pegawai untuk Tim</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={() => setPesertaPickerOpen(false)}
+                aria-label="Tutup"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="umdl__modal-body">
-              <label className="umdl__field">
-                <span>Cari</span>
+            <div className="umdl__modal-body" style={{ paddingBottom: '8px' }}>
+              <div className="umdl__search-box" style={{ maxWidth: 'none' }}>
+                <Search size={15} className="umdl__search-icon" />
                 <input
                   type="text"
                   value={pesertaPickerQuery}
                   onChange={(e) => runPesertaPicker(e.target.value)}
-                  placeholder="Ketik NIK atau nama..."
+                  placeholder="Ketik NIK atau nama pegawai..."
                   autoFocus
                 />
-              </label>
+              </div>
             </div>
 
-            <div className="umdl__peserta">
-              <table className="umdl__table umdl__table--peserta">
+            <div className="umdl__picker-table-wrap">
+              <table className="umdl__table umdl__table--picker">
                 <thead>
                   <tr>
                     <th>NIK</th>
                     <th>Nama</th>
-                    <th>Wilayah</th>
-                    <th>Unit Kerja</th>
-                    <th>Aksi</th>
+                    <th style={{ width: '60px', textAlign: 'center' }}>Pilih</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pesertaPickerRows.length === 0 && (
+                  {pesertaPickerRows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="umdl__no-data">Tidak ada pegawai yang cocok.</td>
-                    </tr>
-                  )}
-                  {pesertaPickerRows.map((p) => (
-                    <tr key={p.nik}>
-                      <td>{p.nik}</td>
-                      <td>{p.nama}</td>
-                      <td>{p.wilayah}</td>
-                      <td>{p.unitKerja}</td>
-                      <td>
-                        <button type="button" className="umdl__row-btn umdl__row-btn--pick" onClick={() => pickPesertaPegawai(p)} title="Pilih pegawai ini">
-                          <Check size={16} />
-                        </button>
+                      <td colSpan={3} className="umdl__no-data">
+                        Tidak ada data pegawai yang cocok.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    pesertaPickerRows.map((p) => (
+                      <tr key={p.nik} className="umdl__row--picker" onClick={() => pickPesertaPegawai(p)}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.nik}</td>
+                        <td>
+                          <b>{p.nama}</b>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="umdl__row-btn umdl__row-btn--pick"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              pickPesertaPegawai(p)
+                            }}
+                            title="Pilih pegawai ini"
+                          >
+                            <Check size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -871,17 +1599,30 @@ export default function UmdlPage() {
         </div>
       )}
 
+      {/* Modal Preview Bukti Foto Dinas */}
       {buktiPreview && (
         <div className="umdl__modal-backdrop" onClick={closeBuktiPreview}>
-          <div className="umdl__modal" onClick={(e) => e.stopPropagation()}>
+          <div className="umdl__modal umdl__modal--photo" onClick={(e) => e.stopPropagation()}>
             <div className="umdl__modal-header">
-              <h3>Foto Bukti Dinas</h3>
-              <button type="button" className="umdl__modal-close" onClick={closeBuktiPreview} aria-label="Tutup">
+              <div className="umdl__modal-header-title">
+                <Camera size={18} />
+                <h3>Foto Bukti Lokasi Dinas</h3>
+              </div>
+              <button
+                type="button"
+                className="umdl__modal-close"
+                onClick={closeBuktiPreview}
+                aria-label="Tutup"
+              >
                 <X size={18} />
               </button>
             </div>
-            <div className="umdl__modal-body">
-              <img src={buktiPreview.url} alt="Foto bukti dinas" style={{ width: '100%', borderRadius: 10 }} />
+            <div className="umdl__modal-body" style={{ textAlign: 'center', padding: '16px' }}>
+              <img
+                src={buktiPreview.url}
+                alt="Foto bukti lokasi dinas"
+                style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px' }}
+              />
             </div>
           </div>
         </div>

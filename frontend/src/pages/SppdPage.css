@@ -1,542 +1,1343 @@
-.sppd__empty {
-  padding: 60px 0;
-  text-align: center;
-  color: var(--gcs-text-muted);
-  font-size: 14px;
-}
+/* ===========================================================================
+   SppdPage Styling - Modern Executive GCS Theme (Dense & Compact Layout)
+   =========================================================================== */
 
-.sppd__page-title {
-  font-size: 22px;
-  margin-bottom: 16px;
-}
-
-.sppd__tabs {
+.sppd {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.sppd__tab {
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  background: var(--gcs-bg);
-  color: var(--gcs-text-muted);
-  border-radius: 10px 10px 0 0;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+/* ===========================================================================
+   1. State Cards (Loading / Error)
+   =========================================================================== */
+
+.sppd__state-card {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.sppd__tab--active {
-  background: var(--gcs-white);
+.sppd__loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(47, 108, 63, 0.15);
+  border-top-color: var(--gcs-green-600);
+  border-radius: 50%;
+  animation: sppd-spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes sppd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sppd__state-icon--err {
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.sppd__state-title {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--gcs-ink);
+  margin: 0 0 4px;
 }
 
-.sppd__actionbar {
+.sppd__state-desc {
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+  margin: 0;
+}
+
+.sppd__error {
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.sppd__hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(244, 174, 70, 0.1);
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  color: #8a6d3b;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.sppd__hint-card svg {
+  color: var(--gcs-gold-700);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sppd__hint-card--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #1e40af;
+}
+
+.sppd__hint-card--info svg {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   2. Page Header
+   =========================================================================== */
+
+.sppd__page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sppd__page-header-info {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  padding: 12px 14px;
-  border-radius: 0 10px 0 0;
 }
 
-.sppd__filter {
-  position: relative;
-  flex: 1;
-  display: flex;
-}
-
-.sppd__filter input {
-  width: 100%;
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  background: var(--gcs-bg);
-  padding: 9px 44px 9px 12px;
-  font-size: 13.5px;
-  color: var(--gcs-ink);
-  outline: none;
-}
-
-.sppd__filter input:focus {
-  background: var(--gcs-white);
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.sppd__filter-icon {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  color: var(--gcs-text-muted);
-  pointer-events: none;
-}
-
-.sppd__actionbar-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.sppd__icon-btn {
-  border: none;
-  border-radius: 8px;
-  width: 38px;
-  height: 38px;
+.sppd__page-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  flex-shrink: 0;
+}
+
+.sppd__page-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.sppd__page-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+.sppd__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  border-radius: 9px;
+  padding: 8px 15px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 3px 10px -2px rgba(15, 38, 31, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.sppd__icon-btn--add {
-  background: var(--gcs-green-600);
+.sppd__btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #16382b 0%, #255c49 100%);
+  box-shadow: 0 5px 14px -2px rgba(15, 38, 31, 0.4);
 }
 
-.sppd__icon-btn--refresh {
-  background: var(--gcs-green-500);
+/* ===========================================================================
+   3. Quick Statistics Summary Grid (Compact)
+   =========================================================================== */
+
+.sppd__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
-.sppd__icon-btn:hover {
-  opacity: 0.9;
+.sppd__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 38, 31, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
+
+.sppd__stat-card:hover {
+  border-color: rgba(47, 108, 63, 0.25);
+}
+
+.sppd__stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sppd__stat-icon--total {
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-green-900);
+}
+
+.sppd__stat-icon--draft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.sppd__stat-icon--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.sppd__stat-icon--monthly {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.sppd__stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sppd__stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sppd__stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sppd__stat-val--draft {
+  color: #d97706;
+}
+
+.sppd__stat-val--approved {
+  color: #059669;
+}
+
+.sppd__stat-val--monthly {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   4. Main Card & Tab Navigation
+   =========================================================================== */
 
 .sppd__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
-  border-radius: 0 0 14px 14px;
-  padding: 20px 24px;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px -3px rgba(15, 38, 31, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
+
+.sppd__nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.sppd__tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sppd__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: rgba(15, 38, 31, 0.03);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sppd__tab:hover:not(.sppd__tab--active) {
+  background: rgba(15, 38, 31, 0.06);
+  color: var(--gcs-ink);
+}
+
+.sppd__tab--active {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.2);
+}
+
+.sppd__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-text-muted);
+}
+
+.sppd__tab--active .sppd__tab-count {
+  background: rgba(244, 174, 70, 0.25);
+  color: var(--gcs-gold-500);
+}
+
+.sppd__nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sppd__icon-btn {
+  border: 1px solid var(--gcs-border);
+  border-radius: 7px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gcs-white);
+  color: var(--gcs-green-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sppd__icon-btn:hover {
+  background: rgba(47, 108, 63, 0.08);
+  border-color: var(--gcs-green-600);
+}
+
+/* ===========================================================================
+   5. Toolbar (Search & Page Size)
+   =========================================================================== */
 
 .sppd__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
-.sppd__page-size,
-.sppd__search {
+.sppd__search-box {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--gcs-text-muted);
+  flex: 1;
+  max-width: 380px;
 }
 
-.sppd__page-size select,
-.sppd__search input {
+.sppd__search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gcs-text-muted);
+  pointer-events: none;
+}
+
+.sppd__search-box input {
+  width: 100%;
   border: 1px solid var(--gcs-border);
   border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 30px 6px 32px;
+  font-size: 12.5px;
   color: var(--gcs-ink);
-  background: var(--gcs-white);
+  background: var(--gcs-bg);
   outline: none;
+  transition: all 0.15s ease;
 }
 
-.sppd__search input {
-  min-width: 220px;
-}
-
-.sppd__search input:focus {
+.sppd__search-box input:focus {
+  background: var(--gcs-white);
   border-color: var(--gcs-gold-500);
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.sppd__table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--gcs-border);
-  border-radius: 12px;
+.sppd__search-box input::placeholder {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
 }
 
-/* Sembilan kolom - butuh ruang paling lebar di antara tabel My Personal. Di bawah lebar ini
-   pembungkusnya menggulir horizontal, bukan memampatkan isi kolom. */
+.sppd__search-clear {
+  position: absolute;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gcs-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.sppd__search-clear:hover {
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+}
+
+.sppd__page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.sppd__page-size-label {
+  font-weight: 600;
+}
+
+.sppd__page-size-wrap select {
+  appearance: none;
+  background: var(--gcs-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%233e3430' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center;
+  border: 1px solid var(--gcs-border);
+  border-radius: 6px;
+  padding: 5px 22px 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  outline: none;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   6. Dense Table Layout (Fit without horizontal scroll)
+   =========================================================================== */
+
+.sppd__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  border-radius: 10px;
+  background: var(--gcs-white);
+  box-shadow: 0 1px 3px rgba(15, 38, 31, 0.02);
+}
+
 .sppd__table {
   width: 100%;
   table-layout: fixed;
-  min-width: 1560px;
+  min-width: 0;
   border-collapse: collapse;
-  font-size: 13.5px;
-}
-
-/* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .sppd__table-wrap). */
-/* Padding kiri-kanan dibuat lega untuk SEMUA sel, bukan ditambal per kolom: isi kolom mana
-   pun (kode SPPD, tanggal, transportasi) sama-sama tidak boleh menempel ke sekat. */
-.sppd__table th,
-.sppd__table td {
-  padding: 14px 20px;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gcs-border);
-  border-right: 1px solid var(--gcs-border);
-}
-
-.sppd__table th:last-child,
-.sppd__table td:last-child {
-  border-right: none;
-}
-
-/* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.sppd__table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.sppd__table thead th {
   font-size: 12.5px;
-  font-weight: 700;
-  color: var(--gcs-ink);
-  background: rgba(15, 38, 31, 0.035);
-  border-bottom: 2px solid var(--gcs-border);
-  white-space: nowrap;
 }
 
-.sppd__table tbody tr:hover td {
-  background: rgba(244, 174, 70, 0.06);
-}
-
-/* Sembilan kolom - total lebar dijaga di bawah 100% supaya tidak ada yang terjepit;
-   di bawah min-width tabel, pembungkusnya menggulir. */
+/* Column Proportions (Total 100%) */
 .sppd__col-status {
-  width: 8%;
-}
-
-.sppd__col-tgl {
-  width: 10%;
-  white-space: nowrap;
-}
-
-/* Kode SPPD ("ISP202607000024") lebih panjang dari yang terlihat. Kalau kolomnya kurang
-   lebar, teksnya meluber melewati padding dan tampak condong ke kanan - bukan salah
-   perataan, melainkan kurang ruang. Nowrap supaya tidak terpotong jadi dua baris. */
-.sppd__col-kode {
   width: 14%;
-  white-space: nowrap;
+  text-align: left;
+}
+
+.sppd__col-kode {
+  width: 17%;
+  text-align: left;
 }
 
 .sppd__col-tujuan {
-  width: 9%;
-}
-
-/* Dua kolom ini memuat daftar (bisa beberapa peserta), jadi paling lebar dan rata kiri -
-   teks panjang yang rata tengah jauh lebih sulit dibaca saat membungkus ke baris baru. */
-.sppd__col-nama {
-  width: 14%;
+  width: 18%;
   text-align: left;
 }
 
-.sppd__col-tugas {
-  width: 14%;
+.sppd__col-jadwal {
+  width: 15%;
   text-align: left;
 }
 
-.sppd__col-kendaraan {
-  width: 9%;
-}
-
-/* Daftar peserta: bernomor supaya batas antar orang jelas, bukan sekadar baris menumpuk
-   yang tak bisa dibedakan dari teks yang membungkus. */
-.sppd__list {
-  margin: 0;
-  padding-left: 18px;
-  list-style: decimal;
+.sppd__col-peserta {
+  width: 23%;
   text-align: left;
 }
 
-.sppd__list li + li {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--gcs-border);
-}
-
-/* Satu peserta saja tidak perlu nomor - "1." di baris tunggal hanya jadi derau visual. */
-.sppd__list li:only-child {
-  list-style: none;
-  margin-left: -18px;
-}
-
-/* Sel dengan daftar diratakan ke atas agar sejajar dengan kolom lain di baris yang sama. */
-.sppd__table td.sppd__col-nama,
-.sppd__table td.sppd__col-tugas {
-  vertical-align: top;
-}
-
-/* Rata kiri hanya untuk isinya; judul kolom tetap di tengah seperti kolom lain - kelas
-   kolom menempel di <th> juga, jadi harus dikembalikan di sini. */
-.sppd__table th.sppd__col-nama,
-.sppd__table th.sppd__col-tugas {
-  text-align: center;
-}
-
-/* Memuat sampai empat tombol: cetak, rincian, ubah, hapus. */
 .sppd__col-aksi {
-  width: 190px;
+  width: 14%;
   text-align: center;
+  white-space: nowrap;
 }
 
-.sppd__col-appr {
-  width: 12%;
+/* Header */
+.sppd__table thead th {
+  padding: 8px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-green-900);
+  background: #f8faf9;
+  border-bottom: 2px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
 }
 
 .sppd__th--sortable {
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .sppd__th--sortable:hover {
+  background: #f0f4f2;
   color: var(--gcs-green-600);
 }
 
-/* Judul kolom SPPD panjang-panjang ("Tugas yang dilaksanakan"), jadi ikon sort mudah
-   menempel ke hurufnya. Jarak dilebarkan dan ikon dijaga agar tidak ikut menyusut. */
+.sppd__th--active {
+  color: var(--gcs-green-700);
+}
+
 .sppd__th-content {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.sppd__th-content svg {
-  flex-shrink: 0;
+.sppd__sort-indicator {
+  display: inline-flex;
+  align-items: center;
 }
-
 
 .sppd__sort-icon--idle {
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
-.sppd__status {
-  font-weight: 600;
-}
-
-.sppd__status--done {
+.sppd__sort-icon--active {
   color: var(--gcs-green-600);
 }
 
-/* Peran saya (Ketua/Anggota) - tampil hanya utk baris yg bukan saya sendiri yg ajukan
-   (diminta 2026-08-24, mirror UMDL). */
-.sppd__peran {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 600;
+/* Rows & Cells */
+.sppd__row {
+  transition: background-color 0.12s ease;
+}
+
+.sppd__row--clickable {
+  cursor: pointer;
+}
+
+.sppd__table tbody tr:nth-child(even) {
+  background-color: rgba(15, 38, 31, 0.015);
+}
+
+.sppd__row--clickable:hover {
+  background-color: rgba(244, 174, 70, 0.1) !important;
+}
+
+.sppd__table tbody td {
+  padding: 8px 7px;
+  border-bottom: 1px solid rgba(15, 38, 31, 0.06);
+  vertical-align: top;
+}
+
+.sppd__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Cell Specifics */
+.sppd__status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sppd__peran-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--gcs-text-muted);
+  background: rgba(15, 38, 31, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sppd__appr {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sppd__appr--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+}
+
+.sppd__appr--reject {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.sppd__appr--wait {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.sppd__appr--none {
   color: var(--gcs-text-muted);
 }
 
-/* Badge status persetujuan MANAGER real-time (approval.pengajuan) - beda dari
-   .sppd__status (legacy, dipakai memilah tab Di Buat/Persetujuan). */
-.sppd__appr {
-  display: inline-block;
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
+.sppd__kode-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
-.sppd__appr--wait { background: rgba(244, 174, 70, 0.16); color: var(--gcs-gold-700); }
-.sppd__appr--ok { background: rgba(47, 108, 63, 0.14); color: var(--gcs-green-700); }
-.sppd__appr--reject { background: rgba(230, 72, 63, 0.12); color: #c8352c; }
-.sppd__appr--none { color: var(--gcs-text-muted); }
+
+.sppd__kode-badge {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sppd__tgl-input {
+  font-size: 10px;
+  color: var(--gcs-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sppd__tujuan-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sppd__tujuan-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sppd__tujuan-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+}
+
+.sppd__tujuan-text {
+  font-weight: 600;
+  color: var(--gcs-ink);
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+.sppd__tujuan-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sppd__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.sppd__chip--jenis {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+.sppd__chip--trans {
+  background: rgba(15, 38, 31, 0.05);
+  color: var(--gcs-ink);
+}
+
+.sppd__jadwal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sppd__jadwal-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sppd__jadwal-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+}
+
+.sppd__date-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sppd__jadwal-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sppd__date-end {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gcs-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sppd__durasi-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gcs-green-700);
+  background: rgba(47, 108, 63, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.sppd__peserta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sppd__peserta-names {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sppd__peserta-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sppd__peserta-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.sppd__tugas-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--gcs-text-muted);
+  word-break: break-word;
+}
+
+/* Badges */
+.sppd__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sppd__badge--sm {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.sppd__badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.sppd__badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sppd__badge--primary {
+  background: rgba(47, 108, 63, 0.12);
+  color: var(--gcs-green-700);
+  border: 1px solid rgba(47, 108, 63, 0.25);
+}
+
+.sppd__badge--neutral {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* ===========================================================================
+   7. Row Actions (Dense)
+   =========================================================================== */
 
 .sppd__row-actions {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-/* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
-   terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
 .sppd__row-btn {
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 9px;
-  width: 36px;
-  height: 36px;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
-.sppd__row-btn--edit {
-  color: var(--gcs-gold-700);
-  border-color: rgba(244, 174, 70, 0.45);
-  background: rgba(244, 174, 70, 0.12);
+.sppd__row-btn--print {
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.08);
 }
 
-.sppd__row-btn--edit:hover {
-  color: #fff;
-  border-color: var(--gcs-gold-600);
-  background: var(--gcs-gold-600);
-}
-
-.sppd__row-btn--delete {
-  color: #c8352c;
-  border-color: rgba(230, 72, 63, 0.4);
-  background: rgba(230, 72, 63, 0.1);
-}
-
-.sppd__row-btn--delete:hover {
-  color: #fff;
-  border-color: #c8352c;
-  background: #d63c32;
+.sppd__row-btn--print:hover {
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
 }
 
 .sppd__row-btn--camera {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
+  color: #7c3aed;
+  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(124, 58, 237, 0.08);
 }
 
 .sppd__row-btn--camera:hover {
-  color: #fff;
+  color: #ffffff;
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
+.sppd__row-btn--detail {
+  color: var(--gcs-green-700);
+  border-color: rgba(47, 108, 63, 0.3);
+  background: rgba(47, 108, 63, 0.08);
+}
+
+.sppd__row-btn--detail:hover {
+  color: #ffffff;
   border-color: var(--gcs-green-600);
   background: var(--gcs-green-600);
 }
 
-.sppd__row-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.sppd__row-btn--edit {
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
 }
 
-.sppd__source {
-  color: var(--gcs-text-muted);
-  font-size: 12px;
-  margin-top: 2px;
+.sppd__row-btn--edit:hover {
+  color: #ffffff;
+  border-color: #d97706;
+  background: #d97706;
 }
+
+.sppd__row-btn--delete {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.sppd__row-btn--delete:hover {
+  color: #ffffff;
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+.sppd__row-btn--pick {
+  color: var(--gcs-green-700);
+  border-color: var(--gcs-green-600);
+  background: rgba(47, 108, 63, 0.1);
+}
+
+.sppd__row-btn--pick:hover {
+  color: #ffffff;
+  background: var(--gcs-green-600);
+}
+
+/* ===========================================================================
+   8. Empty State & Footer
+   =========================================================================== */
 
 .sppd__no-data {
+  padding: 36px 16px !important;
   text-align: center;
+}
+
+.sppd__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  gap: 6px;
+}
+
+.sppd__empty-icon {
   color: var(--gcs-text-muted);
-  padding: 24px;
+  opacity: 0.6;
+}
+
+.sppd__empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+}
+
+.sppd__empty-sub {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+  max-width: 420px;
+  text-align: center;
 }
 
 .sppd__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
-  font-size: 13px;
+  padding-top: 2px;
+}
+
+.sppd__footer-info {
+  font-size: 12.5px;
   color: var(--gcs-text-muted);
+}
+
+.sppd__footer-info strong {
+  color: var(--gcs-ink);
+  font-weight: 700;
 }
 
 .sppd__pagination {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.sppd__pagination button {
+.sppd__page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--gcs-ink);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.sppd__pagination button:hover:not(:disabled) {
+.sppd__page-nav:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+  background: #f8faf9;
+}
+
+.sppd__page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sppd__page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.sppd__page-num {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sppd__page-num:hover:not(.is-active) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.sppd__pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.sppd__page-num.is-active {
+  background: var(--gcs-green-900);
+  border-color: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(15, 38, 31, 0.25);
 }
 
-.sppd__page-indicator {
-  font-weight: 600;
-  color: var(--gcs-ink);
+.sppd__page-ellipsis {
+  padding: 0 3px;
+  color: var(--gcs-text-muted);
+  font-size: 11px;
 }
 
-.sppd__error {
-  margin-bottom: 12px;
-  font-size: 12.5px;
-  color: #b3261e;
-  background: rgba(230, 72, 63, 0.1);
-  border-radius: 8px;
-  padding: 9px 12px;
-}
+/* ===========================================================================
+   9. Modals (Detail, Form, Peserta, Picker, Photo)
+   =========================================================================== */
 
-/* Modal */
 .sppd__modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 38, 31, 0.5);
+  background: rgba(15, 38, 31, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  z-index: 50;
+  padding: 16px;
+  z-index: 100;
 }
 
 .sppd__modal {
   background: var(--gcs-white);
   border-radius: 14px;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -18px rgba(15, 38, 31, 0.45);
+  overflow: hidden;
+}
+
+.sppd__modal--detail {
+  max-width: 580px;
+}
+
+.sppd__modal--wide {
+  max-width: 640px;
+}
+
+.sppd__modal--picker {
+  max-width: 560px;
+}
+
+.sppd__modal--photo {
+  max-width: 680px;
 }
 
 .sppd__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 22px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  border-radius: 14px 14px 0 0;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
 }
 
-.sppd__modal-header h3 {
-  font-size: 17px;
-  color: #fff;
+.sppd__modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gcs-gold-500);
+}
+
+.sppd__modal-header-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: var(--font-heading);
 }
 
 .sppd__modal-close {
   border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .sppd__modal-close:hover {
-  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
 }
 
+/* Detail Modal */
+.sppd__detail-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sppd__detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.sppd__detail-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sppd__detail-kode {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gcs-border);
+}
+
+.sppd__detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sppd__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--gcs-bg);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gcs-border);
+}
+
+.sppd__detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.sppd__detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+}
+
+.sppd__detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sppd__detail-val--date {
+  font-variant-numeric: tabular-nums;
+}
+
+.sppd__detail-peserta-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+  line-height: 1.5;
+}
+
+.sppd__detail-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gcs-ink);
+  white-space: pre-wrap;
+}
+
+.sppd__detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.sppd__detail-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sppd__btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sppd__btn-outline--print {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #2563eb;
+}
+
+.sppd__btn-outline--print:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.sppd__btn-outline--photo {
+  border-color: rgba(124, 58, 237, 0.35);
+  color: #7c3aed;
+}
+
+.sppd__btn-outline--photo:hover {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.sppd__btn-outline--peserta {
+  border-color: rgba(47, 108, 63, 0.35);
+  color: var(--gcs-green-700);
+}
+
+.sppd__btn-outline--peserta:hover {
+  background: var(--gcs-green-600);
+  color: #ffffff;
+}
+
+/* Modal Form Elements */
 .sppd__modal-body {
-  padding: 22px;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sppd__modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .sppd__field {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .sppd__field > span {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--gcs-ink);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
 }
 
 .sppd__field input,
@@ -544,13 +1345,14 @@
 .sppd__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13.5px;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--gcs-ink);
   background: var(--gcs-white);
   outline: none;
+  transition: all 0.15s ease;
 }
 
 .sppd__field input:focus,
@@ -560,57 +1362,64 @@
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.sppd__field--textarea {
-  align-items: start;
-}
-
-.sppd__field--berkas {
-  align-items: start;
-}
-
-.sppd__field--berkas input[type='file'] {
-  width: 100%;
-  font-size: 13px;
-}
-
-.sppd__berkas-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--gcs-text-muted);
+.sppd__field--full {
+  grid-column: 1 / -1;
 }
 
 .sppd__field textarea {
   resize: vertical;
-}
-
-.sppd__window-hint {
-  font-size: 12.5px;
-  color: var(--gcs-text-muted);
-  background: var(--gcs-bg);
-  border-radius: 8px;
-  padding: 9px 12px;
-  margin-bottom: 14px;
+  min-height: 60px;
 }
 
 .sppd__modal-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+}
+
+.sppd__btn-secondary {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 7px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sppd__btn-secondary:hover {
+  background: var(--gcs-bg);
+  color: var(--gcs-ink);
 }
 
 .sppd__submit {
   border: none;
-  border-radius: 8px;
-  background: var(--gcs-gold-500);
-  color: var(--gcs-green-900);
-  font-size: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f4ae46 0%, #e19c35 100%);
+  color: #0f261f;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 10px 26px;
+  padding: 7px 18px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(244, 174, 70, 0.3);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .sppd__submit:hover:not(:disabled) {
   opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .sppd__submit:disabled {
@@ -618,378 +1427,217 @@
   cursor: not-allowed;
 }
 
-.sppd__submit--ghost {
-  background: rgba(47, 108, 63, 0.1);
-  color: var(--gcs-green-700);
-  border: 1px solid rgba(47, 108, 63, 0.35);
-  display: inline-flex;
-  align-items: center;
+/* Peserta Form & Table inside modal */
+.sppd__nik-picker {
+  display: flex;
   gap: 6px;
 }
 
-.sppd__submit--ghost:hover {
-  background: var(--gcs-green-600);
-  color: #fff;
-  border-color: var(--gcs-green-600);
-}
-
-@media (max-width: 640px) {
-  .sppd__card {
-    padding: 16px;
-  }
-
-  .sppd__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
-
-/* --- Tambahan khusus SPPD --- */
-
-/* Modal rincian & pencari pegawai memuat tabel, jadi lebih lebar dari modal form biasa. */
-.sppd__modal--wide {
-  max-width: 860px;
-}
-
-.sppd__peserta {
-  padding: 0 24px 20px;
-  overflow-x: auto;
-}
-
-/* Tabel di dalam modal: lebih ringkas dan tidak perlu lebar minimum halaman. */
-.sppd__table--peserta {
-  min-width: 0;
-  table-layout: auto;
+.sppd__picker-btn {
   border: 1px solid var(--gcs-border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* Kolom NIK: input hanya-baca + tombol pencarian di sampingnya. */
-.sppd__nik {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.sppd__nik input {
-  flex: 1;
-}
-
-.sppd__nik button {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  border-radius: 8px;
-  width: 40px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-700);
+  border-radius: 7px;
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gcs-green-600);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.sppd__nik button:hover {
+.sppd__picker-btn:hover {
   background: var(--gcs-green-600);
-  border-color: var(--gcs-green-600);
-  color: #fff;
+  color: #ffffff;
 }
 
-/* Rincian peserta: biru, dibedakan dari cetak (hijau), ubah (kuning), hapus (merah). */
-.sppd__row-btn--detail {
-  color: #1f6fb2;
-  border-color: rgba(31, 111, 178, 0.4);
-  background: rgba(31, 111, 178, 0.1);
-}
-
-.sppd__row-btn--detail:hover {
-  color: #fff;
-  border-color: #1f6fb2;
-  background: #2a80c8;
-}
-
-.sppd__row-btn--pick {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
-}
-
-.sppd__row-btn--pick:hover {
-  color: #fff;
-  border-color: var(--gcs-green-600);
-  background: var(--gcs-green-600);
-}
-
-.sppd__submit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Baris peserta yang sedang diubah disorot, supaya jelas isi form itu milik baris mana. */
-.sppd__row--editing td {
-  background: rgba(244, 174, 70, 0.14);
-}
-
-.sppd__cancel {
+.sppd__peserta-table-wrap,
+.sppd__picker-table-wrap {
+  overflow-y: auto;
+  max-height: 280px;
   border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  color: var(--gcs-text-muted);
   border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 8px;
+  margin: 0 18px 14px;
 }
 
-.sppd__cancel:hover {
-  border-color: var(--gcs-ink);
-  color: var(--gcs-ink);
+.sppd__table--peserta,
+.sppd__table--picker {
+  min-width: 100%;
+}
+
+.sppd__row--picker {
+  cursor: pointer;
+}
+
+.sppd__row--picker:hover {
+  background: rgba(244, 174, 70, 0.1) !important;
+}
+
+.sppd__row--editing {
+  background: rgba(244, 174, 70, 0.15) !important;
 }
 
 /* ===========================================================================
-   Responsif
+   10. Responsive Breakpoints
    =========================================================================== */
 
-/* Tablet: bilah aksi & toolbar mulai berdesakan, tabel masih berupa tabel
-   (menggulir mendatar di dalam .sppd__table-wrap). */
-@media (max-width: 900px) {
-  .sppd__actionbar {
-    flex-wrap: wrap;
-  }
-
-  .sppd__filter {
-    flex-basis: 100%;
-    order: -1;
+@media (max-width: 960px) {
+  .sppd__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .sppd__toolbar {
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .sppd__search {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .sppd__search input {
-    min-width: 0;
-    flex: 1;
+  .sppd__search-box {
+    max-width: none;
   }
 }
 
-/* Ponsel & tablet kecil: tabel utama terlalu lebar untuk digulir mendatar di
-   layar 360px - tiap baris diubah menjadi kartu bertumpuk, judul kolom diambil
-   dari atribut data-label pada <td>. Tabel peserta di dalam modal dikecualikan
-   (tabel peserta modal tetap tabel yang menggulir). */
 @media (max-width: 720px) {
+  .sppd__card {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .sppd__page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .sppd__btn-primary {
+    justify-content: center;
+  }
+
+  .sppd__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .sppd__stat-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .sppd__stat-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sppd__stat-val {
+    font-size: 15px;
+  }
+
+  /* Table Card Transformation on Mobile */
   .sppd__table-wrap {
     overflow-x: visible;
     border: none;
     border-radius: 0;
     background: none;
+    box-shadow: none;
   }
 
-  .sppd__table:not(.sppd__table--peserta) {
+  .sppd__table {
     display: block;
     min-width: 0;
     table-layout: auto;
-    font-size: 13px;
   }
 
-  .sppd__table:not(.sppd__table--peserta) thead {
+  .sppd__table thead {
     display: none;
   }
 
-  .sppd__table:not(.sppd__table--peserta) tbody {
+  .sppd__table tbody {
     display: block;
   }
 
-  .sppd__table:not(.sppd__table--peserta) tbody tr {
+  .sppd__table tbody tr {
     display: block;
     background: var(--gcs-white);
     border: 1px solid var(--gcs-border);
-    border-radius: 12px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 38, 31, 0.04);
   }
 
-  .sppd__table:not(.sppd__table--peserta) tbody tr:last-child {
-    margin-bottom: 0;
-  }
-
-  .sppd__table:not(.sppd__table--peserta) td {
-    /* width & white-space dari .sppd__col-* dinetralkan: di mode kartu lebar
-       diatur flex dan teks harus boleh membungkus. Selektor ini lebih spesifik
-       daripada .sppd__col-* sehingga tidak perlu !important. */
+  .sppd__table td {
     width: auto;
-    white-space: normal;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 9px 12px;
+    gap: 10px;
+    padding: 8px 10px;
     text-align: right;
-    border-right: none;
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .sppd__table:not(.sppd__table--peserta) td::before {
+  .sppd__table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
     text-align: left;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--gcs-text-muted);
   }
 
-  /* Isi sel (mis. daftar peserta) harus boleh menyusut di bawah lebar
-     alaminya - tanpa ini flex item menolak membungkus. */
-  .sppd__table:not(.sppd__table--peserta) td > * {
-    min-width: 0;
-  }
-
-  /* Aturan dasar menghapus garis bawah seluruh sel di baris terakhir; di mode
-     kartu garis itu justru pemisah antar-isi, jadi dipasang kembali dan hanya
-     sel terakhir tiap kartu yang bersih. */
-  .sppd__table:not(.sppd__table--peserta) tbody tr:last-child td {
+  .sppd__table tbody tr:last-child td {
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .sppd__table:not(.sppd__table--peserta) td:last-child {
+  .sppd__table td:last-child {
     border-bottom: none;
   }
 
-  /* Baris "Tidak ada data" bukan kartu - tanpa label dan melebar penuh. */
-  .sppd__table:not(.sppd__table--peserta) td.sppd__no-data {
+  .sppd__table td.sppd__no-data {
     display: block;
     text-align: center;
-    padding: 22px 12px;
+    padding: 20px 10px;
   }
 
-  .sppd__table:not(.sppd__table--peserta) td.sppd__no-data::before {
+  .sppd__table td.sppd__no-data::before {
     content: none;
-  }
-
-  .sppd__table:not(.sppd__table--peserta) tbody tr:hover td {
-    background: none;
   }
 
   .sppd__row-actions {
     justify-content: flex-end;
-    flex-wrap: wrap;
   }
 
-  /* Sasaran sentuh tombol aksi baris. */
-  .sppd__row-btn {
-    width: 40px;
-    height: 40px;
-  }
-}
-
-@media (max-width: 640px) {
-  .sppd__page-title {
-    font-size: 18px;
+  .sppd__detail-grid,
+  .sppd__modal-grid {
+    grid-template-columns: 1fr;
   }
 
-  .sppd__card {
-    padding: 14px;
-    border-radius: 0 0 12px 12px;
-  }
-
-  .sppd__actionbar {
-    padding: 10px;
-  }
-
-  /* Tab digulir mendatar, bukan menumpuk - menumpuk membuat bingkai tab
-     kehilangan bentuknya. */
-  .sppd__tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .sppd__tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .sppd__tab {
-    flex: 0 0 auto;
-    padding: 9px 14px;
-    font-size: 13px;
-  }
-
-  .sppd__toolbar {
+  .sppd__detail-footer {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 12px;
   }
 
-  .sppd__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .sppd__detail-actions-left {
+    justify-content: stretch;
   }
 
-  /* Modal: hampir layar penuh, tinggi memakai dvh supaya tombol Simpan di dasar
-     modal tidak tertutup bilah URL browser ponsel. */
-  .sppd__modal-backdrop {
-    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
-    align-items: flex-end;
-  }
-
-  .sppd__modal {
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: 14px;
-  }
-
-  .sppd__modal-header {
-    padding: 14px 16px;
-  }
-
-  .sppd__modal-header h3 {
-    font-size: 15.5px;
-  }
-
-  .sppd__modal-body {
-    padding: 16px;
-  }
-
-  .sppd__submit {
-    width: 100%;
-    padding: 13px 20px;
+  .sppd__detail-actions-left button {
+    flex: 1;
+    justify-content: center;
   }
 
   .sppd__footer {
     flex-direction: column;
     align-items: stretch;
+    text-align: center;
     gap: 10px;
   }
 
   .sppd__pagination {
-    justify-content: space-between;
+    justify-content: center;
   }
 
-  .sppd__pagination button {
-    padding: 9px 16px;
-  }
-}
-
-/* Tabel peserta di dalam modal tetap berbentuk tabel (kolomnya sedikit dan
-   saling terkait), hanya tepinya dipersempit agar area gulir mendatarnya lebih
-   lega di ponsel. */
-@media (max-width: 640px) {
-  .sppd__peserta {
-    padding: 0 14px 16px;
-  }
-
-  .sppd__table--peserta {
-    font-size: 12.5px;
-  }
-
-  .sppd__table--peserta th,
-  .sppd__table--peserta td {
-    padding: 9px 10px;
+  .sppd__nav-text {
+    display: none;
   }
 }

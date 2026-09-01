@@ -1,425 +1,948 @@
-.tiket__empty {
-  padding: 60px 0;
-  text-align: center;
-  color: var(--gcs-text-muted);
-  font-size: 14px;
-}
+/* ===========================================================================
+   TiketPage Styling - Modern Executive GCS Theme (Dense & Compact Layout)
+   =========================================================================== */
 
-.tiket__page-title {
-  font-size: 22px;
-  margin-bottom: 16px;
-}
-
-.tiket__tabs {
+.tiket {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.tiket__tab {
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  background: var(--gcs-bg);
-  color: var(--gcs-text-muted);
-  border-radius: 10px 10px 0 0;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+/* ===========================================================================
+   1. State Cards (Loading / Error)
+   =========================================================================== */
+
+.tiket__state-card {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.tiket__tab--active {
-  background: var(--gcs-white);
+.tiket__loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(47, 108, 63, 0.15);
+  border-top-color: var(--gcs-green-600);
+  border-radius: 50%;
+  animation: tiket-spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes tiket-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tiket__state-icon--err {
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.tiket__state-title {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--gcs-ink);
+  margin: 0 0 4px;
 }
 
-.tiket__actionbar {
+.tiket__state-desc {
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+  margin: 0;
+}
+
+.tiket__error {
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.tiket__hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(244, 174, 70, 0.1);
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  color: #8a6d3b;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.tiket__hint-card svg {
+  color: var(--gcs-gold-700);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ===========================================================================
+   2. Page Header
+   =========================================================================== */
+
+.tiket__page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tiket__page-header-info {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--gcs-white);
-  border: 1px solid var(--gcs-border);
-  border-bottom: none;
-  padding: 12px 14px;
-  border-radius: 0 10px 0 0;
 }
 
-.tiket__filter {
-  position: relative;
-  flex: 1;
-  display: flex;
-}
-
-.tiket__filter input {
-  width: 100%;
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  background: var(--gcs-bg);
-  padding: 9px 44px 9px 12px;
-  font-size: 13.5px;
-  color: var(--gcs-ink);
-  outline: none;
-}
-
-.tiket__filter input:focus {
-  background: var(--gcs-white);
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.tiket__filter-icon {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  color: var(--gcs-text-muted);
-  pointer-events: none;
-}
-
-.tiket__actionbar-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.tiket__icon-btn {
-  border: none;
-  border-radius: 8px;
-  width: 38px;
-  height: 38px;
+.tiket__page-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  flex-shrink: 0;
+}
+
+.tiket__page-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.tiket__page-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+.tiket__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+  border: 1px solid rgba(244, 174, 70, 0.3);
+  border-radius: 9px;
+  padding: 8px 15px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 3px 10px -2px rgba(15, 38, 31, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.tiket__icon-btn--add {
-  background: var(--gcs-green-600);
+.tiket__btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #16382b 0%, #255c49 100%);
+  box-shadow: 0 5px 14px -2px rgba(15, 38, 31, 0.4);
 }
 
-.tiket__icon-btn--refresh {
-  background: var(--gcs-green-500);
+/* ===========================================================================
+   3. Quick Statistics Summary Grid (Compact)
+   =========================================================================== */
+
+.tiket__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
-.tiket__icon-btn:hover {
-  opacity: 0.9;
+.tiket__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 38, 31, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
+
+.tiket__stat-card:hover {
+  border-color: rgba(47, 108, 63, 0.25);
+}
+
+.tiket__stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tiket__stat-icon--total {
+  background: rgba(15, 38, 31, 0.08);
+  color: var(--gcs-green-900);
+}
+
+.tiket__stat-icon--draft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.tiket__stat-icon--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.tiket__stat-icon--monthly {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.tiket__stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tiket__stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tiket__stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.tiket__stat-val--draft {
+  color: #d97706;
+}
+
+.tiket__stat-val--approved {
+  color: #059669;
+}
+
+.tiket__stat-val--monthly {
+  color: #2563eb;
+}
+
+/* ===========================================================================
+   4. Main Card & Tab Navigation
+   =========================================================================== */
 
 .tiket__card {
   background: var(--gcs-white);
   border: 1px solid var(--gcs-border);
-  border-radius: 0 0 14px 14px;
-  padding: 20px 24px;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px -3px rgba(15, 38, 31, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.tiket__toolbar {
+.tiket__nav-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--gcs-border);
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
-.tiket__page-size,
-.tiket__search {
+.tiket__tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tiket__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: rgba(15, 38, 31, 0.03);
+  color: var(--gcs-text-muted);
+  border-radius: 8px;
+  padding: 6px 13px;
   font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tiket__tab:hover:not(.tiket__tab--active) {
+  background: rgba(15, 38, 31, 0.06);
+  color: var(--gcs-ink);
+}
+
+.tiket__tab--active {
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.2);
+}
+
+.tiket__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(15, 38, 31, 0.08);
   color: var(--gcs-text-muted);
 }
 
-.tiket__page-size select,
-.tiket__search input {
-  border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  color: var(--gcs-ink);
-  background: var(--gcs-white);
-  outline: none;
+.tiket__tab--active .tiket__tab-count {
+  background: rgba(244, 174, 70, 0.25);
+  color: var(--gcs-gold-500);
 }
 
-.tiket__search input {
-  min-width: 220px;
-}
-
-.tiket__search input:focus {
-  border-color: var(--gcs-gold-500);
-  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
-}
-
-.tiket__table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--gcs-border);
-  border-radius: 12px;
-}
-
-/* Sembilan kolom - butuh ruang paling lebar di antara tabel My Personal. Di bawah lebar ini
-   pembungkusnya menggulir horizontal, bukan memampatkan isi kolom. */
-.tiket__table {
-  width: 100%;
-  table-layout: fixed;
-  min-width: 1200px;
-  border-collapse: collapse;
-  font-size: 13.5px;
-}
-
-/* Sekat antar kolom: garis vertikal di kanan tiap sel, kecuali kolom terakhir
-   (bingkai luar sudah dipegang oleh .tiket__table-wrap). */
-/* Padding kiri-kanan dibuat lega untuk SEMUA sel, bukan ditambal per kolom: isi kolom mana
-   pun (kode SPPD, tanggal, transportasi) sama-sama tidak boleh menempel ke sekat. */
-.tiket__table th,
-.tiket__table td {
-  padding: 14px 20px;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gcs-border);
-  border-right: 1px solid var(--gcs-border);
-}
-
-.tiket__table th:last-child,
-.tiket__table td:last-child {
-  border-right: none;
-}
-
-/* Baris terakhir tidak perlu garis bawah - sudah ada bingkai luar. */
-.tiket__table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.tiket__table thead th {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--gcs-ink);
-  background: rgba(15, 38, 31, 0.035);
-  border-bottom: 2px solid var(--gcs-border);
-  white-space: nowrap;
-}
-
-.tiket__table tbody tr:hover td {
-  background: rgba(244, 174, 70, 0.06);
-}
-
-/* Enam kolom. */
-.tiket__col-status {
-  width: 10%;
-}
-
-.tiket__col-tgl {
-  width: 12%;
-  white-space: nowrap;
-}
-
-.tiket__col-kode {
-  width: 18%;
-  white-space: nowrap;
-}
-
-.tiket__col-pesan {
-  width: 22%;
-  text-align: left;
-}
-
-.tiket__col-ket {
-  width: 20%;
-  text-align: left;
-}
-
-.tiket__col-source {
-  width: 10%;
-}
-
-/* Memuat empat tombol: cetak, rincian, ubah, hapus. */
-.tiket__col-aksi {
-  width: 168px;
-  text-align: center;
-}
-
-/* Judul kolom tetap di tengah walau isinya rata kiri. */
-.tiket__table th.tiket__col-pesan,
-.tiket__table th.tiket__col-ket {
-  text-align: center;
-}
-
-.tiket__table td.tiket__col-pesan,
-.tiket__table td.tiket__col-ket {
-  vertical-align: top;
-}
-
-.tiket__th--sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.tiket__th--sortable:hover {
-  color: var(--gcs-green-600);
-}
-
-/* Judul kolom SPPD panjang-panjang ("Tugas yang dilaksanakan"), jadi ikon sort mudah
-   menempel ke hurufnya. Jarak dilebarkan dan ikon dijaga agar tidak ikut menyusut. */
-.tiket__th-content {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.tiket__th-content svg {
-  flex-shrink: 0;
-}
-
-
-.tiket__sort-icon--idle {
-  opacity: 0.35;
-}
-
-.tiket__status {
-  font-weight: 600;
-}
-
-.tiket__status--done {
-  color: var(--gcs-green-600);
-}
-
-.tiket__row-actions {
+.tiket__nav-actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Ikon aksi berwarna sejak awal (bukan hanya saat hover) supaya fungsinya langsung
-   terbaca: kuning = ubah, merah = hapus. Hover memekatkan warnanya. */
-.tiket__row-btn {
+.tiket__icon-btn {
   border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  border-radius: 8px;
+  border-radius: 7px;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--gcs-white);
+  color: var(--gcs-green-700);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
-.tiket__row-btn--edit {
-  color: var(--gcs-gold-700);
-  border-color: rgba(244, 174, 70, 0.45);
-  background: rgba(244, 174, 70, 0.12);
+.tiket__icon-btn:hover {
+  background: rgba(47, 108, 63, 0.08);
+  border-color: var(--gcs-green-600);
 }
 
-.tiket__row-btn--edit:hover {
-  color: #fff;
-  border-color: var(--gcs-gold-600);
-  background: var(--gcs-gold-600);
+/* ===========================================================================
+   5. Toolbar (Search & Page Size)
+   =========================================================================== */
+
+.tiket__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.tiket__row-btn--delete {
-  color: #c8352c;
-  border-color: rgba(230, 72, 63, 0.4);
-  background: rgba(230, 72, 63, 0.1);
+.tiket__search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 380px;
 }
 
-.tiket__row-btn--delete:hover {
-  color: #fff;
-  border-color: #c8352c;
-  background: #d63c32;
+.tiket__search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gcs-text-muted);
+  pointer-events: none;
 }
 
-/* Cetak: hijau, mengikuti warna tombol cetak di EASy. Tersedia di semua status -
-   tiket yang sudah disetujui pun tetap perlu dicetak. */
-.tiket__row-btn--print {
+.tiket__search-box input {
+  width: 100%;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  padding: 6px 30px 6px 32px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.tiket__search-box input:focus {
+  background: var(--gcs-white);
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
+.tiket__search-box input::placeholder {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
+}
+
+.tiket__search-clear {
+  position: absolute;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gcs-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.tiket__search-clear:hover {
+  color: var(--gcs-ink);
+  background: var(--gcs-white);
+}
+
+.tiket__page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+}
+
+.tiket__page-size-label {
+  font-weight: 600;
+}
+
+.tiket__page-size-wrap select {
+  appearance: none;
+  background: var(--gcs-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%233e3430' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center;
+  border: 1px solid var(--gcs-border);
+  border-radius: 6px;
+  padding: 5px 22px 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  outline: none;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   6. Dense Table Layout (Fit without horizontal scroll)
+   =========================================================================== */
+
+.tiket__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  border-radius: 10px;
+  background: var(--gcs-white);
+  box-shadow: 0 1px 3px rgba(15, 38, 31, 0.02);
+}
+
+.tiket__table {
+  width: 100%;
+  table-layout: fixed;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+/* Column Proportions (Total 100%) */
+.tiket__col-status {
+  width: 13%;
+  text-align: left;
+}
+
+.tiket__col-kode {
+  width: 17%;
+  text-align: left;
+}
+
+.tiket__col-pesan {
+  width: 33%;
+  text-align: left;
+}
+
+.tiket__col-ket {
+  width: 23%;
+  text-align: left;
+}
+
+.tiket__col-aksi {
+  width: 14%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Header */
+.tiket__table thead th {
+  padding: 8px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-green-900);
+  background: #f8faf9;
+  border-bottom: 2px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+}
+
+.tiket__th--sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tiket__th--sortable:hover {
+  background: #f0f4f2;
   color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
+}
+
+.tiket__th--active {
+  color: var(--gcs-green-700);
+}
+
+.tiket__th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiket__sort-indicator {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tiket__sort-icon--idle {
+  opacity: 0.3;
+}
+
+.tiket__sort-icon--active {
+  color: var(--gcs-green-600);
+}
+
+/* Rows & Cells */
+.tiket__row {
+  transition: background-color 0.12s ease;
+}
+
+.tiket__row--clickable {
+  cursor: pointer;
+}
+
+.tiket__table tbody tr:nth-child(even) {
+  background-color: rgba(15, 38, 31, 0.015);
+}
+
+.tiket__row--clickable:hover {
+  background-color: rgba(244, 174, 70, 0.1) !important;
+}
+
+.tiket__table tbody td {
+  padding: 8px 7px;
+  border-bottom: 1px solid rgba(15, 38, 31, 0.06);
+  vertical-align: top;
+}
+
+.tiket__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Cell Specifics */
+.tiket__status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tiket__source-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--gcs-text-muted);
+  background: rgba(15, 38, 31, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tiket__kode-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tiket__kode-badge {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tiket__tgl-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--gcs-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tiket__pesan-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tiket__pesan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tiket__pesan-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  background: rgba(15, 38, 31, 0.04);
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.05);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.tiket__pesan-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tiket__pesan-text {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--gcs-ink);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.tiket__ket-cell {
+  min-width: 0;
+}
+
+.tiket__ket-text {
+  display: block;
+  white-space: normal;
+  color: var(--gcs-ink);
+  line-height: 1.35;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.tiket__dash {
+  color: var(--gcs-text-muted);
+  font-size: 12px;
+}
+
+/* Badges */
+.tiket__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.tiket__badge--sm {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.tiket__badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.tiket__badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.tiket__chip--source {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.tiket__jenis-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
   background: rgba(47, 108, 63, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ===========================================================================
+   7. Row Actions (Dense)
+   =========================================================================== */
+
+.tiket__row-actions {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.tiket__row-btn {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tiket__row-btn--print {
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .tiket__row-btn--print:hover {
-  color: #fff;
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.tiket__row-btn--detail {
+  color: var(--gcs-green-700);
+  border-color: rgba(47, 108, 63, 0.3);
+  background: rgba(47, 108, 63, 0.08);
+}
+
+.tiket__row-btn--detail:hover {
+  color: #ffffff;
   border-color: var(--gcs-green-600);
   background: var(--gcs-green-600);
 }
 
-.tiket__row-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.tiket__row-btn--edit {
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
 }
 
-.tiket__source {
-  color: var(--gcs-text-muted);
-  font-size: 12px;
-  margin-top: 2px;
+.tiket__row-btn--edit:hover {
+  color: #ffffff;
+  border-color: #d97706;
+  background: #d97706;
 }
+
+.tiket__row-btn--delete {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.tiket__row-btn--delete:hover {
+  color: #ffffff;
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+/* ===========================================================================
+   8. Empty State & Footer
+   =========================================================================== */
 
 .tiket__no-data {
+  padding: 36px 16px !important;
   text-align: center;
+}
+
+.tiket__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  gap: 6px;
+}
+
+.tiket__empty-icon {
   color: var(--gcs-text-muted);
-  padding: 24px;
+  opacity: 0.6;
+}
+
+.tiket__empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+}
+
+.tiket__empty-sub {
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+  max-width: 420px;
+  text-align: center;
 }
 
 .tiket__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
-  font-size: 13px;
+  padding-top: 2px;
+}
+
+.tiket__footer-info {
+  font-size: 12.5px;
   color: var(--gcs-text-muted);
+}
+
+.tiket__footer-info strong {
+  color: var(--gcs-ink);
+  font-weight: 700;
 }
 
 .tiket__pagination {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
-.tiket__pagination button {
+.tiket__page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--gcs-border);
   background: var(--gcs-white);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--gcs-ink);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.tiket__pagination button:hover:not(:disabled) {
+.tiket__page-nav:hover:not(:disabled) {
+  border-color: var(--gcs-green-600);
+  color: var(--gcs-green-600);
+  background: #f8faf9;
+}
+
+.tiket__page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tiket__page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tiket__page-num {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tiket__page-num:hover:not(.is-active) {
   border-color: var(--gcs-green-600);
   color: var(--gcs-green-600);
 }
 
-.tiket__pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.tiket__page-num.is-active {
+  background: var(--gcs-green-900);
+  border-color: var(--gcs-green-900);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(15, 38, 31, 0.25);
 }
 
-.tiket__page-indicator {
-  font-weight: 600;
-  color: var(--gcs-ink);
+.tiket__page-ellipsis {
+  padding: 0 3px;
+  color: var(--gcs-text-muted);
+  font-size: 11px;
 }
 
-.tiket__error {
-  margin-bottom: 12px;
-  font-size: 12.5px;
-  color: #b3261e;
-  background: rgba(230, 72, 63, 0.1);
-  border-radius: 8px;
-  padding: 9px 12px;
-}
+/* ===========================================================================
+   9. Modals (Detail, Form, Rincian)
+   =========================================================================== */
 
-/* Modal */
 .tiket__modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 38, 31, 0.5);
+  background: rgba(15, 38, 31, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  z-index: 50;
+  padding: 16px;
+  z-index: 100;
 }
 
 .tiket__modal {
@@ -428,55 +951,244 @@
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -18px rgba(15, 38, 31, 0.45);
+  overflow: hidden;
+}
+
+.tiket__modal--detail {
+  max-width: 560px;
+}
+
+.tiket__modal--wide {
+  max-width: 640px;
 }
 
 .tiket__modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 22px;
-  background: var(--gcs-green-900);
-  color: #fff;
-  border-radius: 14px 14px 0 0;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
 }
 
-.tiket__modal-header h3 {
-  font-size: 17px;
-  color: #fff;
+.tiket__modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gcs-gold-500);
+}
+
+.tiket__modal-header-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: var(--font-heading);
 }
 
 .tiket__modal-close {
   border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
-  padding: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .tiket__modal-close:hover {
-  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
 }
 
+/* Detail Modal */
+.tiket__detail-body {
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tiket__detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.tiket__detail-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tiket__detail-kode {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gcs-ink);
+  background: var(--gcs-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gcs-border);
+}
+
+.tiket__detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tiket__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--gcs-bg);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gcs-border);
+}
+
+.tiket__detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.tiket__detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+}
+
+.tiket__detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tiket__detail-pesan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tiket__detail-pesan-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+}
+
+.tiket__detail-pesan-icon {
+  color: var(--gcs-green-600);
+  flex-shrink: 0;
+}
+
+.tiket__detail-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gcs-ink);
+  white-space: pre-wrap;
+}
+
+.tiket__detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.tiket__detail-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tiket__btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tiket__btn-outline--print {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #2563eb;
+}
+
+.tiket__btn-outline--print:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.tiket__btn-outline--pesan {
+  border-color: rgba(47, 108, 63, 0.35);
+  color: var(--gcs-green-700);
+}
+
+.tiket__btn-outline--pesan:hover {
+  background: var(--gcs-green-600);
+  color: #ffffff;
+}
+
+/* Modal Form Elements */
 .tiket__modal-body {
-  padding: 22px;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tiket__modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .tiket__field {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .tiket__field > span {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--gcs-ink);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
 }
 
 .tiket__field input,
@@ -484,13 +1196,14 @@
 .tiket__field textarea {
   width: 100%;
   border: 1px solid var(--gcs-border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13.5px;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--gcs-ink);
   background: var(--gcs-white);
   outline: none;
+  transition: all 0.15s ease;
 }
 
 .tiket__field input:focus,
@@ -500,56 +1213,64 @@
   box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
 }
 
-.tiket__field--textarea {
-  align-items: start;
-}
-
-.tiket__field--berkas {
-  align-items: start;
-}
-
-.tiket__field--berkas input[type='file'] {
-  width: 100%;
-  font-size: 13px;
-}
-
-.tiket__berkas-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--gcs-text-muted);
+.tiket__field--full {
+  grid-column: 1 / -1;
 }
 
 .tiket__field textarea {
   resize: vertical;
-}
-
-.tiket__window-hint {
-  font-size: 12.5px;
-  color: var(--gcs-text-muted);
-  background: var(--gcs-bg);
-  border-radius: 8px;
-  padding: 9px 12px;
-  margin-bottom: 14px;
+  min-height: 60px;
 }
 
 .tiket__modal-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+}
+
+.tiket__btn-secondary {
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-text-muted);
+  border-radius: 7px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tiket__btn-secondary:hover {
+  background: var(--gcs-bg);
+  color: var(--gcs-ink);
 }
 
 .tiket__submit {
   border: none;
-  border-radius: 8px;
-  background: var(--gcs-gold-500);
-  color: var(--gcs-green-900);
-  font-size: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f4ae46 0%, #e19c35 100%);
+  color: #0f261f;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 10px 26px;
+  padding: 7px 18px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(244, 174, 70, 0.3);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .tiket__submit:hover:not(:disabled) {
   opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .tiket__submit:disabled {
@@ -557,363 +1278,184 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
-  .tiket__card {
-    padding: 16px;
-  }
-
-  .tiket__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
-
-/* --- Tambahan khusus SPPD --- */
-
-/* Modal rincian & pencari pegawai memuat tabel, jadi lebih lebar dari modal form biasa. */
-.tiket__modal--wide {
-  max-width: 860px;
-}
-
-.tiket__peserta {
-  padding: 0 24px 20px;
-  overflow-x: auto;
-}
-
-/* Tabel di dalam modal: lebih ringkas dan tidak perlu lebar minimum halaman. */
-.tiket__table--peserta {
-  min-width: 0;
-  table-layout: auto;
+/* Rincian Elements */
+.tiket__rincian-table-wrap {
+  overflow-y: auto;
+  max-height: 280px;
   border: 1px solid var(--gcs-border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* Kolom NIK: input hanya-baca + tombol pencarian di sampingnya. */
-.tiket__nik {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.tiket__nik input {
-  flex: 1;
-}
-
-.tiket__nik button {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
   border-radius: 8px;
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gcs-green-600);
-  cursor: pointer;
+  margin: 0 18px 14px;
 }
 
-.tiket__nik button:hover {
-  background: var(--gcs-green-600);
-  border-color: var(--gcs-green-600);
-  color: #fff;
+.tiket__table--rincian {
+  min-width: 100%;
 }
 
-/* Rincian peserta: biru, dibedakan dari cetak (hijau), ubah (kuning), hapus (merah). */
-.tiket__row-btn--detail {
-  color: #1f6fb2;
-  border-color: rgba(31, 111, 178, 0.4);
-  background: rgba(31, 111, 178, 0.1);
-}
-
-.tiket__row-btn--detail:hover {
-  color: #fff;
-  border-color: #1f6fb2;
-  background: #2a80c8;
-}
-
-.tiket__row-btn--pick {
-  color: var(--gcs-green-600);
-  border-color: rgba(47, 108, 63, 0.35);
-  background: rgba(47, 108, 63, 0.1);
-}
-
-.tiket__row-btn--pick:hover {
-  color: #fff;
-  border-color: var(--gcs-green-600);
-  background: var(--gcs-green-600);
-}
-
-.tiket__submit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Baris rincian yang sedang diubah disorot, supaya jelas isi form itu milik baris mana. */
-.tiket__row--editing td {
-  background: rgba(244, 174, 70, 0.14);
-}
-
-.tiket__cancel {
-  border: 1px solid var(--gcs-border);
-  background: var(--gcs-white);
-  color: var(--gcs-text-muted);
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 8px;
-}
-
-.tiket__cancel:hover {
-  border-color: var(--gcs-ink);
-  color: var(--gcs-ink);
+.tiket__row--editing {
+  background: rgba(244, 174, 70, 0.15) !important;
 }
 
 /* ===========================================================================
-   Responsif
+   10. Responsive Breakpoints
    =========================================================================== */
 
-/* Tablet: bilah aksi & toolbar mulai berdesakan, tabel masih berupa tabel
-   (menggulir mendatar di dalam .tiket__table-wrap). */
-@media (max-width: 900px) {
-  .tiket__actionbar {
-    flex-wrap: wrap;
-  }
-
-  .tiket__filter {
-    flex-basis: 100%;
-    order: -1;
+@media (max-width: 960px) {
+  .tiket__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .tiket__toolbar {
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .tiket__search {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .tiket__search input {
-    min-width: 0;
-    flex: 1;
+  .tiket__search-box {
+    max-width: none;
   }
 }
 
-/* Ponsel & tablet kecil: tabel utama terlalu lebar untuk digulir mendatar di
-   layar 360px - tiap baris diubah menjadi kartu bertumpuk, judul kolom diambil
-   dari atribut data-label pada <td>. Tabel peserta di dalam modal dikecualikan
-   (tabel peserta modal tetap tabel yang menggulir). */
 @media (max-width: 720px) {
+  .tiket__card {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .tiket__page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .tiket__btn-primary {
+    justify-content: center;
+  }
+
+  .tiket__stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .tiket__stat-card {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .tiket__stat-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .tiket__stat-val {
+    font-size: 15px;
+  }
+
+  /* Table Card Transformation on Mobile */
   .tiket__table-wrap {
     overflow-x: visible;
     border: none;
     border-radius: 0;
     background: none;
+    box-shadow: none;
   }
 
-  .tiket__table:not(.tiket__table--peserta) {
+  .tiket__table {
     display: block;
     min-width: 0;
     table-layout: auto;
-    font-size: 13px;
   }
 
-  .tiket__table:not(.tiket__table--peserta) thead {
+  .tiket__table thead {
     display: none;
   }
 
-  .tiket__table:not(.tiket__table--peserta) tbody {
+  .tiket__table tbody {
     display: block;
   }
 
-  .tiket__table:not(.tiket__table--peserta) tbody tr {
+  .tiket__table tbody tr {
     display: block;
     background: var(--gcs-white);
     border: 1px solid var(--gcs-border);
-    border-radius: 12px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 38, 31, 0.04);
   }
 
-  .tiket__table:not(.tiket__table--peserta) tbody tr:last-child {
-    margin-bottom: 0;
-  }
-
-  .tiket__table:not(.tiket__table--peserta) td {
-    /* width & white-space dari .tiket__col-* dinetralkan: di mode kartu lebar
-       diatur flex dan teks harus boleh membungkus. Selektor ini lebih spesifik
-       daripada .tiket__col-* sehingga tidak perlu !important. */
+  .tiket__table td {
     width: auto;
-    white-space: normal;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 9px 12px;
+    gap: 10px;
+    padding: 8px 10px;
     text-align: right;
-    border-right: none;
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .tiket__table:not(.tiket__table--peserta) td::before {
+  .tiket__table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
     text-align: left;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--gcs-text-muted);
   }
 
-  /* Isi sel (mis. daftar peserta) harus boleh menyusut di bawah lebar
-     alaminya - tanpa ini flex item menolak membungkus. */
-  .tiket__table:not(.tiket__table--peserta) td > * {
-    min-width: 0;
-  }
-
-  /* Aturan dasar menghapus garis bawah seluruh sel di baris terakhir; di mode
-     kartu garis itu justru pemisah antar-isi, jadi dipasang kembali dan hanya
-     sel terakhir tiap kartu yang bersih. */
-  .tiket__table:not(.tiket__table--peserta) tbody tr:last-child td {
+  .tiket__table tbody tr:last-child td {
     border-bottom: 1px dashed var(--gcs-border);
   }
 
-  .tiket__table:not(.tiket__table--peserta) td:last-child {
+  .tiket__table td:last-child {
     border-bottom: none;
   }
 
-  /* Baris "Tidak ada data" bukan kartu - tanpa label dan melebar penuh. */
-  .tiket__table:not(.tiket__table--peserta) td.tiket__no-data {
+  .tiket__table td.tiket__no-data {
     display: block;
     text-align: center;
-    padding: 22px 12px;
+    padding: 20px 10px;
   }
 
-  .tiket__table:not(.tiket__table--peserta) td.tiket__no-data::before {
+  .tiket__table td.tiket__no-data::before {
     content: none;
-  }
-
-  .tiket__table:not(.tiket__table--peserta) tbody tr:hover td {
-    background: none;
   }
 
   .tiket__row-actions {
     justify-content: flex-end;
-    flex-wrap: wrap;
   }
 
-  /* Sasaran sentuh tombol aksi baris. */
-  .tiket__row-btn {
-    width: 38px;
-    height: 38px;
-  }
-}
-
-@media (max-width: 640px) {
-  .tiket__page-title {
-    font-size: 18px;
+  .tiket__detail-grid,
+  .tiket__modal-grid {
+    grid-template-columns: 1fr;
   }
 
-  .tiket__card {
-    padding: 14px;
-    border-radius: 0 0 12px 12px;
-  }
-
-  .tiket__actionbar {
-    padding: 10px;
-  }
-
-  /* Tab digulir mendatar, bukan menumpuk - menumpuk membuat bingkai tab
-     kehilangan bentuknya. */
-  .tiket__tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .tiket__tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tiket__tab {
-    flex: 0 0 auto;
-    padding: 9px 14px;
-    font-size: 13px;
-  }
-
-  .tiket__toolbar {
+  .tiket__detail-footer {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 12px;
   }
 
-  .tiket__field {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .tiket__detail-actions-left {
+    justify-content: stretch;
   }
 
-  /* Modal: hampir layar penuh, tinggi memakai dvh supaya tombol Simpan di dasar
-     modal tidak tertutup bilah URL browser ponsel. */
-  .tiket__modal-backdrop {
-    padding: 10px calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
-    align-items: flex-end;
-  }
-
-  .tiket__modal {
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: 14px;
-  }
-
-  .tiket__modal-header {
-    padding: 14px 16px;
-  }
-
-  .tiket__modal-header h3 {
-    font-size: 15.5px;
-  }
-
-  .tiket__modal-body {
-    padding: 16px;
-  }
-
-  .tiket__submit {
-    width: 100%;
-    padding: 13px 20px;
+  .tiket__detail-actions-left button {
+    flex: 1;
+    justify-content: center;
   }
 
   .tiket__footer {
     flex-direction: column;
     align-items: stretch;
+    text-align: center;
     gap: 10px;
   }
 
   .tiket__pagination {
-    justify-content: space-between;
+    justify-content: center;
   }
 
-  .tiket__pagination button {
-    padding: 9px 16px;
-  }
-}
-
-/* Tabel peserta di dalam modal tetap berbentuk tabel (kolomnya sedikit dan
-   saling terkait), hanya tepinya dipersempit agar area gulir mendatarnya lebih
-   lega di ponsel. */
-@media (max-width: 640px) {
-  .tiket__peserta {
-    padding: 0 14px 16px;
-  }
-
-  .tiket__table--peserta {
-    font-size: 12.5px;
-  }
-
-  .tiket__table--peserta th,
-  .tiket__table--peserta td {
-    padding: 9px 10px;
+  .tiket__nav-text {
+    display: none;
   }
 }

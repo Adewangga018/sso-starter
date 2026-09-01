@@ -1,5 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowUpDown, Download, Smartphone } from 'lucide-react'
+import {
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Download,
+  Smartphone,
+  Calendar,
+  CalendarDays,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Check,
+  CalendarX2,
+} from 'lucide-react'
 import { api, ApiError, isEmptyDataError } from '../lib/api'
 import './AbsensiPage.css'
 
@@ -81,6 +99,21 @@ function periodeBaris(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
   return { bulan: date.getMonth() + 1, tahun: date.getFullYear() }
+}
+
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+  const pages = []
+  if (currentPage <= 3) {
+    pages.push(1, 2, 3, 4, '...', totalPages)
+  } else if (currentPage >= totalPages - 2) {
+    pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+  } else {
+    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+  }
+  return pages
 }
 
 export default function AbsensiPage() {
@@ -201,6 +234,38 @@ export default function AbsensiPage() {
     return list
   }, [filtered, sort])
 
+  // Ringkasan statistik cepat untuk periode terpilih
+  const stats = useMemo(() => {
+    if (!filtered || filtered.length === 0) {
+      return { total: 0, tepatWaktu: 0, catatan: 0, weekendOrCuti: 0 }
+    }
+    let tepatWaktu = 0
+    let catatan = 0
+    let weekendOrCuti = 0
+
+    for (const row of filtered) {
+      const weekend = isWeekend(row.namaHari)
+      const catatanBersih = cleanCatatan(row.catatanMangkir)
+      const hasCatatan = Boolean(catatanBersih)
+      const cutiLabel = !hasCatatan ? cutiLabelFor(row.tanggal, cuti) : null
+
+      if (hasCatatan) {
+        catatan++
+      } else if (weekend || cutiLabel) {
+        weekendOrCuti++
+      } else if (isTepatWaktu(row, weekend, hasCatatan)) {
+        tepatWaktu++
+      }
+    }
+
+    return {
+      total: filtered.length,
+      tepatWaktu,
+      catatan,
+      weekendOrCuti,
+    }
+  }, [filtered, cuti])
+
   const totalEntries = sorted.length
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize))
   const currentPage = Math.min(page, totalPages)
@@ -237,208 +302,369 @@ export default function AbsensiPage() {
 
   return (
     <div className="absensi">
+      {/* Banner Aplikasi Mobile */}
       <div className="absensi__card absensi__app-card">
         <div className="absensi__app-icon">
-          <Smartphone size={22} />
+          <Smartphone size={24} />
         </div>
         <div className="absensi__app-info">
-          <div className="absensi__section-title">Aplikasi MyGCS Absensi</div>
+          <div className="absensi__app-header">
+            <span className="absensi__app-badge">Aplikasi Resmi</span>
+            <h3 className="absensi__app-title">MyGCS Absensi Mobile</h3>
+          </div>
           <p className="absensi__app-desc">
-            Absen masuk/keluar sekarang wajib lewat aplikasi mobile ini (bukan lagi dari halaman
-            web) - lokasi GPS Anda diverifikasi langsung oleh perangkat agar tidak bisa
-            direkayasa (fake GPS).
+            Absen masuk & keluar wajib melalui aplikasi mobile ini dengan verifikasi GPS terenkripsi dari perangkat Anda.
           </p>
           {downloadError && <div className="absensi__app-error">{downloadError}</div>}
         </div>
         <div className="absensi__app-actions">
           <button type="button" className="absensi__app-btn" onClick={handleDownloadApp} disabled={downloading}>
-            <Download size={15} /> {downloading ? 'Menyiapkan...' : 'Unduh untuk Android'}
+            <Download size={16} /> {downloading ? 'Menyiapkan berkas...' : 'Unduh Android (.APK)'}
           </button>
-          <span className="absensi__app-note">Versi iOS menyusul lewat TestFlight.</span>
+          <span className="absensi__app-note">Versi iOS segera hadir lewat TestFlight.</span>
         </div>
       </div>
 
       {loadError ? (
-        <div className="absensi__card">
-          <div className="absensi__section-title">Log Absensi</div>
-          <div className="absensi__empty">{loadError}</div>
+        <div className="absensi__card absensi__state-card">
+          <AlertCircle size={40} className="absensi__state-icon absensi__state-icon--err" />
+          <h4 className="absensi__state-title">Gagal Memuat Data</h4>
+          <p className="absensi__state-desc">{loadError}</p>
         </div>
       ) : !rows ? (
-        <div className="absensi__card">
-          <div className="absensi__section-title">Log Absensi</div>
-          <div className="absensi__empty">Memuat data absensi...</div>
+        <div className="absensi__card absensi__state-card">
+          <div className="absensi__loading-spinner" />
+          <h4 className="absensi__state-title">Memuat Data Absensi</h4>
+          <p className="absensi__state-desc">Sedang mengambil riwayat kehadiran Anda...</p>
         </div>
       ) : (
-      <div className="absensi__card">
-        <div className="absensi__section-title">Log Absensi</div>
+        <div className="absensi__card absensi__main-card">
+          {/* Header Card */}
+          <div className="absensi__header">
+            <div className="absensi__header-main">
+              <div className="absensi__header-title-row">
+                <div className="absensi__header-icon">
+                  <CalendarDays size={20} />
+                </div>
+                <div>
+                  <h2 className="absensi__title">Log Absensi & Kehadiran</h2>
+                  <p className="absensi__subtitle">
+                    Riwayat presensi harian untuk periode <span className="absensi__highlight">{labelPeriode}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <div className="absensi__periode">
-          <label className="absensi__filter">
-            Bulan
-            <select value={bulan} onChange={(e) => handlePeriodeChange(setBulan, e.target.value)}>
-              <option value="">Semua Bulan</option>
-              {BULAN.map((nama, i) => (
-                <option key={nama} value={i + 1}>
-                  {nama}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Quick Statistics Summary */}
+          <div className="absensi__stats-grid">
+            <div className="absensi__stat-card">
+              <div className="absensi__stat-icon absensi__stat-icon--total">
+                <CalendarDays size={18} />
+              </div>
+              <div className="absensi__stat-body">
+                <span className="absensi__stat-label">Total Hari</span>
+                <span className="absensi__stat-val">{stats.total}</span>
+              </div>
+            </div>
 
-          <label className="absensi__filter">
-            Tahun
-            <select value={tahun} onChange={(e) => handlePeriodeChange(setTahun, e.target.value)}>
-              <option value="">Semua Tahun</option>
-              {tahunOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+            <div className="absensi__stat-card">
+              <div className="absensi__stat-icon absensi__stat-icon--ontime">
+                <CheckCircle2 size={18} />
+              </div>
+              <div className="absensi__stat-body">
+                <span className="absensi__stat-label">Tepat Waktu</span>
+                <span className="absensi__stat-val absensi__stat-val--ontime">{stats.tepatWaktu}</span>
+              </div>
+            </div>
 
-        <div className="absensi__toolbar">
-          <label className="absensi__page-size">
-            Tampilkan
-            <select value={pageSize} onChange={(e) => handlePageSizeChange(e.target.value)}>
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-            entri
-          </label>
+            <div className="absensi__stat-card">
+              <div className="absensi__stat-icon absensi__stat-icon--late">
+                <AlertCircle size={18} />
+              </div>
+              <div className="absensi__stat-body">
+                <span className="absensi__stat-label">Catatan / Mangkir</span>
+                <span className="absensi__stat-val absensi__stat-val--late">{stats.catatan}</span>
+              </div>
+            </div>
 
-          <label className="absensi__search">
-            Cari:
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Cari log absensi..."
-            />
-          </label>
-        </div>
+            <div className="absensi__stat-card">
+              <div className="absensi__stat-icon absensi__stat-icon--holiday">
+                <Calendar size={18} />
+              </div>
+              <div className="absensi__stat-body">
+                <span className="absensi__stat-label">Akhir Pekan / Cuti</span>
+                <span className="absensi__stat-val absensi__stat-val--holiday">{stats.weekendOrCuti}</span>
+              </div>
+            </div>
+          </div>
 
-        <div className="absensi__table-wrap">
-          <table className="absensi__table">
-            <thead>
-              <tr>
-                <th className="absensi__col-num">No</th>
-                {COLUMNS.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`${col.className}${col.sortable === false ? '' : ' absensi__th--sortable'}`}
-                    onClick={() => toggleSort(col.key, col.sortable)}
+          {/* Filter & Toolbar Controls */}
+          <div className="absensi__controls">
+            <div className="absensi__filters">
+              <div className="absensi__select-group">
+                <span className="absensi__group-label">
+                  <Filter size={13} /> Filter Periode
+                </span>
+                <div className="absensi__select-wrap">
+                  <select
+                    value={bulan}
+                    onChange={(e) => handlePeriodeChange(setBulan, e.target.value)}
+                    aria-label="Pilih Bulan"
                   >
-                    <span className="absensi__th-content">
-                      {col.label}
-                      {col.sortable !== false &&
-                        (sort.key === col.key ? (
-                          sort.direction === 'asc' ? (
-                            <ArrowUp size={13} />
-                          ) : (
-                            <ArrowDown size={13} />
-                          )
-                        ) : (
-                          <ArrowUpDown size={13} className="absensi__sort-icon--idle" />
-                        ))}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.length === 0 && (
+                    <option value="">Semua Bulan</option>
+                    {BULAN.map((nama, i) => (
+                      <option key={nama} value={i + 1}>
+                        {nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="absensi__select-wrap">
+                  <select
+                    value={tahun}
+                    onChange={(e) => handlePeriodeChange(setTahun, e.target.value)}
+                    aria-label="Pilih Tahun"
+                  >
+                    <option value="">Semua Tahun</option>
+                    {tahunOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="absensi__search-row">
+              <div className="absensi__search-box">
+                <Search size={15} className="absensi__search-icon" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Cari tanggal, hari, jam, keterangan..."
+                />
+                {search && (
+                  <button
+                    type="button"
+                    className="absensi__search-clear"
+                    onClick={() => handleSearchChange('')}
+                    aria-label="Bersihkan pencarian"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="absensi__page-size-wrap">
+                <span className="absensi__page-size-label">Baris:</span>
+                <select value={pageSize} onChange={(e) => handlePageSizeChange(e.target.value)}>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabel Absensi */}
+          <div className="absensi__table-wrap">
+            <table className="absensi__table">
+              <thead>
                 <tr>
-                  <td colSpan={COLUMNS.length + 1} className="absensi__no-data">
-                    Tidak ada data absensi pada {labelPeriode}.
-                  </td>
+                  <th className="absensi__col-num">No</th>
+                  {COLUMNS.map((col) => {
+                    const isSorted = sort.key === col.key
+                    return (
+                      <th
+                        key={col.key}
+                        className={`${col.className}${col.sortable === false ? '' : ' absensi__th--sortable'} ${isSorted ? 'absensi__th--active' : ''}`}
+                        onClick={() => toggleSort(col.key, col.sortable)}
+                      >
+                        <div className="absensi__th-content">
+                          <span>{col.label}</span>
+                          {col.sortable !== false && (
+                            <span className="absensi__sort-indicator">
+                              {isSorted ? (
+                                sort.direction === 'asc' ? (
+                                  <ArrowUp size={13} className="absensi__sort-icon--active" />
+                                ) : (
+                                  <ArrowDown size={13} className="absensi__sort-icon--active" />
+                                )
+                              ) : (
+                                <ArrowUpDown size={13} className="absensi__sort-icon--idle" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })}
                 </tr>
-              )}
-              {pageRows.map((row, i) => {
-                const weekend = isWeekend(row.namaHari)
-                const catatanBersih = cleanCatatan(row.catatanMangkir)
-                const hasCatatan = Boolean(catatanBersih)
-                const cutiLabel = !hasCatatan ? cutiLabelFor(row.tanggal, cuti) : null
-                return (
-                  <tr key={`${row.tanggal}-${row._seq}`}>
-                    {/* Nomor urut mengikuti baris yang tampil, bukan urutan global,
-                        agar tetap mulai dari 1 pada tiap bulan yang dipilih. */}
-                    <td>{startIdx + i + 1}</td>
-                    <td>
-                      {weekend ? (
-                        <span className="absensi__badge absensi__badge--red">{formatTanggal(row.tanggal)}</span>
-                      ) : (
-                        formatTanggal(row.tanggal)
-                      )}
-                    </td>
-                    <td>
-                      {weekend ? (
-                        <span className="absensi__badge absensi__badge--red absensi__badge--hari">
-                          {row.namaHari}
+              </thead>
+              <tbody>
+                {pageRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={COLUMNS.length + 1} className="absensi__no-data">
+                      <div className="absensi__empty-state">
+                        <CalendarX2 size={36} className="absensi__empty-icon" />
+                        <span className="absensi__empty-title">Tidak ada data absensi</span>
+                        <span className="absensi__empty-sub">
+                          Tidak ditemukan catatan absensi pada {labelPeriode}
+                          {search ? ` dengan kata kunci "${search}"` : ''}.
                         </span>
-                      ) : (
-                        row.namaHari ?? '-'
-                      )}
-                    </td>
-                    <td>
-                      {weekend ? (
-                        <span className="absensi__badge absensi__badge--red">{formatJam(row.checkIn) ?? '-'}</span>
-                      ) : (
-                        formatJam(row.checkIn) ?? '-'
-                      )}
-                    </td>
-                    <td>
-                      {weekend ? (
-                        <span className="absensi__badge absensi__badge--red">{formatJam(row.checkOut) ?? '-'}</span>
-                      ) : hasCatatan ? (
-                        <span className="absensi__badge absensi__badge--yellow">{formatJam(row.checkOut) ?? '-'}</span>
-                      ) : (
-                        formatJam(row.checkOut) ?? '-'
-                      )}
-                    </td>
-                    <td className="absensi__col-ket">
-                      {hasCatatan ? (
-                        <span className="absensi__badge absensi__badge--yellow">{catatanBersih}</span>
-                      ) : cutiLabel ? (
-                        <span className="absensi__badge absensi__badge--green">{cutiLabel}</span>
-                      ) : weekend ? (
-                        <span className="absensi__badge absensi__badge--red">Akhir Pekan</span>
-                      ) : (
-                        isTepatWaktu(row, weekend, hasCatatan) && (
-                          <span className="absensi__badge absensi__badge--green">Tepat waktu</span>
-                        )
-                      )}
+                      </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  pageRows.map((row, i) => {
+                    const weekend = isWeekend(row.namaHari)
+                    const catatanBersih = cleanCatatan(row.catatanMangkir)
+                    const hasCatatan = Boolean(catatanBersih)
+                    const cutiLabel = !hasCatatan ? cutiLabelFor(row.tanggal, cuti) : null
+                    const tepatWaktu = isTepatWaktu(row, weekend, hasCatatan)
 
-        <div className="absensi__footer">
-          <div className="absensi__footer-info">
-            {totalEntries === 0
-              ? `Menampilkan 0 entri pada ${labelPeriode}`
-              : `Menampilkan ${startIdx + 1} sampai ${Math.min(startIdx + pageSize, totalEntries)} dari ${totalEntries} entri pada ${labelPeriode}`}
+                    return (
+                      <tr
+                        key={`${row.tanggal}-${row._seq}`}
+                        className={`absensi__row ${weekend ? 'absensi__row--weekend' : ''}`}
+                      >
+                        <td className="absensi__cell-num">
+                          <span className="absensi__num-badge">{startIdx + i + 1}</span>
+                        </td>
+                        <td className="absensi__cell-tanggal">
+                          <span className="absensi__date-text">{formatTanggal(row.tanggal)}</span>
+                        </td>
+                        <td className="absensi__cell-hari">
+                          {weekend ? (
+                            <span className="absensi__badge absensi__badge--weekend">{row.namaHari}</span>
+                          ) : (
+                            <span className="absensi__day-text">{row.namaHari ?? '-'}</span>
+                          )}
+                        </td>
+                        <td className="absensi__cell-jam">
+                          {row.checkIn ? (
+                            <span className={`absensi__time ${weekend ? 'absensi__time--weekend' : 'absensi__time--in'}`}>
+                              <Clock size={12} className="absensi__time-icon" />
+                              {formatJam(row.checkIn)}
+                            </span>
+                          ) : (
+                            <span className="absensi__dash">-</span>
+                          )}
+                        </td>
+                        <td className="absensi__cell-jam">
+                          {row.checkOut ? (
+                            <span
+                              className={`absensi__time ${
+                                weekend
+                                  ? 'absensi__time--weekend'
+                                  : hasCatatan
+                                  ? 'absensi__time--warn'
+                                  : 'absensi__time--out'
+                              }`}
+                            >
+                              <Clock size={12} className="absensi__time-icon" />
+                              {formatJam(row.checkOut)}
+                            </span>
+                          ) : (
+                            <span className="absensi__dash">-</span>
+                          )}
+                        </td>
+                        <td className="absensi__col-ket absensi__cell-ket">
+                          {hasCatatan ? (
+                            <span className="absensi__badge absensi__badge--warning" title={catatanBersih}>
+                              <AlertCircle size={13} />
+                              <span className="absensi__badge-text">{catatanBersih}</span>
+                            </span>
+                          ) : cutiLabel ? (
+                            <span className="absensi__badge absensi__badge--info">
+                              <Calendar size={13} />
+                              <span className="absensi__badge-text">{cutiLabel}</span>
+                            </span>
+                          ) : weekend ? (
+                            <span className="absensi__badge absensi__badge--weekend">
+                              <span>Akhir Pekan</span>
+                            </span>
+                          ) : tepatWaktu ? (
+                            <span className="absensi__badge absensi__badge--success">
+                              <Check size={13} />
+                              <span>Tepat waktu</span>
+                            </span>
+                          ) : (
+                            <span className="absensi__dash">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="absensi__pagination">
-            <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-              Sebelumnya
-            </button>
-            <span className="absensi__page-indicator">
-              {currentPage} / {totalPages}
-            </span>
-            <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
-              Berikutnya
-            </button>
+
+          {/* Footer & Pagination */}
+          <div className="absensi__footer">
+            <div className="absensi__footer-info">
+              {totalEntries === 0 ? (
+                `0 entri pada ${labelPeriode}`
+              ) : (
+                <>
+                  Menampilkan <strong>{startIdx + 1}</strong>–
+                  <strong>{Math.min(startIdx + pageSize, totalEntries)}</strong> dari{' '}
+                  <strong>{totalEntries}</strong> entri ({labelPeriode})
+                </>
+              )}
+            </div>
+
+            <div className="absensi__pagination">
+              <button
+                type="button"
+                className="absensi__page-nav"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+                aria-label="Halaman sebelumnya"
+              >
+                <ChevronLeft size={16} />
+                <span className="absensi__nav-text">Sebelumnya</span>
+              </button>
+
+              <div className="absensi__page-numbers">
+                {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="absensi__page-ellipsis">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`absensi__page-num ${currentPage === p ? 'is-active' : ''}`}
+                      onClick={() => setPage(Number(p))}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="absensi__page-nav"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(currentPage + 1)}
+                aria-label="Halaman berikutnya"
+              >
+                <span className="absensi__nav-text">Berikutnya</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   )

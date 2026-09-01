@@ -1,182 +1,1010 @@
-.cuti { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-.cuti__title { font-size: 1.4rem; color: var(--gcs-green-900); margin: 0 0 2px; }
-.cuti__sub { color: var(--gcs-text-muted); font-size: 0.9rem; margin: 0; }
-.cuti__loading { display: flex; align-items: center; gap: 10px; padding: 40px; color: var(--gcs-text-muted); }
-.cuti__spin { animation: cuti-spin 0.8s linear infinite; color: var(--gcs-green-600); }
-@keyframes cuti-spin { to { transform: rotate(360deg); } }
-.cuti__alert { background: rgba(192, 57, 43, 0.1); color: #c0392b; border-radius: 10px; padding: 12px 16px; font-size: 0.9rem; }
+/* ===========================================================================
+   CutiPage Styling - Modern Executive GCS Theme (Dense & Compact Layout)
+   =========================================================================== */
 
-/* Saldo card */
-.cuti__saldo {
-  display: flex; align-items: center; gap: 18px;
-  background: linear-gradient(135deg, #0f261f 0%, #1c4436 62%, #24513e 100%);
-  color: #fff; border-radius: 16px; padding: 20px 24px;
-  box-shadow: 0 12px 30px -14px rgba(15, 38, 31, 0.55);
+.cuti {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
-.cuti__saldo-icon {
-  width: 54px; height: 54px; border-radius: 14px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(244, 174, 70, 0.2); color: var(--gcs-gold-500);
-  border: 1px solid rgba(244, 174, 70, 0.35);
-}
-.cuti__saldo-value { font-size: 2.1rem; font-weight: 800; line-height: 1; }
-.cuti__saldo-value span { font-size: 1rem; font-weight: 600; opacity: 0.8; }
-.cuti__saldo-label { color: rgba(255, 255, 255, 0.75); font-size: 0.85rem; margin-top: 6px; }
-
-.cuti__note {
-  display: flex; align-items: flex-start; gap: 8px;
-  background: rgba(47, 108, 63, 0.08); border: 1px solid var(--gcs-border);
-  color: var(--gcs-ink); border-radius: 12px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.5;
-}
-.cuti__note svg { color: var(--gcs-green-600); flex: none; margin-top: 1px; }
-
-/* Cards & tables */
-.cuti__card { background: var(--gcs-white); border: 1px solid var(--gcs-border); border-radius: 16px; padding: 16px; }
-.cuti__card-head { font-weight: 700; color: var(--gcs-green-900); font-size: 0.92rem; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.cuti__card-head > span { display: inline-flex; align-items: center; gap: 7px; }
-.cuti__card-head svg { color: var(--gcs-green-600); }
-
-/* daftar cuti bersama / nasional */
-.cuti__empty--pad { padding: 18px !important; background: var(--gcs-bg); border-radius: 10px; }
-.cuti__kal { display: flex; flex-direction: column; gap: 8px; }
-.cuti__kal-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--gcs-border); border-radius: 10px; background: var(--gcs-bg); }
-.cuti__kal-date { font-weight: 700; color: var(--gcs-green-700); font-size: 0.82rem; white-space: nowrap; min-width: 92px; }
-.cuti__kal-main { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.cuti__kal-ket { color: var(--gcs-ink); font-size: 0.88rem; }
-.cuti__kal-days { font-size: 0.76rem; color: var(--gcs-text-muted); }
-.cuti__kal-act { display: flex; gap: 6px; }
-.cuti__tag { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.cuti__tag--red { background: #fbeaea; color: #b03636; }
-.cuti__tag--grey { background: #eef0ee; color: #7b857f; }
-.cuti__ibtn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--gcs-border); background: var(--gcs-white); color: var(--gcs-green-600); cursor: pointer; }
-.cuti__ibtn:hover { border-color: var(--gcs-green-500); }
-.cuti__ibtn--danger { color: #b03636; }
-.cuti__btn--sm { padding: 6px 11px; font-size: 0.78rem; }
-
-/* modal cuti bersama / nasional */
-.cuti__overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,38,31,0.5); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.cuti__modal { background: var(--gcs-white); border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 24px 60px -18px rgba(15,38,31,0.45); }
-.cuti__modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--gcs-border); }
-.cuti__modal-head h3 { margin: 0; font-size: 1rem; color: var(--gcs-green-900); }
-.cuti__x { border: none; background: none; cursor: pointer; color: var(--gcs-text-muted); padding: 4px; border-radius: 8px; display: inline-flex; }
-.cuti__x:hover { background: var(--gcs-bg); }
-.cuti__modal-body { padding: 16px 18px; overflow-y: auto; }
-.cuti__modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--gcs-border); }
-.cuti__check { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 0.86rem; color: var(--gcs-ink); }
-.cuti__check input { width: 16px; height: 16px; flex: none; }
-.cuti__preview--pad { margin-top: 12px; color: var(--gcs-text-muted); font-size: 0.82rem; }
-.cuti__table-wrap { overflow-x: auto; }
-.cuti__table { width: 100%; border-collapse: collapse; font-size: 0.84rem; min-width: 560px; }
-.cuti__table th {
-  text-align: left; padding: 9px 12px; background: var(--gcs-bg);
-  color: var(--gcs-green-900); font-weight: 700; white-space: nowrap;
-}
-.cuti__table td { padding: 10px 12px; border-bottom: 1px solid var(--gcs-border); vertical-align: middle; white-space: nowrap; }
-.cuti__row--expired { opacity: 0.5; }
-.cuti__ket { white-space: normal; }
-.cuti__empty { text-align: center; color: var(--gcs-text-muted); padding: 20px !important; }
-.cuti__badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; }
-.cuti__badge--on { background: #e6f5ea; color: #1f7a3a; }
-.cuti__badge--off { background: #f1f2f1; color: #8a8f8b; }
-.cuti__nodata { display: flex; align-items: flex-start; gap: 8px; background: rgba(244, 174, 70, 0.12); border: 1px solid rgba(244, 174, 70, 0.35); color: #8a6d3b; border-radius: 12px; padding: 12px 14px; font-size: 0.84rem; line-height: 1.5; }
-.cuti__nodata svg { color: var(--gcs-gold-700); flex: none; margin-top: 1px; }
-
-/* Breakdown cutoff */
-.cuti__breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 620px) { .cuti__breakdown { grid-template-columns: repeat(2, 1fr); } }
-.cuti__bd { background: var(--gcs-bg); border: 1px solid var(--gcs-border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
-.cuti__bd span { font-size: 0.74rem; color: var(--gcs-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.cuti__bd b { font-size: 1.5rem; font-weight: 800; color: var(--gcs-ink); line-height: 1; }
-.cuti__bd--minus b { color: #c0392b; }
-.cuti__bd--sum { background: rgba(47, 108, 63, 0.1); border-color: rgba(47, 108, 63, 0.25); }
-.cuti__bd--sum b { color: var(--gcs-green-700); }
-.cuti__meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 0.82rem; color: var(--gcs-text-muted); }
-.cuti__meta b { color: var(--gcs-ink); }
-
-/* --- pengajuan / approval --- */
-.cuti__saldo-main { flex: 1; min-width: 0; }
-.cuti__msg { border-radius: 10px; padding: 10px 14px; font-size: 0.86rem; }
-.cuti__msg--ok { background: rgba(47,108,63,0.12); color: var(--gcs-green-600); }
-.cuti__msg--err { background: rgba(192,57,43,0.1); color: #c0392b; }
-
-.cuti__btn { display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 9px; padding: 9px 15px; background: var(--gcs-green-900); color: #fff; font-size: 0.84rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.cuti__btn:hover { filter: brightness(1.12); }
-.cuti__btn:disabled { opacity: 0.6; cursor: default; }
-.cuti__btn--ghost { background: transparent; color: var(--gcs-text-muted); border: 1px solid var(--gcs-border); }
-.cuti__saldo .cuti__btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); }
-.cuti__saldo .cuti__btn:hover { background: rgba(255,255,255,0.25); }
-
-.cuti__form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 620px) { .cuti__form { grid-template-columns: 1fr; } }
-.cuti__form label { display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--gcs-green-900); }
-.cuti__form label span { color: var(--gcs-text-muted); font-weight: 500; }
-.cuti__form-full { grid-column: 1 / -1; }
-.cuti__form input { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 0.88rem; }
-.cuti__form input:focus { outline: none; border-color: var(--gcs-gold-500); }
-.cuti__form-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.cuti__preview { font-size: 0.85rem; font-weight: 600; color: var(--gcs-green-700); }
-.cuti__form-actions { display: flex; gap: 10px; }
-
-.cuti__list { display: flex; flex-direction: column; gap: 8px; }
-.cuti__item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--gcs-border); border-radius: 12px; background: var(--gcs-bg); flex-wrap: wrap; }
-.cuti__item-title { font-weight: 600; font-size: 0.9rem; color: var(--gcs-ink); }
-.cuti__item-sub { font-size: 0.78rem; color: var(--gcs-text-muted); margin-top: 2px; }
-.cuti__item-actions { display: flex; gap: 8px; }
-
-.cuti__st { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; }
-.cuti__st--wait { background: #fff4de; color: #a9761b; }
-.cuti__st--ok { background: #e6f5ea; color: #1f7a3a; }
-.cuti__st--no { background: #fbeaea; color: #b03636; }
-.cuti__st--off { background: #f1f2f1; color: #8a8f8b; }
-.cuti__link-del { border: none; background: none; color: var(--gcs-text-muted); cursor: pointer; padding: 3px; border-radius: 6px; }
-.cuti__link-del:hover { color: #c0392b; background: rgba(192,57,43,0.08); }
 
 /* ===========================================================================
-   Responsif (pelengkap media query 620px di atas)
+   1. State Cards (Loading / Error / Alert)
    =========================================================================== */
-@media (max-width: 640px) {
-  .cuti { gap: 14px; }
-  .cuti__title { font-size: 1.2rem; }
 
-  /* Kartu saldo: ikon + angka + tombol tidak muat sebaris di 360px. */
-  .cuti__saldo { flex-wrap: wrap; padding: 16px; gap: 14px; }
-  .cuti__saldo-icon { width: 44px; height: 44px; }
-  .cuti__saldo-value { font-size: 1.75rem; }
-  .cuti__saldo .cuti__btn { width: 100%; justify-content: center; }
-
-  .cuti__card { padding: 12px; }
-
-  .cuti__table { min-width: 520px; }
-  .cuti__table th,
-  .cuti__table td { padding: 9px 10px; }
-
-  .cuti__bd b { font-size: 1.25rem; }
-
-  /* Baris kaki formulir: ringkasan hari lalu tombol selebar kartu. */
-  .cuti__form-foot { flex-direction: column; align-items: stretch; }
-  .cuti__form-actions { width: 100%; }
-  .cuti__form-actions .cuti__btn { flex: 1; justify-content: center; padding: 12px 15px; }
-
-  /* Daftar pengajuan: judul di atas, aksi di bawah selebar kartu. */
-  .cuti__item { align-items: stretch; }
-  .cuti__item-actions { width: 100%; }
-  .cuti__item-actions .cuti__btn { flex: 1; justify-content: center; }
-
-  .cuti__meta { gap: 10px 18px; }
+.cuti__state-card {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-@media (max-width: 420px) {
-  .cuti__breakdown { grid-template-columns: minmax(0, 1fr); }
+.cuti__spin {
+  animation: cuti-spin 0.8s linear infinite;
+  color: var(--gcs-green-600);
 }
 
-/* Rincian hak & konfigurasi cuti bersama (Admin SDM) */
-.cuti__saldo-break { font-size: 0.78rem; color: rgba(255, 255, 255, 0.8); margin-top: 4px; }
-.cuti__saldo-break b { color: #fff; }
-.cuti__admin { border-color: var(--gcs-gold-500); background: rgba(244,174,70,0.05); }
-.cuti__admin-note { font-size: 0.85rem; color: var(--gcs-text-muted); margin: 0 0 10px; }
-.cuti__admin-row { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
-.cuti__admin-row label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gcs-text-muted); }
-.cuti__admin-row input { border: 1px solid var(--gcs-border); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 0.95rem; width: 130px; }
-.cuti__admin-row input:focus { outline: none; border-color: var(--gcs-gold-500); }
-.cuti__admin-calc { font-size: 0.9rem; color: var(--gcs-ink); padding-bottom: 9px; }
-.cuti__admin-calc b { color: var(--gcs-green-900); font-size: 1.05rem; }
+@keyframes cuti-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cuti__state-icon--err {
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.cuti__state-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  margin: 0 0 4px;
+}
+
+.cuti__state-desc {
+  font-size: 13px;
+  color: var(--gcs-text-muted);
+  margin: 0;
+}
+
+.cuti__msg {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cuti__msg--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.cuti__msg--err {
+  background: rgba(239, 68, 68, 0.1);
+  color: #991b1b;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.cuti__nodata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(244, 174, 70, 0.12);
+  border: 1px solid rgba(244, 174, 70, 0.35);
+  color: #8a6d3b;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.cuti__nodata svg {
+  color: var(--gcs-gold-700);
+  flex-shrink: 0;
+}
+
+/* ===========================================================================
+   2. Page Header
+   =========================================================================== */
+
+.cuti__page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.cuti__page-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cuti__page-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(47, 108, 63, 0.1);
+  color: var(--gcs-green-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cuti__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.cuti__sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--gcs-text-muted);
+}
+
+/* ===========================================================================
+   3. Saldo Banner Card
+   =========================================================================== */
+
+.cuti__saldo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #0f261f 0%, #16382b 60%, #1e4a3b 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 4px 16px -4px rgba(15, 38, 31, 0.35);
+  border: 1px solid rgba(244, 174, 70, 0.25);
+  flex-wrap: wrap;
+}
+
+.cuti__saldo-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 174, 70, 0.18);
+  color: var(--gcs-gold-500);
+  border: 1px solid rgba(244, 174, 70, 0.35);
+}
+
+.cuti__saldo-main {
+  flex: 1;
+  min-width: 240px;
+}
+
+.cuti__saldo-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.cuti__saldo-value span {
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.cuti__saldo-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.cuti__saldo-break {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 3px;
+}
+
+.cuti__saldo-break b {
+  color: var(--gcs-gold-500);
+}
+
+.cuti__btn--apply {
+  background: linear-gradient(135deg, #f4ae46 0%, #e19c35 100%) !important;
+  color: #0f261f !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(244, 174, 70, 0.35);
+  border: none !important;
+}
+
+.cuti__btn--apply:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* ===========================================================================
+   4. Cards & Tables
+   =========================================================================== */
+
+.cuti__card {
+  background: var(--gcs-white);
+  border: 1px solid var(--gcs-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px -3px rgba(15, 38, 31, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cuti__card-head {
+  font-weight: 700;
+  color: var(--gcs-green-900);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.cuti__card-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cuti__card-head svg {
+  color: var(--gcs-green-600);
+}
+
+/* Table Wrap & Table */
+.cuti__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+  border-radius: 10px;
+  background: var(--gcs-white);
+  box-shadow: 0 1px 3px rgba(15, 38, 31, 0.02);
+}
+
+.cuti__table {
+  width: 100%;
+  table-layout: fixed;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+/* Table Header */
+.cuti__table thead th {
+  padding: 10px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gcs-green-900);
+  background: #f8faf9;
+  border-bottom: 2px solid rgba(15, 38, 31, 0.08);
+  white-space: nowrap;
+}
+
+/* Column Widths (Pengajuan Saya) */
+.cuti__col-tgl {
+  width: 24%;
+  text-align: left;
+}
+
+.cuti__col-hari {
+  width: 12%;
+  text-align: center;
+}
+
+.cuti__col-ket {
+  width: 38%;
+  text-align: left;
+}
+
+.cuti__col-status {
+  width: 16%;
+  text-align: center;
+}
+
+.cuti__col-aksi {
+  width: 10%;
+  text-align: center;
+}
+
+.cuti__col-kode {
+  width: 16%;
+  text-align: left;
+}
+
+/* Rows & Cells */
+.cuti__row {
+  transition: background-color 0.12s ease;
+}
+
+.cuti__row--clickable {
+  cursor: pointer;
+}
+
+.cuti__table tbody tr:nth-child(even) {
+  background-color: rgba(15, 38, 31, 0.015);
+}
+
+.cuti__row--clickable:hover {
+  background-color: rgba(244, 174, 70, 0.1) !important;
+}
+
+.cuti__table tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(15, 38, 31, 0.06);
+  vertical-align: middle;
+}
+
+.cuti__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Cell Elements */
+.cuti__date-text {
+  font-weight: 600;
+  color: var(--gcs-ink);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+
+.cuti__days-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
+  background: rgba(47, 108, 63, 0.08);
+  border: 1px solid rgba(47, 108, 63, 0.15);
+}
+
+.cuti__ket-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--gcs-ink);
+  line-height: 1.35;
+  font-size: 12px;
+}
+
+.cuti__atasan-note {
+  color: var(--gcs-text-muted);
+  font-style: italic;
+}
+
+.cuti__kode-badge {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gcs-ink);
+  background: rgba(15, 38, 31, 0.04);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(15, 38, 31, 0.08);
+}
+
+.cuti__empty {
+  text-align: center;
+  color: var(--gcs-text-muted);
+  padding: 24px 12px !important;
+  font-size: 13px;
+}
+
+.cuti__empty--pad {
+  padding: 16px !important;
+  background: var(--gcs-bg);
+  border-radius: 8px;
+}
+
+.cuti__dash {
+  color: var(--gcs-text-muted);
+}
+
+/* ===========================================================================
+   5. Badges
+   =========================================================================== */
+
+.cuti__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cuti__badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.cuti__badge--success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.cuti__badge--danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.cuti__badge--neutral {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* Action Cancel Button */
+.cuti__link-del {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.06);
+  color: #dc2626;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.cuti__link-del:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+}
+
+/* ===========================================================================
+   6. Kalender List (Cuti Bersama & Cuti Nasional)
+   =========================================================================== */
+
+.cuti__kal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cuti__kal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--gcs-border);
+  border-radius: 8px;
+  background: var(--gcs-bg);
+  transition: background-color 0.12s ease;
+}
+
+.cuti__kal-row:hover {
+  background: rgba(15, 38, 31, 0.04);
+}
+
+.cuti__kal-date {
+  font-weight: 700;
+  color: var(--gcs-green-700);
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.cuti__kal-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cuti__kal-ket {
+  color: var(--gcs-ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.cuti__kal-days {
+  font-size: 11px;
+  color: var(--gcs-text-muted);
+  font-weight: 600;
+}
+
+.cuti__tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cuti__tag--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.cuti__tag--grey {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.cuti__kal-act {
+  display: flex;
+  gap: 4px;
+}
+
+.cuti__ibtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--gcs-border);
+  background: var(--gcs-white);
+  color: var(--gcs-green-600);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cuti__ibtn:hover {
+  border-color: var(--gcs-green-500);
+  background: rgba(47, 108, 63, 0.08);
+}
+
+.cuti__ibtn--danger {
+  color: #dc2626;
+}
+
+.cuti__ibtn--danger:hover {
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ===========================================================================
+   7. Form & Approval List
+   =========================================================================== */
+
+.cuti__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: var(--gcs-green-900);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.cuti__btn:hover {
+  filter: brightness(1.12);
+}
+
+.cuti__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cuti__btn--sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.cuti__btn--ghost {
+  background: transparent;
+  color: var(--gcs-text-muted);
+  border: 1px solid var(--gcs-border);
+}
+
+.cuti__btn--ghost:hover {
+  background: var(--gcs-bg);
+  color: var(--gcs-ink);
+}
+
+.cuti__btn--submit {
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 38, 31, 0.25);
+}
+
+.cuti__btn--danger-outline {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.cuti__btn--danger-outline:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.cuti__form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cuti__form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gcs-green-900);
+}
+
+.cuti__form-field span {
+  color: var(--gcs-green-900);
+  font-weight: 700;
+}
+
+.cuti__form-full {
+  grid-column: 1 / -1;
+}
+
+.cuti__form input {
+  border: 1px solid var(--gcs-border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--gcs-ink);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.cuti__form input:focus {
+  border-color: var(--gcs-gold-500);
+  box-shadow: 0 0 0 3px rgba(244, 174, 70, 0.15);
+}
+
+.cuti__form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gcs-border);
+  flex-wrap: wrap;
+}
+
+.cuti__preview {
+  font-size: 13px;
+  color: var(--gcs-green-700);
+}
+
+.cuti__preview b {
+  font-weight: 700;
+}
+
+.cuti__form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cuti__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cuti__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--gcs-border);
+  border-radius: 10px;
+  background: var(--gcs-bg);
+  flex-wrap: wrap;
+}
+
+.cuti__item-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--gcs-ink);
+}
+
+.cuti__item-sub {
+  font-size: 12px;
+  color: var(--gcs-text-muted);
+  margin-top: 2px;
+}
+
+.cuti__item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ===========================================================================
+   8. Modals
+   =========================================================================== */
+
+.cuti__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(15, 38, 31, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.cuti__modal {
+  background: var(--gcs-white);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -18px rgba(15, 38, 31, 0.45);
+  overflow: hidden;
+}
+
+.cuti__modal--detail {
+  max-width: 540px;
+}
+
+.cuti__modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f261f 0%, #1e4a3b 100%);
+  color: #ffffff;
+}
+
+.cuti__modal-head-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gcs-gold-500);
+}
+
+.cuti__modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: var(--font-heading);
+}
+
+.cuti__x {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  color: #ffffff;
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.cuti__x:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.cuti__modal-body {
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.cuti__modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #f8faf9;
+  border-top: 1px solid var(--gcs-border);
+}
+
+/* Detail Modal Specifics */
+.cuti__detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gcs-border);
+  margin-bottom: 12px;
+}
+
+.cuti__detail-days {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--gcs-green-900);
+}
+
+.cuti__detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cuti__detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--gcs-bg);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--gcs-border);
+}
+
+.cuti__detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.cuti__detail-item--comment {
+  background: rgba(244, 174, 70, 0.08);
+  border-color: rgba(244, 174, 70, 0.25);
+}
+
+.cuti__detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-muted);
+}
+
+.cuti__detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gcs-ink);
+}
+
+.cuti__detail-box {
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+  line-height: 1.4;
+}
+
+.cuti__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--gcs-ink);
+}
+
+.cuti__check input {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* ===========================================================================
+   9. Responsive Breakpoints
+   =========================================================================== */
+
+@media (max-width: 720px) {
+  .cuti {
+    gap: 14px;
+  }
+
+  .cuti__saldo {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .cuti__saldo-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cuti__saldo-value {
+    font-size: 1.6rem;
+  }
+
+  .cuti__btn--apply {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cuti__card {
+    padding: 14px 12px;
+  }
+
+  .cuti__form {
+    grid-template-columns: 1fr;
+  }
+
+  /* Table Card Transformation on Mobile */
+  .cuti__table-wrap {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .cuti__table {
+    display: block;
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .cuti__table thead {
+    display: none;
+  }
+
+  .cuti__table tbody {
+    display: block;
+  }
+
+  .cuti__table tbody tr {
+    display: block;
+    background: var(--gcs-white);
+    border: 1px solid var(--gcs-border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 38, 31, 0.04);
+  }
+
+  .cuti__table td {
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    text-align: right;
+    border-bottom: 1px dashed var(--gcs-border);
+  }
+
+  .cuti__table td::before {
+    content: attr(data-label);
+    flex: 0 0 38%;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--gcs-text-muted);
+  }
+
+  .cuti__table tbody tr:last-child td {
+    border-bottom: 1px dashed var(--gcs-border);
+  }
+
+  .cuti__table td:last-child {
+    border-bottom: none;
+  }
+
+  .cuti__table td.cuti__empty {
+    display: block;
+    text-align: center;
+    padding: 20px 10px;
+  }
+
+  .cuti__table td.cuti__empty::before {
+    content: none;
+  }
+
+  .cuti__detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
