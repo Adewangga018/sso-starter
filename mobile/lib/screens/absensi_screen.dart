@@ -29,7 +29,58 @@ class _AbsensiScreenState extends State<AbsensiScreen> {
     _initCamera();
   }
 
+  // Cek mock-location & integritas perangkat SAAT layar dibuka (sebelum kamera dipakai),
+  // bukan cuma sekali di akhir sebelum submit - supaya fake-GPS yang baru diaktifkan
+  // SETELAH layar dibuka (di sela pengguna membuka kamera & menjepret) tetap tertangkap
+  // di titik ini, bukan cuma lolos sampai submit. Dicek ULANG lagi tepat sebelum submit
+  // di _captureAndSubmit (dua titik pemeriksaan, bukan satu) - diminta manajemen
+  // 2026-08-31 ("mock location terus dicek dan recheck").
+  Future<bool> _precheck() async {
+    try {
+      final location = await LocationService.instance.getCurrentLocation();
+      if (location.isMocked) {
+        if (!mounted) return false;
+        setState(() {
+          _error = 'Lokasi terdeteksi menggunakan aplikasi fake GPS (mock location).\n'
+              'Nonaktifkan mock location di Pengaturan > Opsi Pengembang, lalu coba lagi.';
+          _step = _Step.error;
+        });
+        return false;
+      }
+      final integrity = await DeviceIntegrityService.instance.check();
+      if (integrity.isRooted) {
+        if (!mounted) return false;
+        setState(() {
+          _error = 'Perangkat terdeteksi ter-root. Absen tidak dapat dilakukan dari perangkat ini demi keamanan data.';
+          _step = _Step.error;
+        });
+        return false;
+      }
+      if (integrity.spoofAppsFound.isNotEmpty) {
+        if (!mounted) return false;
+        setState(() {
+          _error = 'Terdeteksi aplikasi yang berpotensi memalsukan lokasi/sensor perangkat.\n'
+              'Copot aplikasi tersebut lalu coba lagi.';
+          _step = _Step.error;
+        });
+        return false;
+      }
+      return true;
+    } on LocationException catch (e) {
+      if (!mounted) return false;
+      setState(() { _error = e.message; _step = _Step.error; });
+      return false;
+    } catch (_) {
+      // Kegagalan teknis (mis. GPS belum siap) - jangan blokir di sini, biar dicoba
+      // lagi & ditangkap oleh pengecekan berikutnya di _captureAndSubmit.
+      return true;
+    }
+  }
+
   Future<void> _initCamera() async {
+    final aman = await _precheck();
+    if (!aman || !mounted) return;
+
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) throw Exception('Tidak ada kamera yang tersedia di perangkat ini.');
@@ -175,7 +226,17 @@ class _AbsensiScreenState extends State<AbsensiScreen> {
             Text(_error ?? 'Terjadi kesalahan.', textAlign: TextAlign.center),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => setState(() => _step = _Step.ready),
+              onPressed: () {
+                // Kalau kamera belum sempat terbuka (gagal di tahap precheck), ulangi dari
+                // awal (precheck + buka kamera); kalau kamera sudah siap, cukup kembali ke
+                // layar jepret.
+                if (_controller == null) {
+                  setState(() => _step = _Step.init);
+                  _initCamera();
+                } else {
+                  setState(() => _step = _Step.ready);
+                }
+              },
               child: const Text('Coba Lagi'),
             ),
           ],

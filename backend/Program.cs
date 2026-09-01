@@ -52,6 +52,7 @@ builder.Services.AddScoped<CurrentUserContext>();
 builder.Services.AddScoped<DocumentResolver>();
 builder.Services.AddScoped<OrgResolver>();
 builder.Services.AddScoped<PosisiResolver>();
+builder.Services.AddScoped<WatermarkService>();
 builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<CutiService>();

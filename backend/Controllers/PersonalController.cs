@@ -33,6 +33,7 @@ public class PersonalController : ControllerBase
     private readonly ILogger<PersonalController> _logger;
     private readonly IAuditLogger _audit;
     private readonly ReverseGeocodingService _geocoding;
+    private readonly WatermarkService _watermark;
 
     public PersonalController(
         GcsDbContext db,
@@ -43,7 +44,8 @@ public class PersonalController : ControllerBase
         IWebHostEnvironment env,
         ILogger<PersonalController> logger,
         IAuditLogger audit,
-        ReverseGeocodingService geocoding)
+        ReverseGeocodingService geocoding,
+        WatermarkService watermark)
     {
         _db = db;
         _appDb = appDb;
@@ -54,6 +56,7 @@ public class PersonalController : ControllerBase
         _geocoding = geocoding;
         _logger = logger;
         _audit = audit;
+        _watermark = watermark;
     }
 
     private static string HariIndonesia(DayOfWeek d) => d switch
@@ -682,8 +685,8 @@ public class PersonalController : ControllerBase
             .AnyAsync(a => a.IdKaryawan == pegawai.ID_KARYAWAN && a.Tanggal == tanggalWib && a.CheckIn != null);
         var type = sudahAbsenMasuk ? "out" : "in";
 
-        // Foto (sudah bertempel timestamp dari klien) disimpan sebagai file di share EASy;
-        // hanya path relatifnya yang dicatat di database.
+        // Foto disimpan sebagai file di share EASy; hanya path relatifnya yang dicatat
+        // di database.
         byte[] fotoBytes;
         try
         {
@@ -692,6 +695,23 @@ public class PersonalController : ControllerBase
         catch (FormatException)
         {
             return BadRequest(new { message = "Format foto tidak valid." });
+        }
+
+        // Watermark tanggal/jam DIBUBUHKAN DI SINI (server), memakai nowWib yang sudah
+        // dihitung dari DateTime.UtcNow di atas - BUKAN apa pun yang dikirim klien - supaya
+        // bukti foto tidak bisa direkayasa dengan mengubah jam HP sebelum jepret. Diminta
+        // manajemen 2026-08-31, pelengkap deteksi mock-location yang sudah ada. Kegagalan
+        // watermarking (mis. foto rusak) TIDAK menggagalkan absen - foto asli tetap dipakai,
+        // dicatat sbg warning utk ditelusuri, bukan alasan menolak absensi yang sah.
+        try
+        {
+            var baris1 = $"{nowWib:dddd, dd MMMM yyyy} pukul {nowWib:HH:mm:ss} WIB (jam server)";
+            var baris2 = $"{pegawai.NAMA_LENGKAP} ({pegawai.ID_KARYAWAN}) - {namaTitik} - {dto.Lat:0.00000}, {dto.Lng:0.00000}";
+            fotoBytes = _watermark.Bubuhkan(fotoBytes, baris1, baris2);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gagal membubuhkan watermark foto absensi, foto asli tetap dipakai: {Nik}", pegawai.ID_KARYAWAN);
         }
 
         var safeKode = new string((pegawai.ID_KARYAWAN ?? "").Where(char.IsLetterOrDigit).ToArray());
