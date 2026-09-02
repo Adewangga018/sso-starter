@@ -84,7 +84,7 @@ public class FlutterAppauthPlugin implements FlutterPlugin, MethodCallHandler, P
     }
 
     // MyGCS patch (2026-08-27): beberapa browser bawaan OEM (mis. Mi Browser di MIUI/HyperOS
-    // Xiaomi) tidak menyerahkan redirect skema custom (com.gcs.mygcsabsensi:/...) balik ke app
+    // Xiaomi) tidak menyerahkan redirect skema custom (com.gresik.gcs.myabsensi:/...) balik ke app
     // dengan benar - hasilnya layar login "loading" tanpa akhir. AppAuth-Android defaultnya
     // memakai browser APA PUN yang tersedia (BrowserSelector default); di sini kita paksa
     // prioritaskan Chrome (paling teruji untuk Custom Tabs + redirect skema custom), dan HANYA

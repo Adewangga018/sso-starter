@@ -98,7 +98,7 @@ public class OidcSeeder : IHostedService
         }
 
         // App mobile Absensi (Flutter, Android/iOS) - client publik terpisah dari SPA: redirect
-        // URI-nya skema kustom (com.gcs.mygcs_absensi:/oauthredirect), bukan https, dan tidak
+        // URI-nya skema kustom (com.gresik.gcs.myabsensi:/oauthredirect), bukan https, dan tidak
         // butuh mygcs.api scope penuh - cukup identitas + endpoint absensi.
         var mobileRedirectUris = _configuration.GetSection("Oidc:Mobile:RedirectUris").Get<string[]>() ?? [];
         var mobilePostLogoutUris = _configuration.GetSection("Oidc:Mobile:PostLogoutRedirectUris").Get<string[]>() ?? [];
@@ -137,7 +137,7 @@ public class OidcSeeder : IHostedService
         // cocok, OpenIddict selalu menolak logout app mobile dengan "invalid_request: The
         // specified 'post_logout_redirect_uri' is invalid" (ditemukan 2026-08-28). App
         // (auth_service.dart) memang mengirim URI yang SAMA dengan redirect URI login
-        // (com.gcs.mygcsabsensi:/oauthredirect) - jadi cukup didaftarkan di sini, TIDAK
+        // (com.gresik.gcs.myabsensi:/oauthredirect) - jadi cukup didaftarkan di sini, TIDAK
         // perlu perubahan apa pun di kode Flutter.
         foreach (var uri in mobilePostLogoutUris)
         {

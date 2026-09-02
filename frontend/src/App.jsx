@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage'
 import CallbackPage from './pages/CallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import SecurityPage from './pages/SecurityPage'
 import AdminAuditPage from './pages/AdminAuditPage'
 import AdminDocumentsPage from './pages/AdminDocumentsPage'
@@ -110,6 +111,9 @@ export default function App() {
           <Route path="/callback" element={<CallbackPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Publik, tanpa login - Google Play (Data Safety form) mensyaratkan URL Kebijakan
+              Privasi yang bisa diakses siapa pun, termasuk reviewer Google. */}
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
           <Route element={<RequireAuth />}>
             <Route path="/security" element={<SecurityPage />} />

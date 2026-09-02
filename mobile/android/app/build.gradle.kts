@@ -20,7 +20,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.gcs.mygcs_absensi"
+    namespace = "com.gresik.gcs.myabsensi"
     compileSdk = flutter.compileSdkVersion
     // Versi yang diminta beberapa plugin (flutter_appauth, geolocator, dst) - flutter.ndkVersion
     // bawaan lebih lama dan memicu warning "requires higher NDK" tiap build.
@@ -37,7 +37,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.gcs.mygcs_absensi"
+        applicationId = "com.gresik.gcs.myabsensi"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -46,9 +46,10 @@ android {
         versionName = flutter.versionName
 
         // Skema redirect OAuth (flutter_appauth) - HARUS sama dengan yang didaftarkan di
-        // backend (Oidc:Mobile:RedirectUris) dan dipakai di auth_service.dart. Tanpa underscore
-        // karena skema URI tidak boleh mengandung underscore (beda dari applicationId di atas).
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.gcs.mygcsabsensi"
+        // backend (Oidc:Mobile:RedirectUris) dan dipakai di app_config.dart. Nama paket
+        // (com.gresik.gcs.myabsensi) diminta manajemen 2026-09-02 - tidak mengandung
+        // underscore, jadi skema URI-nya sama persis dgn applicationId.
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.gresik.gcs.myabsensi"
     }
 
     signingConfigs {

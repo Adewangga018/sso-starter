@@ -27,7 +27,7 @@ class DeviceIntegrityService {
   DeviceIntegrityService._();
   static final DeviceIntegrityService instance = DeviceIntegrityService._();
 
-  static const _channel = MethodChannel('com.gcs.mygcs_absensi/device_integrity');
+  static const _channel = MethodChannel('com.gresik.gcs.myabsensi/device_integrity');
 
   Future<DeviceIntegrityResult> check() async {
     if (!Platform.isAndroid) return DeviceIntegrityResult.clean;

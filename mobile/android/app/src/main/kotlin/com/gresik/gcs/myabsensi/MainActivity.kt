@@ -1,4 +1,4 @@
-package com.gcs.mygcs_absensi
+package com.gresik.gcs.myabsensi
 
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
@@ -12,7 +12,7 @@ import java.io.File
 // spoofer"/cloning container (Parallel Space, App Cloner, dst) atau device rooted, yang
 // TIDAK men-set flag isFromMockProvider() sama sekali sehingga lolos dari geolocator.
 class MainActivity : FlutterActivity() {
-    private val channelName = "com.gcs.mygcs_absensi/device_integrity"
+    private val channelName = "com.gresik.gcs.myabsensi/device_integrity"
 
     // Paket aplikasi fake-GPS / cloning-container yang umum dipakai untuk menembus deteksi
     // mock-location standar Android (tidak butuh root, banyak dipakai orang awam).

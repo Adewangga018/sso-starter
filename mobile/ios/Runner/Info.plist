@@ -55,10 +55,10 @@
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
-				<string>com.gcs.mygcsabsensi.oauthredirect</string>
+				<string>com.gresik.gcs.myabsensi.oauthredirect</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>com.gcs.mygcsabsensi</string>
+					<string>com.gresik.gcs.myabsensi</string>
 				</array>
 			</dict>
 		</array>

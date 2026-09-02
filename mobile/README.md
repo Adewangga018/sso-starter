@@ -66,9 +66,9 @@ Tanpa `--dart-define`, app memakai default production
 
 ## Redirect URI OAuth (PENTING - tiga tempat ini harus selalu sinkron)
 
-Skema custom `com.gcs.mygcsabsensi:/oauthredirect` (tanpa underscore - skema URI
-tidak boleh mengandung underscore, beda dari `applicationId`/`namespace` Android yang
-boleh) didaftarkan di:
+Skema custom `com.gresik.gcs.myabsensi:/oauthredirect` (nama paket diminta manajemen
+2026-09-02; sama persis dengan `applicationId`/`namespace` Android karena tidak
+mengandung underscore) didaftarkan di:
 
 1. `backend/appsettings.json` -> `Oidc:Mobile:RedirectUris`
 2. `mobile/android/app/build.gradle.kts` -> `manifestPlaceholders["appAuthRedirectScheme"]`

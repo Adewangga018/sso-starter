@@ -21,7 +21,8 @@ class AppConfig {
 
   /// Skema custom - HARUS sama dengan appAuthRedirectScheme (Android) &
   /// CFBundleURLSchemes (iOS), dan terdaftar di backend Oidc:Mobile:RedirectUris.
-  static const String oidcRedirectUri = 'com.gcs.mygcsabsensi:/oauthredirect';
+  /// Nama paket com.gresik.gcs.myabsensi diminta manajemen 2026-09-02.
+  static const String oidcRedirectUri = 'com.gresik.gcs.myabsensi:/oauthredirect';
 
   static const List<String> oidcScopes = [
     'openid',
