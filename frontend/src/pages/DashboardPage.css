@@ -245,6 +245,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
 }
 
 .dashboard__user-name {
@@ -667,6 +668,13 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+/* Kartu desktop: kalau ada logo (wordmark 2048x621), tampilkan logo saja - ikon
+   fallback yang ikut dirender di JSX (utk mode kotak kecil mobile) disembunyikan
+   di sini. Mobile membalik ini (lihat @media max-width:640px). */
+.module-tile__logo ~ .module-tile__icon {
+  display: none;
+}
+
 .module-tile__logo {
   align-self: flex-start;
   display: block;
@@ -945,88 +953,557 @@
 
 @media (max-width: 640px) {
   .dashboard {
-    gap: 16px;
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
   }
 
+  /* 1. Hero Mobile Redesign */
   .dashboard__hero {
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 16px;
     border-radius: 16px;
+    gap: 12px;
+  }
+
+  /* Use display: contents so user card can be positioned logically after greeting & sub */
+  .dashboard__hero-content {
+    display: contents;
+  }
+
+  .dashboard__hero-badge {
+    order: 1;
+    align-self: flex-start;
+    font-size: 11px;
+    padding: 4px 10px;
+    margin-bottom: 2px;
   }
 
   .dashboard__hero-greeting {
-    font-size: 22px;
+    order: 2;
+    font-size: 20px;
+    line-height: 1.3;
+    margin: 0;
+    word-break: break-word;
+  }
+
+  .dashboard__hero-greeting .dashboard__name {
+    color: var(--gcs-gold-500);
   }
 
   .dashboard__hero-sub {
-    font-size: 13px;
-    margin-bottom: 16px;
+    order: 3;
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0 0 2px 0;
+  }
+
+  /* User profile card positioned right after identity/greeting */
+  .dashboard__hero-user {
+    order: 4;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .dashboard__avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+    border-width: 2px;
+    flex-shrink: 0;
+  }
+
+  .dashboard__user-online {
+    width: 11px;
+    height: 11px;
+    bottom: 1px;
+    right: 1px;
+  }
+
+  .dashboard__user-info {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .dashboard__user-name {
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard__user-title {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.75);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard__user-meta {
+    gap: 4px;
+    margin-top: 3px;
+  }
+
+  .user-meta-tag {
+    font-size: 9.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Actions Row: Stats & Admin Buttons */
+  .dashboard__hero-actions-row {
+    order: 5;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .dashboard__hero-stats {
     width: 100%;
-    justify-content: space-around;
-    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: center;
+    justify-items: center;
+    padding: 8px 6px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    gap: 0;
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    min-width: 0;
+    padding: 0 4px;
   }
 
   .hero-stat__value {
     font-size: 15px;
+    font-weight: 800;
+    color: var(--gcs-gold-500);
+    line-height: 1.1;
   }
 
   .hero-stat__label {
-    font-size: 9.5px;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.65);
+    letter-spacing: 0.02em;
+    margin-top: 2px;
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
-  .dashboard__hero-user {
-    padding: 14px 16px;
-    gap: 12px;
+  .hero-stat__divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.15);
   }
 
-  .dashboard__avatar {
-    width: 48px;
-    height: 48px;
-    font-size: 18px;
+  .dashboard__hero-admin-actions {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
+  .hero-admin-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 0;
+  }
+
+  /* 2. Akses Cepat Grid */
   .dashboard__quick-bar {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     padding: 12px 14px;
     gap: 10px;
+    border-radius: 14px;
   }
 
   .dashboard__quick-title {
+    font-size: 12px;
+    font-weight: 800;
     border-right: none;
     border-bottom: 1px solid var(--gcs-border);
     padding-right: 0;
     padding-bottom: 8px;
   }
 
+  .dashboard__quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 9px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .quick-btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11.5px;
+  }
+
+  /* 3. Toolbar & Tabs */
+  .dashboard__modules-section {
+    gap: 14px;
+  }
+
   .dashboard__toolbar {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+
+  /* Tab kategori TURUN BARIS (bukan digulir ke samping) - "Operasional" &
+     "Kinerja & Inovasi" sebelumnya kegulir keluar layar & tak terjangkau di HP
+     sempit. Diminta user 2026-09-03. */
+  /* Grid 3 kolom (bukan flex) supaya SETIAP tombol punya lebar & tinggi yang
+     SAMA persis, tak peduli panjang label ("Favorit" vs "Kinerja & Inovasi") -
+     diminta user 2026-09-03 ("tombol 'Semua Modul' dan sejenisnya disamakan
+     ukurannya"). flex-wrap sebelumnya membuat tiap tombol selebar isinya
+     sendiri (content-based), jadi tidak seragam. */
+  .dashboard__tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    padding: 2px;
+    margin-bottom: 0;
+  }
+
+  .dashboard__tab {
+    justify-content: center;
+    height: 34px;
+    padding: 6px 6px;
+    font-size: 10.5px;
+    border-radius: 8px;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard__tab > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .dashboard__tab-count {
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+    padding: 0 4px;
   }
 
   .dashboard__search-box {
     width: 100%;
+    min-width: 0;
   }
 
-  .dashboard__sidebar-widgets {
-    grid-template-columns: 1fr;
+  .dashboard__search-input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom on input focus */
+    padding: 9px 32px 9px 34px;
+    border-radius: 10px;
   }
 
+  /* 4. Modules Grid: Kotak ikon kecil (gaya myITS Portal) - HANYA mobile, tampilan
+     desktop (grid kartu 3 kolom) tidak disentuh sama sekali. Maksimal 2 KOLOM
+     (diminta user 2026-09-03, ukuran acuan iPhone 13 Pro/390px) - 4 kolom
+     terlalu sempit utk label panjang & berisiko meluber lagi di device sungguhan. */
+  .dashboard__modules {
+    display: grid;
+    /* minmax(0, 1fr), BUKAN cuma 1fr - tanpa ini, label panjang (mis. "Struktur
+       Organisasi HR") memaksa kolom lebih lebar dari isi (min-content), grid jadi
+       meluber ke kanan sampai keluar layar - ini akar penyebab kotak yang
+       "kepotong"/tidak muncul yang dilaporkan user 2026-09-03. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 12px;
+  }
+
+  /* Kartu vertikal SAMA PERSIS dgn gaya website (kartu hijau tua, logo penuh,
+     label, deskripsi, footer "Buka Modul") - cuma ukurannya diperkecil supaya
+     muat 2 kolom di layar sempit. Diminta user 2026-09-03: "ukuran kotak di
+     mobile ini berwarna hijau semua ... logo full ... samakan dengan yang ada
+     diwebsite" (draf sebelumnya: kartu putih horizontal + logo dipotong kotak
+     kecil hijau - DITOLAK user). Semua warna/latar/bentuk lain (gradasi hijau
+     tua, bar aksen emas, sudut favorit lipat, warna ikon/label/subtitle)
+     SENGAJA tidak di-override lagi di sini - biar otomatis ikut definisi
+     desktop di atas (identik dgn website), cuma properti ukuran (padding,
+     tinggi logo/ikon, font-size, gap) yang disesuaikan utk kartu sekecil ini. */
   .module-tile {
-    min-height: 180px;
-    padding: 16px;
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 14px;
   }
 
+  .module-tile__top-bar {
+    margin-bottom: 6px;
+  }
+
+  /* Logo ditampilkan UTUH (object-fit: contain, bukan cover) persis spt
+     website - tidak dipotong lagi. Tinggi diperkecil dari 52px (desktop) jadi
+     34px supaya muat di kartu 2-kolom (~145px lebar konten stlh padding),
+     lebarnya otomatis menyesuaikan rasio asli logo (auto, maks 100% kartu). */
   .module-tile__logo {
-    height: 44px;
+    height: 34px;
+    max-width: 100%;
+  }
+
+  .module-tile__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .module-tile__icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .module-tile__body {
+    margin-top: 10px;
+  }
+
+  .module-tile__label {
+    font-size: 12.5px;
+    gap: 4px;
+  }
+
+  .module-tile__badge {
+    font-size: 8px;
+    padding: 1px 5px;
+  }
+
+  .module-tile__subtitle {
+    font-size: 9.5px;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .module-tile__action {
+    margin-top: 10px;
+    padding-top: 8px;
+    font-size: 10.5px;
+  }
+
+  .dashboard__empty {
+    padding: 28px 16px;
+  }
+
+  /* 5. Sidebar Widgets */
+  .dashboard__sidebar-widgets {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dashboard__widget {
+    padding: 14px 16px;
+    border-radius: 14px;
+  }
+
+  .dashboard__widget-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .dashboard__widget-title {
+    font-size: 13px;
+  }
+
+  .widget-header-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  .notif-card-item {
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+
+  .notif-card-item__icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+  }
+
+  .notif-card-item__icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .notif-card-item__title {
+    font-size: 12px;
+  }
+
+  .notif-card-item__desc {
+    font-size: 11px;
+  }
+
+  .notif-card-item__time {
+    font-size: 9.5px;
+  }
+
+  .security-status-box {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  .security-status-row {
+    font-size: 11px;
+    gap: 6px;
   }
 }
 
-@media (max-width: 480px) {
+/* Very narrow screens (<= 360px, e.g. iPhone SE, Galaxy A01) */
+@media (max-width: 360px) {
+  .dashboard__hero {
+    padding: 14px 12px;
+  }
+
+  .dashboard__hero-greeting {
+    font-size: 18px;
+  }
+
+  .dashboard__hero-stats {
+    padding: 6px 4px;
+  }
+
+  .hero-stat__value {
+    font-size: 14px;
+  }
+
+  .hero-stat__label {
+    font-size: 8px;
+  }
+
+  .dashboard__quick-actions {
+    gap: 6px;
+  }
+
+  .quick-btn {
+    padding: 8px 8px;
+    gap: 6px;
+  }
+
+  .quick-btn span {
+    font-size: 10.5px;
+  }
+
   .dashboard__modules {
-    grid-template-columns: 1fr;
+    gap: 10px 8px;
+  }
+
+  .module-tile {
+    padding: 10px;
+  }
+
+  .module-tile__logo {
+    height: 28px;
+  }
+
+  .module-tile__icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .module-tile__icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .module-tile__label {
+    font-size: 11px;
+  }
+
+  .module-tile__subtitle {
+    font-size: 9px;
+  }
+}
+
+/* Touch Device Interaction (Remove sticky hover, add clean active state) */
+@media (hover: none) {
+  .module-tile--open:hover {
+    transform: none;
+    box-shadow: 0 4px 14px -8px rgba(15, 38, 31, 0.4);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .module-tile--open:active {
+    transform: scale(0.97);
+    border-color: rgba(244, 174, 70, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .quick-btn:hover {
+    transform: none;
+    background: var(--gcs-bg);
+    border-color: rgba(15, 38, 31, 0.06);
+    color: var(--gcs-ink);
+    box-shadow: none;
+  }
+
+  .quick-btn:active {
+    background: #ffffff;
+    border-color: var(--gcs-gold-500);
+    transform: scale(0.97);
+  }
+
+  .hero-admin-btn:hover {
+    transform: none;
+  }
+
+  .hero-admin-btn:active {
+    transform: scale(0.97);
   }
 }
 

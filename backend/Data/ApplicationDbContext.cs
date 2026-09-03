@@ -14,6 +14,7 @@ using SsoBackend.Models.Kpi;
 using SsoBackend.Models.Office;
 using SsoBackend.Models.Prosedur;
 using SsoBackend.Models.Health;
+using SsoBackend.Models.Tiket;
 
 namespace SsoBackend.Data;
 
@@ -35,6 +36,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<LokasiKaryawan> LokasiKaryawan => Set<LokasiKaryawan>();
     public DbSet<DinasBukti> DinasBukti => Set<DinasBukti>();
     public DbSet<UmdlAnggota> UmdlAnggota => Set<UmdlAnggota>();
+    public DbSet<TiketProgres> TiketProgres => Set<TiketProgres>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<AdminOverride> AdminOverrides => Set<AdminOverride>();
     public DbSet<ModuleAccess> ModuleAccess => Set<ModuleAccess>();
@@ -270,6 +272,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Lng).HasColumnName("lng").HasPrecision(9, 6);
             e.Property(x => x.Accuracy).HasColumnName("accuracy").HasPrecision(9, 2);
             e.Property(x => x.DibuatPada).HasColumnName("dibuat_pada");
+        });
+
+        // Progres tindak lanjut Sekretariat atas tiket disetujui - lihat TiketProgres.cs.
+        // Tabel dikelola raw SQL (docs/tiket-progres-schema.sql) - ExcludeFromMigrations.
+        builder.Entity<TiketProgres>(e =>
+        {
+            e.ToTable("progres", "tiket", t => t.ExcludeFromMigrations());
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.RefId).HasColumnName("ref_id");
+            e.Property(x => x.Status).HasColumnName("status");
+            e.Property(x => x.Catatan).HasColumnName("catatan");
+            e.Property(x => x.DiprosesOleh).HasColumnName("diproses_oleh");
+            e.Property(x => x.DiprosesPada).HasColumnName("diproses_pada");
         });
 
         // Ketua/anggota UMDL (schema dinas, db_mygcs) - lihat UmdlAnggota.cs. Tabel dikelola

@@ -21,6 +21,7 @@ public class AdminController : ControllerBase
     private const string AdminRole = "Admin";
     private const string JuriRole = "Juri";
     private const string PengelolaJuriRole = "PengelolaJuri";
+    private const string SekretariatTiketRole = "SekretariatTiket";
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _db;
@@ -73,6 +74,7 @@ public class AdminController : ControllerBase
         var adminIds = (await _userManager.GetUsersInRoleAsync(AdminRole)).Select(u => u.Id).ToHashSet();
         var juriIds = (await _userManager.GetUsersInRoleAsync(JuriRole)).Select(u => u.Id).ToHashSet();
         var pengelolaIds = (await _userManager.GetUsersInRoleAsync(PengelolaJuriRole)).Select(u => u.Id).ToHashSet();
+        var sekretariatTiketIds = (await _userManager.GetUsersInRoleAsync(SekretariatTiketRole)).Select(u => u.Id).ToHashSet();
         var me = _userManager.GetUserId(User);
 
         var query = _userManager.Users.AsNoTracking();
@@ -101,6 +103,7 @@ public class AdminController : ControllerBase
             isAdmin = adminIds.Contains(u.Id),
             isJuri = juriIds.Contains(u.Id),
             isPengelolaJuri = pengelolaIds.Contains(u.Id),
+            isSekretariatTiket = sekretariatTiketIds.Contains(u.Id),
             locked = u.LockoutEnd.HasValue && u.LockoutEnd > now,
             twoFactor = u.TwoFactorEnabled,
             isSelf = u.Id == me,
@@ -205,6 +208,38 @@ public class AdminController : ControllerBase
         {
             await _userManager.RemoveFromRoleAsync(user, PengelolaJuriRole);
             await _audit.LogAsync("role.pengelola_juri_revoked", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
+        }
+
+        return NoContent();
+    }
+
+    // Grant/revoke the SekretariatTiket role. Holders (staf Sekretariat, mis. Eka &
+    // Farcha) may ONLY view the Monitoring Tiket page in My Personal (pemesanan tiket
+    // seluruh karyawan setelah disetujui atasan) - no other Admin IT privileges.
+    [HttpPost("users/{id}/role/sekretariat-tiket")]
+    public async Task<IActionResult> SetSekretariatTiket(string id, [FromBody] ToggleRequest req)
+    {
+        if (!IsAdmin())
+        {
+            return Forbid();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound(new { message = "Pengguna tidak ditemukan." });
+        }
+
+        var isSekretariatTiket = await _userManager.IsInRoleAsync(user, SekretariatTiketRole);
+        if (req.Enabled && !isSekretariatTiket)
+        {
+            await _userManager.AddToRoleAsync(user, SekretariatTiketRole);
+            await _audit.LogAsync("role.sekretariat_tiket_granted", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
+        }
+        else if (!req.Enabled && isSekretariatTiket)
+        {
+            await _userManager.RemoveFromRoleAsync(user, SekretariatTiketRole);
+            await _audit.LogAsync("role.sekretariat_tiket_revoked", user.Id, user.Email, $"Via panel admin oleh {User.FindFirstValue("email")}");
         }
 
         return NoContent();

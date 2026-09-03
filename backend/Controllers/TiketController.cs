@@ -166,6 +166,12 @@ public class TiketController : ControllerBase
         _db.WebSdmPesanTiket.Remove(tiket);
 
         await _db.SaveChangesAsync();
+
+        // Batalkan pengajuan approval yg menyertainya - kalau tidak, baris approval.pengajuan
+        // jadi yatim (RefId menunjuk tiket yg sudah dihapus, Status nyangkut "Menunggu"
+        // selamanya).
+        await _approval.CancelAsync("Tiket", id.ToString());
+
         return NoContent();
     }
 

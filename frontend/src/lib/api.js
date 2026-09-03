@@ -528,6 +528,14 @@ export const api = {
     apiFetch(`/api/personal/tiket/${id}/detail/${idDet}`, { method: 'DELETE' }),
   printTiket: (id) => apiFetch(`/api/personal/tiket/${id}/print`, { method: 'POST' }),
 
+  // Monitoring Tiket (staf Sekretariat) - lintas karyawan, cuma role SekretariatTiket/Admin.
+  getTiketAdmin: (params = {}) => {
+    const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))).toString()
+    return apiFetch('/api/personal/tiket/admin' + (q ? `?${q}` : ''))
+  },
+  setTiketProgres: (id, payload) =>
+    apiFetch(`/api/personal/tiket/admin/${id}/progres`, { method: 'PUT', body: JSON.stringify(payload) }),
+
   getUmdl: () => apiFetch('/api/personal/umdl'),
   // Hanya izin "Meninggalkan Pekerjaan" + "Dinas" yang belum dipakai UMDL lain.
   cariIjinUmdl: () => apiFetch('/api/personal/umdl/izin'),
@@ -702,6 +710,8 @@ export const api = {
     apiFetch(`/api/admin/users/${id}/role/juri`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   setUserPengelolaJuri: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/role/pengelola-juri`, { method: 'POST', body: JSON.stringify({ enabled }) }),
+  setUserSekretariatTiket: (id, enabled) =>
+    apiFetch(`/api/admin/users/${id}/role/sekretariat-tiket`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   setUserActive: (id, enabled) =>
     apiFetch(`/api/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   unlockUser: (id) => apiFetch(`/api/admin/users/${id}/unlock`, { method: 'POST' }),

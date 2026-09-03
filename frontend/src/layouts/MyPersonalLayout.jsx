@@ -10,6 +10,7 @@ import {
   FileSignature,
   GraduationCap,
   LayoutGrid,
+  ListChecks,
   Plane,
   UserCircle,
   Wallet,
@@ -24,7 +25,7 @@ const PROFIL_PATH = '/my-personal/profil'
 
 // `locked` items are gated behind the profile being fully filled in (see `profileComplete`
 // below) - Profil itself is how that gets completed, so it's always reachable.
-function buildSections(profileComplete) {
+function buildSections(profileComplete, isSekretariatTiket) {
   return [
     {
       items: [
@@ -99,6 +100,15 @@ function buildSections(profileComplete) {
           disabled: !profileComplete,
           disabledReason: 'Lengkapi Profil terlebih dahulu',
         },
+        // Hanya utk staf Sekretariat (mis. Eka, Farcha) - role SekretariatTiket, diberikan
+        // Admin IT lewat Manajemen Pengguna. Tidak digembok profileComplete - ini alat
+        // pemantauan, bukan pengajuan pribadi.
+        ...(isSekretariatTiket ? [{
+          key: 'tiket-admin',
+          label: 'Monitoring Tiket',
+          icon: ListChecks,
+          to: '/my-personal/tiket-admin',
+        }] : []),
         {
           key: 'gaji', feature: 'my-personal:gaji',
           label: 'Slip Gaji',
@@ -115,7 +125,7 @@ function buildSections(profileComplete) {
 }
 
 export default function MyPersonalLayout() {
-  const { summary, logout, refreshSummary } = useAuth()
+  const { summary, logout, refreshSummary, isSekretariatTiket } = useAuth()
   const { collapsed, toggleCollapsed, mobileOpen, openMobile, closeMobile } = useSidebarState()
   const location = useLocation()
 
@@ -139,7 +149,7 @@ export default function MyPersonalLayout() {
       <Sidebar
         logoSrc="/LOGO GCS.png"
         title="My Personal"
-        sections={buildSections(profileComplete)}
+        sections={buildSections(profileComplete, isSekretariatTiket)}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapsed}
         mobileOpen={mobileOpen}

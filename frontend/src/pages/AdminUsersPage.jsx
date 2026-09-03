@@ -105,6 +105,7 @@ export default function AdminUsersPage() {
               <th className="admin-users__col-center">Admin IT</th>
               <th className="admin-users__col-center">Juri</th>
               <th className="admin-users__col-center">Pengelola Juri</th>
+              <th className="admin-users__col-center">Sekretariat Tiket</th>
               <th className="admin-users__col-center">Aktif</th>
               <th></th>
             </tr>
@@ -158,6 +159,17 @@ export default function AdminUsersPage() {
                     onChange={() =>
                       runAction(u.id, () => api.setUserPengelolaJuri(u.id, !u.isPengelolaJuri),
                         !u.isPengelolaJuri ? `${u.fullName ?? u.email} kini Pengelola Juri.` : `Peran Pengelola Juri ${u.fullName ?? u.email} dicabut.`)
+                    }
+                  />
+                </td>
+                <td className="admin-users__col-center">
+                  <Switch
+                    checked={u.isSekretariatTiket}
+                    disabled={busyId === u.id}
+                    title="Sekretariat Tiket: hanya boleh melihat halaman Monitoring Tiket (My Personal) - pemesanan tiket seluruh karyawan setelah disetujui atasan"
+                    onChange={() =>
+                      runAction(u.id, () => api.setUserSekretariatTiket(u.id, !u.isSekretariatTiket),
+                        !u.isSekretariatTiket ? `${u.fullName ?? u.email} kini Sekretariat Tiket.` : `Peran Sekretariat Tiket ${u.fullName ?? u.email} dicabut.`)
                     }
                   />
                 </td>

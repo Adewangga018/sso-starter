@@ -2292,5 +2292,34 @@ GO
 SET NOEXEC OFF;
 GO
 
+PRINT '################ [25] TIKET PROGRES - tracking staf Sekretariat atas tiket disetujui ################';
+GO
+IF DB_NAME() <> 'db_mygcs'
+BEGIN RAISERROR('BATAL: jalankan di db_mygcs.',16,1); SET NOEXEC ON; END
+GO
+
+IF SCHEMA_ID('tiket') IS NULL EXEC('CREATE SCHEMA tiket');
+GO
+
+IF OBJECT_ID('tiket.progres', 'U') IS NULL
+BEGIN
+    CREATE TABLE tiket.progres (
+        id             INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_tiket_progres PRIMARY KEY,
+        ref_id         NVARCHAR(50)   NOT NULL,   -- WebSdmPesanTiket.id
+        status         NVARCHAR(20)   NOT NULL CONSTRAINT df_tiket_progres_status DEFAULT ('Belum Diproses'),
+        catatan        NVARCHAR(400)  NULL,
+        diproses_oleh  NVARCHAR(50)   NULL,       -- NIK staf Sekretariat
+        diproses_pada  DATETIME2      NULL,
+        CONSTRAINT ck_tiket_progres_status CHECK (status IN ('Belum Diproses','Sedang Diproses','Selesai')),
+        CONSTRAINT uq_tiket_progres_ref UNIQUE (ref_id)
+    );
+    PRINT 'tiket.progres dibuat.';
+END
+ELSE PRINT 'LEWATI: tiket.progres sudah ada.';
+GO
+
+SET NOEXEC OFF;
+GO
+
 PRINT '=== BUNDEL MIGRASI SELESAI ==='
 GO

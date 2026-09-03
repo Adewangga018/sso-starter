@@ -15,7 +15,10 @@ public class OidcSeeder : IHostedService
 
     // PengelolaJuri = koordinator penjurian: hanya boleh mengelola Stream Penilai &
     // Penugasan ke Inovasi (tanpa hak Admin IT lain).
-    private static readonly string[] Roles = ["Admin", "AdminModul", "Karyawan", "Juri", "PengelolaJuri"];
+    // SekretariatTiket = staf Sekretariat (mis. Eka, Farcha) yang mengurus kebutuhan
+    // pemesanan tiket seluruh karyawan: hanya boleh melihat/memantau halaman Monitoring
+    // Tiket (My Personal), tanpa hak Admin IT lain - diminta 2026-09-03.
+    private static readonly string[] Roles = ["Admin", "AdminModul", "Karyawan", "Juri", "PengelolaJuri", "SekretariatTiket"];
 
     public OidcSeeder(IServiceProvider services, IConfiguration configuration)
     {

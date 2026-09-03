@@ -21,7 +21,10 @@ if (hasReleaseSigning) {
 
 android {
     namespace = "com.gresik.gcs.myabsensi"
-    compileSdk = flutter.compileSdkVersion
+    // Target SDK 36 (Android 16) - diminta manajemen 2026-09-03, mengganti
+    // default bawaan Flutter 3.32 (API 35). compileSdk ikut naik ke 36 karena
+    // targetSdk tidak boleh lebih tinggi dari compileSdk.
+    compileSdk = 36
     // Versi yang diminta beberapa plugin (flutter_appauth, geolocator, dst) - flutter.ndkVersion
     // bawaan lebih lama dan memicu warning "requires higher NDK" tiap build.
     ndkVersion = "27.0.12077973"
@@ -41,7 +44,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 

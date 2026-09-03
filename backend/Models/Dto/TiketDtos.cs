@@ -32,3 +32,29 @@ public record TiketPrintDto(
     string Nama,
     IReadOnlyList<TiketDetailDto> Rincian,
     DateTime DicetakPada);
+
+// --- Monitoring Tiket (staf Sekretariat) ---
+
+public record TiketAdminItemDto(
+    int Id,
+    string? KodeTiket,
+    string IdKaryawan,
+    string? NamaKaryawan,
+    DateTime TglInput,
+    string? Keterangan,
+    string? StatusPersetujuan,   // approval.pengajuan.Status: Menunggu|Disetujui|Ditolak|Batal
+    DateTime? TglKeputusan,
+    string StatusProgres,        // tiket.progres.Status: Belum Diproses|Sedang Diproses|Selesai
+    string? CatatanProgres,
+    IReadOnlyList<TiketDetailDto> Rincian);
+
+public record TiketAdminSummaryDto(
+    int TotalDisetujui,
+    int BelumDiproses,
+    int SedangDiproses,
+    int Selesai,
+    IReadOnlyDictionary<string, int> PerJenisTiket);
+
+public record TiketAdminListDto(TiketAdminSummaryDto Ringkasan, IReadOnlyList<TiketAdminItemDto> Items);
+
+public record TiketProgresRequest(string Status, string? Catatan);

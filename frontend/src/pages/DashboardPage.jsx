@@ -395,13 +395,16 @@ export default function DashboardPage() {
                         </button>
                       </div>
 
-                      {logo ? (
-                        <img src={logo} alt={mod.label} className="module-tile__logo" />
-                      ) : (
-                        <div className="module-tile__icon">
-                          <Icon size={24} />
-                        </div>
-                      )}
+                      {/* Logo (kartu desktop) & ikon (kotak kecil mobile) SELALU dua-duanya
+                          dirender - CSS yang memilih mana ditampilkan per breakpoint (lihat
+                          DashboardPage.css, ".module-tile__logo ~ .module-tile__icon").
+                          Logo modul (2048x621, wordmark lebar) tidak muat rapi di kotak kecil
+                          mobile, jadi mobile selalu pakai ikon persegi - diminta user
+                          2026-09-03. */}
+                      {logo && <img src={logo} alt={mod.label} className="module-tile__logo" />}
+                      <div className="module-tile__icon">
+                        <Icon size={24} />
+                      </div>
 
                       <div className="module-tile__body">
                         <div className="module-tile__label">
@@ -441,13 +444,10 @@ export default function DashboardPage() {
                       </button>
                     </div>
 
-                    {logo ? (
-                      <img src={logo} alt={mod.label} className="module-tile__logo" />
-                    ) : (
-                      <div className="module-tile__icon module-tile__icon--active">
-                        <Icon size={24} />
-                      </div>
-                    )}
+                    {logo && <img src={logo} alt={mod.label} className="module-tile__logo" />}
+                    <div className="module-tile__icon module-tile__icon--active">
+                      <Icon size={24} />
+                    </div>
 
                     <div className="module-tile__body">
                       <div className="module-tile__label">

@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>User Manual My Personal</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #2c2521;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm; min-height: 297mm;
+    padding: 16mm 18mm 14mm 18mm;
+    position: relative;
+    page-break-after: always;
+    background: #fff;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ---- running header/footer on inner pages ---- */
+  .doc-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9px; color: #6b6259; border-bottom: 1px solid #e4dfd8;
+    padding-bottom: 6px; margin-bottom: 14px;
+  }
+  .doc-header b { color: #0f261f; }
+  .doc-footer {
+    position: absolute; left: 18mm; right: 18mm; bottom: 8mm;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 8.5px; color: #9a9086; border-top: 1px solid #e4dfd8; padding-top: 5px;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; }
+  .sec-title {
+    font-size: 19px; font-weight: 800; color: #0f261f;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  }
+  .sec-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 7px; font-size: 13px;
+    background: linear-gradient(140deg, #f4ae46, #daa628); color: #fff; font-weight: 800;
+  }
+  .sec-sub { font-size: 11px; color: #6b6259; margin-bottom: 14px; }
+
+  .step { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .step .n {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+    background: #0f261f; color: #f4ae46; font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .step p { margin: 0; font-size: 11.5px; line-height: 1.55; }
+  .step b { color: #0f261f; }
+
+  .shot {
+    width: 100%; border: 1px solid #ddd6cc; border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(15,38,31,0.12); display: block; margin: 8px 0 4px 0;
+  }
+  .cap { font-size: 9.5px; color: #857c72; font-style: italic; margin-bottom: 12px; }
+
+  .note {
+    background: #fbf3e3; border: 1px solid #f0d9a6; border-left: 4px solid #daa628;
+    border-radius: 6px; padding: 9px 12px; font-size: 10.5px; color: #6b4f14; margin: 10px 0;
+  }
+  .note b { color: #4d3a0f; }
+
+  table.info { width: 100%; border-collapse: collapse; font-size: 11px; }
+  table.info td { border: 1px solid #ddd6cc; padding: 8px 10px; vertical-align: top; }
+  table.info td.label { width: 34%; background: #f6f3ee; font-weight: 700; color: #0f261f; }
+
+  ul.toc { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+  ul.toc li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #ddd6cc; }
+  ul.toc li.sub { padding-left: 18px; font-size: 11px; color: #4a423b; }
+  ul.toc li b { color: #0f261f; }
+  ul.toc .dots { color: #b7ac9e; }
+
+  .cover {
+    width: 210mm; height: 297mm; padding: 0;
+    background: linear-gradient(155deg, #163528 0%, #0f261f 100%);
+    color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; position: relative;
+  }
+  .cover .crest { width: 74px; height: 74px; margin-bottom: 18px; }
+  .cover .brandline { font-size: 13px; letter-spacing: 0.14em; color: #f4ae46; font-weight: 700; margin-bottom: 6px; }
+  .cover h1 { font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.75); letter-spacing: 0.05em; }
+  .cover .title { font-size: 40px; font-weight: 800; margin: 22px 0 6px 0; }
+  .cover .sub { font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 26px; }
+  .cover .desc { font-size: 12px; color: rgba(255,255,255,0.55); max-width: 420px; line-height: 1.6; }
+  .cover .bar { width: 70px; height: 3px; background: linear-gradient(90deg, #f4ae46, #daa628); border-radius: 3px; margin: 22px 0; }
+  .cover .foot { position: absolute; bottom: 26mm; font-size: 11px; color: rgba(255,255,255,0.55); }
+  .cover .foot b { color: #fff; }
+
+  .badge {
+    display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    background: rgba(244,174,70,0.16); color: #a9700f; margin-left: 6px;
+  }
+  .badge.role { background: rgba(15,38,31,0.08); color: #0f261f; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .role-card { border: 1px solid #ddd6cc; border-radius: 8px; padding: 10px 12px; }
+  .role-card .t { font-weight: 700; font-size: 11.5px; color: #0f261f; margin-bottom: 3px; }
+  .role-card .d { font-size: 10.5px; color: #6b6259; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER ============================================================ -->
+<div class="page cover">
+  <img class="crest" src="../../frontend/public/LOGO GCS.png" alt="GCS">
+  <div class="brandline">GRESIK CIPTA SEJAHTERA</div>
+  <h1>MyGCS — Single Sign-On Portal</h1>
+  <div class="bar"></div>
+  <div class="title">USER MANUAL</div>
+  <div class="sub">My Personal</div>
+  <div class="desc">
+    Panduan lengkap penggunaan modul My Personal — Profil, Absensi, Izin, Lembur, Cuti,
+    Persetujuan, SPPD, UMDL, Pemesanan Tiket, dan Monitoring Tiket untuk staf Sekretariat —
+    pintu masuk data &amp; layanan kepegawaian setiap karyawan di portal MyGCS.
+  </div>
+  <div class="foot"><b>PT GRESIK CIPTA SEJAHTERA</b><br>Tahun 2026 — Departemen Sumber Daya Manusia</div>
+</div>
+
+<!-- ============================================================ DOC INFO ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">i</span> Dokumen User Manual</div>
+  <div class="sec-sub">Lembar Informasi Dokumen &amp; Proyek</div>
+  <table class="info">
+    <tr><td class="label">Nama Dokumen</td><td>User Manual My Personal — MyGCS</td></tr>
+    <tr><td class="label">Nama Proyek</td><td>MyGCS — Single Sign-On Portal PT Gresik Cipta Sejahtera</td></tr>
+    <tr><td class="label">Modul Dicakup</td><td>My Personal &gt; Profil, Absensi, Izin, Lembur, Cuti, Persetujuan, SPPD, UMDL,
+      Pemesanan Tiket, dan Monitoring Tiket (khusus staf Sekretariat)</td></tr>
+    <tr><td class="label">Tahun</td><td>2026</td></tr>
+    <tr><td class="label">BPO / Related Unit Kerja</td><td>Departemen Sumber Daya Manusia</td></tr>
+    <tr><td class="label">Versi Dokumen</td><td>2.0 — revisi dari versi 1.0 (24 Agustus 2026): menambahkan seluruh modul
+      pengajuan (Absensi s/d Pemesanan Tiket) dan fitur Monitoring Tiket untuk staf Sekretariat</td></tr>
+    <tr><td class="label">Pemilik Dokumen</td><td>Tim IT GCS</td></tr>
+    <tr><td class="label">Tanggal Terbit</td><td>3 September 2026</td></tr>
+  </table>
+
+  <div style="margin-top:22px" class="sec-title"><span class="num">ii</span> Riwayat Revisi</div>
+  <table class="info">
+    <tr><td class="label">Versi 1.0 — 24 Agu 2026</td><td>Rilis awal: Login &amp; My Personal &gt; Profil.</td></tr>
+    <tr><td class="label">Versi 2.0 — 3 Sep 2026</td><td>Menambahkan panduan Absensi, Izin, Lembur, Cuti, Persetujuan
+      (Kotak Persetujuan atasan), SPPD, UMDL, Pemesanan Tiket, dan Monitoring Tiket (peran baru staf Sekretariat).</td></tr>
+  </table>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>2</span></div>
+</div>
+
+<!-- ============================================================ DAFTAR ISI ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">≡</span> Daftar Isi</div>
+  <ul class="toc" style="margin-top:14px">
+    <li><b>A. Deskripsi Umum</b><span class="dots">....................</span><span>4</span></li>
+    <li><b>B. Manfaat Project</b><span class="dots">....................</span><span>4</span></li>
+    <li><b>C. Fitur Project</b><span class="dots">....................</span><span>4</span></li>
+    <li><b>D. User Project</b><span class="dots">....................</span><span>5</span></li>
+    <li><b>E. Panduan Project</b><span class="dots">....................</span><span>5</span></li>
+    <li class="sub">Login Page — Login menggunakan User EASy<span>6</span></li>
+    <li class="sub">My Personal &gt; Profil<span>7</span></li>
+    <li class="sub">My Personal &gt; Absensi<span>10</span></li>
+    <li class="sub">My Personal &gt; Izin<span>11</span></li>
+    <li class="sub">My Personal &gt; Lembur (SPL)<span>12</span></li>
+    <li class="sub">My Personal &gt; Cuti<span>13</span></li>
+    <li class="sub">My Personal &gt; Persetujuan (Kotak Persetujuan)<span>15</span></li>
+    <li class="sub">My Personal &gt; SPPD<span>16</span></li>
+    <li class="sub">My Personal &gt; UMDL<span>18</span></li>
+    <li class="sub">My Personal &gt; Pemesanan Tiket<span>20</span></li>
+    <li class="sub">Untuk Staf Sekretariat: Monitoring Tiket<span>21</span></li>
+    <li><b>F. Penutup</b><span class="dots">....................</span><span>22</span></li>
+  </ul>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>3</span></div>
+</div>
+
+<!-- ============================================================ A-D ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+
+  <div class="sec-title"><span class="num">A</span> Deskripsi Umum</div>
+  <p style="font-size:11.5px; line-height:1.6; margin:0 0 16px 0;">
+    MyGCS merupakan portal Single Sign-On (SSO) terpadu yang dikembangkan oleh PT Gresik Cipta Sejahtera
+    untuk menyatukan seluruh layanan operasional dan kepegawaian karyawan dalam satu pintu akses. Modul
+    <b>My Personal</b> adalah ruang bagi setiap karyawan untuk mengelola data pribadinya sendiri sekaligus
+    mengajukan berbagai permohonan kepegawaian — biodata, Absensi, Izin, Lembur, Cuti, SPPD, UMDL, hingga
+    Pemesanan Tiket — dan bagi atasan untuk memberi persetujuan atas pengajuan tim lewat Kotak Persetujuan.
+    Sistem berbasis web, dapat diakses lewat jaringan internal maupun eksternal pada alamat
+    <b>my.gcs-gresik.com</b>, menggunakan akun Single Sign-On yang sama dengan akun EASy. Direkomendasikan
+    diakses menggunakan browser Chrome.
+  </p>
+
+  <div class="sec-title"><span class="num">B</span> Manfaat Project</div>
+  <div class="step"><div class="n">1</div><p>Karyawan memiliki satu profil digital resmi yang menjadi rujukan seluruh modul MyGCS — Absensi, Izin, Lembur, Cuti, SPPD, UMDL, Pemesanan Tiket, dan Slip Gaji.</p></div>
+  <div class="step"><div class="n">2</div><p>Seluruh pengajuan (Izin, Lembur, Cuti, SPPD, UMDL, Tiket) tercatat dalam satu alur persetujuan terpadu — atasan cukup membuka satu <b>Kotak Persetujuan</b> untuk memutuskan seluruh pengajuan timnya.</p></div>
+  <div class="step"><div class="n">3</div><p>Pengajuan dinas luar (SPPD/UMDL) otomatis dipilah berdasarkan jarak tempuh, lengkap dengan bukti foto lokasi ber-GPS — mengurangi risiko pengajuan fiktif.</p></div>
+  <div class="step"><div class="n">4</div><p>Tim Sekretariat memiliki halaman khusus untuk memantau seluruh pemesanan tiket karyawan yang sudah disetujui atasan, sehingga tindak lanjut pemesanan ke agen/maskapai tidak tercecer.</p></div>
+
+  <div class="sec-title" style="margin-top:16px"><span class="num">C</span> Fitur Project</div>
+  <p style="font-size:11.5px; margin:0 0 6px 0;">Fitur yang tercakup dalam dokumen ini:</p>
+  <div class="step"><div class="n">1</div><p>Login Page (Single Sign-On menggunakan akun EASy)</p></div>
+  <div class="step"><div class="n">2</div><p><b>My Personal &gt; Profil</b> — biodata, kontak &amp; alamat, kesehatan &amp; darurat, data keluarga, berkas pribadi, dan foto profil</p></div>
+  <div class="step"><div class="n">3</div><p><b>Absensi</b> — riwayat presensi harian, terhubung dengan aplikasi mobile MyGCS Absensi</p></div>
+  <div class="step"><div class="n">4</div><p><b>Izin</b> — pengajuan surat izin (datang terlambat, meninggalkan pekerjaan, sakit, dinas, dsb.)</p></div>
+  <div class="step"><div class="n">5</div><p><b>Lembur (SPL)</b> — pengajuan Surat Perintah Lembur (biasa, mengganti, crash program)</p></div>
+  <div class="step"><div class="n">6</div><p><b>Cuti</b> — saldo &amp; pengajuan cuti tahunan, cuti bersama, dan cuti nasional/hari libur</p></div>
+  <div class="step"><div class="n">7</div><p><b>Persetujuan</b> — Kotak Persetujuan bagi atasan/manager untuk memutuskan pengajuan tim</p></div>
+  <div class="step"><div class="n">8</div><p><b>SPPD</b> — Surat Perintah Perjalanan Dinas untuk jarak jauh (&gt;150 km PP)</p></div>
+  <div class="step"><div class="n">9</div><p><b>UMDL</b> — Uang Muka Dinas Luar untuk jarak dekat (&lt;150 km PP)</p></div>
+  <div class="step"><div class="n">10</div><p><b>Pemesanan Tiket</b> — pengajuan tiket &amp; akomodasi (Pesawat, Kereta Api, Bus, Kapal Laut, Hotel)</p></div>
+  <div class="step"><div class="n">11</div><p><b>Monitoring Tiket</b> — khusus staf Sekretariat, memantau tindak lanjut tiket yang sudah disetujui</p></div>
+
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>4</span></div>
+</div>
+
+<!-- ============================================================ D lanjutan ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">D</span> User Project</div>
+  <p style="font-size:11.5px; line-height:1.6; margin:0 0 10px 0;">
+    Seluruh karyawan pemegang akun EASy aktif dapat mengakses MyGCS sebagai <b>Karyawan (User)</b> untuk
+    mengelola profil dan mengajukan permohonan kepegawaian miliknya sendiri. Beberapa peran tambahan
+    berlaku sesuai jabatan/penunjukan berikut:
+  </p>
+  <div class="role-grid">
+    <div class="role-card"><div class="t">Karyawan (User)</div><div class="d">Seluruh pemegang akun EASy aktif — mengelola profil &amp; mengajukan Absensi, Izin, Lembur, Cuti, SPPD, UMDL, dan Pemesanan Tiket miliknya sendiri.</div></div>
+    <div class="role-card"><div class="t">Atasan / Manager</div><div class="d">Otomatis aktif bagi siapa pun yang punya bawahan di Struktur Organisasi — memutuskan pengajuan tim lewat <b>Persetujuan</b> (Kotak Persetujuan).</div></div>
+    <div class="role-card"><div class="t">Staf Sekretariat <span class="badge role">Peran Baru</span></div><div class="d">Ditunjuk Admin IT (mis. Eka, Farcha) — akses tambahan ke halaman <b>Monitoring Tiket</b> untuk memantau seluruh pemesanan tiket karyawan yang sudah disetujui atasan.</div></div>
+    <div class="role-card"><div class="t">Admin Modul SDM / Admin IT</div><div class="d">Konfigurasi lanjutan (tarif, komponen gaji, verifikasi dinas, dsb.) — dibahas di dokumen User Manual Admin SDM terpisah.</div></div>
+  </div>
+
+  <div class="sec-title" style="margin-top:20px"><span class="num">E</span> Panduan Project</div>
+  <p style="font-size:11.5px; line-height:1.6; margin:0;">
+    Bagian berikut menjelaskan langkah demi langkah penggunaan setiap fitur di atas, dimulai dari
+    Login Page dan modul My Personal &gt; Profil, dilanjutkan dengan modul-modul pengajuan lainnya.
+  </p>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>5</span></div>
+</div>
+
+<!-- ============================================================ LOGIN ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">1</span> Login Page</div>
+  <div class="sec-sub">A. Login (Menggunakan User EASy)</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Karyawan masuk ke portal MyGCS menggunakan akun EASy yang sudah dimiliki — tidak perlu membuat akun baru.</p>
+  <div class="step"><div class="n">1</div><p>Buka portal MyGCS pada peramban (disarankan Chrome) di alamat <b>my.gcs-gresik.com/login</b>.</p></div>
+  <div class="step"><div class="n">2</div><p>Masukkan <b>Username/Email</b> dan <b>Password</b> — gunakan data yang sama dengan akun EASy Anda.</p></div>
+  <div class="step"><div class="n">3</div><p>Klik tombol <b>Masuk</b>. Jika lupa kata sandi, gunakan pranala <b>Forgot Password?</b> pada halaman yang sama.</p></div>
+  <div class="step"><div class="n">4</div><p>Jika berhasil, Anda akan diarahkan langsung ke halaman <b>Beranda (Dashboard)</b> MyGCS.</p></div>
+  <img class="shot" src="profile/login.png" alt="Halaman Login MyGCS">
+  <div class="cap">Halaman Login MyGCS — alamat my.gcs-gresik.com/login.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>6</span></div>
+</div>
+
+<!-- ============================================================ PROFIL ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">2</span> My Personal &gt; Profil</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Pada modul ini karyawan mengelola profil pribadinya sendiri.</p>
+  <div class="step"><div class="n">1</div><p>Dari halaman Beranda, tekan kartu modul <b>My Personal</b> pada daftar Semua Modul, lalu klik <b>Buka Modul</b>.</p></div>
+  <img class="shot" src="profile/myperson.png" alt="Beranda MyGCS">
+  <div class="cap">Beranda MyGCS — tekan kartu modul My Personal untuk masuk.</div>
+  <div class="step"><div class="n">2</div><p>Anda masuk ke halaman <b>Profil</b>. Perhatikan kotak <b>Kelengkapan Profil</b> di kartu identitas — persentase kelengkapan biodata &amp; dokumen dasar (KTP, KK, Ijazah, Buku Nikah bila Kawin). Gunakan tab <b>Berkas Pribadi</b> untuk memeriksa satu per satu.</p></div>
+  <img class="shot" src="profile/halaman-profil.png" alt="Halaman Profil">
+  <div class="cap">Halaman Profil — kartu identitas menampilkan persentase Kelengkapan Profil.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>7</span></div>
+</div>
+
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="step"><div class="n">3</div><p>Cek foto profil pada avatar kartu identitas. Klik <b>Edit Profil</b> untuk memperbaiki data maupun foto.</p></div>
+  <img class="shot" src="profile/edit-profil.png" alt="Edit Profil">
+  <div class="cap">Klik tombol Edit Profil di kanan atas kartu identitas untuk mulai mengubah data, termasuk foto.</div>
+  <div class="step"><div class="n">4</div><p>Dalam mode edit, klik ikon kamera pada avatar atau pranala <b>Tambah foto</b>, lalu pilih berkas (JPG/PNG). Foto otomatis dipangkas melingkar sebelum diunggah.</p></div>
+  <img class="shot" src="profile/upload-foto.png" alt="Upload Foto">
+  <div class="cap">Mode edit — klik ikon kamera pada avatar untuk mengunggah foto baru.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>8</span></div>
+</div>
+
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="step"><div class="n">5</div><p>Periksa kembali data yang diubah, klik <b>Simpan Profil</b> di kanan atas — atau <b>Batal</b> bila ingin membatalkan. Data &amp; foto baru langsung tampil di seluruh bagian portal yang menampilkan identitas Anda.</p></div>
+  <img class="shot" src="profile/cek-dokumen.png" alt="Cek Dokumen">
+  <div class="cap">Tab Berkas Pribadi — status setiap dokumen (Tersedia / Belum Tersedia) dapat dicek di sini.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>9</span></div>
+</div>
+
+<!-- ============================================================ ABSENSI ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">3</span> My Personal &gt; Absensi</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Menampilkan riwayat presensi harian Anda. Absen masuk &amp; keluar dilakukan lewat
+    aplikasi <b>MyGCS Absensi Mobile</b> (Android, verifikasi GPS terenkripsi &amp; anti fake-GPS) — halaman web ini
+    murni untuk <b>melihat riwayat</b>, bukan untuk absen langsung.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Absensi</b> pada sidebar My Personal. Bila Anda belum memasang aplikasi, unduh lewat tombol <b>Unduh Android (.APK)</b> pada banner di bagian atas halaman.</p></div>
+  <div class="step"><div class="n">2</div><p>Empat kartu ringkasan menampilkan <b>Total Hari</b>, <b>Tepat Waktu</b>, <b>Catatan/Mangkir</b>, dan <b>Akhir Pekan/Cuti</b> untuk periode yang dipilih.</p></div>
+  <div class="step"><div class="n">3</div><p>Gunakan <b>Filter Periode</b> (bulan &amp; tahun) atau kotak pencarian untuk menemukan tanggal tertentu. Setiap baris menampilkan jam masuk/keluar dan keterangan (mis. "Pulang Cepat", "Tepat waktu").</p></div>
+  <div class="note"><b>Catatan:</b> aplikasi mobile menolak absen bila mendeteksi <i>mock location</i> (fake-GPS) — pertahanan dobel dilakukan di sisi aplikasi maupun server.</div>
+  <img class="shot" src="absen/absen.png" alt="Halaman Absensi">
+  <div class="cap">Log Absensi &amp; Kehadiran — riwayat presensi harian per periode, lengkap dengan banner unduh aplikasi mobile.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>10</span></div>
+</div>
+
+<!-- ============================================================ IZIN ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">4</span> My Personal &gt; Izin</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Pengajuan dan riwayat surat izin kerja (datang terlambat, meninggalkan pekerjaan, sakit, dinas, atau keperluan pribadi).</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Izin</b>. Tab <b>Di Buat (Draft)</b> menampilkan izin yang masih bisa diubah/dihapus; tab <b>Persetujuan</b> menampilkan izin yang sudah diputuskan atasan.</p></div>
+  <div class="step"><div class="n">2</div><p>Klik <b>+ Ajukan Izin Baru</b>. Isi <b>Tgl/Jam Mulai</b> &amp; <b>Selesai</b>, pilih <b>Jenis Izin</b> dan <b>Kepentingan</b> (Pribadi/Dinas), lalu tulis <b>Keterangan Alasan</b>.</p></div>
+  <img class="shot" src="izin/Screenshot 2026-09-03 092210.png" alt="Ajukan Surat Izin Baru">
+  <div class="cap">Formulir Ajukan Surat Izin Baru.</div>
+  <div class="step"><div class="n">3</div><p>Klik <b>Ajukan Permohonan</b> — izin masuk ke Kotak Persetujuan atasan Anda. Izin yang masih berstatus <b>Di Buat</b> boleh diedit (ikon pensil) atau dihapus (ikon tempat sampah).</p></div>
+  <div class="note"><b>Untuk izin jenis "Dinas":</b> izin ini menjadi dasar rujukan saat mengajukan UMDL — lihat bagian UMDL pada halaman selanjutnya.</div>
+  <img class="shot" src="izin/Screenshot 2026-09-03 092159.png" alt="Daftar Permohonan Izin">
+  <div class="cap">Permohonan Surat Izin — daftar & ringkasan status pengajuan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>11</span></div>
+</div>
+
+<!-- ============================================================ LEMBUR ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">5</span> My Personal &gt; Lembur (SPL)</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Pengajuan dan riwayat Surat Perintah Lembur — jenis Biasa, Mengganti, atau Crash Program.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Lembur</b>, lalu klik <b>+ Ajukan SPL Baru</b>.</p></div>
+  <div class="step"><div class="n">2</div><p>Isi <b>Mulai/Sampai Tgl</b> dan <b>Jam Mulai/Selesai</b>, pilih <b>Jenis Lembur (SPL)</b>, lalu tulis <b>Keterangan Tugas Lembur</b> secara rinci.</p></div>
+  <img class="shot" src="lembur/Screenshot 2026-09-03 092242.png" alt="Ajukan Surat Perintah Lembur">
+  <div class="cap">Formulir Ajukan Surat Perintah Lembur.</div>
+  <div class="step"><div class="n">3</div><p>Klik <b>Ajukan SPL</b> — pengajuan masuk ke Kotak Persetujuan atasan Anda. Nominal lembur dihitung otomatis oleh Admin SDM berdasarkan jam yang disetujui.</p></div>
+  <img class="shot" src="lembur/Screenshot 2026-09-03 092236.png" alt="Daftar Surat Perintah Lembur">
+  <div class="cap">Surat Perintah Lembur (SPL) — daftar & ringkasan status pengajuan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>12</span></div>
+</div>
+
+<!-- ============================================================ CUTI ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">6</span> My Personal &gt; Cuti</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Saldo dan pengajuan cuti tahunan Anda, beserta daftar cuti bersama &amp; cuti nasional/hari libur perusahaan.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Cuti</b>. Kartu hijau di bagian atas menampilkan <b>Sisa Saldo Cuti Tahunan</b> — akrual 24 hari tiap 2 tahun sekali di TMT Anda, dikurangi cuti bersama yang <i>"mengurangi hak"</i>, batas akumulasi maksimal 24 hari.</p></div>
+  <img class="shot" src="cuti/Screenshot 2026-09-03 092330.png" alt="Saldo & Pengajuan Cuti">
+  <div class="cap">Cuti Tahunan & Hari Libur — saldo cuti dan daftar Pengajuan Saya.</div>
+  <div class="step"><div class="n">2</div><p>Klik <b>+ Ajukan Cuti</b> untuk mengajukan cuti baru — isi rentang tanggal dan keterangan, lalu kirim untuk disetujui atasan.</p></div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>13</span></div>
+</div>
+
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="step"><div class="n">3</div><p>Gulir ke bawah untuk melihat <b>Cuti Bersama</b> — setiap tanggal ditandai <i>"mengurangi hak"</i> atau <i>"tidak mengurangi"</i> sisa saldo cuti tahunan Anda.</p></div>
+  <img class="shot" src="cuti/Screenshot 2026-09-03 092341.png" alt="Cuti Bersama">
+  <div class="cap">Daftar Cuti Bersama — status pengurangan hak cuti tahunan per tanggal.</div>
+  <div class="step"><div class="n">4</div><p>Bagian paling bawah menampilkan <b>Cuti Nasional / Hari Libur</b> — daftar resmi tanggal merah yang tidak memotong saldo cuti Anda.</p></div>
+  <img class="shot" src="cuti/Screenshot 2026-09-03 092348.png" alt="Cuti Nasional / Hari Libur">
+  <div class="cap">Cuti Nasional / Hari Libur — referensi tanggal merah perusahaan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>14</span></div>
+</div>
+
+<!-- ============================================================ PERSETUJUAN ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">7</span> My Personal &gt; Persetujuan</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Kotak Persetujuan terpadu bagi atasan/manager — satu tempat untuk memutuskan
+    seluruh pengajuan tim: <b>Cuti, Izin, Lembur, SPPD, UMDL, dan Tiket</b>. Menu ini hanya berisi data bila Anda
+    memiliki bawahan di Struktur Organisasi.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Persetujuan</b>. Tab <b>Menunggu Persetujuan</b> menampilkan pengajuan tim yang perlu diputuskan; tab <b>Riwayat Keputusan</b> menampilkan yang sudah Anda proses.</p></div>
+  <img class="shot" src="approval/Screenshot 2026-09-03 092820.png" alt="Kotak Persetujuan">
+  <div class="cap">Kotak Persetujuan — daftar pengajuan tim menunggu keputusan, ditandai label jenis (UMDL, SPPD, dst.).</div>
+  <div class="step"><div class="n">2</div><p>Klik <b>Detail</b> pada satu baris untuk melihat rincian pemohon, jabatan, ringkasan/keterangan, dan (khusus SPPD/UMDL) rentang jarak &amp; foto bukti lokasi dinas.</p></div>
+  <div class="step"><div class="n">3</div><p>Tuliskan <b>Catatan/Komentar</b> (opsional), lalu klik <b>Setujui Pengajuan</b> atau <b>Tolak Pengajuan</b>. Bisa juga langsung klik tombol <b>Setujui</b>/<b>Tolak</b> pada baris tanpa membuka detail.</p></div>
+  <img class="shot" src="approval/Screenshot 2026-09-03 092828.png" alt="Detail Pengajuan">
+  <div class="cap">Detail Pengajuan UMDL — rentang jarak, foto bukti dinas, dan kolom catatan sebelum diputuskan.</div>
+  <div class="note"><b>Atasan langsung (bukan manager langsung):</b> tetap dapat membuka detail untuk meninjau, namun tombol Setujui/Tolak hanya aktif bagi manager yang berwenang memutuskan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>15</span></div>
+</div>
+
+<!-- ============================================================ SPPD ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">8</span> My Personal &gt; SPPD</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Surat Perintah Perjalanan Dinas — untuk perjalanan dinas jarak jauh
+    (<b>lebih dari 150 km PP</b>), lengkap dengan alokasi tim peserta dan cetak surat dinas resmi.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>SPPD</b>, lalu klik <b>+ Ajukan SPPD Baru</b>.</p></div>
+  <div class="step"><div class="n">2</div><p>Isi <b>Tanggal Berangkat/Pulang</b>, <b>Cakupan Lokasi</b> (Dalam/Luar Negeri), <b>Transportasi</b>, <b>Tujuan Lokasi SPPD</b>, dan <b>Keterangan Tugas/Keperluan</b>.</p></div>
+  <img class="shot" src="sppd/Screenshot 2026-09-03 092417.png" alt="Ajukan SPPD Baru">
+  <div class="cap">Formulir Ajukan SPPD Baru — sistem mengingatkan batas jarak (&gt;150 km PP), di bawahnya diarahkan ke UMDL.</div>
+  <div class="step"><div class="n">3</div><p>Unggah <b>Foto Bukti Lokasi Dinas</b> (wajib, diambil langsung lewat kamera perangkat — bukan galeri) sebelum mengirim pengajuan.</p></div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>16</span></div>
+</div>
+
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="step"><div class="n">4</div><p>Setelah SPPD disetujui manager, klik ikon <b>Kelola Tim</b> (centang) pada baris SPPD untuk menambahkan Ketua &amp; Anggota tim yang ikut dalam perjalanan dinas tersebut.</p></div>
+  <img class="shot" src="sppd/Screenshot 2026-09-03 092503.png" alt="Kelola Tim SPPD">
+  <div class="cap">Kelola Tim SPPD — menambahkan Ketua/Anggota peserta perjalanan dinas.</div>
+  <div class="step"><div class="n">5</div><p>Gunakan ikon pensil untuk mengubah, atau ikon cetak pada pengajuan yang sudah disetujui untuk mencetak <b>Surat Perintah Perjalanan Dinas</b> resmi ber-QR.</p></div>
+  <img class="shot" src="sppd/Screenshot 2026-09-03 092513.png" alt="Daftar SPPD">
+  <div class="cap">Surat Perintah Perjalanan Dinas (SPPD) — daftar & ringkasan status pengajuan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>17</span></div>
+</div>
+
+<!-- ============================================================ UMDL ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">9</span> My Personal &gt; UMDL</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Uang Muka Dinas Luar — untuk perjalanan dinas jarak dekat
+    (<b>kurang dari 150 km PP</b>), mencakup uang makan &amp; akomodasi, alokasi tim, dan bukti foto dinas.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>UMDL</b>, lalu klik <b>+ Ajukan UMDL Baru</b>.</p></div>
+  <div class="step"><div class="n">2</div><p>Pilih <b>Surat Izin Terkait</b> (izin jenis "Dinas" yang sudah Anda ajukan sebelumnya di menu Izin), isi <b>Tanggal Dinas</b>, pilih <b>Rentang Jarak (KM)</b> — <i>&lt;75 km</i> atau <i>75–150 km (PP)</i> — dan tulis <b>Keterangan Dinas</b>.</p></div>
+  <img class="shot" src="umdl/Screenshot 2026-09-03 092703.png" alt="Ajukan UMDL Baru">
+  <div class="cap">Formulir Ajukan UMDL Baru — wajib menautkan Surat Izin Terkait & memilih rentang jarak.</div>
+  <div class="step"><div class="n">3</div><p>Ambil <b>Foto Bukti Lokasi Dinas</b> langsung lewat kamera (tombol <b>Switch</b> untuk berganti kamera depan/belakang) — lokasi GPS terekam otomatis pada foto.</p></div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>18</span></div>
+</div>
+
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="step"><div class="n">4</div><p>Setelah disetujui, gunakan ikon <b>Kelola Tim</b> untuk mendaftarkan Ketua/Anggota bila UMDL diajukan atas nama tim.</p></div>
+  <img class="shot" src="umdl/Screenshot 2026-09-03 092655.png" alt="Kelola Tim UMDL">
+  <div class="cap">Kelola Tim UMDL — menambahkan Ketua/Anggota peserta dinas luar.</div>
+  <div class="note"><b>Rumus nominal (dihitung otomatis Admin SDM saat penggajian):</b> jarak &lt;75 km = flat Rp40.000; jarak 75–150 km (PP) = 20% dari tarif SPPD Band pegawai. Nominal ini muncul di Slip Gaji Anda pada kelompok Tunjangan Tidak Tetap sebagai "Uang Makan Dinas".</div>
+  <img class="shot" src="umdl/Screenshot 2026-09-03 092648.png" alt="Daftar UMDL">
+  <div class="cap">Uang Muka Dinas Luar (UMDL) — daftar & ringkasan status pengajuan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>19</span></div>
+</div>
+
+<!-- ============================================================ PEMESANAN TIKET ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">10</span> My Personal &gt; Pemesanan Tiket</div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">Pengajuan pemesanan tiket transportasi dinas (Pesawat, Kereta Api, Bus, Kapal Laut) dan akomodasi hotel.</p>
+  <div class="step"><div class="n">1</div><p>Klik menu <b>Pemesanan Tiket</b>, lalu klik <b>+ Pesan Tiket Baru</b> dan isi <b>Keterangan</b> singkat keperluan pemesanan.</p></div>
+  <div class="step"><div class="n">2</div><p>Buka pengajuan yang baru dibuat, klik ikon <b>Rincian</b> (centang) untuk menambahkan satu atau lebih baris rincian: pilih <b>Jenis Tiket/Akomodasi</b>, <b>Tanggal IN/OUT</b>, dan <b>Keterangan Rute/Nama Hotel</b>.</p></div>
+  <img class="shot" src="pemesanan-tiket/Screenshot 2026-09-03 092743.png" alt="Rincian Tiket & Akomodasi">
+  <div class="cap">Rincian Tiket & Akomodasi — boleh menambahkan beberapa baris (pesawat pergi-pulang, hotel, dsb.) dalam satu pengajuan.</div>
+  <div class="step"><div class="n">3</div><p>Klik <b>Tambah Rincian Tiket</b> untuk setiap kebutuhan, lalu <b>Selesai &amp; Tutup</b>. Kirim pengajuan untuk diproses persetujuan atasan.</p></div>
+  <div class="step"><div class="n">4</div><p>Setelah disetujui, pengajuan pindah ke tab <b>Persetujuan</b> — dan otomatis masuk ke pantauan tim <b>Sekretariat</b> untuk ditindaklanjuti pemesanannya (lihat halaman berikut).</p></div>
+  <img class="shot" src="pemesanan-tiket/Screenshot 2026-09-03 092731.png" alt="Daftar Pemesanan Tiket">
+  <div class="cap">Pemesanan Tiket & Hotel — daftar & ringkasan status pengajuan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>20</span></div>
+</div>
+
+<!-- ============================================================ MONITORING TIKET (SEKRETARIAT) ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">11</span> Untuk Staf Sekretariat: Monitoring Tiket <span class="badge">Peran Baru</span></div>
+  <p style="font-size:11.5px; margin:0 0 10px 0;">
+    Staf Sekretariat adalah pihak yang mengurus kebutuhan pemesanan tiket &amp; akomodasi seluruh karyawan.
+    Menu <b>Monitoring Tiket</b> hanya muncul di sidebar My Personal bagi akun yang sudah ditandai Admin IT
+    dengan peran ini (mis. Eka, Farcha) — memberi mereka satu halaman untuk memantau seluruh pemesanan
+    tiket karyawan setelah disetujui atasan, tanpa perlu mengecek satu per satu akun karyawan.
+  </p>
+  <div class="note"><b>Alur:</b> karyawan mengajukan Pemesanan Tiket → atasan/manager menyetujui lewat Kotak
+    Persetujuan → pengajuan otomatis muncul di Monitoring Tiket → staf Sekretariat menindaklanjuti pemesanan
+    ke agen/maskapai &amp; menandai progresnya di sini.</div>
+
+  <div class="step"><div class="n">1</div><p>Kartu ringkasan di bagian atas menampilkan total tiket <b>Disetujui</b> pada periode berjalan, serta jumlah per status progres (<b>Belum Diproses</b>, <b>Sedang Diproses</b>, <b>Selesai</b>) dan rincian per <b>Jenis Tiket</b>.</p></div>
+  <div class="step"><div class="n">2</div><p>Gunakan filter <b>Status Persetujuan</b>, <b>Progres</b>, <b>Jenis</b>, atau <b>Filter NIK</b> untuk menyaring daftar — mis. pilih status "Menunggu" untuk melihat gambaran beban kerja yang akan datang sebelum disetujui atasan.</p></div>
+  <div class="step"><div class="n">3</div><p>Setiap baris menampilkan nama &amp; NIK karyawan, kode tiket, tanggal ajuan, keterangan &amp; rincian pemesanan (jenis dan rentang tanggal tiap leg), serta status persetujuan atasan.</p></div>
+  <div class="step"><div class="n">4</div><p>Klik ikon <b>pensil</b> pada kolom Progres untuk membuka pop-up — pilih status progres terbaru dan tulis <b>Catatan</b> singkat (mis. kode booking, nama agen), lalu klik <b>Simpan</b>.</p></div>
+  <img class="shot" src="monitoring-tiket/monitoring-tiket.png" alt="Monitoring Tiket">
+  <div class="cap">Monitoring Tiket — khusus staf Sekretariat: ringkasan, filter, dan daftar pemesanan tiket karyawan yang sudah disetujui atasan.</div>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>21</span></div>
+</div>
+
+<!-- ============================================================ PENUTUP ============================================================ -->
+<div class="page">
+  <div class="doc-header"><span><b>User Manual: My Personal</b> — MyGCS</span><span>GRESIK CIPTA SEJAHTERA</span></div>
+  <div class="sec-title"><span class="num">F</span> Penutup</div>
+  <p style="font-size:11.5px; line-height:1.7; margin:0 0 12px 0;">
+    Demikian panduan penggunaan modul My Personal pada portal MyGCS versi 2.0, mencakup Profil, Absensi,
+    Izin, Lembur, Cuti, Persetujuan, SPPD, UMDL, Pemesanan Tiket, dan Monitoring Tiket untuk staf
+    Sekretariat. Dokumen ini akan diperbarui kembali seiring dirilisnya modul-modul lain (mis. Slip Gaji,
+    Asesmen, Training).
+  </p>
+  <p style="font-size:11.5px; line-height:1.7; margin:0 0 20px 0;">
+    Apabila menemui kendala teknis dalam mengoperasikan sistem MyGCS, silakan hubungi:
+  </p>
+  <table class="info" style="max-width:340px">
+    <tr><td class="label">A Arjuna</td><td>081359449097</td></tr>
+    <tr><td class="label">Unit</td><td>Tim IT GCS</td></tr>
+  </table>
+  <div class="doc-footer"><span>User Manual My Personal — MyGCS</span><span>22</span></div>
+</div>
+
+</body>
+</html>

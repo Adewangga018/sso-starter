@@ -46,6 +46,25 @@ public class ApprovalService
         await _db.SaveChangesAsync();
     }
 
+    // Dipanggil saat pemohon MENGHAPUS sendiri pengajuannya selagi masih "Di Buat" (blm
+    // diputuskan) - mis. TiketController.Delete. Tanpa ini, baris approval.pengajuan jadi
+    // yatim (RefId menunjuk record legacy yg sudah tak ada) & tetap nyangkut Status=
+    // "Menunggu" selamanya - ditemukan 2026-09-03 lewat halaman Monitoring Tiket (baris
+    // "Semua" tampak kosong krn satu2nya baris Tiket menunjuk tiket yg sudah dihapus).
+    // No-op kalau statusnya sudah Disetujui/Ditolak (sudah diputuskan manager, jgn ditimpa).
+    public async Task CancelAsync(string jenis, string refId)
+    {
+        var row = await _db.ApprovalPengajuan.AsTracking()
+            .FirstOrDefaultAsync(a => a.Jenis == jenis && a.RefId == refId && a.Status == "Menunggu");
+        if (row is null)
+        {
+            return;
+        }
+        row.Status = "Batal";
+        row.TglKeputusan = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     // Kotak: pengajuan di mana saya manager (bisa acc) ATAU atasan langsung (tinjau saja).
     public async Task<PersetujuanInboxDto> InboxAsync(string nik)
     {

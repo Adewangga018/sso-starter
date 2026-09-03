@@ -80,6 +80,7 @@ import IzinCetakPage from './pages/IzinCetakPage'
 import SppdPage from './pages/SppdPage'
 import UmdlPage from './pages/UmdlPage'
 import TiketPage from './pages/TiketPage'
+import TiketAdminPage from './pages/TiketAdminPage'
 import TiketCetakPage from './pages/TiketCetakPage'
 import SppdCetakPage from './pages/SppdCetakPage'
 import InovasiLayout from './layouts/InovasiLayout'
@@ -230,6 +231,10 @@ export default function App() {
                 <Route element={<RequireFeature featureKey="my-personal:sppd" />}><Route path="sppd" element={<SppdPage />} /></Route>
                 <Route element={<RequireFeature featureKey="my-personal:umdl" />}><Route path="umdl" element={<UmdlPage />} /></Route>
                 <Route element={<RequireFeature featureKey="my-personal:tiket" />}><Route path="tiket" element={<TiketPage />} /></Route>
+                {/* Tidak dibungkus RequireFeature("my-personal:tiket") - halaman ini gate sendiri
+                    lewat isSekretariatTiket (role), bukan feature-lock modul biasa. Sama pola dgn
+                    /org/absensi-log. */}
+                <Route path="tiket-admin" element={<TiketAdminPage />} />
               </Route>
             </Route>
 
