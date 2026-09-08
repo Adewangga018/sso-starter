@@ -499,7 +499,6 @@ export const api = {
   getGajiGradeOpsi: () => apiFetch('/api/personal/gaji/admin/grade'),
   getAbsensi: () => apiFetch('/api/personal/absensi'),
   getLocations: () => apiFetch('/api/personal/locations'),
-  unduhAppAndroid: () => apiDownload('/api/personal/absensi/app/android', 'MyGCS-Absensi.apk'),
   submitAbsensi: (payload) =>
     apiFetch('/api/personal/absensi', { method: 'POST', body: JSON.stringify(payload) }),
   getSpl: () => apiFetch('/api/personal/spl'),

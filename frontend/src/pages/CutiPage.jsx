@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   CalendarRange,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Flag,
   Info,
   Loader2,
@@ -640,51 +642,90 @@ export default function CutiPage() {
   )
 }
 
+// Daftar bisa panjang (bertahun-tahun cuti bersama/hari libur menumpuk) - dikelompokkan
+// per tahun & bisa dilipat supaya tidak perlu scroll panjang (diminta user 2026-09-03).
+// Tahun berjalan (dan tahun² mendatang) terbuka secara default; tahun lampau terlipat.
 function KalenderList({ items, isAdmin, kind, onEdit, onDelete }) {
   const list = items || []
+  const currentYear = new Date().getFullYear()
+
+  const groups = useMemo(() => {
+    const byYear = new Map()
+    for (const x of list) {
+      const y = new Date(x.tglMulai).getFullYear()
+      const key = Number.isNaN(y) ? 0 : y
+      if (!byYear.has(key)) byYear.set(key, [])
+      byYear.get(key).push(x)
+    }
+    return [...byYear.entries()].sort(([a], [b]) => b - a)
+  }, [list])
+
+  const [openYears, setOpenYears] = useState(() => new Set([currentYear]))
+  function toggleYear(y) {
+    setOpenYears((prev) => {
+      const next = new Set(prev)
+      if (next.has(y)) next.delete(y)
+      else next.add(y)
+      return next
+    })
+  }
+
   if (list.length === 0) return <div className="cuti__empty cuti__empty--pad">Belum ada data cuti bersama/libur.</div>
+
   return (
     <div className="cuti__kal">
-      {list.map((x) => (
-        <div className="cuti__kal-row" key={x.id}>
-          <div className="cuti__kal-date">
-            {formatTgl(x.tglMulai)}
-            {x.tglSelesai !== x.tglMulai ? ` – ${formatTgl(x.tglSelesai)}` : ''}
+      {groups.map(([year, rows]) => {
+        const open = openYears.has(year) || year >= currentYear
+        return (
+          <div className="cuti__kal-yeargroup" key={year}>
+            <button type="button" className="cuti__kal-yearhead" onClick={() => toggleYear(year)}>
+              {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span className="cuti__kal-yearlabel">{year || 'Lainnya'}</span>
+              <span className="cuti__kal-yearcount">{rows.length} hari</span>
+            </button>
+            {open && rows.map((x) => (
+              <div className="cuti__kal-row" key={x.id}>
+                <div className="cuti__kal-date">
+                  {formatTgl(x.tglMulai)}
+                  {x.tglSelesai !== x.tglMulai ? ` – ${formatTgl(x.tglSelesai)}` : ''}
+                </div>
+                <div className="cuti__kal-main">
+                  <span className="cuti__kal-ket">{x.keterangan}</span>
+                  <span className="cuti__kal-days">{x.jumlahHari} hari</span>
+                  {kind === 'cb' &&
+                    (x.mengurangiHak ? (
+                      <span className="cuti__tag cuti__tag--red">mengurangi hak</span>
+                    ) : (
+                      <span className="cuti__tag cuti__tag--grey">tidak mengurangi</span>
+                    ))}
+                </div>
+                {isAdmin && (
+                  <div className="cuti__kal-act">
+                    <button
+                      type="button"
+                      className="cuti__ibtn"
+                      title="Ubah"
+                      onClick={() => onEdit(x)}
+                      aria-label="Ubah"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="cuti__ibtn cuti__ibtn--danger"
+                      title="Hapus"
+                      onClick={() => onDelete(x)}
+                      aria-label="Hapus"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-          <div className="cuti__kal-main">
-            <span className="cuti__kal-ket">{x.keterangan}</span>
-            <span className="cuti__kal-days">{x.jumlahHari} hari</span>
-            {kind === 'cb' &&
-              (x.mengurangiHak ? (
-                <span className="cuti__tag cuti__tag--red">mengurangi hak</span>
-              ) : (
-                <span className="cuti__tag cuti__tag--grey">tidak mengurangi</span>
-              ))}
-          </div>
-          {isAdmin && (
-            <div className="cuti__kal-act">
-              <button
-                type="button"
-                className="cuti__ibtn"
-                title="Ubah"
-                onClick={() => onEdit(x)}
-                aria-label="Ubah"
-              >
-                <Pencil size={13} />
-              </button>
-              <button
-                type="button"
-                className="cuti__ibtn cuti__ibtn--danger"
-                title="Hapus"
-                onClick={() => onDelete(x)}
-                aria-label="Hapus"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

@@ -472,6 +472,38 @@
   gap: 6px;
 }
 
+.cuti__kal-yeargroup + .cuti__kal-yeargroup {
+  margin-top: 4px;
+}
+
+.cuti__kal-yearhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--gcs-green-700);
+  text-align: left;
+}
+
+.cuti__kal-yearlabel {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cuti__kal-yearcount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gcs-text-muted);
+}
+
+.cuti__kal-yeargroup .cuti__kal-row {
+  margin-top: 6px;
+}
+
 .cuti__kal-row {
   display: flex;
   align-items: center;

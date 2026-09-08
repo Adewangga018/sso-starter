@@ -126,8 +126,6 @@ export default function AbsensiPage() {
   // Log ditampilkan per bulan. '' pada bulan = seluruh bulan pada tahun terpilih.
   const [bulan, setBulan] = useState('')
   const [tahun, setTahun] = useState('')
-  const [downloading, setDownloading] = useState(false)
-  const [downloadError, setDownloadError] = useState('')
   // Daftar Cuti Nasional/Cuti Bersama (Admin SDM) - dipakai utk label Keterangan; gagal
   // memuatnya bukan error fatal, label itu cuma tidak tampil.
   const [cuti, setCuti] = useState(null)
@@ -135,18 +133,6 @@ export default function AbsensiPage() {
   useEffect(() => {
     api.getCuti().then(setCuti).catch(() => {})
   }, [])
-
-  async function handleDownloadApp() {
-    setDownloading(true)
-    setDownloadError('')
-    try {
-      await api.unduhAppAndroid()
-    } catch (err) {
-      setDownloadError(err instanceof ApiError ? err.message : 'Gagal mengunduh aplikasi.')
-    } finally {
-      setDownloading(false)
-    }
-  }
 
   const loadRows = useCallback(() => {
     setLoadError('')
@@ -315,12 +301,16 @@ export default function AbsensiPage() {
           <p className="absensi__app-desc">
             Absen masuk & keluar wajib melalui aplikasi mobile ini dengan verifikasi GPS terenkripsi dari perangkat Anda.
           </p>
-          {downloadError && <div className="absensi__app-error">{downloadError}</div>}
         </div>
         <div className="absensi__app-actions">
-          <button type="button" className="absensi__app-btn" onClick={handleDownloadApp} disabled={downloading}>
-            <Download size={16} /> {downloading ? 'Menyiapkan berkas...' : 'Unduh Android (.APK)'}
-          </button>
+          <a
+            className="absensi__app-btn"
+            href="https://play.google.com/store/apps/details?id=com.gresik.gcs.myabsensi"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Download size={16} /> Unduh di Play Store
+          </a>
           <span className="absensi__app-note">Versi iOS segera hadir lewat TestFlight.</span>
         </div>
       </div>
